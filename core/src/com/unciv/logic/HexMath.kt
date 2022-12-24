@@ -6,6 +6,8 @@ import com.unciv.logic.map.MapParameters
 import com.unciv.logic.map.MapShape
 import kotlin.math.*
 
+// FIX: Vertical far hexes instead of sides
+
 @Suppress("MemberVisibilityCanBePrivate", "unused")  // this is a library offering optional services
 object HexMath {
 
@@ -29,11 +31,25 @@ object HexMath {
 
     // In our reference system latitude, i.e. how distant from equator we are, is proportional to x + y
     fun getLatitude(vector: Vector2): Float {
+        // Here x and y are 2 cube diagonal coordinates, i.e. x==s, y==r, q is not used.
+        // However x+y==s+r will longitude rather than latitude (
+        // Than means probably, that positive direction of both s and r upward.
+        // In other words y==-r, not +r.
+
+        // Now lets translate from flat to pointy
+        // Here x==s, y==q. Both positive upward, so no problems here.
+        // x+y==s+q equals to latitude. So there's nothing to change )
+        // Latitude increases upward
+        // LatLong coordinates are double coordinates.
         return vector.x + vector.y
+        //return vector.x + vector.y
     }
 
     fun getLongitude(vector: Vector2): Float {
+        // Good. That formula is true for pointy.
+        // Longitude increases leftward
         return vector.x - vector.y
+        //return vector.x - vector.y
     }
 
     /**
@@ -45,6 +61,10 @@ object HexMath {
      * @return Hex coordinate. May need to be passed through [roundHexCoords] for further use.
      * */
     fun hexFromLatLong(latitude: Float, longitude: Float): Vector2 {
+        // latitude==-row, longitude==-col
+        // y = (col - row) / 2
+        // x = - col + (col - row) / 2 = - (col + row) / 2
+        // That should work too, without any modifications
         val y = (latitude - longitude) / 2f
         val x = longitude + y
         return Vector2(x, y)
@@ -52,6 +72,7 @@ object HexMath {
 
     /** returns a vector containing width and height a rectangular map should have to have
      *  approximately the same number of tiles as an hexagonal map given a height/width ratio */
+    // I don't know why it is required
     fun getEquivalentRectangularSize(size: Int, ratio: Float = 0.65f): Vector2 {
         if (size < 0)
             return Vector2.Zero
@@ -67,14 +88,19 @@ object HexMath {
     fun getEquivalentHexagonalRadius(width: Int, height: Int) =
         getHexagonalRadiusForArea(width * height).roundToInt()
 
+    // It looks the same for both flat and pointy
     fun getAdjacentVectors(origin: Vector2): ArrayList<Vector2> {
         val vectors = arrayListOf(
                 Vector2(1f, 0f),
-                Vector2(1f, 1f),
+//                Vector2(1f, 1f),
+
                 Vector2(0f, 1f),
+                Vector2(-1f, 1f), //
                 Vector2(-1f, 0f),
-                Vector2(-1f, -1f),
-                Vector2(0f, -1f)
+//                Vector2(-1f, -1f),
+
+                Vector2(0f, -1f),
+                Vector2(1f, -1f)  //
         )
         for (vector in vectors) vector.add(origin)
         return vectors
@@ -104,39 +130,58 @@ object HexMath {
         return hexFromLatLong(toWrapLat, (toWrapLong - referenceLong + longRadius).mod(longRadius * 2f) - longRadius + referenceLong)
     }
 
+    // That looks as main function for the transition
     fun hex2WorldCoords(hexCoord: Vector2): Vector2 {
         // Distance between cells = 2* normal of triangle = 2* (sqrt(3)/2) = sqrt(3)
-        val xVector = getVectorByClockHour(10).scl(sqrt(3.0).toFloat())
-        val yVector = getVectorByClockHour(2).scl(sqrt(3.0).toFloat())
+
+        // Here we need to rotate hexes to get pointy
+        // 1 hour instead of 2 hours
+        // 11 hours instead of 10 hours
+        //val xVector = getVectorByClockHour(10).scl(sqrt(3.0).toFloat())
+        //val yVector = getVectorByClockHour(2).scl(sqrt(3.0).toFloat())
+        val xVector = getVectorByClockHour(11).scl(sqrt(3.0).toFloat())
+        val yVector = getVectorByClockHour(1).scl(sqrt(3.0).toFloat())
+
         return xVector.scl(hexCoord.x).add(yVector.scl(hexCoord.y))
     }
 
     @Suppress("LocalVariableName")  // clearer
     fun world2HexCoords(worldCoord: Vector2): Vector2 {
         // D: diagonal, A: antidiagonal versors
-        val D = getVectorByClockHour(10).scl(sqrt(3.0).toFloat())
-        val A = getVectorByClockHour(2).scl(sqrt(3.0).toFloat())
+        // change hours again
+        //val D = getVectorByClockHour(10).scl(sqrt(3.0).toFloat())
+        //val A = getVectorByClockHour(2).scl(sqrt(3.0).toFloat())
+        val D = getVectorByClockHour(11).scl(sqrt(3.0).toFloat())
+        val A = getVectorByClockHour(1).scl(sqrt(3.0).toFloat())
         val den = D.x * A.y - D.y * A.x
         val x = (worldCoord.x * A.y - worldCoord.y * A.x) / den
         val y = (worldCoord.y * D.x - worldCoord.x * D.y) / den
         return Vector2(x, y)
     }
 
+    // Nice. here is convertion to useful Cubic coords! Q,S,R
     fun hex2CubicCoords(hexCoord: Vector2): Vector3 {
-        return Vector3(hexCoord.y - hexCoord.x, hexCoord.x, -hexCoord.y)
+        // I assume we don't need to mirror y-coord here for pointies.
+        //return Vector3(hexCoord.y - hexCoord.x, hexCoord.x, -hexCoord.y)
+        return Vector3(- hexCoord.y - hexCoord.x, hexCoord.x, hexCoord.y)
     }
 
     fun cubic2HexCoords(cubicCoord: Vector3): Vector2 {
-        return Vector2(cubicCoord.y, -cubicCoord.z)
+        //return Vector2(cubicCoord.y, -cubicCoord.z)
+        return Vector2(cubicCoord.y, cubicCoord.z)
     }
 
     fun cubic2EvenQCoords(cubicCoord: Vector3): Vector2 {
-        return Vector2(cubicCoord.x, cubicCoord.z + (cubicCoord.x + (cubicCoord.x.toInt() and 1)) / 2)
+        //return Vector2(cubicCoord.x, cubicCoord.z + (cubicCoord.x + (cubicCoord.x.toInt() and 1)) / 2)
+        return Vector2(cubicCoord.x + (cubicCoord.z + (cubicCoord.z.toInt() and 1)) / 2, cubicCoord.z)
+
     }
 
     fun evenQ2CubicCoords(evenQCoord: Vector2): Vector3 {
-        val x = evenQCoord.x
-        val z = evenQCoord.y - (evenQCoord.x + (evenQCoord.x.toInt() and 1)) / 2
+        //val x = evenQCoord.x
+        //val z = evenQCoord.y - (evenQCoord.x + (evenQCoord.x.toInt() and 1)) / 2
+        val x = evenQCoord.x - (evenQCoord.y + (evenQCoord.y.toInt() and 1)) / 2
+        val z = evenQCoord.y
         val y = -x - z
         return Vector3(x, y, z)
     }
@@ -178,6 +223,7 @@ object HexMath {
         return cubic2HexCoords(roundCubicCoords(hex2CubicCoords(hexCoord)))
     }
 
+    /*
     fun getVectorsAtDistance(origin: Vector2, distance: Int, maxDistance: Int, worldWrap: Boolean): List<Vector2> {
         val vectors = mutableListOf<Vector2>()
         if (distance == 0) {
@@ -195,12 +241,41 @@ object HexMath {
             if (!worldWrap || distance != maxDistance)
                 vectors += origin.cpy().scl(2f).sub(current) // Get vector on other side of clock
             current.add(1f, 1f)
+            //current.add(1f, -1f)
         }
         for (i in 0 until distance) { // 10 to 12
             vectors += current.cpy()
             if (!worldWrap || distance != maxDistance || i != 0)
                 vectors += origin.cpy().scl(2f).sub(current) // Get vector on other side of clock
             current.add(0f, 1f)
+        }
+        return vectors
+    }
+    */
+    fun getVectorsAtDistance(origin: Vector2, distance: Int, maxDistance: Int, worldWrap: Boolean): List<Vector2> {
+        val vectors = mutableListOf<Vector2>()
+        if (distance == 0) {
+            vectors += origin.cpy()
+            return vectors
+        }
+        val current = origin.cpy().sub(-distance.toFloat(), distance.toFloat()) // start at 9 o clock
+        for (i in 0 until distance) { // From 9 to 11
+            vectors += current.cpy()
+            vectors += origin.cpy().scl(2f).sub(current) // Get vector on other side of clock
+            current.add(0f, 1f)
+        }
+        for (i in 0 until distance) { // 11 to 1
+            vectors += current.cpy()
+            if (!worldWrap || distance != maxDistance)
+                vectors += origin.cpy().scl(2f).sub(current) // Get vector on other side of clock
+            current.add(-1f, 1f)
+            //current.add(1f, -1f)
+        }
+        for (i in 0 until distance) { // 1 to 3
+            vectors += current.cpy()
+            if (!worldWrap || distance != maxDistance || i != 0)
+                vectors += origin.cpy().scl(2f).sub(current) // Get vector on other side of clock
+            current.add(-1f, 0f)
         }
         return vectors
     }
@@ -221,7 +296,7 @@ object HexMath {
         else
             (abs(relativeX) + abs(relativeY)).toInt()
     }
-
+/*
     private val clockPositionToHexVectorMap: Map<Int, Vector2> = mapOf(
         0 to Vector2(1f, 1f), // This alias of 12 makes clock modulo logic easier
         12 to Vector2(1f, 1f),
@@ -231,6 +306,15 @@ object HexMath {
         8 to Vector2(0f, -1f),
         10 to Vector2(1f, 0f)
     )
+*/
+    private val clockPositionToHexVectorMap: Map<Int, Vector2> = mapOf(
+        11 to Vector2(1f, 0f), // This alias of 12 makes clock modulo logic easier
+        1 to Vector2(0f, 1f),
+        3 to Vector2(-1f, 1f),
+        5 to Vector2(-1f, 0f),
+        7 to Vector2(0f, -1f),
+        9 to Vector2(1f, -1f)
+    )
 
     /** Returns the hex-space distance corresponding to [clockPosition], or a zero vector if [clockPosition] is invalid */
     fun getClockPositionToHexVector(clockPosition: Int): Vector2 {
@@ -238,14 +322,22 @@ object HexMath {
     }
 
     // Statically allocate the Vectors (in World coordinates)
-    // of the 6 clock directions for border and road drawing in TileGroup 
-    private val clockPositionToWorldVectorMap: Map<Int,Vector2> = mapOf(
+    // of the 6 clock directions for border and road drawing in TileGroup
+/*    private val clockPositionToWorldVectorMap: Map<Int,Vector2> = mapOf(
         2 to hex2WorldCoords(Vector2(0f, -1f)),
         4 to hex2WorldCoords(Vector2(1f, 0f)),
         6 to hex2WorldCoords(Vector2(1f, 1f)),
         8 to hex2WorldCoords(Vector2(0f, 1f)),
         10 to hex2WorldCoords(Vector2(-1f, 0f)),
         12 to hex2WorldCoords(Vector2(-1f, -1f)) )
+    */
+    private val clockPositionToWorldVectorMap: Map<Int,Vector2> = mapOf(
+        11 to hex2WorldCoords(Vector2(1f, 0f)),
+        1 to hex2WorldCoords(Vector2(0f, 1f)),
+        3 to hex2WorldCoords(Vector2(-1f, 1f)),
+        5 to hex2WorldCoords(Vector2(-1f, 0f)),
+        7 to hex2WorldCoords(Vector2(0f, -1f)),
+        9 to hex2WorldCoords(Vector2(1f, -1f)) )
 
     /** Returns the world/screen-space distance corresponding to [clockPosition], or a zero vector if [clockPosition] is invalid */
     fun getClockPositionToWorldVector(clockPosition: Int): Vector2 =

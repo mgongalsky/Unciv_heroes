@@ -105,7 +105,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         Concurrency.run("ShowMapBackground") {
             var scale = 1f
             var mapWidth = stage.width / TileGroupMap.groupHorizontalAdvance
-            var mapHeight = stage.height / TileGroupMap.groupSize
+            var mapHeight = stage.height / TileGroupMap.groupVerticalAdvance
             if (mapWidth * mapHeight > 3000f) {  // 3000 as max estimated number of tiles is arbitrary (we had typically 721 before)
                 scale = mapWidth * mapHeight / 3000f
                 mapWidth /= scale

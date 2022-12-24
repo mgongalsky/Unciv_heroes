@@ -173,6 +173,8 @@ class TileMap : IsPartOfGameInfoSerialization {
 
     /** @return All tiles in a hexagonal ring 1 tile wide around [origin] with the [distance]. Contains the [origin] if and only if [distance] is <= 0.
      *  Respects map edges and world wrap. */
+    /*
+    // !Warning! Here is doubling of the code!
     fun getTilesAtDistance(origin: Vector2, distance: Int): Sequence<TileInfo> =
             if (distance <= 0) // silently take negatives.
                 sequenceOf(get(origin))
@@ -203,6 +205,39 @@ class TileMap : IsPartOfGameInfoSerialization {
                         yield(getIfTileExistsOrNull(currentX, currentY))
                         yield(getIfTileExistsOrNull(2 * centerX - currentX, 2 * centerY - currentY))
                         currentY += 1 // we're going up the top left side of the hexagon so we're heading "up and to the right"
+                    }
+                }.filterNotNull()
+    */
+    fun getTilesAtDistance(origin: Vector2, distance: Int): Sequence<TileInfo> =
+            if (distance <= 0) // silently take negatives.
+                sequenceOf(get(origin))
+            else
+                sequence {
+                    val centerX = origin.x.toInt()
+                    val centerY = origin.y.toInt()
+
+                    // Start from 9 O'clock point which means (distance, -distance) away from the center point
+                    var currentX = centerX + distance
+                    var currentY = centerY - distance
+
+                    for (i in 0 until distance) { // From 9 to 11
+                        yield(getIfTileExistsOrNull(currentX, currentY))
+                        // We want to get the tile on the other side of the clock,
+                        // so if we're at current = origin-delta we want to get to origin+delta.
+                        // The simplest way to do this is 2*origin - current = 2*origin- (origin - delta) = origin+delta
+                        yield(getIfTileExistsOrNull(2 * centerX - currentX, 2 * centerY - currentY))
+                        currentY += 1 // we're going upwards to the right, towards 1 o'clock
+                    }
+                    for (i in 0 until distance) { // 11 to 1
+                        yield(getIfTileExistsOrNull(currentX, currentY))
+                        yield(getIfTileExistsOrNull(2 * centerX - currentX, 2 * centerY - currentY))
+                        currentX -= 1
+                        currentY += 1 // we're going right - -1,+1
+                    }
+                    for (i in 0 until distance) { // 1 to 3
+                        yield(getIfTileExistsOrNull(currentX, currentY))
+                        yield(getIfTileExistsOrNull(2 * centerX - currentX, 2 * centerY - currentY))
+                        currentX -= 1 // we're going down the down right side of the hexagon
                     }
                 }.filterNotNull()
 

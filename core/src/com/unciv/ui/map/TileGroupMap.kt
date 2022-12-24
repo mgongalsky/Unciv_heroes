@@ -28,13 +28,17 @@ class TileGroupMap<T: TileGroup>(
     companion object {
         /** Vertical size of a hex in world coordinates, or the distance between the centers of any two opposing edges
          *  (the hex is oriented so it has corners to the left and right of the center and its upper and lower bounds are horizontal edges) */
-        const val groupSize = 50f
+        //    const val groupSize = 50f
+        const val groupSize = 50f * 1.1547005f
         /** Length of the diagonal of a hex, or distance between two opposing corners */
-        const val groupSizeDiagonal = groupSize * 1.1547005f  // groupSize * sqrt(4/3)
+    //    const val groupSizeDiagonal = groupSize * 1.1547005f  // groupSize * sqrt(4/3)
+        const val groupSizeDiagonal = 50f //groupSize / 1.1547005f  // groupSize * sqrt(4/3)
         /** Horizontal displacement per hex, meaning the increase in overall map size (in world coordinates) when adding a column.
          *  On the hex, this can be visualized as the horizontal distance between the leftmost corner and the
          *  line connecting the two corners at 2 and 4 o'clock. */
-        const val groupHorizontalAdvance = groupSizeDiagonal * 3 / 4
+     //   const val groupHorizontalAdvance = groupSizeDiagonal * 3 / 4
+        const val groupHorizontalAdvance = groupSizeDiagonal
+        const val groupVerticalAdvance = groupSize * 3 / 4 // 1.1547005f
         //TODO magic numbers that **seem** like they might depend on these values can be found in
         //   TileGroupMap.getPositionalVector, TileGroup.updateArrows, TileGroup.updateRoadImages
         //   and other places. I can't understand them so I'm leaving cleanup of hardcoding to someone else.
