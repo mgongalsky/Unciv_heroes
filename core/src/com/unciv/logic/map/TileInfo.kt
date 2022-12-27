@@ -1027,7 +1027,9 @@ open class TileInfo : IsPartOfGameInfoSerialization {
 
     /** The two tiles have a river between them */
     fun isConnectedByRiver(otherTile: TileInfo): Boolean {
-        if (otherTile == this) throw Exception("Should not be called to compare to self!")
+        // That is commented because make errors during borders rendering
+        // Moreover, I think rivers will be made inside hexes instead of between them, like roads
+/*        if (otherTile == this) throw Exception("Should not be called to compare to self!")
 
         return when (tileMap.getNeighborTileClockPosition(this, otherTile)) {
             2 -> otherTile.hasBottomLeftRiver // we're to the bottom-left of it
@@ -1038,6 +1040,9 @@ open class TileInfo : IsPartOfGameInfoSerialization {
             12 -> otherTile.hasBottomRiver // we're directly below it
             else -> throw Exception("Should never call this function on a non-neighbor!")
         }
+
+ */
+        return false
     }
 
     @delegate:Transient

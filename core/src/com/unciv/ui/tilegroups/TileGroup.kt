@@ -30,6 +30,7 @@ open class TileGroup(
     var tileInfo: TileInfo,
     val tileSetStrings: TileSetStrings,
     groupSize: Float = 54f
+    // groupSize: Float = 54f
 ) : ActionlessGroupWithHit() {
     /*
         Layers (reordered in TileGroupMap):
@@ -44,9 +45,12 @@ open class TileGroup(
     */
 
     /** Cache simple but frequent calculations. */
+    // Looks like it should be * 2f for pointy hexes
     private val hexagonImageWidth = groupSize * 1.5f
+    //private val hexagonImageWidth = groupSize * 2f
     /** Cache simple but frequent calculations. */
-    private val hexagonImageOrigin = Pair(hexagonImageWidth / 2f, sqrt((hexagonImageWidth / 2f).pow(2) - (hexagonImageWidth / 4f).pow(2)))
+    //private val hexagonImageOrigin = Pair(hexagonImageWidth / 2f, sqrt((hexagonImageWidth / 2f).pow(2) - (hexagonImageWidth / 4f).pow(2)))
+    private val hexagonImageOrigin = Pair(hexagonImageWidth / 2f, hexagonImageWidth / sqrt (3f))
     // Pair, not Vector2, for immutability. Second number is triangle height for hex center.
     /** Cache simple but frequent calculations. */
     private val hexagonImagePosition = Pair(-hexagonImageOrigin.first / 3f, -hexagonImageOrigin.second / 4f)
@@ -480,6 +484,7 @@ open class TileGroup(
                     else -> throw IllegalStateException("This shouldn't happen?")
                 }
 
+                // TODO: borders are not exactly simmetrical. Fix it.
                 val relativeWorldPosition = tileInfo.tileMap.getNeighborTilePositionAsWorldCoords(tileInfo, neighbor)
 
                 val sign = if (relativeWorldPosition.x < 0) -1 else 1
@@ -491,6 +496,7 @@ open class TileGroup(
                 borderLayerGroup.addActor(innerBorderImage)
                 images.add(innerBorderImage)
                 setHexagonImageSize(innerBorderImage)
+                innerBorderImage.setScale(1.1547f, 1f) //
                 innerBorderImage.rotateBy(angle)
                 innerBorderImage.color = civOuterColor
 
@@ -500,6 +506,7 @@ open class TileGroup(
                 borderLayerGroup.addActor(outerBorderImage)
                 images.add(outerBorderImage)
                 setHexagonImageSize(outerBorderImage)
+                outerBorderImage.setScale(1.1547f * 1f, 1f) //
                 outerBorderImage.rotateBy(angle)
                 outerBorderImage.color = civInnerColor
             }

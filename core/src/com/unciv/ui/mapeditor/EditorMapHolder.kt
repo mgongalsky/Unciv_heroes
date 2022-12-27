@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
+import com.unciv.UncivGame
 import com.unciv.logic.HexMath
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap

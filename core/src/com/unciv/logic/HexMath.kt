@@ -337,7 +337,17 @@ object HexMath {
         3 to hex2WorldCoords(Vector2(-1f, 1f)),
         5 to hex2WorldCoords(Vector2(-1f, 0f)),
         7 to hex2WorldCoords(Vector2(0f, -1f)),
-        9 to hex2WorldCoords(Vector2(1f, -1f)) )
+        9 to hex2WorldCoords(Vector2(1f, -1f)),
+        // Obsolete, but useful for borders troubleshooting:
+        0 to hex2WorldCoords(Vector2(1f, 0f)),
+        2 to hex2WorldCoords(Vector2(0f, 1f)),
+        4 to hex2WorldCoords(Vector2(-1f, 1f)),
+        6 to hex2WorldCoords(Vector2(-1f, 0f)),
+        8 to hex2WorldCoords(Vector2(0f, -1f)),
+        10 to hex2WorldCoords(Vector2(1f, -1f)),
+        12 to hex2WorldCoords(Vector2(1f, 0f))
+
+    )
 
     /** Returns the world/screen-space distance corresponding to [clockPosition], or a zero vector if [clockPosition] is invalid */
     fun getClockPositionToWorldVector(clockPosition: Int): Vector2 =
