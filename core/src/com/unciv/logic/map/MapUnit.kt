@@ -26,8 +26,10 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.models.stats.Stats
+import com.unciv.ui.newgamescreen.NewGameScreen
 import com.unciv.ui.utils.extensions.filterAndLogic
 import com.unciv.ui.utils.extensions.toPercent
+import com.unciv.ui.worldscreen.WorldScreen
 import java.text.DecimalFormat
 import kotlin.math.pow
 
@@ -619,6 +621,7 @@ class MapUnit : IsPartOfGameInfoSerialization {
 
     fun fortify() {
         action = "Fortify"
+        //WorldScreen.game.pushScreen(NewGameScreen())
     }
 
     fun heroView() {

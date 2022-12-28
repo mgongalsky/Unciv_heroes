@@ -22,6 +22,7 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.stats.Stat
 import com.unciv.models.stats.Stats
 import com.unciv.models.translations.tr
+import com.unciv.ui.heroscreen.HeroOverviewScreen
 import com.unciv.ui.pickerscreens.ImprovementPickerScreen
 import com.unciv.ui.pickerscreens.PromotionPickerScreen
 import com.unciv.ui.popup.ConfirmPopup
@@ -860,7 +861,8 @@ object UnitActions {
 
     private fun addHeroViewActions(actionList: ArrayList<UnitAction>, unit: MapUnit, showingAdditionalActions: Boolean) {
         actionList += UnitAction(UnitActionType.HeroView,
-            action = { unit.heroView() })
+    //        action = { unit.heroView() })
+            action = { UncivGame.Current.pushScreen(HeroOverviewScreen(unit.civInfo, unit)) })
     }
     /*
         if (unit.isFortified() && !showingAdditionalActions) {
