@@ -88,6 +88,7 @@ object UnitActions {
 
         addSleepActions(actionList, unit, true)
         addFortifyActions(actionList, unit, true)
+        addHeroViewActions(actionList, unit, true)
 
         addSwapAction(unit, actionList, worldScreen)
         addDisbandAction(actionList, unit, worldScreen)
@@ -856,6 +857,37 @@ object UnitActions {
             actionList += UnitAction(UnitActionType.Fortify,
                 action = { unit.fortify() }.takeIf { !isFortified })
     }
+
+    private fun addHeroViewActions(actionList: ArrayList<UnitAction>, unit: MapUnit, showingAdditionalActions: Boolean) {
+        actionList += UnitAction(UnitActionType.HeroView,
+            action = { unit.heroView() })
+    }
+    /*
+        if (unit.isFortified() && !showingAdditionalActions) {
+            actionList += UnitAction(
+                type = if (unit.isActionUntilHealed())
+                    UnitActionType.FortifyUntilHealed else
+                    UnitActionType.HeroView,
+                isCurrentAction = true,
+                title = "${"View Hero pushed".tr()} ${unit.getFortificationTurns() * 20}%"
+            )
+            return
+        }
+
+        if (!unit.canFortify()) return
+        if (unit.currentMovement == 0f) return
+
+        val isFortified = unit.isFortified()
+        val isDamaged = unit.health < 100
+
+        if (isDamaged && !showingAdditionalActions && unit.rankTileForHealing(unit.currentTile) != 0)
+            actionList += UnitAction(UnitActionType.FortifyUntilHealed,
+                action = { unit.fortifyUntilHealed() })
+        else if (isDamaged || !showingAdditionalActions)
+            actionList += UnitAction(UnitActionType.HeroView,
+                action = { unit.heroView() })
+    }
+*/
 
     private fun addSleepActions(actionList: ArrayList<UnitAction>, unit: MapUnit, showingAdditionalActions: Boolean) {
         if (unit.isFortified() || unit.canFortify() || unit.currentMovement == 0f) return

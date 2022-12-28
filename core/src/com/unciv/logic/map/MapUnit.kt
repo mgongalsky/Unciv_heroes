@@ -35,6 +35,7 @@ import kotlin.math.pow
 /**
  * The immutable properties and mutable game state of an individual unit present on the map
  */
+// That's gonna be a Hero instead of MapUnit
 class MapUnit : IsPartOfGameInfoSerialization {
 
     @Transient
@@ -618,6 +619,10 @@ class MapUnit : IsPartOfGameInfoSerialization {
 
     fun fortify() {
         action = "Fortify"
+    }
+
+    fun heroView() {
+        action = "View Hero"
     }
 
     fun fortifyUntilHealed() {

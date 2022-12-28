@@ -77,6 +77,8 @@ enum class UnitActionType(
         { ImageGetter.getImage("UnitActionIcons/Fortify") }, 'f', UncivSound.Fortify),
     FortifyUntilHealed("Fortify until healed",
         { ImageGetter.getImage("UnitActionIcons/FortifyUntilHealed") }, 'h', UncivSound.Fortify),
+    HeroView("View Hero",
+        { ImageGetter.getImage("UnitActionIcons/Upgrade") }, 's', UncivSound.Fortify),
     Explore("Explore",
         { ImageGetter.getImage("UnitActionIcons/Explore") }, 'x'),
     StopExploration("Stop exploration",

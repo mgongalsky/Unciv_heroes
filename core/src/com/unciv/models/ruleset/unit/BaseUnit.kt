@@ -33,6 +33,7 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
     override var hurryCostModifier: Int = 0
     var movement: Int = 0
     var strength: Int = 0
+    var attackSkill: Int = 0
     var rangedStrength: Int = 0
     var religiousStrength: Int = 0
     var range: Int = 2
