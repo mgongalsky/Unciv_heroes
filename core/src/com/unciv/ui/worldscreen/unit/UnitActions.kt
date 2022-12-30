@@ -862,7 +862,7 @@ object UnitActions {
     private fun addHeroViewActions(actionList: ArrayList<UnitAction>, unit: MapUnit, showingAdditionalActions: Boolean) {
         actionList += UnitAction(UnitActionType.HeroView,
     //        action = { unit.heroView() })
-            action = { UncivGame.Current.pushScreen(HeroOverviewScreen(unit.civInfo, unit)) })
+            action = { UncivGame.Current.pushScreen(HeroOverviewScreen(unit)) })
     }
     /*
         if (unit.isFortified() && !showingAdditionalActions) {
