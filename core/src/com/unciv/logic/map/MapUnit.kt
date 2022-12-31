@@ -628,6 +628,10 @@ class MapUnit : IsPartOfGameInfoSerialization {
         action = "View Hero"
     }
 
+    fun runBattle() {
+        action = "Run Battle"
+    }
+
     fun fortifyUntilHealed() {
         action = "Fortify until healed"
     }

@@ -22,6 +22,7 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.stats.Stat
 import com.unciv.models.stats.Stats
 import com.unciv.models.translations.tr
+import com.unciv.ui.battlescreen.BattleScreen
 import com.unciv.ui.heroscreen.HeroOverviewScreen
 import com.unciv.ui.pickerscreens.ImprovementPickerScreen
 import com.unciv.ui.pickerscreens.PromotionPickerScreen
@@ -74,6 +75,7 @@ object UnitActions {
         addAutomateBuildingImprovementsAction(unit, actionList)
         addTriggerUniqueActions(unit, actionList)
         addAddInCapitalAction(unit, actionList, tile)
+        addRunBattleActions(unit, actionList)
 
         addWaitAction(unit, actionList, worldScreen)
 
@@ -864,32 +866,12 @@ object UnitActions {
     //        action = { unit.heroView() })
             action = { UncivGame.Current.pushScreen(HeroOverviewScreen(unit)) })
     }
-    /*
-        if (unit.isFortified() && !showingAdditionalActions) {
-            actionList += UnitAction(
-                type = if (unit.isActionUntilHealed())
-                    UnitActionType.FortifyUntilHealed else
-                    UnitActionType.HeroView,
-                isCurrentAction = true,
-                title = "${"View Hero pushed".tr()} ${unit.getFortificationTurns() * 20}%"
-            )
-            return
-        }
 
-        if (!unit.canFortify()) return
-        if (unit.currentMovement == 0f) return
-
-        val isFortified = unit.isFortified()
-        val isDamaged = unit.health < 100
-
-        if (isDamaged && !showingAdditionalActions && unit.rankTileForHealing(unit.currentTile) != 0)
-            actionList += UnitAction(UnitActionType.FortifyUntilHealed,
-                action = { unit.fortifyUntilHealed() })
-        else if (isDamaged || !showingAdditionalActions)
-            actionList += UnitAction(UnitActionType.HeroView,
-                action = { unit.heroView() })
+    private fun addRunBattleActions( unit: MapUnit, actionList: ArrayList<UnitAction>) {
+        actionList += UnitAction(UnitActionType.RunBattle,
+            //        action = { unit.heroView() })
+            action = { UncivGame.Current.pushScreen(BattleScreen(unit)) })
     }
-*/
 
     private fun addSleepActions(actionList: ArrayList<UnitAction>, unit: MapUnit, showingAdditionalActions: Boolean) {
         if (unit.isFortified() || unit.canFortify() || unit.currentMovement == 0f) return
