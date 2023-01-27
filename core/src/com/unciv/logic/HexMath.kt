@@ -139,8 +139,10 @@ object HexMath {
         // 11 hours instead of 10 hours
         //val xVector = getVectorByClockHour(10).scl(sqrt(3.0).toFloat())
         //val yVector = getVectorByClockHour(2).scl(sqrt(3.0).toFloat())
-        val xVector = getVectorByClockHour(11).scl(sqrt(3.0).toFloat())
-        val yVector = getVectorByClockHour(1).scl(sqrt(3.0).toFloat())
+    //    val xVector = getVectorByClockHour(11).scl(sqrt(3.0).toFloat())
+    //    val yVector = getVectorByClockHour(1).scl(sqrt(3.0).toFloat())
+        val xVector = getVectorByClockHour(9).scl(sqrt(3.0).toFloat())
+        val yVector = getVectorByClockHour(11).scl(sqrt(3.0).toFloat())
 
         return xVector.scl(hexCoord.x).add(yVector.scl(hexCoord.y))
     }
@@ -151,8 +153,10 @@ object HexMath {
         // change hours again
         //val D = getVectorByClockHour(10).scl(sqrt(3.0).toFloat())
         //val A = getVectorByClockHour(2).scl(sqrt(3.0).toFloat())
-        val D = getVectorByClockHour(11).scl(sqrt(3.0).toFloat())
-        val A = getVectorByClockHour(1).scl(sqrt(3.0).toFloat())
+    //    val D = getVectorByClockHour(11).scl(sqrt(3.0).toFloat())
+    //    val A = getVectorByClockHour(1).scl(sqrt(3.0).toFloat())
+        val D = getVectorByClockHour(9).scl(sqrt(3.0).toFloat())
+        val A = getVectorByClockHour(11).scl(sqrt(3.0).toFloat())
         val den = D.x * A.y - D.y * A.x
         val x = (worldCoord.x * A.y - worldCoord.y * A.x) / den
         val y = (worldCoord.y * D.x - worldCoord.x * D.y) / den
@@ -170,7 +174,7 @@ object HexMath {
         //return Vector2(cubicCoord.y, -cubicCoord.z)
         return Vector2(cubicCoord.y, cubicCoord.z)
     }
-
+/// TODO: EvenQ is OddR in fact. We need to rename
     fun cubic2EvenQCoords(cubicCoord: Vector3): Vector2 {
         //return Vector2(cubicCoord.x, cubicCoord.z + (cubicCoord.x + (cubicCoord.x.toInt() and 1)) / 2)
         return Vector2(cubicCoord.x + (cubicCoord.z + (cubicCoord.z.toInt() and 1)) / 2, cubicCoord.z)
