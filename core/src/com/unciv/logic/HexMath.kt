@@ -41,14 +41,16 @@ object HexMath {
         // x+y==s+q equals to latitude. So there's nothing to change )
         // Latitude increases upward
         // LatLong coordinates are double coordinates.
-        return vector.x + vector.y
+
+        /// x axis goes to the left. y axis goes to left-up.
+        return vector.y
         //return vector.x + vector.y
     }
 
     fun getLongitude(vector: Vector2): Float {
         // Good. That formula is true for pointy.
         // Longitude increases leftward
-        return vector.x - vector.y
+        return vector.x - (vector.y - (vector.y % 2)) / 2
         //return vector.x - vector.y
     }
 
