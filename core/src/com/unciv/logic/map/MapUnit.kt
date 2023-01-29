@@ -14,6 +14,7 @@ import com.unciv.logic.city.RejectionReasons
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.LocationAction
 import com.unciv.logic.civilization.NotificationIcon
+import com.unciv.logic.hero.Troop
 import com.unciv.models.UnitActionType
 import com.unciv.models.helpers.UnitMovementMemoryType
 import com.unciv.models.ruleset.Ruleset
@@ -84,6 +85,9 @@ class MapUnit : IsPartOfGameInfoSerialization {
     var roughTerrainPenalty = false
         private set
 
+    /// TODO: Change into list of troops
+    @Transient
+    var exampleTroop : Troop = Troop(10, "Warrior")
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
      *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */
     @Transient

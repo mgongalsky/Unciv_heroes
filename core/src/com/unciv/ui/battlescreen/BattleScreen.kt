@@ -11,6 +11,7 @@ import com.unciv.Constants
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
+import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.map.TileGroupMap
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
 import com.unciv.ui.tilegroups.TileGroup
@@ -120,6 +121,10 @@ class BattleScreen(
         //stage.addActor(pageObject)
 
         addTiles()
+ //       val pixelUnitImages = ImageGetter.getLayeredImageColored(newImageLocation, null, nation.getInnerColor(), nation.getOuterColor())
+ //       for (pixelUnitImage in pixelUnitImages) {
+  //          pixelMilitaryUnitGroup.addActor(pixelUnitImage)
+
         stage.addActor(tabbedPager)
 
         val index = tabbedPager.addPage(
@@ -145,7 +150,7 @@ class BattleScreen(
 
         tileGroupMap = TileGroupMap(
             daTileGroups)
-        val actor = tileGroupMap
+    //    val actor = tileGroupMap
    //     val mirrorTileGroups = tileGroupMap.getMirrorTiles()
 
         for (tileGroup in daTileGroups) {
