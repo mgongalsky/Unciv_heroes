@@ -6,7 +6,9 @@ import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.unciv.Constants
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
@@ -21,6 +23,7 @@ import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
+import com.unciv.ui.utils.UncivTextField
 import com.unciv.ui.utils.extensions.onClick
 
 // Now it's just copied from HeroOverviewScreen
@@ -121,6 +124,19 @@ class BattleScreen(
         //stage.addActor(pageObject)
 
         addTiles()
+       // val img = ImageGetter.getImage("Warrior")
+        val pixelUnitImages = ImageGetter.getLayeredImageColored("TileSets/FantasyHex/Units/Warrior-1")
+        //     stage.addActor(img)
+        for (pixelUnitImage in pixelUnitImages) {
+            pixelUnitImage.setPosition(0f,0f)
+            stage.addActor(pixelUnitImage)
+            //     setHexagonImageSize(pixelUnitImage)// Treat this as A TILE, which gets overlayed on the base tile.
+        }
+
+
+        //   val acTroop: Actor = Actor()
+     //   acTroop.
+     //   TileSets/AbsoluteUnits/Units/Warrior
  //       val pixelUnitImages = ImageGetter.getLayeredImageColored(newImageLocation, null, nation.getInnerColor(), nation.getOuterColor())
  //       for (pixelUnitImage in pixelUnitImages) {
   //          pixelMilitaryUnitGroup.addActor(pixelUnitImage)
@@ -158,8 +174,37 @@ class BattleScreen(
        //         val mirrorTileGroupLeft = mirrorTileGroups[tileGroup.tileInfo]!!.first
          //       val mirrorTileGroupRight = mirrorTileGroups[tileGroup.tileInfo]!!.second
 
+                val unitTroopString = "TileSets/AbsoluteUnits/Units/" + viewingHero.exampleTroop.unitName
+                val amountText = Label(viewingHero.exampleTroop.amount.toString(), skin)
+                amountText.moveBy(tileGroup.width*0.8f, 1f)
+
+            //        val amountText = TextField(viewingHero.exampleTroop.amount.toString(), skinStrings)
+                val pixelUnitImages = ImageGetter.getLayeredImageColored(unitTroopString, null, viewingHero.civInfo.nation.getInnerColor(), viewingHero.civInfo.nation.getOuterColor())
+
+                for (pixelUnitImage in pixelUnitImages) {
+               //     var troopTileGroup = tileGroup.clone()
+                    pixelUnitImage.setScale(-2f, 2f)
+                    pixelUnitImage.moveBy(tileGroup.width*3.2f, -tileGroup.height*0.6f)
+                    pixelUnitImage.setOrigin(tileGroup.originX, tileGroup.originY)
+                //    pixelUnitImage.
+                //    troopTileGroup.resourceImage = pixelUnitImage
+
+            //     stage.addActor(img)
+                //  pixelUnitImage.setPosition(3f,3f)
+                 //   if(tileGroup.tileInfo.latitude==4f && tileGroup.tileInfo.longitude==3f)
+                   // {
+                    tileGroup.addActor(pixelUnitImage)
+                    tileGroup.addActor(amountText)
+                  //  }
+                //     setHexagonImageSize(pixelUnitImage)// Treat this as A TILE, which gets overlayed on the base tile.
+                }
+
                 allTileGroups.add(tileGroup)
-           //     allTileGroups.add(mirrorTileGroupLeft)
+
+
+
+
+            //     allTileGroups.add(mirrorTileGroupLeft)
              //   allTileGroups.add(mirrorTileGroupRight)
 
                 tileGroups[tileGroup.tileInfo] = listOf(tileGroup)

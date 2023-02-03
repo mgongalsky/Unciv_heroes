@@ -87,7 +87,7 @@ class MapUnit : IsPartOfGameInfoSerialization {
 
     /// TODO: Change into list of troops
     @Transient
-    var exampleTroop : Troop = Troop(10, "Warrior")
+    var exampleTroop : Troop = Troop(10, "Spearman")
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
      *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */
     @Transient
