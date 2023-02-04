@@ -10,6 +10,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.unciv.Constants
+import com.unciv.logic.HexMath.hex2EvenQCoords
+import com.unciv.logic.HexMath.hexTranspose
+import com.unciv.logic.hero.Troop
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
@@ -166,46 +169,13 @@ class BattleScreen(
 
         tileGroupMap = TileGroupMap(
             daTileGroups)
-    //    val actor = tileGroupMap
-   //     val mirrorTileGroups = tileGroupMap.getMirrorTiles()
 
-        for (tileGroup in daTileGroups) {
-     //       if (continuousScrollingX){
-       //         val mirrorTileGroupLeft = mirrorTileGroups[tileGroup.tileInfo]!!.first
-         //       val mirrorTileGroupRight = mirrorTileGroups[tileGroup.tileInfo]!!.second
-
-                val unitTroopString = "TileSets/AbsoluteUnits/Units/" + viewingHero.exampleTroop.unitName
-                val amountText = Label(viewingHero.exampleTroop.amount.toString(), skin)
-                amountText.moveBy(tileGroup.width*0.8f, 1f)
-
-            //        val amountText = TextField(viewingHero.exampleTroop.amount.toString(), skinStrings)
-                val pixelUnitImages = ImageGetter.getLayeredImageColored(unitTroopString, null, viewingHero.civInfo.nation.getInnerColor(), viewingHero.civInfo.nation.getOuterColor())
-
-                for (pixelUnitImage in pixelUnitImages) {
-               //     var troopTileGroup = tileGroup.clone()
-                    pixelUnitImage.setScale(-2f, 2f)
-                    pixelUnitImage.moveBy(tileGroup.width*3.2f, -tileGroup.height*0.6f)
-                    pixelUnitImage.setOrigin(tileGroup.originX, tileGroup.originY)
-                //    pixelUnitImage.
-                //    troopTileGroup.resourceImage = pixelUnitImage
-
-            //     stage.addActor(img)
-                //  pixelUnitImage.setPosition(3f,3f)
-                 //   if(tileGroup.tileInfo.latitude==4f && tileGroup.tileInfo.longitude==3f)
-                   // {
-                    tileGroup.addActor(pixelUnitImage)
-                    tileGroup.addActor(amountText)
-                  //  }
-                //     setHexagonImageSize(pixelUnitImage)// Treat this as A TILE, which gets overlayed on the base tile.
-                }
-
+        for (tileGroup in daTileGroups)
+        {
+                var exTroop = Troop(10, "Warrior")
+                exTroop.enterBattle(viewingHero.civInfo)
+                exTroop.drawOnBattle(tileGroup)
                 allTileGroups.add(tileGroup)
-
-
-
-
-            //     allTileGroups.add(mirrorTileGroupLeft)
-             //   allTileGroups.add(mirrorTileGroupRight)
 
                 tileGroups[tileGroup.tileInfo] = listOf(tileGroup)
         }

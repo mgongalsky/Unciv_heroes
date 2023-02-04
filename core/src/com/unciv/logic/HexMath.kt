@@ -206,6 +206,8 @@ object HexMath {
             cubic2EvenQCoords(hex2CubicCoords(hexCoord))
     }
 
+    fun hexTranspose(hexCoord: Vector2): Vector2 = Vector2(hexCoord.y,hexCoord.x)
+
     fun roundCubicCoords(cubicCoords: Vector3): Vector3 {
         var rx = round(cubicCoords.x)
         var ry = round(cubicCoords.y)
