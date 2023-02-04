@@ -1,18 +1,9 @@
 package com.unciv.ui.battlescreen
 
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
-import com.badlogic.gdx.scenes.scene2d.Stage
-import com.badlogic.gdx.scenes.scene2d.Touchable
-import com.badlogic.gdx.scenes.scene2d.ui.Label
-import com.badlogic.gdx.scenes.scene2d.ui.Table
-import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.unciv.Constants
 import com.unciv.logic.HexMath
-import com.unciv.logic.HexMath.hex2EvenQCoords
-import com.unciv.logic.HexMath.hexTranspose
 import com.unciv.logic.hero.Troop
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
@@ -22,13 +13,10 @@ import com.unciv.ui.map.TileGroupMap
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.tilegroups.TileSetStrings
-import com.unciv.ui.tilegroups.WorldTileGroup
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
-import com.unciv.ui.utils.UncivTextField
-import com.unciv.ui.utils.extensions.onClick
 
 // Now it's just copied from HeroOverviewScreen
 
@@ -171,9 +159,37 @@ class BattleScreen(
         tileGroupMap = TileGroupMap(
             daTileGroups)
 
-        var exTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == viewingHero.exampleTroop.position }
-        viewingHero.exampleTroop.enterBattle(viewingHero.civInfo)
-        viewingHero.exampleTroop.drawOnBattle(exTile)
+        var defenderTroops = mutableListOf<Troop>()
+        defenderTroops.clear()
+        defenderTroops.add(Troop(13,"Archer"))
+        defenderTroops.add(Troop(26,"Crossbowman"))
+        defenderTroops.add(Troop(15,"Pikeman"))
+        defenderTroops.add(Troop(11,"Musketman"))
+        defenderTroops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
+        defenderTroops.forEach { troop ->
+            //        var troopTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == troop.position }
+            var troopTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == troop.position }
+            //         var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
+            troop.drawOnBattle(troopTile, attacker = false)
+        }
+
+
+        viewingHero.troops.clear()
+        viewingHero.troops.add(Troop(10, "Warrior"))
+        viewingHero.troops.add(Troop(20, "Archer"))
+        viewingHero.troops.add(Troop(15, "Spearman"))
+        viewingHero.troops.add(Troop(5, "Swordsman"))
+        viewingHero.troops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo, index, attacker = true)}
+        viewingHero.troops.forEach { troop ->
+    //        var troopTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == troop.position }
+            var troopTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == troop.position }
+   //         var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
+            troop.drawOnBattle(troopTile, attacker = true)
+        }
+
+    //    var exTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == viewingHero.exampleTroop.position }
+    //    viewingHero.exampleTroop.enterBattle(viewingHero.civInfo)
+    //    viewingHero.exampleTroop.drawOnBattle(exTile)
 
         for (tileGroup in daTileGroups)
         {
