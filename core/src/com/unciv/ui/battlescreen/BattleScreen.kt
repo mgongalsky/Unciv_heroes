@@ -1,6 +1,7 @@
 package com.unciv.ui.battlescreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.unciv.Constants
 import com.unciv.logic.HexMath
@@ -18,6 +19,7 @@ import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
+import com.unciv.ui.utils.extensions.onClick
 
 // Now it's just copied from HeroOverviewScreen
 
@@ -142,14 +144,7 @@ class BattleScreen(
         )
         tabbedPager.selectPage(index)
 
-
-
-
-
-
         tabbedPager.setFillParent(true)
-
-
    }
     // Copied from EditorMapHolder
     internal fun addTiles(){
@@ -186,12 +181,26 @@ class BattleScreen(
     //    var exTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == viewingHero.exampleTroop.position }
     //    viewingHero.exampleTroop.enterBattle(viewingHero.civInfo)
     //    viewingHero.exampleTroop.drawOnBattle(exTile)
+/*
+        for (tileGroup in daTileGroups) {
+            tileGroup.onClick {
+                tileGroupOnClick(tileGroup, cityInfo)
+            }
+            tileGroups.add(tileGroup)
+        }
+
+
+ */
 
         for (tileGroup in daTileGroups)
         {
-                allTileGroups.add(tileGroup)
+            tileGroup.onClick {
+                tileGroupOnClick(tileGroup)
+            }
 
-                tileGroups[tileGroup.tileInfo] = listOf(tileGroup)
+            allTileGroups.add(tileGroup)
+
+            tileGroups[tileGroup.tileInfo] = listOf(tileGroup)
         }
 
         for (tileGroup in allTileGroups) {
@@ -207,6 +216,7 @@ class BattleScreen(
                 }
             }
 */
+
             tileGroup.showEntireMap = true
             tileGroup.update()
           //  if (touchable != Touchable.disabled)
@@ -221,6 +231,15 @@ class BattleScreen(
  //       scrollPercentX = .5f
    //     scrollPercentY = .5f
      //   updateVisualScroll()
+    }
+
+    private fun tileGroupOnClick(tileGroup: TileGroup)
+    {
+        viewingHero.troops.first().position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
+        for(troopImage in viewingHero.troops.first().troopImages)
+           tileGroup.addActor(troopImage)
+        tileGroup.update()
+
     }
 
     override fun resume() {

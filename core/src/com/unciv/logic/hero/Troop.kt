@@ -76,8 +76,8 @@ class Troop (
         //    if(hexCoords == position || true)// && tileGroup.tileInfo.longitude==3f)
          //   {
             tileGroup.addActor(troopImage)
-            tileGroup.addActor(amountText)
-            //tileGroup.addActor(hexLabel)
+            //tileGroup.addActor(amountText)
+            tileGroup.addActor(hexLabel)
           //  }
             //     setHexagonImageSize(troopImage)// Treat this as A TILE, which gets overlayed on the base tile.
         }
