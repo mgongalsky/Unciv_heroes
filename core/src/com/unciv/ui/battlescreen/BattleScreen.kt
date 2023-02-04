@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.unciv.Constants
 import com.unciv.logic.HexMath
+import com.unciv.logic.hero.Monster
 import com.unciv.logic.hero.Troop
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
@@ -159,14 +160,9 @@ class BattleScreen(
         tileGroupMap = TileGroupMap(
             daTileGroups)
 
-        var defenderTroops = mutableListOf<Troop>()
-        defenderTroops.clear()
-        defenderTroops.add(Troop(13,"Archer"))
-        defenderTroops.add(Troop(26,"Crossbowman"))
-        defenderTroops.add(Troop(15,"Pikeman"))
-        defenderTroops.add(Troop(11,"Musketman"))
-        defenderTroops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
-        defenderTroops.forEach { troop ->
+        var monster = Monster(40, "Crossbowman")
+        monster.troops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
+        monster.troops.forEach { troop ->
             //        var troopTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == troop.position }
             var troopTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == troop.position }
             //         var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
