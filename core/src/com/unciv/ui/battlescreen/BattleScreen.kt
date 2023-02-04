@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.unciv.Constants
+import com.unciv.logic.HexMath
 import com.unciv.logic.HexMath.hex2EvenQCoords
 import com.unciv.logic.HexMath.hexTranspose
 import com.unciv.logic.hero.Troop
@@ -170,11 +171,12 @@ class BattleScreen(
         tileGroupMap = TileGroupMap(
             daTileGroups)
 
+        var exTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == viewingHero.exampleTroop.position }
+        viewingHero.exampleTroop.enterBattle(viewingHero.civInfo)
+        viewingHero.exampleTroop.drawOnBattle(exTile)
+
         for (tileGroup in daTileGroups)
         {
-                var exTroop = Troop(10, "Warrior")
-                exTroop.enterBattle(viewingHero.civInfo)
-                exTroop.drawOnBattle(tileGroup)
                 allTileGroups.add(tileGroup)
 
                 tileGroups[tileGroup.tileInfo] = listOf(tileGroup)
