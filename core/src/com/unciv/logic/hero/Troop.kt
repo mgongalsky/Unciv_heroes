@@ -1,6 +1,8 @@
 package com.unciv.logic.hero
 
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.unciv.logic.HexMath
@@ -24,11 +26,12 @@ class Troop (
     var baseUnit: BaseUnit = ruleset.units[unitName]!!
 
     @Transient
+    var troopGroup = Group()
+
+    @Transient
     lateinit var troopImages: ArrayList<Image>
 
     lateinit var position: Vector2 //= Vector2(2f,2f)
-
-    lateinit var currTileGroup: TileGroup
     // type, amount, currentHealth, currentAmount, spells, ref2unittype, promotions
     init{
         baseUnit.ruleset = ruleset
@@ -50,7 +53,6 @@ class Troop (
 //        val amountText = Label(amount.toString(), BaseScreen.skin)
         troopImages = ImageGetter.getLayeredImageColored(unitTroopString, null, civInfo.nation.getInnerColor(), civInfo.nation.getOuterColor())
 
-
     }
 
     fun drawOnBattle(tileGroup: TileGroup, attacker: Boolean)
@@ -71,20 +73,21 @@ class Troop (
             /// TODO: Seems like latitude and longitude work incorrectly in main map
         //    if(hexCoords == position || true)// && tileGroup.tileInfo.longitude==3f)
          //   {
-            tileGroup.addActor(troopImage)
+            troopImage.touchable = Touchable.disabled
+            troopImage.name = "troopImage"
+            troopGroup.addActor(troopImage)
+          //  tileGroup.addActor(troopImage)
           //  }
             //     setHexagonImageSize(troopImage)// Treat this as A TILE, which gets overlayed on the base tile.
         }
         val hexCoords =HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
-        val hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString(),
+        var hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString(),
             BaseScreen.skin)
+        hexLabel.name = "hexCoordsLabel"
 
         //tileGroup.addActor(amountText)
-        tileGroup.addActor(hexLabel)
-        currTileGroup = tileGroup
-
-
-
+        troopGroup.addActor(hexLabel)
+        tileGroup.addActor(troopGroup)
 
 
     }

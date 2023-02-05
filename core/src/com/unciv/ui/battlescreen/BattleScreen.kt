@@ -3,6 +3,7 @@ package com.unciv.ui.battlescreen
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.unciv.Constants
 import com.unciv.logic.HexMath
@@ -236,24 +237,34 @@ class BattleScreen(
 
     private fun tileGroupOnClick(tileGroup: TileGroup)
     {
+        if(tileGroup.findActor<Image>("troopImage") != null)
+            return
         viewingHero.troops.first().position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
-        for(troopImage in viewingHero.troops.first().troopImages) {
-            tileGroup.addActor(troopImage)
-          //  viewingHero.troops.first().currTileGroup.removeActorAt(1, true)
-            //apply { this.removeActor(this.) }   removeActor(viewingHero.troops.first().c)
+        viewingHero.troops.first().apply {
+            this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(this.position.x.toString() + ", " + this.position.y.toString())
         }
 
-        val hexCoords = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
-        val hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString(),
-            skin)
-        //    if(hexCoords == position || true)// && tileGroup.tileInfo.longitude==3f)
-        //   {
-        //tileGroup.addActor(amountText)
-        tileGroup.addActor(hexLabel)
+            /*
+            for(troopImage in viewingHero.troops.first().troopImages) {
+                tileGroup.addActor(troopImage)
+              //  viewingHero.troops.first().currTileGroup.removeActorAt(1, true)
+                //apply { this.removeActor(this.) }   removeActor(viewingHero.troops.first().c)
+            }
+
+            val hexCoords = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
+            val hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString(),
+                skin)
+            //    if(hexCoords == position || true)// && tileGroup.tileInfo.longitude==3f)
+            //   {
+            //tileGroup.addActor(amountText)
+            tileGroup.addActor(hexLabel)
+
+
+             */
+        tileGroup.addActor(viewingHero.troops.first().troopGroup)
 
         tileGroup.update()
 
-        viewingHero.troops.first().currTileGroup=tileGroup
     }
 
     override fun resume() {
