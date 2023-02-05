@@ -21,15 +21,16 @@ class Troop (
     lateinit var civInfo: CivilizationInfo
 
     @Transient
-    lateinit var baseUnit: BaseUnit
+    var baseUnit: BaseUnit = ruleset.units[unitName]!!
 
     @Transient
     lateinit var troopImages: ArrayList<Image>
 
-    lateinit  var position: Vector2 //= Vector2(2f,2f)
+    lateinit var position: Vector2 //= Vector2(2f,2f)
+
+    lateinit var currTileGroup: TileGroup
     // type, amount, currentHealth, currentAmount, spells, ref2unittype, promotions
     init{
-        baseUnit = ruleset.units[unitName]!!
         baseUnit.ruleset = ruleset
         var currentHealth: Int = baseUnit.strength // TODO: Change to Health in Units.json
         var currentAmount = amount
@@ -44,7 +45,7 @@ class Troop (
         if(attacker)
             position = Vector2(-7f, 3f-number.toFloat()*2)
         else
-            position = Vector2(6f, 3f-number.toFloat()*2)
+            position = Vector2(4f, 3f-number.toFloat()*2)
 
 //        val amountText = Label(amount.toString(), BaseScreen.skin)
         troopImages = ImageGetter.getLayeredImageColored(unitTroopString, null, civInfo.nation.getInnerColor(), civInfo.nation.getOuterColor())
@@ -68,19 +69,19 @@ class Troop (
             }
             troopImage.setOrigin(tileGroup.originX, tileGroup.originY)
             /// TODO: Seems like latitude and longitude work incorrectly in main map
-            val hexCoords =
-                    HexMath.hexTranspose(HexMath.hex2EvenQCoords(tileGroup.tileInfo.position))
-            val hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString(),
-                BaseScreen.skin
-            )
         //    if(hexCoords == position || true)// && tileGroup.tileInfo.longitude==3f)
          //   {
             tileGroup.addActor(troopImage)
-            //tileGroup.addActor(amountText)
-            tileGroup.addActor(hexLabel)
           //  }
             //     setHexagonImageSize(troopImage)// Treat this as A TILE, which gets overlayed on the base tile.
         }
+        val hexCoords =HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
+        val hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString(),
+            BaseScreen.skin)
+
+        //tileGroup.addActor(amountText)
+        tileGroup.addActor(hexLabel)
+        currTileGroup = tileGroup
 
 
 
