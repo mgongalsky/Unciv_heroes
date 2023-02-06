@@ -3,6 +3,7 @@ package com.unciv.ui.map
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.unciv.logic.HexMath
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
@@ -29,10 +30,10 @@ class TileGroupMap<T: TileGroup>(
         /** Vertical size of a hex in world coordinates, or the distance between the centers of any two opposing edges
          *  (the hex is oriented so it has corners to the left and right of the center and its upper and lower bounds are horizontal edges) */
         //    const val groupSize = 50f
-        const val groupSize = 50f * 1.1547005f
+        const val groupSize = 31f*1.5f//50f * 1.1547005f
         /** Length of the diagonal of a hex, or distance between two opposing corners */
     //    const val groupSizeDiagonal = groupSize * 1.1547005f  // groupSize * sqrt(4/3)
-        const val groupSizeDiagonal = 50f //groupSize / 1.1547005f  // groupSize * sqrt(4/3)
+        const val groupSizeDiagonal = 31f //50f //groupSize / 1.1547005f  // groupSize * sqrt(4/3)
         /** Horizontal displacement per hex, meaning the increase in overall map size (in world coordinates) when adding a column.
          *  On the hex, this can be visualized as the horizontal distance between the leftmost corner and the
          *  line connecting the two corners at 2 and 4 o'clock. */
@@ -72,8 +73,8 @@ class TileGroupMap<T: TileGroup>(
                 HexMath.hex2WorldCoords(tileGroup.tileInfo.position)
             }
 
-            tileGroup.setPosition(positionalVector.x * 0.8f * groupSize,
-                    positionalVector.y * 0.8f * groupSize)
+            tileGroup.setPosition(positionalVector.x * groupSize,
+                positionalVector.y * groupSize)
 
             topX =
                 if (worldWrap)
@@ -100,12 +101,12 @@ class TileGroupMap<T: TileGroup>(
             for (mirrorTiles in mirrorTileGroups.values){
                 val positionalVector = HexMath.hex2WorldCoords(mirrorTiles.first.tileInfo.position)
 
-                mirrorTiles.first.setPosition(positionalVector.x * 0.8f * groupSize,
-                    positionalVector.y * 0.8f * groupSize)
+                mirrorTiles.first.setPosition(positionalVector.x * groupSize,
+                    positionalVector.y * groupSize)
                 mirrorTiles.first.moveBy(-bottomX - bottomX * 2, -bottomY )
 
-                mirrorTiles.second.setPosition(positionalVector.x * 0.8f * groupSize,
-                    positionalVector.y * 0.8f * groupSize)
+                mirrorTiles.second.setPosition(positionalVector.x * groupSize,
+                    positionalVector.y * groupSize)
                 mirrorTiles.second.moveBy(-bottomX + bottomX * 2, -bottomY)
             }
         }
@@ -124,7 +125,7 @@ class TileGroupMap<T: TileGroup>(
         //    for (group in tileGroups.sortedByDescending { it.tileInfo.position.x + it.tileInfo.position.y }) {
             for (group in tileGroups.sortedByDescending {it.tileInfo.position.y }) {
             // now, we steal the subgroups from all the tilegroups, that's how we form layers!
-            baseLayers.add(group.baseLayerGroup.apply { setPosition(group.x,group.y) })
+            baseLayers.add(group.baseLayerGroup.apply { touchable = Touchable.childrenOnly; setPosition(group.x,group.y) })
             featureLayers.add(group.terrainFeatureLayerGroup.apply { setPosition(group.x,group.y) })
             borderLayers.add(group.borderLayerGroup.apply { setPosition(group.x,group.y) })
             miscLayers.add(group.miscLayerGroup.apply { setPosition(group.x,group.y) })
@@ -137,7 +138,7 @@ class TileGroupMap<T: TileGroup>(
 
             if (worldWrap) {
                 for (mirrorTile in mirrorTileGroups[group.tileInfo]!!.toList()) {
-                    baseLayers.add(mirrorTile.baseLayerGroup.apply { setPosition(mirrorTile.x,mirrorTile.y) })
+                    baseLayers.add(mirrorTile.baseLayerGroup.apply { touchable = Touchable.childrenOnly; setPosition(mirrorTile.x,mirrorTile.y) })
                     featureLayers.add(mirrorTile.terrainFeatureLayerGroup.apply { setPosition(mirrorTile.x,mirrorTile.y) })
                     borderLayers.add(mirrorTile.borderLayerGroup.apply { setPosition(mirrorTile.x,mirrorTile.y) })
                     miscLayers.add(mirrorTile.miscLayerGroup.apply { setPosition(mirrorTile.x,mirrorTile.y) })
@@ -180,7 +181,7 @@ class TileGroupMap<T: TileGroup>(
      * Returns the positional coordinates of the TileGroupMap center.
      */
     fun getPositionalVector(stageCoords: Vector2): Vector2 {
-        val trueGroupSize = 0.8f * groupSize
+        val trueGroupSize = groupSize
         return Vector2(bottomX, bottomY)
                 .add(stageCoords)
                 .sub(groupSize / 2f, groupSize / 2f)

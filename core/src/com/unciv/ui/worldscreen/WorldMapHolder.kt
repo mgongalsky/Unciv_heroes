@@ -17,6 +17,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.UncivGame
+import com.unciv.logic.HexMath
 import com.unciv.logic.automation.unit.BattleHelper
 import com.unciv.logic.automation.unit.UnitAutomation
 import com.unciv.logic.battle.Battle

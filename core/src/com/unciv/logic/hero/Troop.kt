@@ -48,7 +48,7 @@ class Troop (
         if(attacker)
             position = Vector2(-7f, 3f-number.toFloat()*2)
         else
-            position = Vector2(4f, 3f-number.toFloat()*2)
+            position = Vector2(6f, 3f-number.toFloat()*2)
 
 //        val amountText = Label(amount.toString(), BaseScreen.skin)
         troopImages = ImageGetter.getLayeredImageColored(unitTroopString, null, civInfo.nation.getInnerColor(), civInfo.nation.getOuterColor())
@@ -58,16 +58,16 @@ class Troop (
     fun drawOnBattle(tileGroup: TileGroup, attacker: Boolean)
     {
         val amountText = Label(amount.toString(), BaseScreen.skin)
-        amountText.moveBy(tileGroup.width*0.8f, 0f)
+        amountText.moveBy(tileGroup.width*0.5f, 0f)
 
         for (troopImage in troopImages) {
             if(attacker) {
                 troopImage.setScale(-2f, 2f)
-                troopImage.moveBy(tileGroup.width*3.2f, -tileGroup.height*0.6f)
+                troopImage.moveBy(tileGroup.width*2.2f, -tileGroup.height*0.3f)
             }
             else {
                 troopImage.setScale(2f, 2f)
-                troopImage.moveBy(tileGroup.width*(-2.2f), -tileGroup.height*0.6f)
+                troopImage.moveBy(tileGroup.width*(-1.2f), -tileGroup.height*0.3f)
             }
             troopImage.setOrigin(tileGroup.originX, tileGroup.originY)
             /// TODO: Seems like latitude and longitude work incorrectly in main map
@@ -84,9 +84,10 @@ class Troop (
         var hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString(),
             BaseScreen.skin)
         hexLabel.name = "hexCoordsLabel"
-
-        //tileGroup.addActor(amountText)
-        troopGroup.addActor(hexLabel)
+        hexLabel.touchable = Touchable.disabled
+        amountText.touchable = Touchable.disabled
+        troopGroup.addActor(amountText)
+        //troopGroup.addActor(hexLabel)
         tileGroup.addActor(troopGroup)
 
 

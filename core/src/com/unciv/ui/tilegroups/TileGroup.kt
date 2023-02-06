@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.utils.Align
+import com.badlogic.gdx.utils.Null
 import com.unciv.UncivGame
 import com.unciv.logic.HexMath
 import com.unciv.logic.civilization.CivilizationInfo
@@ -29,7 +30,7 @@ import kotlin.random.Random
 open class TileGroup(
     var tileInfo: TileInfo,
     val tileSetStrings: TileSetStrings,
-    groupSize: Float = 54f
+    groupSize: Float = 54f*1.5f
     // groupSize: Float = 54f
 ) : ActionlessGroupWithHit() {
     /*
@@ -46,26 +47,58 @@ open class TileGroup(
 
     /** Cache simple but frequent calculations. */
     // Looks like it should be * 2f for pointy hexes
-    private val hexagonImageWidth = groupSize * 1.5f
+    private val hexagonImageWidth = groupSize //* 1.5f
     //private val hexagonImageWidth = groupSize * 2f
     /** Cache simple but frequent calculations. */
     //private val hexagonImageOrigin = Pair(hexagonImageWidth / 2f, sqrt((hexagonImageWidth / 2f).pow(2) - (hexagonImageWidth / 4f).pow(2)))
     private val hexagonImageOrigin = Pair(hexagonImageWidth / 2f, hexagonImageWidth / sqrt (3f))
+//    private val hexagonImageOrigin = Pair(hexagonImageWidth / sqrt (3f), hexagonImageWidth / 2f)
     // Pair, not Vector2, for immutability. Second number is triangle height for hex center.
     /** Cache simple but frequent calculations. */
-    private val hexagonImagePosition = Pair(-hexagonImageOrigin.first / 3f, -hexagonImageOrigin.second / 4f)
+  //  private val hexagonImagePosition = Pair(-hexagonImageOrigin.first / 3f, -hexagonImageOrigin.second / 4f)
+    private val hexagonImagePosition = Pair(0f, 0f)
     // Honestly, I got these numbers empirically by printing `.x` and `.y` after `.center()`, and I'm not totally
     // clear on the stack of transformations that makes them work. But they are still exact ratios, AFAICT.
 
+    override fun hit(x: Float, y: Float, touchable: Boolean): Actor? {
+        if (touchable && this.touchable != Touchable.enabled) return null
+        val x0 = width/2
+        val y0 = x0 * 0.577f // tangents of 30 degrees
+        // y + (y0/x0)*x -y0 = 0
+        // TODO: add top lines also
+        return if ( x >= 0 &&
+                 x < width &&
+                //    y >= 0 &&
+                // y < width * 1.1547f &&
+                 y + x*0.577f - y0 > 0 &&
+                -y + x*0.577f - y0 < 0 &&
+                -y + x*0.577f - y0 + width * 1.1547f > 0 &&
+                 y + x*0.577f - y0 - width * 1.1547f < 0
+
+                ) this else null
+        //return super.hit(x, y, touchable)
+    }
+
+
     // For recognizing the group in the profiler
-    class BaseLayerGroupClass(groupSize: Float) : ActionlessGroup(groupSize)
-    val baseLayerGroup = BaseLayerGroupClass(groupSize)
+    class BaseLayerGroupClass(groupSize: Float) : ActionlessGroup(groupSize) {
+        init {
+            touchable = Touchable.childrenOnly
+        }
+    }
+
+    var baseLayerGroup = BaseLayerGroupClass(groupSize)
 
     val tileBaseImages: ArrayList<Image> = ArrayList()
     /** List of image locations comprising the layers so we don't need to change images all the time */
     private var tileImageIdentifiers = listOf<String>()
 
-    class TerrainFeatureLayerGroupClass(groupSize: Float) : ActionlessGroup(groupSize)
+    class TerrainFeatureLayerGroupClass(groupSize: Float) : ActionlessGroup(groupSize) {
+        init {
+            touchable = Touchable.disabled
+        }
+    }
+
     val terrainFeatureLayerGroup = TerrainFeatureLayerGroupClass(groupSize)
 
     private var pixelMilitaryUnitImageLocation = ""
@@ -185,6 +218,7 @@ open class TileGroup(
 
     init {
         this.setSize(groupSize, groupSize)
+        baseLayerGroup.touchable = Touchable.childrenOnly
         this.addActor(baseLayerGroup)
         this.addActor(terrainFeatureLayerGroup)
         this.addActor(borderLayerGroup)
@@ -235,9 +269,11 @@ open class TileGroup(
     private fun getTileBaseImageLocations(viewingCiv: CivilizationInfo?): List<String> {
         if (viewingCiv == null && !showEntireMap) return tileSetStrings.hexagonList
 
-        val baseHexagon = if (tileSetStrings.tileSetConfig.useColorAsBaseTerrain)
-            listOf(tileSetStrings.hexagon)
-        else listOf()
+        val baseHexagon = listOf(tileSetStrings.hexagon)
+
+//        val baseHexagon = if (tileSetStrings.tileSetConfig.useColorAsBaseTerrain)
+  //          listOf(tileSetStrings.hexagon)
+    //    else listOf()
 
         if (tileInfo.naturalWonder != null)
             return if (tileSetStrings.tileSetConfig.useSummaryImages) baseHexagon + tileSetStrings.naturalWonder
@@ -326,7 +362,14 @@ open class TileGroup(
             }
             val finalLocation = existingImages.random(Random(tileInfo.position.hashCode() + locationToCheck.hashCode()))
             val image = ImageGetter.getImage(finalLocation)
+            if(baseLocation == "TileSets/FantasyHex/Hexagon") {
+                image.touchable = Touchable.enabled
+                image.isVisible = false
+            }
+            else
+                image.touchable = Touchable.disabled
 
+        //    image.setBounds()
             tileBaseImages.add(image)
             baseLayerGroup.addActor(image)
 
@@ -337,6 +380,7 @@ open class TileGroup(
                 setHexagonImageSize(image)
             }
         }
+        baseLayerGroup.touchable = Touchable.childrenOnly
     }
 
     fun showMilitaryUnit(viewingCiv: CivilizationInfo) = showEntireMap
@@ -356,6 +400,7 @@ open class TileGroup(
         @Suppress("BooleanLiteralArgument")  // readable enough as is
         fun clearUnexploredTiles() {
             baseLayerGroup.isVisible = false
+          //  baseLayerGroup.isVisible = true
             updateRivers(false,false, false)
 
             updatePixelMilitaryUnit(false)
@@ -682,6 +727,7 @@ open class TileGroup(
             if (!ImageGetter.imageExists(imageName)) return null // Old "Default" tileset gets no rivers.
             val newImage = ImageGetter.getImage(imageName)
             baseLayerGroup.addActor(newImage)
+            baseLayerGroup.touchable = Touchable.childrenOnly
             setHexagonImageSize(newImage)
             return newImage
         }

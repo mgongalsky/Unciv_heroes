@@ -2,6 +2,7 @@ package com.unciv.ui.tilegroups
 
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
+import java.lang.Math.sqrt
 
 /** A lot of the render time was spent on snapshot arrays of the TileGroupMap's groups, in the act() function.
  * These classes are to avoid the overhead of useless act() calls. */
@@ -18,7 +19,7 @@ open class ActionlessGroup() : ActionlessGroupWithHit() {
     constructor(groupSize: Float) : this() {
         isTransform = false
         @Suppress("LeakingThis")  // works by setting fields only
-        setSize(groupSize, groupSize)
+        setSize(groupSize, groupSize) // I don't know if this is right
     }
     override fun hit(x: Float, y: Float, touchable: Boolean): Actor? = null
 }
