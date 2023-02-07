@@ -26,6 +26,7 @@ import com.unciv.ui.utils.extensions.onClick
 // Now it's just copied from HeroOverviewScreen
 
 class BattleScreen(
+    private var manager: BattleManager,
     private var viewingHero: MapUnit,
     defaultPage: String = "",
     selection: String = ""
@@ -61,34 +62,6 @@ class BattleScreen(
         val iconSize = Constants.defaultFontSize.toFloat()
         //battleField[1,1].
         val terraLayer = ArrayList<Group>()
-        //for (group in tileGroups.sortedByDescending { it.tileInfo.position.x + it.tileInfo.position.y }) {
-        //    unitLayers.add(group.unitLayerGroup.apply { setPosition(group.x,group.y) })
-/*
-        //battleField.tileMatrix  // ArrayList<TileInfo>
-        for (tileArray in battleField.tileMatrix)
-        {
-            for (tile in tileArray)
-            {
-                //val tileGroup : TileGroup()
-                //tileGroup = Tile
-                //tileGroup.tileInfo = tile
-            }
-            tileGroup.tileInfo = tile
-            val newGroup : Group
-            newGroup = Group()
-            newGroup.x = 1f
-            newGroup.y = 1f
-           // newGroup.
-            terraLayer.add(newGroup)
-          //  tile.
-
-        }
-
- */
-        //for (group in tileGroups) addActor(group) // The above layers are for the visual layers, this is for the clickability of the tile
-
-        //
-        //    tileGroupMap = TileGroupMap()
         globalShortcuts.add(KeyCharAndCode.BACK) { game.popScreen() }
 
         tabbedPager = TabbedPager(
@@ -97,46 +70,9 @@ class BattleScreen(
             separatorColor = Color.WHITE)
 
 
-        tabbedPager.addClosePage { game.popScreen() }
-/*
-        val pageObject = Table(BaseScreen.skin)
-        pageObject.pad(10f,0f,10f,0f)
-        pageObject.add("Battle!").size(200f)//.padLeft(8f)
-        pageObject.add("Hero Type").size(140f)//.padLeft(8f)
-        pageObject.add("Attack Skill").size(140f)//.padLeft(8f)
-        pageObject.add("Strength").size(140f)//.padLeft(8f)
-        pageObject.add("Health").size(140f)//.padLeft(8f)
-        pageObject.add("We are on:").size(140f)//.padLeft(8f)
-
-        pageObject.row()
-        pageObject.add("Glory to heroes!").size(200f)//.padLeft(8f)
-        pageObject.add(viewingHero.displayName()).size(140f)//.padRight(8f)
-        pageObject.add(viewingHero.baseUnit.attackSkill.toString()).size(140f)//.padRight(8f)
-        pageObject.add(viewingHero.baseUnit.strength.toString()).size(140f)//.padRight(8f)
-        pageObject.add(viewingHero.health.toString()).size(140f)//.padRight(8f)
-        pageObject.add(viewingHero.currentTile.baseTerrain).size(140f)
-
-
- */
-        //stage.addActor(pageObject)
+        tabbedPager.addClosePage { manager.finishBattle(); game.popScreen() }
 
         addTiles()
-       // val img = ImageGetter.getImage("Warrior")
-        val pixelUnitImages = ImageGetter.getLayeredImageColored("TileSets/FantasyHex/Units/Warrior-1")
-        //     stage.addActor(img)
-        for (pixelUnitImage in pixelUnitImages) {
-            pixelUnitImage.setPosition(0f,0f)
-            stage.addActor(pixelUnitImage)
-            //     setHexagonImageSize(pixelUnitImage)// Treat this as A TILE, which gets overlayed on the base tile.
-        }
-
-
-        //   val acTroop: Actor = Actor()
-     //   acTroop.
-     //   TileSets/AbsoluteUnits/Units/Warrior
- //       val pixelUnitImages = ImageGetter.getLayeredImageColored(newImageLocation, null, nation.getInnerColor(), nation.getOuterColor())
- //       for (pixelUnitImage in pixelUnitImages) {
-  //          pixelMilitaryUnitGroup.addActor(pixelUnitImage)
 
         stage.addActor(tabbedPager)
 
@@ -174,25 +110,9 @@ class BattleScreen(
         viewingHero.troops.add(Troop(5, "Swordsman"))
         viewingHero.troops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo, index, attacker = true)}
         viewingHero.troops.forEach { troop ->
-    //        var troopTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == troop.position }
             var troopTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == troop.position }
-   //         var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
             troop.drawOnBattle(troopTile, attacker = true)
         }
-
-    //    var exTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == viewingHero.exampleTroop.position }
-    //    viewingHero.exampleTroop.enterBattle(viewingHero.civInfo)
-    //    viewingHero.exampleTroop.drawOnBattle(exTile)
-/*
-        for (tileGroup in daTileGroups) {
-            tileGroup.onClick {
-                tileGroupOnClick(tileGroup, cityInfo)
-            }
-            tileGroups.add(tileGroup)
-        }
-
-
- */
 
         for (tileGroup in daTileGroups)
         {
@@ -221,18 +141,11 @@ class BattleScreen(
 
             tileGroup.showEntireMap = true
             tileGroup.update()
-          //  if (touchable != Touchable.disabled)
-            //    tileGroup.onClick { onTileClick(tileGroup.tileInfo) }
         }
 
         tileGroupMap.setSize(stage.width, stage.height)
         stage.addActor(tileGroupMap)
 
-//        tileGroupMap.layout()
-
- //       scrollPercentX = .5f
-   //     scrollPercentY = .5f
-     //   updateVisualScroll()
     }
 
     private fun tileGroupOnClick(tileGroup: TileGroup)
@@ -244,23 +157,6 @@ class BattleScreen(
             this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(this.position.x.toString() + ", " + this.position.y.toString())
         }
 
-            /*
-            for(troopImage in viewingHero.troops.first().troopImages) {
-                tileGroup.addActor(troopImage)
-              //  viewingHero.troops.first().currTileGroup.removeActorAt(1, true)
-                //apply { this.removeActor(this.) }   removeActor(viewingHero.troops.first().c)
-            }
-
-            val hexCoords = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
-            val hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString(),
-                skin)
-            //    if(hexCoords == position || true)// && tileGroup.tileInfo.longitude==3f)
-            //   {
-            //tileGroup.addActor(amountText)
-            tileGroup.addActor(hexLabel)
-
-
-             */
         tileGroup.addActor(viewingHero.troops.first().troopGroup)
 
         tileGroup.update()
@@ -272,7 +168,7 @@ class BattleScreen(
     }
 
     override fun recreate(): BaseScreen {
-        return BattleScreen(viewingHero, game.settings.lastOverviewPage)
+        return BattleScreen(manager, viewingHero, game.settings.lastOverviewPage)
     }
 
     fun resizePage(tab: EmpireOverviewTab) {

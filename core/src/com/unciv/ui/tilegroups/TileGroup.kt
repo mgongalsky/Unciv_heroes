@@ -65,7 +65,6 @@ open class TileGroup(
         val x0 = width/2
         val y0 = x0 * 0.577f // tangents of 30 degrees
         // y + (y0/x0)*x -y0 = 0
-        // TODO: add top lines also
         return if ( x >= 0 &&
                  x < width &&
                 //    y >= 0 &&
