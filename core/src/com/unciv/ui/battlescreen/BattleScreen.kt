@@ -8,8 +8,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.unciv.Constants
 import com.unciv.logic.HexMath
-import com.unciv.logic.hero.Monster
-import com.unciv.logic.hero.Troop
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
@@ -23,7 +21,6 @@ import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
 import com.unciv.ui.utils.extensions.onClick
-import kotlin.reflect.jvm.internal.impl.incremental.components.Position
 
 // Now it's just copied from HeroOverviewScreen
 
@@ -113,8 +110,14 @@ class BattleScreen(
             pointerTile.addActorBefore(pointerTile.findActor("troopGroup"), pointerImage)
        //     pointerTile.addActor(pointerImage)
         }
+        for (tileGroup in daTileGroups)
+            tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
+        // TODO: Principally it works, but we need to fix coordinates conversions and distances
+        var achievableHexes = daTileGroups.filter { HexMath.getDistance(it.tileInfo.position,HexMath.evenQ2HexCoords(pointerPosition)) < 5 }
+        for (achievableHex in achievableHexes)
+            achievableHex.baseLayerGroup.color = Color(1f,1f,1f,0.5f)
 
-
+       // pointerTile.baseLayerGroup.color
     }
     // Copied from EditorMapHolder
     internal fun addTiles(){
@@ -127,7 +130,7 @@ class BattleScreen(
 
         //   var monster = Monster(40, "Crossbowman")
      //   monster.troops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
-        manager.defendingTroops!!.forEach { troop ->
+        manager.defendingTroops.forEach { troop ->
             //        var troopTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == troop.position }
             var troopTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == troop.position }
             //         var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
@@ -149,7 +152,8 @@ class BattleScreen(
             tileGroup.onClick {
                 tileGroupOnClick(tileGroup)
             }
-
+         //   tileGroup.name = "terrainHex"
+         //   tileGroup.color = Color(1.0f, 1.0f, 1.0f, 0.3f)
             allTileGroups.add(tileGroup)
 
             tileGroups[tileGroup.tileInfo] = listOf(tileGroup)
