@@ -1,10 +1,12 @@
 package com.unciv.ui.battlescreen
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
 import com.unciv.UncivGame
 import com.unciv.logic.hero.Monster
 import com.unciv.logic.hero.Troop
 import com.unciv.logic.map.MapUnit
+import com.unciv.logic.map.TileInfo
 
 class BattleManager()
  {
@@ -46,6 +48,16 @@ class BattleManager()
 
          screen = BattleScreen(this, attackingHero0)
          UncivGame.Current.pushScreen(screen!!)
+/*
+         fun highlightTile(tile: TileInfo, color: Color = Color.WHITE) {
+             for (group in mapHolder.tileGroups[tile] ?: return) {
+                 group.showHighlight(color)
+                 highlightedTileGroups.add(group)
+             }
+         }
+
+
+ */
      }
 
      fun moveCurrentTroop(position: Vector2)

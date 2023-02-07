@@ -64,18 +64,15 @@ open class TileGroup(
         if (touchable && this.touchable != Touchable.enabled) return null
         val x0 = width/2
         val y0 = x0 * 0.577f // tangents of 30 degrees
-        // y + (y0/x0)*x -y0 = 0
+        // The following equation is used (and similar): y + (y0/x0)*x -y0 = 0
         return if ( x >= 0 &&
                  x < width &&
-                //    y >= 0 &&
-                // y < width * 1.1547f &&
                  y + x*0.577f - y0 > 0 &&
                 -y + x*0.577f - y0 < 0 &&
                 -y + x*0.577f - y0 + width * 1.1547f > 0 &&
                  y + x*0.577f - y0 - width * 1.1547f < 0
 
                 ) this else null
-        //return super.hit(x, y, touchable)
     }
 
 

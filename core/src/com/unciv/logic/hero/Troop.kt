@@ -44,6 +44,7 @@ class Troop (
     {
         civInfo = civInfo0
         val unitTroopString = "TileSets/AbsoluteUnits/Units/" + baseUnit.name
+      //  val unitTroopString = "TileSets/FantasyHex/Highlight"
         // TODO: There is a mess with float and int coordinates. It's better to make int everywhere
         if(attacker)
             position = Vector2(-7f, 3f-number.toFloat()*2)
@@ -75,6 +76,7 @@ class Troop (
          //   {
             troopImage.touchable = Touchable.disabled
             troopImage.name = "troopImage"
+            troopGroup.name = "troopGroup"
             troopGroup.addActor(troopImage)
           //  tileGroup.addActor(troopImage)
           //  }

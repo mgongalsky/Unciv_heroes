@@ -3,6 +3,7 @@ package com.unciv.ui.battlescreen
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.unciv.Constants
@@ -22,6 +23,7 @@ import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
 import com.unciv.ui.utils.extensions.onClick
+import kotlin.reflect.jvm.internal.impl.incremental.components.Position
 
 // Now it's just copied from HeroOverviewScreen
 
@@ -41,6 +43,9 @@ class BattleScreen(
     val tileGroups = HashMap<TileInfo, List<TileGroup>>()
     private lateinit var tileGroupMap: TileGroupMap<TileGroup>
     private val allTileGroups = ArrayList<TileGroup>()
+    lateinit var pointerPosition : Vector2
+    lateinit var pointerImages : ArrayList<Image>
+    lateinit var daTileGroups : List<TileGroup>
 
     // Have TileInfo
     // Need TileGroup
@@ -64,6 +69,15 @@ class BattleScreen(
         val terraLayer = ArrayList<Group>()
         globalShortcuts.add(KeyCharAndCode.BACK) { game.popScreen() }
 
+        val tileSetStrings = TileSetStrings()
+        daTileGroups = battleField.values.map { TileGroup(it, tileSetStrings) }
+
+        val pointerString = "TileSets/FantasyHex/Highlight"
+        pointerImages =
+                ImageGetter.getLayeredImageColored(pointerString, Color.valueOf("#00AAFF77"))
+   //     pointerPosition = Vector2(0f, 0f)
+
+
         tabbedPager = TabbedPager(
             stage.width, stage.width,
             centerAreaHeight, centerAreaHeight,
@@ -84,16 +98,34 @@ class BattleScreen(
 
         tabbedPager.setFillParent(true)
    }
+    fun draw_pointer()
+    {
+        var pointerTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == pointerPosition }
+        for (pointerImage in pointerImages) {
+            pointerImage.setScale(pointerTile.width/256f, pointerTile.width/256f*0.5f)
+          //  pointerImage.moveBy(0f, pointerTile.height*0.15f)
+            pointerImage.setPosition(0f, pointerTile.height*0.15f)
+
+            pointerImage.setOrigin(pointerTile.originX, pointerTile.originY)
+            pointerImage.touchable = Touchable.disabled
+            pointerImage.name = "pointer"
+           // if(pointerTile.)
+            pointerTile.addActorBefore(pointerTile.findActor("troopGroup"), pointerImage)
+       //     pointerTile.addActor(pointerImage)
+        }
+
+
+    }
     // Copied from EditorMapHolder
     internal fun addTiles(){
 
-        val tileSetStrings = TileSetStrings()
-        val daTileGroups = battleField.values.map { TileGroup(it, tileSetStrings) }
 
         tileGroupMap = TileGroupMap(
             daTileGroups)
 
-     //   var monster = Monster(40, "Crossbowman")
+
+
+        //   var monster = Monster(40, "Crossbowman")
      //   monster.troops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
         manager.defendingTroops!!.forEach { troop ->
             //        var troopTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == troop.position }
@@ -103,10 +135,14 @@ class BattleScreen(
         }
 
 
-        manager.attackingTroops!!.forEach { troop ->
+        manager.attackingTroops.forEach { troop ->
             var troopTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == troop.position }
             troop.drawOnBattle(troopTile, attacker = true)
         }
+   //     pointerImages =
+  //              ImageGetter.getLayeredImageColored(poString, Color.valueOf("#00AAFF77"))
+        pointerPosition = manager.sequence.first().position
+        draw_pointer()
 
         for (tileGroup in daTileGroups)
         {
@@ -147,14 +183,19 @@ class BattleScreen(
         if(tileGroup.findActor<Image>("troopImage") != null)
             return
         val position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
-        manager.currentTroop?.apply {
+        manager.currentTroop.apply {
             this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(position.x.toString() + ", " + position.y.toString())
         }
+        //tileGroup.showHighlight(Color.BLUE, 0.7f)
 
-        tileGroup.addActor(manager.currentTroop?.troopGroup)
+        tileGroup.addActor(manager.currentTroop.troopGroup)
+       // tileGroup.showHighlight(Color.BLUE, 0.7f)
 
         tileGroup.update()
         manager.moveCurrentTroop(position)
+        pointerPosition = manager.currentTroop.position
+        draw_pointer()
+
 
     }
 
