@@ -5,39 +5,44 @@ import com.unciv.UncivGame
 import com.unciv.logic.hero.Monster
 import com.unciv.logic.hero.Troop
 import com.unciv.logic.map.MapUnit
-import java.text.FieldPosition
 
 class BattleManager()
  {
 
      internal var isBattleOn = false
-     internal var attackingHero: MapUnit? = null
-     internal var attackingTroops: MutableList<Troop>? = null
-    // typealias attackingTroops = attackingHero.troops
+     internal lateinit var attackingHero: MapUnit
+     internal lateinit var attackingTroops: MutableList<Troop>
      internal var defendingHero: MapUnit? = null
-     internal var defendingTroops: MutableList<Troop>? = null
+     internal lateinit var defendingTroops: MutableList<Troop>
+     internal lateinit var sequence: MutableList<Troop>
      internal var screen: BattleScreen? = null
-     internal var currentTroop: Troop? = null
-//     UncivGame.Current.pushScreen(BattleScreen(attackingHero))
+     private lateinit var iterTroop: MutableListIterator<Troop>
+     internal lateinit var currentTroop: Troop
+
      fun startBattle(attackingHero0: MapUnit)
      {
          attackingHero = attackingHero0
-         attackingTroops = attackingHero!!.troops
+         attackingTroops = attackingHero.troops
          isBattleOn = true
 
 
          var monster = Monster(40, "Crossbowman")
          defendingTroops = monster.troops
-         defendingTroops!!.forEachIndexed { index, troop -> troop.enterBattle(attackingHero!!.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
+         defendingTroops.forEachIndexed { index, troop -> troop.enterBattle(attackingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
 
-         attackingTroops!!.clear()
-         attackingTroops!!.add(Troop(10, "Warrior"))
-         attackingTroops!!.add(Troop(20, "Archer"))
-         attackingTroops!!.add(Troop(15, "Spearman"))
-         attackingTroops!!.add(Troop(5, "Swordsman"))
-         attackingTroops!!.forEachIndexed { index, troop -> troop.enterBattle(attackingHero!!.civInfo, index, attacker = true)}
+         attackingTroops.clear()
+         attackingTroops.add(Troop(10, "Warrior"))
+         attackingTroops.add(Troop(20, "Archer"))
+         attackingTroops.add(Troop(15, "Spearman"))
+         attackingTroops.add(Troop(5, "Swordsman"))
+         attackingTroops.forEachIndexed { index, troop -> troop.enterBattle(attackingHero.civInfo, index, attacker = true)}
 
-         currentTroop = attackingTroops!!.first()
+         // Here should be sorting by speed
+  //       sequence = (attackingTroops + defendingTroops).toMutableList().sortedByDescending { it.amount }.toMutableList()
+         sequence = (attackingTroops + defendingTroops).toMutableList()
+         iterTroop = sequence.listIterator()
+         currentTroop = iterTroop.next()
+
 
          screen = BattleScreen(this, attackingHero0)
          UncivGame.Current.pushScreen(screen!!)
@@ -45,13 +50,18 @@ class BattleManager()
 
      fun moveCurrentTroop(position: Vector2)
      {
-         currentTroop?.position = position
+         currentTroop.position = position
+         if(iterTroop.hasNext())
+             currentTroop = iterTroop.next()
+         else{
+             iterTroop = sequence.listIterator()
+             currentTroop = iterTroop.next()
+         }
      }
 
      fun finishBattle()
      {
          isBattleOn = false
-         attackingHero = null
          defendingHero = null
          screen = null
 

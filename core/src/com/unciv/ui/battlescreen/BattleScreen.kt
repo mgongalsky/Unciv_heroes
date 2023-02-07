@@ -147,7 +147,6 @@ class BattleScreen(
         if(tileGroup.findActor<Image>("troopImage") != null)
             return
         val position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
-        manager.moveCurrentTroop(position)
         manager.currentTroop?.apply {
             this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(position.x.toString() + ", " + position.y.toString())
         }
@@ -155,6 +154,7 @@ class BattleScreen(
         tileGroup.addActor(manager.currentTroop?.troopGroup)
 
         tileGroup.update()
+        manager.moveCurrentTroop(position)
 
     }
 
