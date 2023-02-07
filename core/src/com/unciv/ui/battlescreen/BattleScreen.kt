@@ -93,9 +93,9 @@ class BattleScreen(
         tileGroupMap = TileGroupMap(
             daTileGroups)
 
-        var monster = Monster(40, "Crossbowman")
-        monster.troops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
-        monster.troops.forEach { troop ->
+     //   var monster = Monster(40, "Crossbowman")
+     //   monster.troops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
+        manager.defendingTroops!!.forEach { troop ->
             //        var troopTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == troop.position }
             var troopTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == troop.position }
             //         var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
@@ -103,13 +103,7 @@ class BattleScreen(
         }
 
 
-        viewingHero.troops.clear()
-        viewingHero.troops.add(Troop(10, "Warrior"))
-        viewingHero.troops.add(Troop(20, "Archer"))
-        viewingHero.troops.add(Troop(15, "Spearman"))
-        viewingHero.troops.add(Troop(5, "Swordsman"))
-        viewingHero.troops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo, index, attacker = true)}
-        viewingHero.troops.forEach { troop ->
+        manager.attackingTroops!!.forEach { troop ->
             var troopTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == troop.position }
             troop.drawOnBattle(troopTile, attacker = true)
         }
@@ -152,12 +146,13 @@ class BattleScreen(
     {
         if(tileGroup.findActor<Image>("troopImage") != null)
             return
-        viewingHero.troops.first().position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
-        viewingHero.troops.first().apply {
-            this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(this.position.x.toString() + ", " + this.position.y.toString())
+        val position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
+        manager.moveCurrentTroop(position)
+        manager.currentTroop?.apply {
+            this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(position.x.toString() + ", " + position.y.toString())
         }
 
-        tileGroup.addActor(viewingHero.troops.first().troopGroup)
+        tileGroup.addActor(manager.currentTroop?.troopGroup)
 
         tileGroup.update()
 
