@@ -115,7 +115,7 @@ class BattleScreen(
         // TODO: Principally it works, but we need to fix coordinates conversions and distances
         var achievableHexes = daTileGroups.filter { HexMath.getDistance(it.tileInfo.position,HexMath.evenQ2HexCoords(pointerPosition)) < 5 }
         for (achievableHex in achievableHexes)
-            achievableHex.baseLayerGroup.color = Color(1f,1f,1f,0.5f)
+            achievableHex.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
 
        // pointerTile.baseLayerGroup.color
     }

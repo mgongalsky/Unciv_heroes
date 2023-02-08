@@ -50,7 +50,8 @@ object HexMath {
     fun getLongitude(vector: Vector2): Float {
         // Good. That formula is true for pointy.
         // Longitude increases leftward
-        return vector.x - (vector.y - (vector.y % 2)) / 2
+        //return vector.x - (vector.y - (vector.y % 2)) / 2
+        return vector.x - vector.y / 2
         //return vector.x - vector.y
     }
 
@@ -67,8 +68,12 @@ object HexMath {
         // y = (col - row) / 2
         // x = - col + (col - row) / 2 = - (col + row) / 2
         // That should work too, without any modifications
-        val y = (latitude - longitude) / 2f
-        val x = longitude + y
+
+        //val y = (latitude - longitude) / 2f
+        //val x = longitude + y
+        // Revised version:
+        val x = longitude - (latitude - latitude % 2) / 2
+        val y = latitude
         return Vector2(x, y)
     }
 
@@ -108,12 +113,8 @@ object HexMath {
         return vectors
     }
 
-    // HexCoordinates are a (x,y) vector, where x is the vector getting us to the top-left hex (e.g. 10 o'clock)
-    // and y is the vector getting us to the top-right hex (e.g. 2 o'clock)
-
-    // Each (1,1) vector effectively brings us up a layer.
-    // For example, to get to the cell above me, I'll use a (1,1) vector.
-    // To get to the cell below the cell to my bottom-right, I'll use a (-1,-2) vector.
+    // HexCoordinates are a (x,y) vector, where x is the vector getting us to the left hex (e.g. 9 o'clock)
+    // and y is the vector getting us to the left-right hex (e.g. 11    // To get to the cell below the cell to my bottom-right, I'll use a (-1,-2) vector.
 
     /**
      * @param unwrapHexCoord Hex coordinate to unwrap.
@@ -297,12 +298,17 @@ object HexMath {
     }
 
     fun getDistance(origin: Vector2, destination: Vector2): Int {
-        val relativeX = origin.x - destination.x
+        val originCube = hex2CubicCoords(origin)
+        val destinationCube = hex2CubicCoords(destination)
+        return (abs(originCube.x-destinationCube.x) + abs(originCube.y-destinationCube.y) + abs(originCube.z-destinationCube.z)).toInt() / 2
+        /*val relativeX = origin.x - destination.x
         val relativeY = origin.y - destination.y
         return if (relativeX * relativeY >= 0)
             max(abs(relativeX), abs(relativeY)).toInt()
         else
             (abs(relativeX) + abs(relativeY)).toInt()
+            */
+
     }
 /*
     private val clockPositionToHexVectorMap: Map<Int, Vector2> = mapOf(
