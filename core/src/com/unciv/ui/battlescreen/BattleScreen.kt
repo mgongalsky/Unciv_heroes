@@ -187,6 +187,9 @@ class BattleScreen(
         if(tileGroup.findActor<Image>("troopImage") != null)
             return
         val position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
+        // Here the value of 5 must be substituted to unit speed
+        if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >=5)
+            return
         manager.currentTroop.apply {
             this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(position.x.toString() + ", " + position.y.toString())
         }
