@@ -1,11 +1,15 @@
 package com.unciv.ui.battlescreen
 
+import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.unciv.Constants
 import com.unciv.logic.HexMath
 import com.unciv.logic.map.MapUnit
@@ -21,6 +25,7 @@ import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
 import com.unciv.ui.utils.extensions.onClick
+import com.unciv.utils.concurrency.Concurrency
 
 // Now it's just copied from HeroOverviewScreen
 
@@ -152,7 +157,53 @@ class BattleScreen(
             tileGroup.onClick {
                 tileGroupOnClick(tileGroup)
             }
-         //   tileGroup.name = "terrainHex"
+
+            // Right mouse click listener
+            tileGroup.addListener(object : ClickListener() {
+                /*
+                init {
+                    button = Input.Buttons.RIGHT
+                }
+
+                override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                    val unit = worldScreen.bottomUnitTable.selectedUnit
+                        ?: return
+                    Concurrency.run("WorldScreenClick") {
+                        onTileRightClicked(unit, tileGroup.tileInfo)
+                    }
+                }
+
+                 */
+
+                override fun enter(
+                    event: InputEvent?,
+                    x: Float,
+                    y: Float,
+                    pointer: Int,
+                    fromActor: Actor?
+                ) {
+                    tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.5f)
+                    super.enter(event, x, y, pointer, fromActor)
+                }
+
+                override fun exit(
+                    event: InputEvent?,
+                    x: Float,
+                    y: Float,
+                    pointer: Int,
+                    toActor: Actor?
+                ) {
+                    // TODO: This must be rewritten to avoid code doubling
+                    if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
+                        tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
+                    else
+                        tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
+
+                    super.exit(event, x, y, pointer, toActor)
+                }
+            })
+
+            //   tileGroup.name = "terrainHex"
          //   tileGroup.color = Color(1.0f, 1.0f, 1.0f, 0.3f)
             allTileGroups.add(tileGroup)
 
