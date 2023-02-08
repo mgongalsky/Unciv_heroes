@@ -113,7 +113,7 @@ class BattleScreen(
         for (tileGroup in daTileGroups)
             tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
         // TODO: Principally it works, but we need to fix coordinates conversions and distances
-        var achievableHexes = daTileGroups.filter { HexMath.getDistance(it.tileInfo.position,HexMath.evenQ2HexCoords(pointerPosition)) < 5 }
+        var achievableHexes = daTileGroups.filter { HexMath.getDistance(it.tileInfo.position,HexMath.evenQ2HexCoords(pointerPosition)) < manager.currentTroop.baseUnit.speed }
         for (achievableHex in achievableHexes)
             achievableHex.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
 
@@ -188,7 +188,7 @@ class BattleScreen(
             return
         val position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
         // Here the value of 5 must be substituted to unit speed
-        if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >=5)
+        if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
             return
         manager.currentTroop.apply {
             this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(position.x.toString() + ", " + position.y.toString())
