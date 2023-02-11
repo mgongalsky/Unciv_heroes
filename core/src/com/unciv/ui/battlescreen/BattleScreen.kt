@@ -1,7 +1,11 @@
 package com.unciv.ui.battlescreen
 
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Graphics
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Cursor
+import com.badlogic.gdx.graphics.Cursor.SystemCursor
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
@@ -86,7 +90,7 @@ class BattleScreen(
             separatorColor = Color.WHITE)
 
 
-        tabbedPager.addClosePage { manager.finishBattle(); game.popScreen() }
+        tabbedPager.addClosePage {shutdownScreen()}
 
         addTiles()
 
@@ -184,6 +188,16 @@ class BattleScreen(
                 ) {
                     tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.5f)
                     super.enter(event, x, y, pointer, fromActor)
+                    //var cursor = Cursor()
+                    if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
+                        Gdx.graphics.setSystemCursor(SystemCursor.NotAllowed)
+                    else
+                        Gdx.graphics.setSystemCursor(SystemCursor.Hand)
+
+
+
+
+                    // Graphics.   .setCursor()
                 }
 
                 override fun exit(
@@ -266,5 +280,13 @@ class BattleScreen(
     }
 
     fun resizePage(tab: EmpireOverviewTab) {
+    }
+
+    fun shutdownScreen()
+    {
+        Gdx.graphics.setSystemCursor(SystemCursor.Arrow)
+        manager.finishBattle()
+        game.popScreen()
+
     }
 }
