@@ -54,6 +54,7 @@ class BattleScreen(
     lateinit var daTileGroups : List<TileGroup>
     val cursorMove : Cursor
     val cursorCancel : Cursor
+    var cursorAttack : ArrayList<Cursor> = ArrayList()
     // Have TileInfo
     // Need TileGroup
 
@@ -66,16 +67,14 @@ class BattleScreen(
 
     init {
         // Load cursor pixmaps
-        val textureMove = Texture("ExtraImages/BattleMoveCursor128.png")
-        textureMove.textureData.prepare()
-        val pixmapMove = textureMove.textureData.consumePixmap()
-        cursorMove = Gdx.graphics.newCursor(pixmapMove, 32, 64)//x.toInt(),y.toInt())
-
-        val textureCancel = Texture("ExtraImages/BattleCancelCursor64.png")
-        textureCancel.textureData.prepare()
-        val pixmapCancel = textureCancel.textureData.consumePixmap()
-        cursorCancel = Gdx.graphics.newCursor(pixmapCancel, 32, 32)//x.toInt(),y.toInt())
-
+        cursorMove = loadCursor("BattleMoveCursor128.png", 32,64)
+        cursorCancel = loadCursor("BattleCancelCursor64.png", 32,32)
+        cursorAttack.add(loadCursor("BattleAttackCursor0.png", 64,64))
+        cursorAttack.add(loadCursor("BattleAttackCursor1.png", 64,16))
+        cursorAttack.add(loadCursor("BattleAttackCursor2.png", 64,64))
+        cursorAttack.add(loadCursor("BattleAttackCursor3.png", 64,64))
+        cursorAttack.add(loadCursor("BattleAttackCursor4.png", 64,16))
+        cursorAttack.add(loadCursor("BattleAttackCursor5.png", 64,64))
 
         // TODO: Cursors are fixed-sized, what is not really good
 
@@ -120,7 +119,17 @@ class BattleScreen(
         tabbedPager.setFillParent(true)
 
 
-   }
+    }
+
+    fun loadCursor(filename: String, xHotspot: Int, yHotspot: Int) : Cursor{
+
+        val texture = Texture("ExtraImages/" + filename)
+        texture.textureData.prepare()
+        val pixmap = texture.textureData.consumePixmap()
+        return Gdx.graphics.newCursor(pixmap, xHotspot, yHotspot)
+
+    }
+
     fun draw_pointer()
     {
         var pointerTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == pointerPosition }
@@ -326,22 +335,23 @@ class BattleScreen(
                 when{
                     y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
                             x <= x0
-                    -> Gdx.graphics.setSystemCursor(SystemCursor.NWSEResize) // Left top triangle
+                    -> Gdx.graphics.setCursor(cursorAttack[5]) // Left top triangle
                     y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
                             y - y0 - x * y0 / x0 >= 0
-                    -> Gdx.graphics.setSystemCursor(SystemCursor.HorizontalResize) // Left central triangle
+                    -> Gdx.graphics.setCursor(cursorAttack[4]) // Left top triangle
                     y - y0 - x * y0 / x0 < 0 &&
                             x <= x0
-                    -> Gdx.graphics.setSystemCursor(SystemCursor.NESWResize) // Left bottom triangle
+                    -> Gdx.graphics.setCursor(cursorAttack[3]) // Left top triangle
                     y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
                             x > x0
-                    -> Gdx.graphics.setSystemCursor(SystemCursor.NWSEResize) // Right bottom triangle
+                    -> Gdx.graphics.setCursor(cursorAttack[2]) // Left top triangle
                     y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
                             y - y0 - x * y0 / x0 < 0
-                    -> Gdx.graphics.setSystemCursor(SystemCursor.HorizontalResize) // Right central triangle
+                    -> Gdx.graphics.setCursor(cursorAttack[1]) // Left top triangle
                     y - y0 - x * y0 / x0 >= 0 &&
                             x > x0
-                    -> Gdx.graphics.setSystemCursor(SystemCursor.NESWResize) // Right top triangle
+                    -> Gdx.graphics.setCursor(cursorAttack[0]) // Left top triangle
+
                 }
                 return
             }
