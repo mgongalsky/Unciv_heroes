@@ -176,7 +176,11 @@ class BattleScreen(
                 }
 
                  */
+                override fun mouseMoved(event: InputEvent?, x: Float, y: Float): Boolean {
+                    chooseCrosshair(tileGroup, x, y, tileGroup.baseLayerGroup.width)
+                    return super.mouseMoved(event, x, y)
 
+                }
                 override fun enter(
                     event: InputEvent?,
                     x: Float,
@@ -197,13 +201,8 @@ class BattleScreen(
 
                 }
 
-                fun mouseMoved(x: Int, y: Int): Boolean {
-                    Gdx.graphics.setSystemCursor(SystemCursor.AllResize)
 
-                    return false
-                }
-
-
+/*
                 override fun isOver(actor: Actor?, x: Float, y: Float): Boolean {
 
                    // tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.5f)
@@ -216,6 +215,8 @@ class BattleScreen(
 
                 }
 
+
+ */
 
                 override fun exit(
                     event: InputEvent?,
@@ -291,20 +292,56 @@ class BattleScreen(
     fun chooseCrosshair(tileGroup:TileGroup, x: Float, y: Float, width: Float)
     {
         // width of the hex
+
+        val x0 = width/2
+        val height = width * 1.1547f
+        val slope = 0.577f // tangents of 30 degrees
+        val y0 = x0 * 0.577f // tangents of 30 degrees
+        // The following equation is used (and similar): y + (y0/x0)*x -y0 = 0
+        /*
+        return if ( x >= 0 &&
+                x < width &&
+                y + x*0.577f - y0 > 0 &&
+                -y + x*0.577f - y0 < 0 &&
+                -y + x*0.577f - y0 + height > 0 &&
+                y + x*0.577f - y0 - height < 0
+
+
+         */
+        // Here we divide the hex with defender into 6 triangles in order to show from which adjacent hex attack will be mad
+        // We have three diagonal lines intersecting at the center of the hex:
         if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
             Gdx.graphics.setSystemCursor(SystemCursor.NotAllowed)
-        else
-            Gdx.graphics.setSystemCursor(SystemCursor.Hand)
-        if(tileGroup.findActor<Image>("troopImage") != null)
-            when{
-                y > width * 0.577f -> Gdx.graphics.setSystemCursor(SystemCursor.VerticalResize)
-                else -> Gdx.graphics.setSystemCursor(SystemCursor.Crosshair)
-
-
+        else {
+            if(tileGroup.findActor<Image>("troopImage") != null){
+                when{
+                    y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
+                            x <= x0
+                    -> Gdx.graphics.setSystemCursor(SystemCursor.NWSEResize) // Left top triangle
+                    y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
+                            y - y0 - x * y0 / x0 >= 0
+                    -> Gdx.graphics.setSystemCursor(SystemCursor.HorizontalResize) // Left central triangle
+                    y - y0 - x * y0 / x0 < 0 &&
+                            x <= x0
+                    -> Gdx.graphics.setSystemCursor(SystemCursor.NESWResize) // Left bottom triangle
+                    y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
+                            x > x0
+                    -> Gdx.graphics.setSystemCursor(SystemCursor.NWSEResize) // Right bottom triangle
+                    y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
+                            y - y0 - x * y0 / x0 < 0
+                    -> Gdx.graphics.setSystemCursor(SystemCursor.HorizontalResize) // Right central triangle
+                    y - y0 - x * y0 / x0 >= 0 &&
+                            x > x0
+                    -> Gdx.graphics.setSystemCursor(SystemCursor.NESWResize) // Right top triangle
+                }
+                return
             }
 
+            Gdx.graphics.setSystemCursor(SystemCursor.Hand)
+        }
 
     }
+
     override fun resume() {
         game.replaceCurrentScreen(recreate())
     }
