@@ -2,7 +2,10 @@ package com.unciv.ui.battlescreen
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Cursor
 import com.badlogic.gdx.graphics.Cursor.SystemCursor
+import com.badlogic.gdx.graphics.Pixmap
+import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
@@ -49,7 +52,8 @@ class BattleScreen(
     lateinit var pointerPosition : Vector2
     lateinit var pointerImages : ArrayList<Image>
     lateinit var daTileGroups : List<TileGroup>
-
+    val cursorMove : Cursor
+    val cursorCancel : Cursor
     // Have TileInfo
     // Need TileGroup
 
@@ -61,6 +65,20 @@ class BattleScreen(
     }
 
     init {
+        // Load cursor pixmaps
+        val textureMove = Texture("ExtraImages/BattleMoveCursor128.png")
+        textureMove.textureData.prepare()
+        val pixmapMove = textureMove.textureData.consumePixmap()
+        cursorMove = Gdx.graphics.newCursor(pixmapMove, 32, 64)//x.toInt(),y.toInt())
+
+        val textureCancel = Texture("ExtraImages/BattleCancelCursor64.png")
+        textureCancel.textureData.prepare()
+        val pixmapCancel = textureCancel.textureData.consumePixmap()
+        cursorCancel = Gdx.graphics.newCursor(pixmapCancel, 32, 32)//x.toInt(),y.toInt())
+
+
+        // TODO: Cursors are fixed-sized, what is not really good
+
         val page =
             if (defaultPage != "") {
                 game.settings.lastOverviewPage = defaultPage
@@ -100,6 +118,8 @@ class BattleScreen(
         tabbedPager.selectPage(index)
 
         tabbedPager.setFillParent(true)
+
+
    }
     fun draw_pointer()
     {
@@ -295,23 +315,12 @@ class BattleScreen(
 
         val x0 = width/2
         val height = width * 1.1547f
-        val slope = 0.577f // tangents of 30 degrees
         val y0 = x0 * 0.577f // tangents of 30 degrees
-        // The following equation is used (and similar): y + (y0/x0)*x -y0 = 0
-        /*
-        return if ( x >= 0 &&
-                x < width &&
-                y + x*0.577f - y0 > 0 &&
-                -y + x*0.577f - y0 < 0 &&
-                -y + x*0.577f - y0 + height > 0 &&
-                y + x*0.577f - y0 - height < 0
-
-
-         */
         // Here we divide the hex with defender into 6 triangles in order to show from which adjacent hex attack will be mad
         // We have three diagonal lines intersecting at the center of the hex:
         if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
-            Gdx.graphics.setSystemCursor(SystemCursor.NotAllowed)
+            Gdx.graphics.setCursor(cursorCancel)
+
         else {
             if(tileGroup.findActor<Image>("troopImage") != null){
                 when{
@@ -337,7 +346,7 @@ class BattleScreen(
                 return
             }
 
-            Gdx.graphics.setSystemCursor(SystemCursor.Hand)
+            Gdx.graphics.setCursor(cursorMove)
         }
 
     }
