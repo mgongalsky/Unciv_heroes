@@ -1,10 +1,7 @@
 package com.unciv.ui.battlescreen
 
 import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.Graphics
-import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.Cursor
 import com.badlogic.gdx.graphics.Cursor.SystemCursor
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
@@ -28,8 +25,8 @@ import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
+import com.unciv.ui.utils.extensions.onChange
 import com.unciv.ui.utils.extensions.onClick
-import com.unciv.utils.concurrency.Concurrency
 
 // Now it's just copied from HeroOverviewScreen
 
@@ -158,6 +155,7 @@ class BattleScreen(
 
         for (tileGroup in daTileGroups)
         {
+           // tileGroup.onChange {  }
             tileGroup.onClick {
                 tileGroupOnClick(tileGroup)
             }
@@ -187,18 +185,37 @@ class BattleScreen(
                     fromActor: Actor?
                 ) {
                     tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.5f)
-                    super.enter(event, x, y, pointer, fromActor)
                     //var cursor = Cursor()
-                    if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
-                        Gdx.graphics.setSystemCursor(SystemCursor.NotAllowed)
-                    else
-                        Gdx.graphics.setSystemCursor(SystemCursor.Hand)
+
+                    if(fromActor != null) {
+                        val width = fromActor.width
+                        chooseCrosshair(tileGroup, x, y, width)
+                    }
 
 
+                    super.enter(event, x, y, pointer, fromActor)
 
-
-                    // Graphics.   .setCursor()
                 }
+
+                fun mouseMoved(x: Int, y: Int): Boolean {
+                    Gdx.graphics.setSystemCursor(SystemCursor.AllResize)
+
+                    return false
+                }
+
+
+                override fun isOver(actor: Actor?, x: Float, y: Float): Boolean {
+
+                   // tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.5f)
+                    //var cursor = Cursor()
+                    if(actor != null) {
+                        val width = actor.width
+                        chooseCrosshair(tileGroup, x, y, width)
+                    }
+                    return super.isOver(actor, x, y)
+
+                }
+
 
                 override fun exit(
                     event: InputEvent?,
@@ -271,6 +288,23 @@ class BattleScreen(
 
     }
 
+    fun chooseCrosshair(tileGroup:TileGroup, x: Float, y: Float, width: Float)
+    {
+        // width of the hex
+        if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
+            Gdx.graphics.setSystemCursor(SystemCursor.NotAllowed)
+        else
+            Gdx.graphics.setSystemCursor(SystemCursor.Hand)
+        if(tileGroup.findActor<Image>("troopImage") != null)
+            when{
+                y > width * 0.577f -> Gdx.graphics.setSystemCursor(SystemCursor.VerticalResize)
+                else -> Gdx.graphics.setSystemCursor(SystemCursor.Crosshair)
+
+
+            }
+
+
+    }
     override fun resume() {
         game.replaceCurrentScreen(recreate())
     }
@@ -282,7 +316,7 @@ class BattleScreen(
     fun resizePage(tab: EmpireOverviewTab) {
     }
 
-    fun shutdownScreen()
+    private fun shutdownScreen()
     {
         Gdx.graphics.setSystemCursor(SystemCursor.Arrow)
         manager.finishBattle()
