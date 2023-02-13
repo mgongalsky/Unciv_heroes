@@ -60,6 +60,10 @@ class BattleManager()
  */
      }
 
+     fun isTroopOnHex(position: Vector2): Boolean {
+        return (sequence.find { it.position == position } != null)
+     }
+
      fun moveCurrentTroop(position: Vector2)
      {
          currentTroop.position = position

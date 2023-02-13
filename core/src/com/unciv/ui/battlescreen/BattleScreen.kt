@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Cursor
 import com.badlogic.gdx.graphics.Cursor.SystemCursor
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.math.Vector
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
@@ -335,23 +336,59 @@ class BattleScreen(
                 when{
                     y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
                             x <= x0
-                    -> Gdx.graphics.setCursor(cursorAttack[5]) // Left top triangle
+                    -> // Left top triangle
+                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x, tileGroup.tileInfo.position.y+1f)))// + Vector2(-1f, 1f)))
+                            Gdx.graphics.setCursor(cursorAttack[5])
+                        else
+                            Gdx.graphics.setCursor(cursorCancel)
+
+                   // Gdx.graphics.setCursor(cursorAttack[5])
                     y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
                             y - y0 - x * y0 / x0 >= 0
-                    -> Gdx.graphics.setCursor(cursorAttack[4]) // Left top triangle
+                    -> // Left central triangle
+                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x-1f, tileGroup.tileInfo.position.y)))// + Vector2(-1f, 1f)))
+                            Gdx.graphics.setCursor(cursorAttack[4])
+                        else
+                            Gdx.graphics.setCursor(cursorCancel)
+
+                 //   Gdx.graphics.setCursor(cursorAttack[4])
                     y - y0 - x * y0 / x0 < 0 &&
                             x <= x0
-                    -> Gdx.graphics.setCursor(cursorAttack[3]) // Left top triangle
+                    -> // Left bottom triangle
+                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x-1f, tileGroup.tileInfo.position.y-1f)))// + Vector2(-1f, 1f)))
+                            Gdx.graphics.setCursor(cursorAttack[3])
+                        else
+                            Gdx.graphics.setCursor(cursorCancel)
+
+              //      Gdx.graphics.setCursor(cursorAttack[3])
                     y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
                             x > x0
-                    -> Gdx.graphics.setCursor(cursorAttack[2]) // Left top triangle
+                    -> // Right bottom triangle
+                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x, tileGroup.tileInfo.position.y-1f)))// + Vector2(-1f, 1f)))
+                            Gdx.graphics.setCursor(cursorAttack[2])
+                        else
+                            Gdx.graphics.setCursor(cursorCancel)
+
+                 //   Gdx.graphics.setCursor(cursorAttack[2])
                     y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
                             y - y0 - x * y0 / x0 < 0
-                    -> Gdx.graphics.setCursor(cursorAttack[1]) // Left top triangle
+                    -> // Right central triangle
+                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x+1f, tileGroup.tileInfo.position.y)))// + Vector2(-1f, 1f)))
+                            Gdx.graphics.setCursor(cursorAttack[1])
+                        else
+                            Gdx.graphics.setCursor(cursorCancel)
+
+                  //  Gdx.graphics.setCursor(cursorAttack[1])
                     y - y0 - x * y0 / x0 >= 0 &&
                             x > x0
-                    -> Gdx.graphics.setCursor(cursorAttack[0]) // Left top triangle
+                    -> // Right top triangle
+                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x+1f, tileGroup.tileInfo.position.y+1f)))// + Vector2(-1f, 1f)))
+                                Gdx.graphics.setCursor(cursorAttack[0])
+                        else
+                            Gdx.graphics.setCursor(cursorCancel)
 
+
+                    // TODO: tileGroup x coordinates equals to minus troop x coordinates. Needs to fix it.
                 }
                 return
             }
