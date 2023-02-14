@@ -78,6 +78,8 @@ object HexMath {
                 positionMove.x = hex.x
                 positionMove.y = hex.y + 1f
             }
+            Direction.DirError ->
+                return hex
         }
 
         return positionMove

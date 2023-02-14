@@ -11,7 +11,7 @@ import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 
 enum class Direction(val num: Int) {
-    TopRight(0), CenterRight(1), BottomRight(2), BottomLeft(3), CenterLeft(4), TopLeft(5)
+    TopRight(0), CenterRight(1), BottomRight(2), BottomLeft(3), CenterLeft(4), TopLeft(5), DirError(6)
 }
 
 // Remember that: troop coordinates are offset, but all calculations and tileinfo are hex coords
@@ -84,6 +84,11 @@ class BattleManager()
              iterTroop = sequence.listIterator()
              currentTroop = iterTroop.next()
          }
+     }
+
+     fun isHexAchievable(positionHex: Vector2): Boolean{
+
+         return HexMath.getDistance(positionHex, currentTroop.positionHex()) <= currentTroop.baseUnit.speed
      }
 
      fun attackFrom(attackedHex: Vector2, direction: Direction){

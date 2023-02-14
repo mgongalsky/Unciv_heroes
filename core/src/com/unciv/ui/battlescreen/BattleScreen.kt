@@ -149,12 +149,17 @@ class BattleScreen(
         for (tileGroup in daTileGroups)
             tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
         // TODO: Principally it works, but we need to fix coordinates conversions and distances
-        var achievableHexes = daTileGroups.filter { HexMath.getDistance(it.tileInfo.position,HexMath.evenQ2HexCoords(pointerPosition)) < manager.currentTroop.baseUnit.speed }
+//        var achievableHexes = daTileGroups.filter { HexMath.getDistance(it.tileInfo.position,HexMath.evenQ2HexCoords(pointerPosition)) < manager.currentTroop.baseUnit.speed }
+        var achievableHexes = daTileGroups.filter { manager.isHexAchievable(it.tileInfo.position) }
         for (achievableHex in achievableHexes)
             achievableHex.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
 
        // pointerTile.baseLayerGroup.color
     }
+
+    private var isMouseMoved = false
+    private var xLastMouse = 0f
+    private var yLastMouse = 0f
     // Copied from EditorMapHolder
     internal fun addTiles(){
 
@@ -186,10 +191,10 @@ class BattleScreen(
         for (tileGroup in daTileGroups)
         {
            // tileGroup.onChange {  }
-            tileGroup.onClick {
-                tileGroupOnClick(tileGroup)
+           /* tileGroup.onClick {
+              //  tileGroupOnClick(tileGroup)
             }
-
+*/
             // Right mouse click listener
             tileGroup.addListener(object : ClickListener() {
                 /*
@@ -207,10 +212,18 @@ class BattleScreen(
 
                  */
                 override fun mouseMoved(event: InputEvent?, x: Float, y: Float): Boolean {
+                    // TODO: it is better to use width directly from Hexagon actor rather than baseLayerGroup actors
                     chooseCrosshair(tileGroup, x, y, tileGroup.baseLayerGroup.width)
                     return super.mouseMoved(event, x, y)
 
                 }
+
+                override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                    tileGroupOnClick(tileGroup, x, y)
+
+
+                }
+
                 override fun enter(
                     event: InputEvent?,
                     x: Float,
@@ -256,10 +269,10 @@ class BattleScreen(
                     toActor: Actor?
                 ) {
                     // TODO: This must be rewritten to avoid code doubling
-                    if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
-                        tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
-                    else
+                    if(manager.isHexAchievable(tileGroup.tileInfo.position))
                         tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
+                    else
+                        tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
 
                     super.exit(event, x, y, pointer, toActor)
                 }
@@ -295,13 +308,15 @@ class BattleScreen(
 
     }
 
-    private fun tileGroupOnClick(tileGroup: TileGroup)
+    private fun tileGroupOnClick(tileGroup: TileGroup, x: Float, y: Float)
     {
-        if(tileGroup.findActor<Image>("troopImage") != null)
+        if(tileGroup.findActor<Image>("troopImage") != null) {
+            val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
             return
+        }
         val position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
         // Here the value of 5 must be substituted to unit speed
-        if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
+        if(!manager.isHexAchievable(tileGroup.tileInfo.position))//HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
             return
         manager.currentTroop.apply {
             this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(position.x.toString() + ", " + position.y.toString())
@@ -321,44 +336,13 @@ class BattleScreen(
 
     fun chooseCrosshair(tileGroup:TileGroup, x: Float, y: Float, width: Float)
     {
-        // width of the hex
 
-        val x0 = width/2
-        val height = width * 1.1547f
-        val y0 = x0 * 0.577f // tangents of 30 degrees
-        // Here we divide the hex with defender into 6 triangles in order to show from which adjacent hex attack will be mad
-        // We have three diagonal lines intersecting at the center of the hex:
-        if(HexMath.getDistance(tileGroup.tileInfo.position, manager.currentTroop.positionHex()) >= manager.currentTroop.baseUnit.speed)
+        if(!manager.isHexAchievable(tileGroup.tileInfo.position))
             Gdx.graphics.setCursor(cursorCancel)
 
         else {
             if(tileGroup.findActor<Image>("troopImage") != null){
-                var direction = Direction.TopLeft
-                when{
-                    y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
-                            x <= x0
-                    -> direction = Direction.TopLeft
-
-                    y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
-                            y - y0 - x * y0 / x0 >= 0
-                    -> direction = Direction.CenterLeft
-
-                    y - y0 - x * y0 / x0 < 0 &&
-                            x <= x0
-                    -> direction = Direction.BottomLeft
-
-                    y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
-                            x > x0
-                    -> direction = Direction.BottomRight
-
-                    y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
-                            y - y0 - x * y0 / x0 < 0
-                    -> direction = Direction.CenterRight
-
-                    y - y0 - x * y0 / x0 >= 0 &&
-                            x > x0
-                    -> direction = Direction.TopRight
-                }
+                val direction = pixelToDirection(x, y, width)
                 if(!manager.isTroopOnHex(HexMath.oneStepTowards(tileGroup.tileInfo.position, direction))) {
                     Gdx.graphics.setCursor(cursorAttack[direction.num])
                     //manager.attackFrom(tileGroup.tileInfo.position, direction)
@@ -374,6 +358,46 @@ class BattleScreen(
 
     }
 
+    fun pixelToDirection(x: Float, y: Float, width: Float): Direction{
+        // width of the hex
+
+        val x0 = width/2
+        val height = width * 1.1547f
+        val y0 = x0 * 0.577f // tangents of 30 degrees
+
+        //  var direction = Direction.TopLeft
+
+        // Here we divide the hex with defender into 6 triangles in order to show from which adjacent hex attack will be mad
+        // We have three diagonal lines intersecting at the center of the hex:
+
+        when{
+            y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
+                    x <= x0
+            -> return Direction.TopLeft
+
+            y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
+                    y - y0 - x * y0 / x0 >= 0
+            -> return Direction.CenterLeft
+
+            y - y0 - x * y0 / x0 < 0 &&
+                    x <= x0
+            -> return Direction.BottomLeft
+
+            y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
+                    x > x0
+            -> return Direction.BottomRight
+
+            y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
+                    y - y0 - x * y0 / x0 < 0
+            -> return Direction.CenterRight
+
+            y - y0 - x * y0 / x0 >= 0 &&
+                    x > x0
+            -> return Direction.TopRight
+        }
+        return Direction.DirError
+
+    }
     override fun resume() {
         game.replaceCurrentScreen(recreate())
     }
