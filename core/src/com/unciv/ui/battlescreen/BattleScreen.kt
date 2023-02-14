@@ -148,7 +148,7 @@ class BattleScreen(
         }
         for (tileGroup in daTileGroups)
             tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
-        // TODO: Principally it works, but we need to fix coordinates conversions and distances
+        // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
 //        var achievableHexes = daTileGroups.filter { HexMath.getDistance(it.tileInfo.position,HexMath.evenQ2HexCoords(pointerPosition)) < manager.currentTroop.baseUnit.speed }
         var achievableHexes = daTileGroups.filter { manager.isHexAchievable(it.tileInfo.position) }
         for (achievableHex in achievableHexes)
@@ -310,10 +310,26 @@ class BattleScreen(
 
     private fun tileGroupOnClick(tileGroup: TileGroup, x: Float, y: Float)
     {
-        if(tileGroup.findActor<Image>("troopImage") != null) {
-            val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
+        var hexToMove = Vector2(0f,0f)
+        if(manager.isTroopOnHex(tileGroup.tileInfo.position)){
+            if(manager.isHexAchievable(tileGroup.tileInfo.position)){
+                val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
+                // TODO: remove code dubbing
+                hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
+                if(!manager.isTroopOnHex(hexToMove) && manager.isHexAchievable(hexToMove)){
+                    tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.addActor(manager.currentTroop.troopGroup)
+                    //tileGroup.addActor(manager.currentTroop.troopGroup)
+                    // tileGroup.showHighlight(Color.BLUE, 0.7f)
+                    manager.attackFrom(tileGroup.tileInfo.position, direction)
+
+                    tileGroup.update()
+                    pointerPosition = manager.currentTroop.position
+                    draw_pointer()
+                }
+            }
             return
         }
+
         val position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
         // Here the value of 5 must be substituted to unit speed
         if(!manager.isHexAchievable(tileGroup.tileInfo.position))//HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
@@ -341,9 +357,11 @@ class BattleScreen(
             Gdx.graphics.setCursor(cursorCancel)
 
         else {
-            if(tileGroup.findActor<Image>("troopImage") != null){
+            if(manager.isTroopOnHex(tileGroup.tileInfo.position)){
+         //   if(tileGroup.findActor<Image>("troopImage") != null){
                 val direction = pixelToDirection(x, y, width)
-                if(!manager.isTroopOnHex(HexMath.oneStepTowards(tileGroup.tileInfo.position, direction))) {
+                val hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
+                if(!manager.isTroopOnHex(hexToMove) && manager.isHexAchievable(hexToMove)) {
                     Gdx.graphics.setCursor(cursorAttack[direction.num])
                     //manager.attackFrom(tileGroup.tileInfo.position, direction)
                 }
