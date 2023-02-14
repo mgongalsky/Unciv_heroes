@@ -1,13 +1,20 @@
 package com.unciv.ui.battlescreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Vector
 import com.badlogic.gdx.math.Vector2
 import com.unciv.UncivGame
+import com.unciv.logic.HexMath
 import com.unciv.logic.hero.Monster
 import com.unciv.logic.hero.Troop
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 
+enum class Direction(val num: Int) {
+    TopRight(0), CenterRight(1), BottomRight(2), BottomLeft(3), CenterLeft(4), TopLeft(5)
+}
+
+// Remember that: troop coordinates are offset, but all calculations and tileinfo are hex coords
 class BattleManager()
  {
 
@@ -61,7 +68,11 @@ class BattleManager()
      }
 
      fun isTroopOnHex(position: Vector2): Boolean {
-        return (sequence.find { it.position == position } != null)
+         return (sequence.find { HexMath.evenQ2HexCoords(it.position) == position } != null)
+     }
+
+     fun getTroopOnHex(position: Vector2): Troop {
+         return sequence.first { HexMath.evenQ2HexCoords(it.position) == position }
      }
 
      fun moveCurrentTroop(position: Vector2)
@@ -73,6 +84,19 @@ class BattleManager()
              iterTroop = sequence.listIterator()
              currentTroop = iterTroop.next()
          }
+     }
+
+     fun attackFrom(attackedHex: Vector2, direction: Direction){
+        // val attackedTroop = sequence.find { it.position == attackedHex }
+         if (isTroopOnHex(attackedHex))
+             attackFrom(getTroopOnHex(attackedHex), direction)
+
+
+     }
+     fun attackFrom(attackedTroop: Troop, direction: Direction) {
+         val positionMoveOffset = HexMath.hex2EvenQCoords(HexMath.oneStepTowards(HexMath.evenQ2HexCoords(attackedTroop.position), direction))
+
+         moveCurrentTroop(positionMoveOffset)
      }
 
      fun finishBattle()

@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
 import com.unciv.logic.map.MapParameters
 import com.unciv.logic.map.MapShape
+import com.unciv.ui.battlescreen.Direction
 import kotlin.math.*
 
 // FIX: Vertical far hexes instead of sides
@@ -47,6 +48,41 @@ object HexMath {
         //return vector.x + vector.y
     }
 
+    fun oneStepTowards(hex: Vector2, direction: Direction): Vector2 {
+        // This calculation is in Hex Coords! do not use for other coordinate systems!
+        val positionMove = Vector2(0f,0f)
+
+        when(direction)
+        {
+            Direction.TopRight ->{
+                positionMove.x = hex.x - 1f
+                positionMove.y = hex.y + 1f
+            }
+            Direction.CenterRight ->{
+                positionMove.x = hex.x - 1f
+                positionMove.y = hex.y
+            }
+            Direction.BottomRight ->{
+                positionMove.x = hex.x
+                positionMove.y = hex.y - 1f
+            }
+            Direction.BottomLeft ->{
+                positionMove.x = hex.x + 1f
+                positionMove.y = hex.y - 1f
+            }
+            Direction.CenterLeft ->{
+                positionMove.x = hex.x + 1f
+                positionMove.y = hex.y
+            }
+            Direction.TopLeft ->{
+                positionMove.x = hex.x
+                positionMove.y = hex.y + 1f
+            }
+        }
+
+        return positionMove
+
+    }
     fun getLongitude(vector: Vector2): Float {
         // Good. That formula is true for pointy.
         // Longitude increases leftward

@@ -31,6 +31,7 @@ class Troop (
     @Transient
     lateinit var troopImages: ArrayList<Image>
 
+    // This is in offset coordinates:
     lateinit var position: Vector2 //= Vector2(2f,2f)
     // type, amount, currentHealth, currentAmount, spells, ref2unittype, promotions
     init{
@@ -55,6 +56,8 @@ class Troop (
         troopImages = ImageGetter.getLayeredImageColored(unitTroopString, null, civInfo.nation.getInnerColor(), civInfo.nation.getOuterColor())
 
     }
+
+    fun positionHex() = HexMath.evenQ2HexCoords(position)
 
     fun drawOnBattle(tileGroup: TileGroup, attacker: Boolean)
     {
@@ -82,8 +85,10 @@ class Troop (
           //  }
             //     setHexagonImageSize(troopImage)// Treat this as A TILE, which gets overlayed on the base tile.
         }
-        val hexCoords =HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
-        var hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString(),
+        val hexCoords = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
+        var hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString() + "\r\n" +
+                position.x.toString() + ", " + position.y.toString() + "\r\n" +
+                tileGroup.tileInfo.position.x.toString() + ", " + tileGroup.tileInfo.position.y.toString(),
             BaseScreen.skin)
         hexLabel.name = "hexCoordsLabel"
         hexLabel.touchable = Touchable.disabled

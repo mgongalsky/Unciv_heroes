@@ -328,68 +328,44 @@ class BattleScreen(
         val y0 = x0 * 0.577f // tangents of 30 degrees
         // Here we divide the hex with defender into 6 triangles in order to show from which adjacent hex attack will be mad
         // We have three diagonal lines intersecting at the center of the hex:
-        if(HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
+        if(HexMath.getDistance(tileGroup.tileInfo.position, manager.currentTroop.positionHex()) >= manager.currentTroop.baseUnit.speed)
             Gdx.graphics.setCursor(cursorCancel)
 
         else {
             if(tileGroup.findActor<Image>("troopImage") != null){
+                var direction = Direction.TopLeft
                 when{
                     y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
                             x <= x0
-                    -> // Left top triangle
-                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x, tileGroup.tileInfo.position.y+1f)))// + Vector2(-1f, 1f)))
-                            Gdx.graphics.setCursor(cursorAttack[5])
-                        else
-                            Gdx.graphics.setCursor(cursorCancel)
+                    -> direction = Direction.TopLeft
 
-                   // Gdx.graphics.setCursor(cursorAttack[5])
                     y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
                             y - y0 - x * y0 / x0 >= 0
-                    -> // Left central triangle
-                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x-1f, tileGroup.tileInfo.position.y)))// + Vector2(-1f, 1f)))
-                            Gdx.graphics.setCursor(cursorAttack[4])
-                        else
-                            Gdx.graphics.setCursor(cursorCancel)
+                    -> direction = Direction.CenterLeft
 
-                 //   Gdx.graphics.setCursor(cursorAttack[4])
                     y - y0 - x * y0 / x0 < 0 &&
                             x <= x0
-                    -> // Left bottom triangle
-                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x-1f, tileGroup.tileInfo.position.y-1f)))// + Vector2(-1f, 1f)))
-                            Gdx.graphics.setCursor(cursorAttack[3])
-                        else
-                            Gdx.graphics.setCursor(cursorCancel)
+                    -> direction = Direction.BottomLeft
 
-              //      Gdx.graphics.setCursor(cursorAttack[3])
                     y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
                             x > x0
-                    -> // Right bottom triangle
-                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x, tileGroup.tileInfo.position.y-1f)))// + Vector2(-1f, 1f)))
-                            Gdx.graphics.setCursor(cursorAttack[2])
-                        else
-                            Gdx.graphics.setCursor(cursorCancel)
+                    -> direction = Direction.BottomRight
 
-                 //   Gdx.graphics.setCursor(cursorAttack[2])
                     y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
                             y - y0 - x * y0 / x0 < 0
-                    -> // Right central triangle
-                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x+1f, tileGroup.tileInfo.position.y)))// + Vector2(-1f, 1f)))
-                            Gdx.graphics.setCursor(cursorAttack[1])
-                        else
-                            Gdx.graphics.setCursor(cursorCancel)
+                    -> direction = Direction.CenterRight
 
-                  //  Gdx.graphics.setCursor(cursorAttack[1])
                     y - y0 - x * y0 / x0 >= 0 &&
                             x > x0
-                    -> // Right top triangle
-                        if(!manager.isTroopOnHex(Vector2(-tileGroup.tileInfo.position.x+1f, tileGroup.tileInfo.position.y+1f)))// + Vector2(-1f, 1f)))
-                                Gdx.graphics.setCursor(cursorAttack[0])
-                        else
-                            Gdx.graphics.setCursor(cursorCancel)
-
-
-                    // TODO: tileGroup x coordinates equals to minus troop x coordinates. Needs to fix it.
+                    -> direction = Direction.TopRight
                 }
+                if(!manager.isTroopOnHex(HexMath.oneStepTowards(tileGroup.tileInfo.position, direction))) {
+                    Gdx.graphics.setCursor(cursorAttack[direction.num])
+                    //manager.attackFrom(tileGroup.tileInfo.position, direction)
+                }
+                else
+                    Gdx.graphics.setCursor(cursorCancel)
+
                 return
             }
 
