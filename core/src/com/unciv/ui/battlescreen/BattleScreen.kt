@@ -317,12 +317,27 @@ class BattleScreen(
                 // TODO: remove code dubbing
                 hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
                 if(!manager.isTroopOnHex(hexToMove) && manager.isHexAchievable(hexToMove)){
-                    tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.addActor(manager.currentTroop.troopGroup)
+                    manager.attackFrom(tileGroup.tileInfo.position)
+                    manager.currentTroop.apply {
+                        this.troopGroup.findActor<Label>("amountLabel")?.setText(currentAmount.toString())
+                    }
+                    if(manager.isTroopOnHex(tileGroup.tileInfo.position))
+                        manager.getTroopOnHex(tileGroup.tileInfo.position).apply {
+                            this.troopGroup.findActor<Label>("amountLabel")?.setText(currentAmount.toString())
+                        }
+
+                    tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.apply {
+                    //    this.addActor(manager.currentTroop.troopGroup)
+                        this.update()
+                    }
+                    tileGroup.update()
                     //tileGroup.addActor(manager.currentTroop.troopGroup)
                     // tileGroup.showHighlight(Color.BLUE, 0.7f)
-                    manager.attackFrom(tileGroup.tileInfo.position, direction)
+                   /// manager.attackFrom(tileGroup.tileInfo.position, direction)
 
-                    tileGroup.update()
+                 //   tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.update()
+//                    manager.moveCurrentTroop(HexMath.hex2EvenQCoords(hexToMove))
+
                     pointerPosition = manager.currentTroop.position
                     draw_pointer()
                 }

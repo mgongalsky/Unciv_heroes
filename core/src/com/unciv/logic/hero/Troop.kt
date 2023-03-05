@@ -31,16 +31,20 @@ class Troop (
     @Transient
     lateinit var troopImages: ArrayList<Image>
 
+    var currentHealth = baseUnit.health
+    var currentAmount = amount
     // This is in offset coordinates:
     lateinit var position: Vector2 //= Vector2(2f,2f)
     // type, amount, currentHealth, currentAmount, spells, ref2unittype, promotions
-    init{
+ /*   init{
         baseUnit.ruleset = ruleset
-        var currentHealth: Int = baseUnit.strength // TODO: Change to Health in Units.json
+     //   var currentHealth: Int = baseUnit.strength // TODO: Change to Health in Units.json
         var currentAmount = amount
        // position = Vector2(2f, 2f)
     }
 
+
+  */
     fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean)
     {
         civInfo = civInfo0
@@ -61,7 +65,7 @@ class Troop (
 
     fun drawOnBattle(tileGroup: TileGroup, attacker: Boolean)
     {
-        val amountText = Label(amount.toString(), BaseScreen.skin)
+        val amountText = Label(currentAmount.toString(), BaseScreen.skin)
         amountText.moveBy(tileGroup.width*0.5f, 0f)
 
         for (troopImage in troopImages) {
@@ -92,11 +96,18 @@ class Troop (
             BaseScreen.skin)
         hexLabel.name = "hexCoordsLabel"
         hexLabel.touchable = Touchable.disabled
+        amountText.name = "amountLabel"
         amountText.touchable = Touchable.disabled
         troopGroup.addActor(amountText)
         //troopGroup.addActor(hexLabel)
         tileGroup.addActor(troopGroup)
 
 
+    }
+
+    fun perish(){
+
+        troopGroup.remove()
+        //troopGroup.
     }
 }

@@ -50,6 +50,8 @@ class BattleManager()
   //       sequence = (attackingTroops + defendingTroops).toMutableList().sortedByDescending { it.amount }.toMutableList()
          sequence = (attackingTroops + defendingTroops).toMutableList()
          iterTroop = sequence.listIterator()
+         //iterTroop = sequence.iterator()
+       //  val iter = sequence.iterator()
          currentTroop = iterTroop.next()
 
 
@@ -91,17 +93,63 @@ class BattleManager()
          return HexMath.getDistance(positionHex, currentTroop.positionHex()) <= currentTroop.baseUnit.speed
      }
 
-     fun attackFrom(attackedHex: Vector2, direction: Direction){
+     fun attackFrom(attackedHex: Vector2, attacker:Troop = currentTroop){
         // val attackedTroop = sequence.find { it.position == attackedHex }
-         if (isTroopOnHex(attackedHex))
-             attackFrom(getTroopOnHex(attackedHex), direction)
+         if (isTroopOnHex(attackedHex)) {
+             //val positionMoveOffset = HexMath.hex2EvenQCoords(HexMath.oneStepTowards(HexMath.evenQ2HexCoords(attackedHex), direction))
+
+
+             attack(getTroopOnHex(attackedHex), attacker)
+         }
+
+     }
+     /*fun attackFrom(attackedTroop: Troop, direction: Direction) {
+         val positionMoveOffset = HexMath.hex2EvenQCoords(HexMath.oneStepTowards(HexMath.evenQ2HexCoords(attackedTroop.position), direction))
+
+      //   moveCurrentTroop(positionMoveOffset)
+         attack(currentTroop, attackedTroop)
+     }
+
+      */
+     fun attack(defender: Troop, attacker:Troop = currentTroop){
+         val damage = attacker.amount * attacker.baseUnit.damage
+         val healthLack = defender.baseUnit.health - defender.currentHealth
+         val perished = (damage + healthLack) / defender.baseUnit.health
+         defender.currentHealth = defender.baseUnit.health - ((damage + healthLack) - perished * defender.baseUnit.health)
+         defender.currentAmount -= perished
+         if(defender.currentAmount <= 0)
+             defender.currentAmount = 0
+
+         if(defender.currentAmount <= 0)
+             perishTroop(defender)
 
 
      }
-     fun attackFrom(attackedTroop: Troop, direction: Direction) {
-         val positionMoveOffset = HexMath.hex2EvenQCoords(HexMath.oneStepTowards(HexMath.evenQ2HexCoords(attackedTroop.position), direction))
 
-         moveCurrentTroop(positionMoveOffset)
+     fun perishTroop(troop: Troop){
+         troop.perish()
+         // TODO: That is ugly, but that's how iterators in kotlin work ( We must redefine all iterators after removing the element.
+         // Otherwise, everything crashes ( Ideally, we need to invent our own IteratableList class, or switch to Int iterators.
+
+         val index = sequence.indexOf(troop)
+         if(index != -1)
+         {
+             val currIndex = sequence.indexOf(currentTroop)
+             sequence.removeAt(index)
+             iterTroop = if(currIndex <= index)
+                 sequence.listIterator(currIndex+1)
+             else
+                 sequence.listIterator(currIndex)
+
+         }
+         val indexAttack = attackingTroops.indexOf(troop)
+         if(indexAttack != -1)
+             attackingTroops.removeAt(indexAttack)
+
+         val indexDefend = defendingTroops.indexOf(troop)
+         if(indexDefend != -1)
+             defendingTroops.removeAt(indexDefend)
+
      }
 
      fun finishBattle()
