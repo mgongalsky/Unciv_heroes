@@ -100,6 +100,7 @@ class BattleManager()
 
 
              attack(getTroopOnHex(attackedHex), attacker)
+             //moveCurrentTroop()
          }
 
      }
@@ -130,16 +131,23 @@ class BattleManager()
          troop.perish()
          // TODO: That is ugly, but that's how iterators in kotlin work ( We must redefine all iterators after removing the element.
          // Otherwise, everything crashes ( Ideally, we need to invent our own IteratableList class, or switch to Int iterators.
-
+        // TODO: Maybe the solution is to use iterator.cursor, etc.
          val index = sequence.indexOf(troop)
          if(index != -1)
          {
              val currIndex = sequence.indexOf(currentTroop)
              sequence.removeAt(index)
-             iterTroop = if(currIndex <= index)
-                 sequence.listIterator(currIndex+1)
-             else
-                 sequence.listIterator(currIndex)
+             if(currIndex == -1){
+                 iterTroop = sequence.listIterator()
+                 currentTroop = iterTroop.next()
+             }
+             else{
+                 iterTroop = if(currIndex <= index)
+                    sequence.listIterator(currIndex)
+                 else
+//                 sequence.listIterator(currIndex-1)
+                    sequence.listIterator(currIndex)
+             }
 
          }
          val indexAttack = attackingTroops.indexOf(troop)

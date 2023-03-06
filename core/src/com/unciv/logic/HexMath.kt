@@ -48,35 +48,40 @@ object HexMath {
         //return vector.x + vector.y
     }
 
-    fun oneStepTowards(hex: Vector2, direction: Direction): Vector2 {
+    fun oneStepTowards(hex: Vector2, direction: Direction, mirrored: Boolean = false): Vector2 {
         // This calculation is in Hex Coords! do not use for other coordinate systems!
         val positionMove = Vector2(0f,0f)
+
+        val m = if(mirrored) // factor for mirrored step
+            -1
+        else
+            1
 
         when(direction)
         {
             Direction.TopRight ->{
-                positionMove.x = hex.x - 1f
-                positionMove.y = hex.y + 1f
+                positionMove.x = hex.x - 1f * m
+                positionMove.y = hex.y + 1f * m
             }
             Direction.CenterRight ->{
-                positionMove.x = hex.x - 1f
+                positionMove.x = hex.x - 1f * m
                 positionMove.y = hex.y
             }
             Direction.BottomRight ->{
                 positionMove.x = hex.x
-                positionMove.y = hex.y - 1f
+                positionMove.y = hex.y - 1f * m
             }
             Direction.BottomLeft ->{
-                positionMove.x = hex.x + 1f
-                positionMove.y = hex.y - 1f
+                positionMove.x = hex.x + 1f * m
+                positionMove.y = hex.y - 1f * m
             }
             Direction.CenterLeft ->{
-                positionMove.x = hex.x + 1f
+                positionMove.x = hex.x + 1f * m
                 positionMove.y = hex.y
             }
             Direction.TopLeft ->{
                 positionMove.x = hex.x
-                positionMove.y = hex.y + 1f
+                positionMove.y = hex.y + 1f * m
             }
             Direction.DirError ->
                 return hex

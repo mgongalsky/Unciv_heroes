@@ -328,9 +328,12 @@ class BattleScreen(
 
                     tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.apply {
                     //    this.addActor(manager.currentTroop.troopGroup)
+                        this.addActor(manager.currentTroop.troopGroup)
                         this.update()
                     }
                     tileGroup.update()
+                    manager.moveCurrentTroop(HexMath.hex2EvenQCoords(hexToMove))
+
                     //tileGroup.addActor(manager.currentTroop.troopGroup)
                     // tileGroup.showHighlight(Color.BLUE, 0.7f)
                    /// manager.attackFrom(tileGroup.tileInfo.position, direction)
