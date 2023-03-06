@@ -132,21 +132,23 @@ class BattleManager()
          // TODO: That is ugly, but that's how iterators in kotlin work ( We must redefine all iterators after removing the element.
          // Otherwise, everything crashes ( Ideally, we need to invent our own IteratableList class, or switch to Int iterators.
         // TODO: Maybe the solution is to use iterator.cursor, etc.
-         val index = sequence.indexOf(troop)
-         if(index != -1)
+         val indexPerish = sequence.indexOf(troop)
+         if(indexPerish != -1)
          {
-             val currIndex = sequence.indexOf(currentTroop)
-             sequence.removeAt(index)
-             if(currIndex == -1){
+             val indexCurr = sequence.indexOf(currentTroop)
+             sequence.removeAt(indexPerish)
+             if(indexCurr == -1){
                  iterTroop = sequence.listIterator()
                  currentTroop = iterTroop.next()
              }
              else{
-                 iterTroop = if(currIndex <= index)
-                    sequence.listIterator(currIndex)
-                 else
-//                 sequence.listIterator(currIndex-1)
-                    sequence.listIterator(currIndex)
+                 if(indexCurr <= indexPerish)
+                     iterTroop = sequence.listIterator(indexCurr+1)
+                 else {
+                     iterTroop = sequence.listIterator(indexCurr)
+                     //currentTroop = iterTroop.next()
+                 }
+                     //           sequence.listIterator(currIndex)
              }
 
          }
