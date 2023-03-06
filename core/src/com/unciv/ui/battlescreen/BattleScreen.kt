@@ -55,6 +55,7 @@ class BattleScreen(
     lateinit var daTileGroups : List<TileGroup>
     val cursorMove : Cursor
     val cursorCancel : Cursor
+   // val cursorQuestion : Cursor
     var cursorAttack : ArrayList<Cursor> = ArrayList()
     // Have TileInfo
     // Need TileGroup
@@ -70,6 +71,7 @@ class BattleScreen(
         // Load cursor pixmaps
         cursorMove = loadCursor("BattleMoveCursor128.png", 32,64)
         cursorCancel = loadCursor("BattleCancelCursor64.png", 32,32)
+      //  cursorQuestion = loadCursor("BattleQuestionCursor128.png", 32,64)
         cursorAttack.add(loadCursor("BattleAttackCursor0.png", 64,64))
         cursorAttack.add(loadCursor("BattleAttackCursor1.png", 64,16))
         cursorAttack.add(loadCursor("BattleAttackCursor2.png", 64,64))
@@ -311,41 +313,50 @@ class BattleScreen(
     private fun tileGroupOnClick(tileGroup: TileGroup, x: Float, y: Float)
     {
         var hexToMove = Vector2(0f,0f)
-        if(manager.isTroopOnHex(tileGroup.tileInfo.position)){
-            if(manager.isHexAchievable(tileGroup.tileInfo.position)){
-                val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
-                // TODO: remove code dubbing
-                hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
-                if(!manager.isTroopOnHex(hexToMove) && manager.isHexAchievable(hexToMove)){
-                    manager.attackFrom(tileGroup.tileInfo.position)
-                    manager.currentTroop.apply {
-                        this.troopGroup.findActor<Label>("amountLabel")?.setText(currentAmount.toString())
-                    }
-                    if(manager.isTroopOnHex(tileGroup.tileInfo.position))
-                        manager.getTroopOnHex(tileGroup.tileInfo.position).apply {
-                            this.troopGroup.findActor<Label>("amountLabel")?.setText(currentAmount.toString())
+        if(manager.isTroopOnHex(tileGroup.tileInfo.position)) {
+            if (manager.getTroopOnHex(tileGroup.tileInfo.position).civInfo != manager.currentTroop.civInfo) {
+
+                if (manager.isHexAchievable(tileGroup.tileInfo.position)) {
+                    val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
+                    // TODO: remove code dubbing
+                    hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
+                    if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.positionHex()) && manager.isHexAchievable(
+                                hexToMove
+                            )
+                    ) {
+                        manager.attackFrom(tileGroup.tileInfo.position)
+                        manager.currentTroop.apply {
+                            this.troopGroup.findActor<Label>("amountLabel")
+                                ?.setText(currentAmount.toString())
                         }
+                        if (manager.isTroopOnHex(tileGroup.tileInfo.position))
+                            manager.getTroopOnHex(tileGroup.tileInfo.position).apply {
+                                this.troopGroup.findActor<Label>("amountLabel")
+                                    ?.setText(currentAmount.toString())
+                            }
 
-                    tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.apply {
-                    //    this.addActor(manager.currentTroop.troopGroup)
-                        this.addActor(manager.currentTroop.troopGroup)
-                        this.update()
-                    }
-                    tileGroup.update()
-                    manager.moveCurrentTroop(HexMath.hex2EvenQCoords(hexToMove))
+                        tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.apply {
+                            //    this.addActor(manager.currentTroop.troopGroup)
+                            this.addActor(manager.currentTroop.troopGroup)
+                            this.update()
+                        }
+                        tileGroup.update()
+                        manager.moveCurrentTroop(HexMath.hex2EvenQCoords(hexToMove))
 
-                    //tileGroup.addActor(manager.currentTroop.troopGroup)
-                    // tileGroup.showHighlight(Color.BLUE, 0.7f)
-                   /// manager.attackFrom(tileGroup.tileInfo.position, direction)
+                        //tileGroup.addActor(manager.currentTroop.troopGroup)
+                        // tileGroup.showHighlight(Color.BLUE, 0.7f)
+                        /// manager.attackFrom(tileGroup.tileInfo.position, direction)
 
-                 //   tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.update()
+                        //   tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.update()
 //                    manager.moveCurrentTroop(HexMath.hex2EvenQCoords(hexToMove))
 
-                    pointerPosition = manager.currentTroop.position
-                    draw_pointer()
+                        pointerPosition = manager.currentTroop.position
+                        draw_pointer()
+                    }
                 }
             }
             return
+
         }
 
         val position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
@@ -376,15 +387,22 @@ class BattleScreen(
 
         else {
             if(manager.isTroopOnHex(tileGroup.tileInfo.position)){
-         //   if(tileGroup.findActor<Image>("troopImage") != null){
-                val direction = pixelToDirection(x, y, width)
-                val hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
-                if(!manager.isTroopOnHex(hexToMove) && manager.isHexAchievable(hexToMove)) {
-                    Gdx.graphics.setCursor(cursorAttack[direction.num])
-                    //manager.attackFrom(tileGroup.tileInfo.position, direction)
+                if (manager.getTroopOnHex(tileGroup.tileInfo.position).civInfo != manager.currentTroop.civInfo) {
+
+                    //   if(tileGroup.findActor<Image>("troopImage") != null){
+                    val direction = pixelToDirection(x, y, width)
+                    val hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
+                    if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.positionHex()) && manager.isHexAchievable(
+                                hexToMove
+                            )
+                    ) {
+                        Gdx.graphics.setCursor(cursorAttack[direction.num])
+                        //manager.attackFrom(tileGroup.tileInfo.position, direction)
+                    } else
+                        Gdx.graphics.setCursor(cursorCancel)
                 }
                 else
-                    Gdx.graphics.setCursor(cursorCancel)
+                    Gdx.graphics.setCursor(cursorCancel)  /// TODO: change to question
 
                 return
             }
@@ -445,11 +463,13 @@ class BattleScreen(
     fun resizePage(tab: EmpireOverviewTab) {
     }
 
-    private fun shutdownScreen()
+    internal fun shutdownScreen(calledFromManager: Boolean = false)
     {
         Gdx.graphics.setSystemCursor(SystemCursor.Arrow)
-        manager.finishBattle()
-        game.popScreen()
+        if(!calledFromManager)
+            manager.finishBattle()
+        else
+            game.popScreen()
 
     }
 }

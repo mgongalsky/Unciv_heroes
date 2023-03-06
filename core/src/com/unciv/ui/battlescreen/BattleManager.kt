@@ -1,6 +1,8 @@
 package com.unciv.ui.battlescreen
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Cursor
 import com.badlogic.gdx.math.Vector
 import com.badlogic.gdx.math.Vector2
 import com.unciv.UncivGame
@@ -142,13 +144,10 @@ class BattleManager()
                  currentTroop = iterTroop.next()
              }
              else{
-                 if(indexCurr <= indexPerish)
-                     iterTroop = sequence.listIterator(indexCurr+1)
-                 else {
-                     iterTroop = sequence.listIterator(indexCurr)
-                     //currentTroop = iterTroop.next()
-                 }
-                     //           sequence.listIterator(currIndex)
+                 iterTroop = if(indexCurr <= indexPerish)
+                     sequence.listIterator(indexCurr+1)
+                 else
+                     sequence.listIterator(indexCurr)
              }
 
          }
@@ -160,13 +159,22 @@ class BattleManager()
          if(indexDefend != -1)
              defendingTroops.removeAt(indexDefend)
 
+         checkBattleFinished()
+
      }
 
      fun finishBattle()
      {
          isBattleOn = false
          defendingHero = null
+         screen?.shutdownScreen(calledFromManager = true)
          screen = null
 
+     }
+
+     fun checkBattleFinished()
+     {
+         if(attackingTroops.isEmpty() || defendingTroops.isEmpty())
+             finishBattle()
      }
 }
