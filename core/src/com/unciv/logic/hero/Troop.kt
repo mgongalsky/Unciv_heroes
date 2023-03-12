@@ -67,8 +67,8 @@ class Troop (
     }
 
   //  fun positionHex() = HexMath.evenQ2HexCoords(position)
-    /** Position of a troop in Offset coordinates */
-    fun positionOffset() = HexMath.hex2EvenQCoords(position)
+ //   /** Position of a troop in Offset coordinates */
+  //  fun positionOffset() = HexMath.hex2EvenQCoords(position)
 
     fun drawOnBattle(tileGroup: TileGroup, attacker: Boolean)
     {

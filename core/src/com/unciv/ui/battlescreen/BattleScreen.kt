@@ -321,6 +321,11 @@ class BattleScreen(
                     val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
                     // TODO: remove code dubbing
                     hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
+                    if(!manager.isHexOnBattleField(hexToMove)){
+                     //   Gdx.graphics.setCursor(cursorCancel)
+                        return
+                    }
+
                     if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.position) && manager.isHexAchievable(
                                 hexToMove
                             )
@@ -401,6 +406,10 @@ class BattleScreen(
                     //   if(tileGroup.findActor<Image>("troopImage") != null){
                     val direction = pixelToDirection(x, y, width)
                     val hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
+                    if(!manager.isHexOnBattleField(hexToMove)){
+                        Gdx.graphics.setCursor(cursorCancel)
+                        return
+                    }
                     if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.position) && manager.isHexAchievable(
                                 hexToMove
                             )

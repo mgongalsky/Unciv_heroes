@@ -95,6 +95,16 @@ class BattleManager()
          return HexMath.getDistance(positionHex, currentTroop.position) <= currentTroop.baseUnit.speed
      }
 
+     fun isHexOnBattleField(positionHex: Vector2): Boolean{
+         val positionOffset = HexMath.hex2EvenQCoords(positionHex)
+         // TODO: Change to variable parameters of the BattleField
+         return -7f <= positionOffset.x  &&
+                 positionOffset.x <= 6f &&
+                 -4f <= positionOffset.y &&
+                 positionOffset.y <= 3f
+
+     }
+
      fun attackFrom(attackedHex: Vector2, attacker:Troop = currentTroop){
         // val attackedTroop = sequence.find { it.position == attackedHex }
          if (isTroopOnHex(attackedHex)) {
