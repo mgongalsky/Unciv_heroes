@@ -71,12 +71,12 @@ class BattleManager()
  */
      }
 
-     fun isTroopOnHex(position: Vector2): Boolean {
-         return (sequence.find { HexMath.evenQ2HexCoords(it.position) == position } != null)
+     fun isTroopOnHex(positionHex: Vector2): Boolean {
+         return (sequence.find { it.position == positionHex } != null)
      }
 
-     fun getTroopOnHex(position: Vector2): Troop {
-         return sequence.first { HexMath.evenQ2HexCoords(it.position) == position }
+     fun getTroopOnHex(positionHex: Vector2): Troop {
+         return sequence.first { it.position == positionHex }
      }
 
      fun moveCurrentTroop(position: Vector2)
@@ -92,7 +92,7 @@ class BattleManager()
 
      fun isHexAchievable(positionHex: Vector2): Boolean{
 
-         return HexMath.getDistance(positionHex, currentTroop.positionHex()) <= currentTroop.baseUnit.speed
+         return HexMath.getDistance(positionHex, currentTroop.position) <= currentTroop.baseUnit.speed
      }
 
      fun attackFrom(attackedHex: Vector2, attacker:Troop = currentTroop){

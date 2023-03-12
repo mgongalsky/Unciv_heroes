@@ -34,6 +34,7 @@ class Troop (
     var currentHealth = baseUnit.health
     var currentAmount = amount
     // This is in offset coordinates:
+    /** Position of a troop in hex coordinates */
     lateinit var position: Vector2 //= Vector2(2f,2f)
     // type, amount, currentHealth, currentAmount, spells, ref2unittype, promotions
  /*   init{
@@ -52,16 +53,22 @@ class Troop (
       //  val unitTroopString = "TileSets/FantasyHex/Highlight"
         // TODO: There is a mess with float and int coordinates. It's better to make int everywhere
         if(attacker)
-            position = Vector2(-7f, 3f-number.toFloat()*2)
+        //           position = Vector2(-7f, 3f-number.toFloat()*2)
+        //    position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f-number.toFloat()*2))
+            position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f-number.toFloat()*2))
         else
-            position = Vector2(6f, 3f-number.toFloat()*2)
+        //           position = Vector2(6f, 3f-number.toFloat()*2)
+    //        position = HexMath.evenQ2HexCoords(Vector2(6f, 3f-number.toFloat()*2))
+            position = HexMath.evenQ2HexCoords(Vector2(6f, 3f-number.toFloat()*2))
 
 //        val amountText = Label(amount.toString(), BaseScreen.skin)
         troopImages = ImageGetter.getLayeredImageColored(unitTroopString, null, civInfo.nation.getInnerColor(), civInfo.nation.getOuterColor())
 
     }
 
-    fun positionHex() = HexMath.evenQ2HexCoords(position)
+  //  fun positionHex() = HexMath.evenQ2HexCoords(position)
+    /** Position of a troop in Offset coordinates */
+    fun positionOffset() = HexMath.hex2EvenQCoords(position)
 
     fun drawOnBattle(tileGroup: TileGroup, attacker: Boolean)
     {
@@ -89,7 +96,7 @@ class Troop (
           //  }
             //     setHexagonImageSize(troopImage)// Treat this as A TILE, which gets overlayed on the base tile.
         }
-        val hexCoords = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
+        val hexCoords = tileGroup.tileInfo.position
         var hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString() + "\r\n" +
                 position.x.toString() + ", " + position.y.toString() + "\r\n" +
                 tileGroup.tileInfo.position.x.toString() + ", " + tileGroup.tileInfo.position.y.toString(),

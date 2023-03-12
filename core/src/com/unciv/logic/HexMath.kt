@@ -223,14 +223,14 @@ object HexMath {
 /// TODO: EvenQ is OddR in fact. We need to rename
     fun cubic2EvenQCoords(cubicCoord: Vector3): Vector2 {
         //return Vector2(cubicCoord.x, cubicCoord.z + (cubicCoord.x + (cubicCoord.x.toInt() and 1)) / 2)
-        return Vector2(cubicCoord.x + (cubicCoord.z + (cubicCoord.z.toInt() and 1)) / 2, cubicCoord.z)
+        return Vector2(cubicCoord.x + (cubicCoord.z - (cubicCoord.z.toInt() and 1)) / 2, cubicCoord.z)
 
     }
 
     fun evenQ2CubicCoords(evenQCoord: Vector2): Vector3 {
         //val x = evenQCoord.x
         //val z = evenQCoord.y - (evenQCoord.x + (evenQCoord.x.toInt() and 1)) / 2
-        val x = evenQCoord.x - (evenQCoord.y + (evenQCoord.y.toInt() and 1)) / 2
+        val x = evenQCoord.x - (evenQCoord.y - (evenQCoord.y.toInt() and 1)) / 2
         val z = evenQCoord.y
         val y = -x - z
         return Vector3(x, y, z)

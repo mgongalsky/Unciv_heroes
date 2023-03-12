@@ -77,7 +77,9 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     var civilianUnit: MapUnit? = null
     var airUnits = ArrayList<MapUnit>()
 
+    /** Position of a tile in hex coordinates */
     var position: Vector2 = Vector2.Zero
+
     lateinit var baseTerrain: String
     var terrainFeatures: List<String> = listOf()
         private set

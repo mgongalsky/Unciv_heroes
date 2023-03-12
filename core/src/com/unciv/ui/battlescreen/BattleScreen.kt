@@ -33,6 +33,7 @@ import com.unciv.ui.utils.extensions.onChange
 import com.unciv.ui.utils.extensions.onClick
 
 // Now it's just copied from HeroOverviewScreen
+// All coordinates are hex, not offset
 
 class BattleScreen(
     private var manager: BattleManager,
@@ -135,7 +136,7 @@ class BattleScreen(
 
     fun draw_pointer()
     {
-        var pointerTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == pointerPosition }
+        var pointerTile = daTileGroups.first { it.tileInfo.position == pointerPosition }
         for (pointerImage in pointerImages) {
             pointerImage.setScale(pointerTile.width/256f, pointerTile.width/256f*0.5f)
           //  pointerImage.moveBy(0f, pointerTile.height*0.15f)
@@ -175,14 +176,14 @@ class BattleScreen(
      //   monster.troops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
         manager.defendingTroops.forEach { troop ->
             //        var troopTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == troop.position }
-            var troopTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == troop.position }
+            var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
             //         var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
             troop.drawOnBattle(troopTile, attacker = false)
         }
 
 
         manager.attackingTroops.forEach { troop ->
-            var troopTile = daTileGroups.first { HexMath.hex2EvenQCoords(it.tileInfo.position) == troop.position }
+            var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
             troop.drawOnBattle(troopTile, attacker = true)
         }
    //     pointerImages =
@@ -320,7 +321,7 @@ class BattleScreen(
                     val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
                     // TODO: remove code dubbing
                     hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
-                    if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.positionHex()) && manager.isHexAchievable(
+                    if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.position) && manager.isHexAchievable(
                                 hexToMove
                             )
                     ) {
@@ -341,7 +342,7 @@ class BattleScreen(
                             this.update()
                         }
                         tileGroup.update()
-                        manager.moveCurrentTroop(HexMath.hex2EvenQCoords(hexToMove))
+                        manager.moveCurrentTroop(hexToMove)
 
                         //tileGroup.addActor(manager.currentTroop.troopGroup)
                         // tileGroup.showHighlight(Color.BLUE, 0.7f)
@@ -359,12 +360,20 @@ class BattleScreen(
 
         }
 
-        val position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
+        //val position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
+        val position = tileGroup.tileInfo.position
         // Here the value of 5 must be substituted to unit speed
         if(!manager.isHexAchievable(tileGroup.tileInfo.position))//HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
             return
         manager.currentTroop.apply {
-            this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(position.x.toString() + ", " + position.y.toString())
+            this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(
+                //    position.x.toString() + ", " + position.y.toString() + "\r\n" +
+                    tileGroup.tileInfo.position.x.toString() + ", " + tileGroup.tileInfo.position.y.toString() + "\r\n" +
+                            tileGroup.tileInfo.position.x.toString() + ", " + tileGroup.tileInfo.position.y.toString() + "\r\n" +
+                            HexMath.getDistance(tileGroup.tileInfo.position, Vector2(0f,0f)).toString()
+               //             HexMath.hex2EvenQCoords(tileGroup.tileInfo.position).x.toString() + ", " + HexMath.hex2EvenQCoords(tileGroup.tileInfo.position).y.toString()
+            )
+
         }
         //tileGroup.showHighlight(Color.BLUE, 0.7f)
 
@@ -392,7 +401,7 @@ class BattleScreen(
                     //   if(tileGroup.findActor<Image>("troopImage") != null){
                     val direction = pixelToDirection(x, y, width)
                     val hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
-                    if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.positionHex()) && manager.isHexAchievable(
+                    if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.position) && manager.isHexAchievable(
                                 hexToMove
                             )
                     ) {
