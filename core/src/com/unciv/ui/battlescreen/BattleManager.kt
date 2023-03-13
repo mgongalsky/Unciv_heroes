@@ -79,15 +79,21 @@ class BattleManager()
          return sequence.first { it.position == positionHex }
      }
 
-     fun moveCurrentTroop(position: Vector2)
+     fun nextTurn()
      {
-         currentTroop.position = position
          if(iterTroop.hasNext())
              currentTroop = iterTroop.next()
          else{
              iterTroop = sequence.listIterator()
              currentTroop = iterTroop.next()
          }
+     }
+
+     fun moveCurrentTroop(position: Vector2)
+     {
+         currentTroop.position = position
+         nextTurn()
+
      }
 
      fun isHexAchievable(positionHex: Vector2): Boolean{

@@ -56,6 +56,7 @@ class BattleScreen(
     lateinit var daTileGroups : List<TileGroup>
     val cursorMove : Cursor
     val cursorCancel : Cursor
+    val cursorShoot : Cursor
    // val cursorQuestion : Cursor
     var cursorAttack : ArrayList<Cursor> = ArrayList()
     // Have TileInfo
@@ -71,6 +72,7 @@ class BattleScreen(
     init {
         // Load cursor pixmaps
         cursorMove = loadCursor("BattleMoveCursor128.png", 32,64)
+        cursorShoot = loadCursor("BattleArrowCursor128.png", 64,64)
         cursorCancel = loadCursor("BattleCancelCursor64.png", 32,32)
       //  cursorQuestion = loadCursor("BattleQuestionCursor128.png", 32,64)
         cursorAttack.add(loadCursor("BattleAttackCursor0.png", 64,64))
@@ -313,6 +315,31 @@ class BattleScreen(
 
     private fun tileGroupOnClick(tileGroup: TileGroup, x: Float, y: Float)
     {
+        if(manager.currentTroop.baseUnit.rangedStrength != 0 &&
+                manager.isTroopOnHex(tileGroup.tileInfo.position) &&
+                tileGroup.tileInfo.position != manager.currentTroop.position &&
+                manager.getTroopOnHex(tileGroup.tileInfo.position).civInfo != manager.currentTroop.civInfo
+        ){
+            manager.attack(manager.getTroopOnHex(tileGroup.tileInfo.position))
+            if(manager.isTroopOnHex(tileGroup.tileInfo.position)) {
+
+
+                manager.getTroopOnHex(tileGroup.tileInfo.position).apply {
+                    this.troopGroup.findActor<Label>("amountLabel")
+                        ?.setText(currentAmount.toString())
+                }
+
+                tileGroup.update()
+                manager.nextTurn()
+                pointerPosition = manager.currentTroop.position
+                draw_pointer()
+
+            }
+
+            // Gdx.graphics.setCursor(cursorShoot)
+            return
+        }
+
         var hexToMove = Vector2(0f,0f)
         if(manager.isTroopOnHex(tileGroup.tileInfo.position)) {
             if (manager.getTroopOnHex(tileGroup.tileInfo.position).civInfo != manager.currentTroop.civInfo) {
@@ -395,6 +422,14 @@ class BattleScreen(
 
     fun chooseCrosshair(tileGroup:TileGroup, x: Float, y: Float, width: Float)
     {
+        if(manager.currentTroop.baseUnit.rangedStrength != 0 &&
+                manager.isTroopOnHex(tileGroup.tileInfo.position) &&
+                tileGroup.tileInfo.position != manager.currentTroop.position &&
+                manager.getTroopOnHex(tileGroup.tileInfo.position).civInfo != manager.currentTroop.civInfo
+        ){
+            Gdx.graphics.setCursor(cursorShoot)
+            return
+        }
 
         if(!manager.isHexAchievable(tileGroup.tileInfo.position))
             Gdx.graphics.setCursor(cursorCancel)
@@ -415,6 +450,7 @@ class BattleScreen(
                             )
                     ) {
                         Gdx.graphics.setCursor(cursorAttack[direction.num])
+
                         //manager.attackFrom(tileGroup.tileInfo.position, direction)
                     } else
                         Gdx.graphics.setCursor(cursorCancel)
