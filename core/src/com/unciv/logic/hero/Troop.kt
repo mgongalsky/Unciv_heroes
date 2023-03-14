@@ -14,6 +14,7 @@ import com.unciv.ui.images.ImageGetter.ruleset
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.BaseScreen
 
+/** Battle units with specified [amount], [position] in hex coordinates and reference to a [baseUnit] */
 class Troop (
     var amount: Int, // TODO: Maybe @transient is required
     val unitName: String
@@ -25,56 +26,43 @@ class Troop (
     @Transient
     var baseUnit: BaseUnit = ruleset.units[unitName]!!
 
+    // Group of actors for this troop. (Mostly pixmap of the unit and its amount)
     @Transient
     var troopGroup = Group()
 
     @Transient
     lateinit var troopImages: ArrayList<Image>
 
+    // Current amount of units and health, which can be changed during the battle.
     var currentHealth = baseUnit.health
     var currentAmount = amount
     // This is in offset coordinates:
     /** Position of a troop in hex coordinates */
     lateinit var position: Vector2 //= Vector2(2f,2f)
-    // type, amount, currentHealth, currentAmount, spells, ref2unittype, promotions
- /*   init{
-        baseUnit.ruleset = ruleset
-     //   var currentHealth: Int = baseUnit.strength // TODO: Change to Health in Units.json
-        var currentAmount = amount
-       // position = Vector2(2f, 2f)
-    }
 
-
-  */
+    /** Called when battle is started (or the troop is summoned). [number] corresponds to location in the hero's army and determines initial location */
     fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean)
     {
         civInfo = civInfo0
         val unitTroopString = "TileSets/AbsoluteUnits/Units/" + baseUnit.name
-      //  val unitTroopString = "TileSets/FantasyHex/Highlight"
         // TODO: There is a mess with float and int coordinates. It's better to make int everywhere
         if(attacker)
-        //           position = Vector2(-7f, 3f-number.toFloat()*2)
-        //    position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f-number.toFloat()*2))
             position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f-number.toFloat()*2))
         else
-        //           position = Vector2(6f, 3f-number.toFloat()*2)
-    //        position = HexMath.evenQ2HexCoords(Vector2(6f, 3f-number.toFloat()*2))
             position = HexMath.evenQ2HexCoords(Vector2(6f, 3f-number.toFloat()*2))
 
-//        val amountText = Label(amount.toString(), BaseScreen.skin)
+        // Load images for all troops
         troopImages = ImageGetter.getLayeredImageColored(unitTroopString, null, civInfo.nation.getInnerColor(), civInfo.nation.getOuterColor())
-
     }
 
-  //  fun positionHex() = HexMath.evenQ2HexCoords(position)
- //   /** Position of a troop in Offset coordinates */
-  //  fun positionOffset() = HexMath.hex2EvenQCoords(position)
-
+    /** Draw the troop on a battle within specifed [tileGroup]*/
     fun drawOnBattle(tileGroup: TileGroup, attacker: Boolean)
     {
+        // Draw amount of units
         val amountText = Label(currentAmount.toString(), BaseScreen.skin)
         amountText.moveBy(tileGroup.width*0.5f, 0f)
 
+        // Draw pixmap of a troop
         for (troopImage in troopImages) {
             if(attacker) {
                 troopImage.setScale(-2f, 2f)
@@ -86,16 +74,13 @@ class Troop (
             }
             troopImage.setOrigin(tileGroup.originX, tileGroup.originY)
             /// TODO: Seems like latitude and longitude work incorrectly in main map
-        //    if(hexCoords == position || true)// && tileGroup.tileInfo.longitude==3f)
-         //   {
             troopImage.touchable = Touchable.disabled
             troopImage.name = "troopImage"
             troopGroup.name = "troopGroup"
             troopGroup.addActor(troopImage)
-          //  tileGroup.addActor(troopImage)
-          //  }
-            //     setHexagonImageSize(troopImage)// Treat this as A TILE, which gets overlayed on the base tile.
         }
+
+        // hexCoordsLabel is used for debug only. Shows various coordinates for the troop
         val hexCoords = tileGroup.tileInfo.position
         var hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString() + "\r\n" +
                 position.x.toString() + ", " + position.y.toString() + "\r\n" +
@@ -106,15 +91,12 @@ class Troop (
         amountText.name = "amountLabel"
         amountText.touchable = Touchable.disabled
         troopGroup.addActor(amountText)
+        // Uncomment this for debug with rendering of coordinates. Comment amountText label.
         //troopGroup.addActor(hexLabel)
         tileGroup.addActor(troopGroup)
-
-
     }
 
     fun perish(){
-
         troopGroup.remove()
-        //troopGroup.
     }
 }

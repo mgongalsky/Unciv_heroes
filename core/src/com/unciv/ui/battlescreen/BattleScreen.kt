@@ -35,6 +35,7 @@ import com.unciv.ui.utils.extensions.onClick
 // Now it's just copied from HeroOverviewScreen
 // All coordinates are hex, not offset
 
+/** Screen for a battle. Visual routines are here, logic of the battle is in [BattleManager] class. Must not be used for AI duels. */
 class BattleScreen(
     private var manager: BattleManager,
     private var viewingHero: MapUnit,
@@ -47,23 +48,23 @@ class BattleScreen(
     internal val BFwidth : Int = 14
     internal val BFheight : Int = 8
     private val battleField : TileMap = TileMap(BFwidth, BFheight,  game.gameInfo!!.ruleSet, viewingHero.currentTile.baseTerrain)
-//    private lateinit var tileGroupMap: TileGroupMap<TileGroup>
     val tileGroups = HashMap<TileInfo, List<TileGroup>>()
     private lateinit var tileGroupMap: TileGroupMap<TileGroup>
     private val allTileGroups = ArrayList<TileGroup>()
+    /** Position of a pointer to a currently active troop. */
     lateinit var pointerPosition : Vector2
-    lateinit var pointerImages : ArrayList<Image>
-    lateinit var daTileGroups : List<TileGroup>
+    var pointerImages : ArrayList<Image>
+    var daTileGroups : List<TileGroup>
     val cursorMove : Cursor
     val cursorCancel : Cursor
     val cursorShoot : Cursor
    // val cursorQuestion : Cursor
     var cursorAttack : ArrayList<Cursor> = ArrayList()
-    // Have TileInfo
-    // Need TileGroup
 
+    /** Handle for a table with a battlefield. Could be obsolete in future */
     private val tabbedPager: TabbedPager
 
+    /** What to do if battlefield window is closing */
     override fun dispose() {
         tabbedPager.selectPage(-1)
         super.dispose()
@@ -84,6 +85,7 @@ class BattleScreen(
 
         // TODO: Cursors are fixed-sized, what is not really good
 
+        /*
         val page =
             if (defaultPage != "") {
                 game.settings.lastOverviewPage = defaultPage
@@ -93,25 +95,30 @@ class BattleScreen(
         val iconSize = Constants.defaultFontSize.toFloat()
         //battleField[1,1].
         val terraLayer = ArrayList<Group>()
-        globalShortcuts.add(KeyCharAndCode.BACK) { game.popScreen() }
+        */
 
+        // shotcut for exiting the battle
+        globalShortcuts.add(KeyCharAndCode.BACK) { shutdownScreen() }
+
+        // Loading all the assets into daTileGroups
         val tileSetStrings = TileSetStrings()
         daTileGroups = battleField.values.map { TileGroup(it, tileSetStrings) }
 
+        // Loading pixmap for the current troop pointer
         val pointerString = "TileSets/FantasyHex/Highlight"
         pointerImages =
                 ImageGetter.getLayeredImageColored(pointerString, Color.valueOf("#00AAFF77"))
-   //     pointerPosition = Vector2(0f, 0f)
 
-
+        // Routines with table containing battlefield. Copied.
         tabbedPager = TabbedPager(
             stage.width, stage.width,
             centerAreaHeight, centerAreaHeight,
             separatorColor = Color.WHITE)
 
-
+        // Button for exiting the battle
         tabbedPager.addClosePage {shutdownScreen()}
 
+        // Add net of tiles of battlefield
         addTiles()
 
         stage.addActor(tabbedPager)
@@ -124,7 +131,6 @@ class BattleScreen(
 
         tabbedPager.setFillParent(true)
 
-
     }
 
     fun loadCursor(filename: String, xHotspot: Int, yHotspot: Int) : Cursor{
@@ -136,97 +142,66 @@ class BattleScreen(
 
     }
 
+    /** Draw a pointer to a currently active troop. */
     fun draw_pointer()
     {
+        // Find a tileGroup with specified pointer position
         var pointerTile = daTileGroups.first { it.tileInfo.position == pointerPosition }
         for (pointerImage in pointerImages) {
+            // Note that here fixed sizes are used. Must be improved.
             pointerImage.setScale(pointerTile.width/256f, pointerTile.width/256f*0.5f)
-          //  pointerImage.moveBy(0f, pointerTile.height*0.15f)
             pointerImage.setPosition(0f, pointerTile.height*0.15f)
 
             pointerImage.setOrigin(pointerTile.originX, pointerTile.originY)
             pointerImage.touchable = Touchable.disabled
             pointerImage.name = "pointer"
-           // if(pointerTile.)
+            // Here we find an actor devoted to a troop and put a pointer underneath
             pointerTile.addActorBefore(pointerTile.findActor("troopGroup"), pointerImage)
-       //     pointerTile.addActor(pointerImage)
         }
+
+        // Now we highlight achievable hexes by transparency. First of all we make all hexes non-transparent.
         for (tileGroup in daTileGroups)
             tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
         // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
-//        var achievableHexes = daTileGroups.filter { HexMath.getDistance(it.tileInfo.position,HexMath.evenQ2HexCoords(pointerPosition)) < manager.currentTroop.baseUnit.speed }
         var achievableHexes = daTileGroups.filter { manager.isHexAchievable(it.tileInfo.position) }
         for (achievableHex in achievableHexes)
             achievableHex.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
-
-       // pointerTile.baseLayerGroup.color
     }
 
-    private var isMouseMoved = false
-    private var xLastMouse = 0f
-    private var yLastMouse = 0f
-    // Copied from EditorMapHolder
+    /** creating a rectangular array of battlefield tiles */
     internal fun addTiles(){
 
+        tileGroupMap = TileGroupMap(daTileGroups)
 
-        tileGroupMap = TileGroupMap(
-            daTileGroups)
-
-
-
-        //   var monster = Monster(40, "Crossbowman")
-     //   monster.troops.forEachIndexed { index, troop -> troop.enterBattle(viewingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
+        // Draw defending troops
         manager.defendingTroops.forEach { troop ->
-            //        var troopTile = daTileGroups.first { HexMath.hexTranspose(HexMath.hex2EvenQCoords(it.tileInfo.position)) == troop.position }
             var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
-            //         var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
             troop.drawOnBattle(troopTile, attacker = false)
         }
 
-
+        // Draw attacking troops
         manager.attackingTroops.forEach { troop ->
             var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
             troop.drawOnBattle(troopTile, attacker = true)
         }
-   //     pointerImages =
-  //              ImageGetter.getLayeredImageColored(poString, Color.valueOf("#00AAFF77"))
+
+        // Draw a pointer to currently active troop
         pointerPosition = manager.sequence.first().position
         draw_pointer()
 
+        // Add various mouse listeners to each tile
         for (tileGroup in daTileGroups)
         {
-           // tileGroup.onChange {  }
-           /* tileGroup.onClick {
-              //  tileGroupOnClick(tileGroup)
-            }
-*/
             // Right mouse click listener
             tileGroup.addListener(object : ClickListener() {
-                /*
-                init {
-                    button = Input.Buttons.RIGHT
-                }
-
-                override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                    val unit = worldScreen.bottomUnitTable.selectedUnit
-                        ?: return
-                    Concurrency.run("WorldScreenClick") {
-                        onTileRightClicked(unit, tileGroup.tileInfo)
-                    }
-                }
-
-                 */
                 override fun mouseMoved(event: InputEvent?, x: Float, y: Float): Boolean {
                     // TODO: it is better to use width directly from Hexagon actor rather than baseLayerGroup actors
                     chooseCrosshair(tileGroup, x, y, tileGroup.baseLayerGroup.width)
                     return super.mouseMoved(event, x, y)
-
                 }
 
                 override fun clicked(event: InputEvent?, x: Float, y: Float) {
                     tileGroupOnClick(tileGroup, x, y)
-
-
                 }
 
                 override fun enter(
@@ -236,36 +211,19 @@ class BattleScreen(
                     pointer: Int,
                     fromActor: Actor?
                 ) {
+                    // Highlight a tile as currently targeted by mouse pointer
                     tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.5f)
-                    //var cursor = Cursor()
 
+                    // Choose apropriate crosshair
                     if(fromActor != null) {
                         val width = fromActor.width
                         chooseCrosshair(tileGroup, x, y, width)
                     }
 
-
                     super.enter(event, x, y, pointer, fromActor)
-
                 }
 
-
-/*
-                override fun isOver(actor: Actor?, x: Float, y: Float): Boolean {
-
-                   // tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.5f)
-                    //var cursor = Cursor()
-                    if(actor != null) {
-                        val width = actor.width
-                        chooseCrosshair(tileGroup, x, y, width)
-                    }
-                    return super.isOver(actor, x, y)
-
-                }
-
-
- */
-
+                // Restore the tile after mouse pointer exited it
                 override fun exit(
                     event: InputEvent?,
                     x: Float,
@@ -283,26 +241,12 @@ class BattleScreen(
                 }
             })
 
-            //   tileGroup.name = "terrainHex"
-         //   tileGroup.color = Color(1.0f, 1.0f, 1.0f, 0.3f)
             allTileGroups.add(tileGroup)
 
             tileGroups[tileGroup.tileInfo] = listOf(tileGroup)
         }
 
         for (tileGroup in allTileGroups) {
-
-/* revisit when Unit editing is re-implemented
-            // This is a hack to make the unit icons render correctly on the game, even though the map isn't part of a game
-            // and the units aren't assigned to any "real" CivInfo
-            //to do make safe the !!
-            //to do worse - don't create a whole Civ instance per unit
-            tileGroup.tileInfo.getUnits().forEach {
-                it.civInfo = CivilizationInfo().apply {
-                    nation = ruleset.nations[it.owner]!!
-                }
-            }
-*/
 
             tileGroup.showEntireMap = true
             tileGroup.update()
@@ -313,75 +257,74 @@ class BattleScreen(
 
     }
 
+    /** Routing for mouse clicking a certian tile. */
     private fun tileGroupOnClick(tileGroup: TileGroup, x: Float, y: Float)
     {
+        val targetHex = tileGroup.tileInfo.position
+        // If current troop can shoot:
         if(manager.currentTroop.baseUnit.rangedStrength != 0 &&
-                manager.isTroopOnHex(tileGroup.tileInfo.position) &&
-                tileGroup.tileInfo.position != manager.currentTroop.position &&
-                manager.getTroopOnHex(tileGroup.tileInfo.position).civInfo != manager.currentTroop.civInfo
+                manager.isTroopOnHex(targetHex) &&
+                targetHex != manager.currentTroop.position &&
+                manager.getTroopOnHex(targetHex).civInfo != manager.currentTroop.civInfo
         ){
-            manager.attack(manager.getTroopOnHex(tileGroup.tileInfo.position))
-            if(manager.isTroopOnHex(tileGroup.tileInfo.position)) {
-
-
-                manager.getTroopOnHex(tileGroup.tileInfo.position).apply {
+            manager.attack(manager.getTroopOnHex(targetHex))
+            // We need to check that we didn't kill the troop and it still exists
+            if(manager.isTroopOnHex(targetHex)) {
+               manager.getTroopOnHex(targetHex).apply {
                     this.troopGroup.findActor<Label>("amountLabel")
                         ?.setText(currentAmount.toString())
                 }
-
-                tileGroup.update()
-                manager.nextTurn()
-                pointerPosition = manager.currentTroop.position
-                draw_pointer()
-
             }
 
-            // Gdx.graphics.setCursor(cursorShoot)
+            // After a shoot we turn to next troop and redraw the pointer
+            tileGroup.update()
+            manager.nextTurn()
+            pointerPosition = manager.currentTroop.position
+            draw_pointer()
+
             return
         }
 
+        // for non-shooting troops:
         var hexToMove = Vector2(0f,0f)
-        if(manager.isTroopOnHex(tileGroup.tileInfo.position)) {
-            if (manager.getTroopOnHex(tileGroup.tileInfo.position).civInfo != manager.currentTroop.civInfo) {
+        if(manager.isTroopOnHex(targetHex)) {
+            if (manager.getTroopOnHex(targetHex).civInfo != manager.currentTroop.civInfo) {
 
-                if (manager.isHexAchievable(tileGroup.tileInfo.position)) {
+                if (manager.isHexAchievable(targetHex)) {
+                    // Determine the direction depending in which part of target hex mouse cursor is located
                     val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
                     // TODO: remove code dubbing
-                    hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
-                    if(!manager.isHexOnBattleField(hexToMove)){
-                     //   Gdx.graphics.setCursor(cursorCancel)
+                    // Specify the hex, where we have intention to go
+                    hexToMove = HexMath.oneStepTowards(targetHex, direction)
+                    if(!manager.isHexOnBattleField(hexToMove))
                         return
-                    }
 
-                    if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.position) && manager.isHexAchievable(
-                                hexToMove
-                            )
-                    ) {
-                        manager.attackFrom(tileGroup.tileInfo.position)
+                    // We need to check several things:
+                    if ((!manager.isTroopOnHex(hexToMove) || // Hex to move is free
+                                    hexToMove == manager.currentTroop.position) && // that is not the same hex where we are
+                             manager.isHexAchievable(hexToMove))  // hex is achievable
+                    {
+                        // Attack target
+                        manager.attack(targetHex)
+                        // Redraw the label with amount of units in the targeted troop
                         manager.currentTroop.apply {
                             this.troopGroup.findActor<Label>("amountLabel")
                                 ?.setText(currentAmount.toString())
                         }
-                        if (manager.isTroopOnHex(tileGroup.tileInfo.position))
-                            manager.getTroopOnHex(tileGroup.tileInfo.position).apply {
+                        if (manager.isTroopOnHex(targetHex))
+                            manager.getTroopOnHex(targetHex).apply {
                                 this.troopGroup.findActor<Label>("amountLabel")
                                     ?.setText(currentAmount.toString())
                             }
 
                         tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.apply {
-                            //    this.addActor(manager.currentTroop.troopGroup)
                             this.addActor(manager.currentTroop.troopGroup)
                             this.update()
                         }
                         tileGroup.update()
+
+                        // Move current troop and redraw the pointer
                         manager.moveCurrentTroop(hexToMove)
-
-                        //tileGroup.addActor(manager.currentTroop.troopGroup)
-                        // tileGroup.showHighlight(Color.BLUE, 0.7f)
-                        /// manager.attackFrom(tileGroup.tileInfo.position, direction)
-
-                        //   tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.update()
-//                    manager.moveCurrentTroop(HexMath.hex2EvenQCoords(hexToMove))
 
                         pointerPosition = manager.currentTroop.position
                         draw_pointer()
@@ -392,67 +335,61 @@ class BattleScreen(
 
         }
 
-        //val position = HexMath.hex2EvenQCoords(tileGroup.tileInfo.position)
-        val position = tileGroup.tileInfo.position
-        // Here the value of 5 must be substituted to unit speed
-        if(!manager.isHexAchievable(tileGroup.tileInfo.position))//HexMath.getDistance(tileGroup.tileInfo.position, HexMath.evenQ2HexCoords(manager.currentTroop.position)) >= manager.currentTroop.baseUnit.speed)
+        if(!manager.isHexAchievable(targetHex))
             return
+        // hexCoordsLabel is used for debug only and shows various coordinates and parameters
         manager.currentTroop.apply {
             this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(
-                //    position.x.toString() + ", " + position.y.toString() + "\r\n" +
-                    tileGroup.tileInfo.position.x.toString() + ", " + tileGroup.tileInfo.position.y.toString() + "\r\n" +
-                            tileGroup.tileInfo.position.x.toString() + ", " + tileGroup.tileInfo.position.y.toString() + "\r\n" +
-                            HexMath.getDistance(tileGroup.tileInfo.position, Vector2(0f,0f)).toString()
-               //             HexMath.hex2EvenQCoords(tileGroup.tileInfo.position).x.toString() + ", " + HexMath.hex2EvenQCoords(tileGroup.tileInfo.position).y.toString()
+                    targetHex.x.toString() + ", " + targetHex.y.toString() + "\r\n" +
+                            targetHex.x.toString() + ", " + targetHex.y.toString() + "\r\n" +
+                            HexMath.getDistance(targetHex, Vector2(0f,0f)).toString()
             )
 
         }
-        //tileGroup.showHighlight(Color.BLUE, 0.7f)
 
         tileGroup.addActor(manager.currentTroop.troopGroup)
-       // tileGroup.showHighlight(Color.BLUE, 0.7f)
-
         tileGroup.update()
-        manager.moveCurrentTroop(position)
+
+        // Move to next troop and redraw the pointer
+        manager.moveCurrentTroop(targetHex)
         pointerPosition = manager.currentTroop.position
         draw_pointer()
-
-
     }
 
+    /** Routing for choose appropriate mouse cursor: for movement, attack, shooting and info. In other cases "cancel" cursor is shown */
     fun chooseCrosshair(tileGroup:TileGroup, x: Float, y: Float, width: Float)
     {
+        // The code is similar to onClick routines. See details comments there.
+        val targetHex = tileGroup.tileInfo.position
+
+        // if current troop can shoot:
         if(manager.currentTroop.baseUnit.rangedStrength != 0 &&
-                manager.isTroopOnHex(tileGroup.tileInfo.position) &&
-                tileGroup.tileInfo.position != manager.currentTroop.position &&
-                manager.getTroopOnHex(tileGroup.tileInfo.position).civInfo != manager.currentTroop.civInfo
+                manager.isTroopOnHex(targetHex) &&
+                targetHex != manager.currentTroop.position &&
+                manager.getTroopOnHex(targetHex).civInfo != manager.currentTroop.civInfo
         ){
             Gdx.graphics.setCursor(cursorShoot)
             return
         }
 
-        if(!manager.isHexAchievable(tileGroup.tileInfo.position))
+        // for non-shooting troops:
+        if(!manager.isHexAchievable(targetHex))
             Gdx.graphics.setCursor(cursorCancel)
 
         else {
-            if(manager.isTroopOnHex(tileGroup.tileInfo.position)){
-                if (manager.getTroopOnHex(tileGroup.tileInfo.position).civInfo != manager.currentTroop.civInfo) {
+            if(manager.isTroopOnHex(targetHex)){
+                if (manager.getTroopOnHex(targetHex).civInfo != manager.currentTroop.civInfo) {
 
-                    //   if(tileGroup.findActor<Image>("troopImage") != null){
                     val direction = pixelToDirection(x, y, width)
-                    val hexToMove = HexMath.oneStepTowards(tileGroup.tileInfo.position, direction)
+                    val hexToMove = HexMath.oneStepTowards(targetHex, direction)
                     if(!manager.isHexOnBattleField(hexToMove)){
                         Gdx.graphics.setCursor(cursorCancel)
                         return
                     }
-                    if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.position) && manager.isHexAchievable(
-                                hexToMove
-                            )
-                    ) {
+                    if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.position) &&
+                            manager.isHexAchievable(hexToMove))
                         Gdx.graphics.setCursor(cursorAttack[direction.num])
-
-                        //manager.attackFrom(tileGroup.tileInfo.position, direction)
-                    } else
+                     else
                         Gdx.graphics.setCursor(cursorCancel)
                 }
                 else
@@ -466,14 +403,13 @@ class BattleScreen(
 
     }
 
+    /** Determine direction of the supposed attack by position of the mouse pointer */
     fun pixelToDirection(x: Float, y: Float, width: Float): Direction{
         // width of the hex
 
         val x0 = width/2
         val height = width * 1.1547f
         val y0 = x0 * 0.577f // tangents of 30 degrees
-
-        //  var direction = Direction.TopLeft
 
         // Here we divide the hex with defender into 6 triangles in order to show from which adjacent hex attack will be mad
         // We have three diagonal lines intersecting at the center of the hex:
@@ -519,7 +455,9 @@ class BattleScreen(
 
     internal fun shutdownScreen(calledFromManager: Boolean = false)
     {
+        // Change cursor to arrow, default for map view.
         Gdx.graphics.setSystemCursor(SystemCursor.Arrow)
+        // Take into account that this function can be called from BattleManager. In that case we need just to close screen.
         if(!calledFromManager)
             manager.finishBattle()
         else

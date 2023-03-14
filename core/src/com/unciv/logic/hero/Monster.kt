@@ -3,6 +3,7 @@ package com.unciv.logic.hero
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.models.ruleset.unit.BaseUnit
 
+/** A neutral "monster" army presented on map */
 class Monster(
     var amount: Int, // TODO: Maybe @transient is required
     val unitName: String
@@ -21,6 +22,4 @@ class Monster(
 
         }
     }
-
-
 }

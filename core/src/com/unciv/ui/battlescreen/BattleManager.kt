@@ -12,31 +12,43 @@ import com.unciv.logic.hero.Troop
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 
+// TODO: This class is logic. And should be moved to "logic" package. However, there is internal visibility with BattleScreen class, which is UI.
+
+/** Specifies one of 6 directions of a hex (from center of an edge to center of the hex). [DirError] is handle for error */
 enum class Direction(val num: Int) {
     TopRight(0), CenterRight(1), BottomRight(2), BottomLeft(3), CenterLeft(4), TopLeft(5), DirError(6)
 }
 
-// Remember that: troop coordinates are offset, but all calculations and tileinfo are hex coords
+/** Logical part of a battle. No visial part here (it is in [BattleScreen] class).
+ * That class must handle AI duel.
+ * Here we use hex coordinates, despite that the battle map is rectagular.
+ */
 class BattleManager()
  {
 
+     /** Current status of the battle */
      internal var isBattleOn = false
+     /** Reference to a hero unit on a world map.
+      * Currently used only for determining of terrain land and a handle to hero parameters */
      internal lateinit var attackingHero: MapUnit
      internal lateinit var attackingTroops: MutableList<Troop>
      internal var defendingHero: MapUnit? = null
      internal lateinit var defendingTroops: MutableList<Troop>
      internal lateinit var sequence: MutableList<Troop>
      internal var screen: BattleScreen? = null
+     /** Iterator to a currently active troop */
      private lateinit var iterTroop: MutableListIterator<Troop>
+     /** Reference to a currently active troop. Must be changed just after iterator [iterTroop] changed ( */
      internal lateinit var currentTroop: Troop
 
+     /** Initialization of the battle */
      fun startBattle(attackingHero0: MapUnit)
      {
          attackingHero = attackingHero0
          attackingTroops = attackingHero.troops
          isBattleOn = true
 
-
+         // Initialize model armies
          var monster = Monster(40, "Crossbowman")
          defendingTroops = monster.troops
          defendingTroops.forEachIndexed { index, troop -> troop.enterBattle(attackingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
@@ -48,39 +60,31 @@ class BattleManager()
          attackingTroops.add(Troop(5, "Swordsman"))
          attackingTroops.forEachIndexed { index, troop -> troop.enterBattle(attackingHero.civInfo, index, attacker = true)}
 
+         // Initialize turns sequence for all troops
          // Here should be sorting by speed
-  //       sequence = (attackingTroops + defendingTroops).toMutableList().sortedByDescending { it.amount }.toMutableList()
-         sequence = (attackingTroops + defendingTroops).toMutableList()
+         sequence = (attackingTroops + defendingTroops).toMutableList().sortedByDescending { it.baseUnit.speed }.toMutableList()
+    //     sequence = (attackingTroops + defendingTroops).toMutableList()
          iterTroop = sequence.listIterator()
-         //iterTroop = sequence.iterator()
-       //  val iter = sequence.iterator()
          currentTroop = iterTroop.next()
-
 
          screen = BattleScreen(this, attackingHero0)
          UncivGame.Current.pushScreen(screen!!)
-/*
-         fun highlightTile(tile: TileInfo, color: Color = Color.WHITE) {
-             for (group in mapHolder.tileGroups[tile] ?: return) {
-                 group.showHighlight(color)
-                 highlightedTileGroups.add(group)
-             }
-         }
-
-
- */
      }
 
+     /** Check if specified hex has a troop on it */
      fun isTroopOnHex(positionHex: Vector2): Boolean {
          return (sequence.find { it.position == positionHex } != null)
      }
 
+     /** Get a troop on the specified hex. Check if there is any by call [isTroopOnHex] first */
      fun getTroopOnHex(positionHex: Vector2): Troop {
          return sequence.first { it.position == positionHex }
      }
 
+     /** Gives turn to next troop in the sequence */
      fun nextTurn()
      {
+         // If we are at the end of the sequence, go to the beginning
          if(iterTroop.hasNext())
              currentTroop = iterTroop.next()
          else{
@@ -89,6 +93,7 @@ class BattleManager()
          }
      }
 
+     /** Moves current troop to the specified [position] */
      fun moveCurrentTroop(position: Vector2)
      {
          currentTroop.position = position
@@ -96,11 +101,13 @@ class BattleManager()
 
      }
 
+     /** Checks if the specified hex is achievable by the current troop */
      fun isHexAchievable(positionHex: Vector2): Boolean{
 
          return HexMath.getDistance(positionHex, currentTroop.position) <= currentTroop.baseUnit.speed
      }
 
+     /** Checks if the specified hex is inside the battlefield */
      fun isHexOnBattleField(positionHex: Vector2): Boolean{
          val positionOffset = HexMath.hex2EvenQCoords(positionHex)
          // TODO: Change to variable parameters of the BattleField
@@ -111,29 +118,22 @@ class BattleManager()
 
      }
 
-     fun attackFrom(attackedHex: Vector2, attacker:Troop = currentTroop){
-        // val attackedTroop = sequence.find { it.position == attackedHex }
-         if (isTroopOnHex(attackedHex)) {
-             //val positionMoveOffset = HexMath.hex2EvenQCoords(HexMath.oneStepTowards(HexMath.evenQ2HexCoords(attackedHex), direction))
-
-
-             attack(getTroopOnHex(attackedHex), attacker)
-             //moveCurrentTroop()
+     /** Attack the target by current troop by specified [defenderHex] position */
+     fun attack(defenderHex: Vector2, attacker:Troop = currentTroop){
+         if (isTroopOnHex(defenderHex)) {
+             attack(getTroopOnHex(defenderHex), attacker)
          }
-
-     }
-     /*fun attackFrom(attackedTroop: Troop, direction: Direction) {
-         val positionMoveOffset = HexMath.hex2EvenQCoords(HexMath.oneStepTowards(HexMath.evenQ2HexCoords(attackedTroop.position), direction))
-
-      //   moveCurrentTroop(positionMoveOffset)
-         attack(currentTroop, attackedTroop)
      }
 
-      */
+     /** Attack the target by current troop by specified [defender] troop handle */
      fun attack(defender: Troop, attacker:Troop = currentTroop){
-         val damage = attacker.amount * attacker.baseUnit.damage
+         // Calculate maximum damage
+         val damage = attacker.currentAmount * attacker.baseUnit.damage
+         // We add lack of health just to simplify calculations. We add it to total amount of health
          val healthLack = defender.baseUnit.health - defender.currentHealth
+         // Calculate amount of perished units
          val perished = (damage + healthLack) / defender.baseUnit.health
+         // Update parameters after attack:
          defender.currentHealth = defender.baseUnit.health - ((damage + healthLack) - perished * defender.baseUnit.health)
          defender.currentAmount -= perished
          if(defender.currentAmount <= 0)
@@ -145,6 +145,7 @@ class BattleManager()
 
      }
 
+     /** Routine for perished troops. Removal from all lists. */
      fun perishTroop(troop: Troop){
          troop.perish()
          // TODO: That is ugly, but that's how iterators in kotlin work ( We must redefine all iterators after removing the element.
@@ -167,6 +168,7 @@ class BattleManager()
              }
 
          }
+
          val indexAttack = attackingTroops.indexOf(troop)
          if(indexAttack != -1)
              attackingTroops.removeAt(indexAttack)
@@ -176,7 +178,6 @@ class BattleManager()
              defendingTroops.removeAt(indexDefend)
 
          checkBattleFinished()
-
      }
 
      fun finishBattle()
@@ -188,6 +189,7 @@ class BattleManager()
 
      }
 
+     /** Checks if battle is finished. If all troops of one army is gone, then finish the battle */
      fun checkBattleFinished()
      {
          if(attackingTroops.isEmpty() || defendingTroops.isEmpty())
