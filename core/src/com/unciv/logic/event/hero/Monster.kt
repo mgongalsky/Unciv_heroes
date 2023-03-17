@@ -1,4 +1,4 @@
-package com.unciv.logic.hero
+package com.unciv.logic.event.hero
 
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.models.ruleset.unit.BaseUnit

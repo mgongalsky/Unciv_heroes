@@ -1,4 +1,4 @@
-package com.unciv.logic.hero
+package com.unciv.logic.event.hero
 
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Group

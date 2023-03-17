@@ -7,8 +7,8 @@ import com.badlogic.gdx.math.Vector
 import com.badlogic.gdx.math.Vector2
 import com.unciv.UncivGame
 import com.unciv.logic.HexMath
-import com.unciv.logic.hero.Monster
-import com.unciv.logic.hero.Troop
+import com.unciv.logic.event.hero.Monster
+import com.unciv.logic.event.hero.Troop
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 
@@ -119,14 +119,14 @@ class BattleManager()
      }
 
      /** Attack the target by current troop by specified [defenderHex] position */
-     fun attack(defenderHex: Vector2, attacker:Troop = currentTroop){
+     fun attack(defenderHex: Vector2, attacker: Troop = currentTroop){
          if (isTroopOnHex(defenderHex)) {
              attack(getTroopOnHex(defenderHex), attacker)
          }
      }
 
      /** Attack the target by current troop by specified [defender] troop handle */
-     fun attack(defender: Troop, attacker:Troop = currentTroop){
+     fun attack(defender: Troop, attacker: Troop = currentTroop){
          // Calculate maximum damage
          val damage = attacker.currentAmount * attacker.baseUnit.damage
          // We add lack of health just to simplify calculations. We add it to total amount of health

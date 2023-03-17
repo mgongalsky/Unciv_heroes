@@ -2,8 +2,10 @@ package com.unciv.ui.cityscreen
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Label
+import com.badlogic.gdx.scenes.scene2d.ui.Slider
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
@@ -13,10 +15,12 @@ import com.unciv.logic.city.CityFocus
 import com.unciv.logic.city.CityInfo
 import com.unciv.models.ruleset.Building
 import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.stats.Stat
 import com.unciv.models.translations.tr
 import com.unciv.ui.civilopedia.CivilopediaScreen
 import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.images.ImageGetter.ruleset
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.ExpanderTab
 import com.unciv.ui.utils.Fonts
@@ -118,6 +122,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             addReligionInfo()
 
         addBuildingsInfo()
+        addRecruitmentInfo()
 
         upperTable.pack()
         lowerTable.pack()
@@ -311,6 +316,92 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
         destinationTable.add(button).pad(1f).padBottom(2f).padTop(2f).expandX().right().row()
     }
+
+
+    private fun addRecruitmentInfo() {
+        val units = mutableListOf<BaseUnit>()
+
+        units.add(ruleset.units["Archer"]!!)
+        units.add(ruleset.units["Warrior"]!!)
+
+
+        val wonders = mutableListOf<Building>()
+        val specialistBuildings = mutableListOf<Building>()
+        val otherBuildings = mutableListOf<Building>()
+
+        for (building in cityInfo.cityConstructions.getBuiltBuildings()) {
+            when {
+                building.isAnyWonder() -> wonders.add(building)
+                !building.newSpecialists().isEmpty() -> specialistBuildings.add(building)
+                else -> otherBuildings.add(building)
+            }
+        }
+
+        // Buildings sorted alphabetically
+        wonders.sortBy { it.name }
+        specialistBuildings.sortBy { it.name }
+        otherBuildings.sortBy { it.name }
+
+        val totalTable = Table()
+        lowerTable.addCategory("Recruit", totalTable, false)
+
+        val unitsTable = Table()
+        totalTable.add().row()
+        //totalTable.addSeparator(color = Color.LIGHT_GRAY)
+        totalTable.add("Available units:".toLabel().apply { setAlignment(Align.center) }).growX().colspan(4)
+        totalTable.addSeparator(color = Color.LIGHT_GRAY)
+        for (unit in units) {
+            val amount2Buy = Slider(0f,100f, 10f, false, BaseScreen.skin)
+            totalTable.add(amount2Buy)
+            totalTable.add("Max".toTextButton().apply { onActivation { amount2Buy.value = 100f } }).pad(5f)
+            totalTable.add("Buy".toTextButton())
+        //    totalTable.row().height(25f)
+            totalTable.add(unit.name.toLabel().apply { setAlignment(Align.right) }).growX().right().row()
+          //  totalTable.row().height(25f)
+
+        }
+/*
+        private val detailedStatsButton = "Stats".toTextButton().apply {
+            labelCell.pad(10f)
+            onActivation {
+                DetailedStatsPopup(cityScreen).open()
+            }
+        }
+
+
+ */
+/*
+        if (specialistBuildings.isNotEmpty()) {
+            val specialistBuildingsTable = Table()
+            totalTable.add().row()
+            totalTable.addSeparator(color = Color.LIGHT_GRAY)
+            totalTable.add("Specialist Buildings".toLabel().apply { setAlignment(Align.center) }).growX()
+            totalTable.addSeparator(color = Color.LIGHT_GRAY)
+            for (building in specialistBuildings) addBuildingButton(building, specialistBuildingsTable)
+            totalTable.add(specialistBuildingsTable).growX().right().row()
+        }
+
+        if (wonders.isNotEmpty()) {
+            val wondersTable = Table()
+            totalTable.addSeparator(color = Color.LIGHT_GRAY)
+            totalTable.add("Wonders".toLabel().apply { setAlignment(Align.center) }).growX()
+            totalTable.addSeparator(color = Color.LIGHT_GRAY)
+            for (building in wonders) addBuildingButton(building, wondersTable)
+            totalTable.add(wondersTable).growX().right().row()
+        }
+
+        if (otherBuildings.isNotEmpty()) {
+            val regularBuildingsTable = Table()
+            totalTable.addSeparator(color = Color.LIGHT_GRAY)
+            totalTable.add("Other".toLabel().apply { setAlignment(Align.center) }).growX()
+            totalTable.addSeparator(color = Color.LIGHT_GRAY)
+            for (building in otherBuildings) addBuildingButton(building, regularBuildingsTable)
+            totalTable.add(regularBuildingsTable).growX().right().row()
+        }
+
+ */
+    }
+
 
     private fun Table.addCategory(category: String, showHideTable: Table, startsOpened: Boolean = true, innerPadding: Float = 10f) : ExpanderTab {
         val expanderTab = ExpanderTab(
