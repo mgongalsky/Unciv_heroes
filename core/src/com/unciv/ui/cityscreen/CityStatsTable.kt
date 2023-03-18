@@ -355,8 +355,10 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             totalTable.add(amount2Buy)
             totalTable.add("Max".toTextButton().apply { onActivation { amount2Buy.value = 100f } }).pad(5f)
             totalTable.add("Buy".toTextButton())
+          //  totalTable.add(unit.getIconName().)
         //    totalTable.row().height(25f)
             totalTable.add(unit.name.toLabel().apply { setAlignment(Align.right) }).growX().right().row()
+          //  totalTable.add(unit.getDescription(cityScreen.city).toLabel()).row()
           //  totalTable.row().height(25f)
 
         }

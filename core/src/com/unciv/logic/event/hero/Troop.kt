@@ -65,12 +65,12 @@ class Troop (
         // Draw pixmap of a troop
         for (troopImage in troopImages) {
             if(attacker) {
-                troopImage.setScale(-2f, 2f)
-                troopImage.moveBy(tileGroup.width*2.2f, -tileGroup.height*0.3f)
+                troopImage.setScale(-0.25f, 0.25f)
+                troopImage.moveBy(tileGroup.width*1.3f, tileGroup.height*0.15f)
             }
             else {
-                troopImage.setScale(2f, 2f)
-                troopImage.moveBy(tileGroup.width*(-1.2f), -tileGroup.height*0.3f)
+                troopImage.setScale(0.25f, 0.25f)
+                troopImage.moveBy(tileGroup.width*(-0.3f), tileGroup.height*0.15f)
             }
             troopImage.setOrigin(tileGroup.originX, tileGroup.originY)
             /// TODO: Seems like latitude and longitude work incorrectly in main map
