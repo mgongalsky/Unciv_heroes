@@ -165,6 +165,16 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
         }
     }
 
+    com.badlogic.gdx.scenes.scene2d.ui.TextButton$TextButtonStyle: {
+    fantasy: {
+        up: UI_button_up,
+        down: UI_button_down,
+        font: "Nativefont",
+        fontColor: white
+    }
+    }
+
+
     com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable: {
         fantasy_background: {
 

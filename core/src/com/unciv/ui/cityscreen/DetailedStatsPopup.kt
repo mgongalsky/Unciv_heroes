@@ -2,8 +2,10 @@ package com.unciv.ui.cityscreen
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
 import com.unciv.logic.city.StatTreeNode
 import com.unciv.models.stats.Stat
@@ -45,7 +47,9 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
         scrollPaneCell.maxHeight(cityScreen.stage.height *3 / 4)
 
         row()
-        addCloseButton("Cancel", KeyCharAndCode('n'))
+        val closeButtonCell = addCloseButton("Cancel", KeyCharAndCode('n'), BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java))
+        closeButtonCell.actor.label.setAlignment(Align.center)
+        closeButtonCell.actor.pad(0f)
         update()
     }
 

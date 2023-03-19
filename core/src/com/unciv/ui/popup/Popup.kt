@@ -54,7 +54,7 @@ open class Popup(
         name = javaClass.simpleName
 
   //      background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
-   //     innerTable.background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
+   //`       innerTable.background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
 
 
         background = BaseScreen.skinStrings.getUiBackground(
