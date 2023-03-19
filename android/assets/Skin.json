@@ -155,7 +155,27 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
         color: white
     }
 }
-com.badlogic.gdx.scenes.scene2d.ui.Button$ButtonStyle: {
+    com.badlogic.gdx.scenes.scene2d.ui.Window$WindowStyle: {
+        default: {
+
+            titleFont: "Nativefont",
+            // background: select-box-pressed-c
+            background: UI_example1_window_empty
+            //  stageBackground: default-window-bg
+        }
+    }
+
+    com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable: {
+        fantasy_background: {
+
+         //   patch: "Nativefont",
+            // background: select-box-pressed-c
+            patch: UI_example1_window_empty
+            //  stageBackground: default-window-bg
+        }
+    }
+
+    com.badlogic.gdx.scenes.scene2d.ui.Button$ButtonStyle: {
     default: {
         up: button-c
         down: button-p

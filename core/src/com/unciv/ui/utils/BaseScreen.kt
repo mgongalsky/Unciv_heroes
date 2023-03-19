@@ -5,6 +5,8 @@ import com.badlogic.gdx.Screen
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.NinePatch
+import com.badlogic.gdx.graphics.g2d.TextureAtlas
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox
@@ -14,6 +16,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
+import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.unciv.UncivGame
 import com.unciv.models.TutorialTrigger
@@ -114,12 +117,14 @@ abstract class BaseScreen : Screen {
          *  Gets overwritten by SkinConfig.clearColor after starting Unciv */
         var clearColor = Color(0f, 0f, 0.2f, 1f)
 
+        // Here is atlas for fantasy background
+        val atlas = TextureAtlas(Gdx.files.internal("fantasy_window.atlas"))
         lateinit var skin: Skin
         lateinit var skinStrings: SkinStrings
         fun setSkin() {
             Fonts.resetFont()
             skinStrings = SkinStrings()
-            skin = Skin().apply {
+            skin = Skin(atlas).apply {
                 add("Nativefont", Fonts.font, BitmapFont::class.java)
                 add("RoundedEdgeRectangle", skinStrings.getUiBackground("", skinStrings.roundedEdgeRectangleShape), Drawable::class.java)
                 add("Rectangle", ImageGetter.getDrawable(""), Drawable::class.java)

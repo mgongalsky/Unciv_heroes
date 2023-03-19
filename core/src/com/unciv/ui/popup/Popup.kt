@@ -12,6 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle
 import com.badlogic.gdx.scenes.scene2d.ui.TextField
+import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.logic.event.EventBus
@@ -52,14 +53,23 @@ open class Popup(
         // Set actor name for debugging
         name = javaClass.simpleName
 
+  //      background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
+   //     innerTable.background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
+
+
         background = BaseScreen.skinStrings.getUiBackground(
             "General/Popup/Background",
             tintColor = Color.GRAY.cpy().apply { a=.5f })
+
+        innerTable.background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
+/*
         innerTable.background = BaseScreen.skinStrings.getUiBackground(
             "General/Popup/InnerTable",
             tintColor = BaseScreen.skinStrings.skinConfig.baseColor.darken(0.5f)
         )
 
+
+         */
         innerTable.pad(20f)
         innerTable.defaults().pad(5f)
 

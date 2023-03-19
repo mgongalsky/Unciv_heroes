@@ -71,6 +71,7 @@ object FasterUIDevelopment {
             ImageGetter.resetAtlases()
             ImageGetter.setNewRuleset(ImageGetter.ruleset)
             BaseScreen.setSkin()
+            BaseScreen.setFantasySkin()
             game.pushScreen(UIDevScreen())
             Gdx.graphics.requestRendering()
         }

@@ -52,6 +52,13 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
         }
     }
 
+    private val testFantasyButton = "Fantasy".toTextButton().apply {
+        labelCell.pad(10f)
+        onActivation {
+            TestFantasyPopup(cityScreen).open()
+        }
+    }
+
     init {
         pad(2f)
         background = BaseScreen.skinStrings.getUiBackground(
@@ -110,6 +117,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
         upperTable.addSeparator()
         upperTable.add(detailedStatsButton).row()
+        upperTable.add(testFantasyButton).row()
         addText()
 
         // begin lowerTable
