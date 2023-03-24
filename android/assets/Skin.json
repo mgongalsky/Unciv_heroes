@@ -165,11 +165,16 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
         }
     }
 
+    com.badlogic.gdx.graphics.g2d.BitmapFont: {
+    oldLondon: { file: "fantasy-font.fnt" }
+    }
+
+
     com.badlogic.gdx.scenes.scene2d.ui.TextButton$TextButtonStyle: {
     fantasy: {
         up: UI_button_up,
         down: UI_button_down,
-        font: "Nativefont",
+        font: oldLondon,
         fontColor: white
     }
     }

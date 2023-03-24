@@ -47,9 +47,11 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
         scrollPaneCell.maxHeight(cityScreen.stage.height *3 / 4)
 
         row()
-        val closeButtonCell = addCloseButton("Cancel", KeyCharAndCode('n'), BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java))
-        closeButtonCell.actor.label.setAlignment(Align.center)
-        closeButtonCell.actor.pad(0f)
+        addCloseButton("Cancel", KeyCharAndCode('n'), BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)).apply {
+            actor.label.setFontScale(0.5f, 0.5f)
+            actor.label.setAlignment(Align.center)
+            actor.pad(10f)
+        }
         update()
     }
 
