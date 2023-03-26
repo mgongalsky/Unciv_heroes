@@ -194,6 +194,13 @@ class MapUnit : IsPartOfGameInfoSerialization {
     var religion: String? = null
     var religiousStrengthLost = 0
 
+    init {
+        troops.add(Troop(10, "Horseman"))
+        troops.add(Troop(20, "Archer"))
+        troops.add(Troop(15, "Spearman"))
+        troops.add(Troop(5, "Swordsman"))
+
+    }
     /**
      * Container class to represent a single instant in a [MapUnit]'s recent movement history.
      *

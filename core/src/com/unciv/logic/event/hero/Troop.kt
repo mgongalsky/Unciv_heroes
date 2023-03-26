@@ -44,12 +44,17 @@ class Troop (
     fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean)
     {
         civInfo = civInfo0
+        baseUnit = ruleset.units[unitName]!!
+
         val unitTroopString = "TileSets/AbsoluteUnits/Units/" + baseUnit.name
         // TODO: There is a mess with float and int coordinates. It's better to make int everywhere
         if(attacker)
             position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f-number.toFloat()*2))
         else
             position = HexMath.evenQ2HexCoords(Vector2(6f, 3f-number.toFloat()*2))
+
+        currentHealth = baseUnit.health
+        currentAmount = amount
 
         // Load images for all troops
         troopImages = ImageGetter.getLayeredImageColored(unitTroopString, null, civInfo.nation.getInnerColor(), civInfo.nation.getOuterColor())

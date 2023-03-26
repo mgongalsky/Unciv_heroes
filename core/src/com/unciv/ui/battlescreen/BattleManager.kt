@@ -45,7 +45,7 @@ class BattleManager()
      fun startBattle(attackingHero0: MapUnit)
      {
          attackingHero = attackingHero0
-         attackingTroops = attackingHero.troops
+         attackingTroops = attackingHero.troops.toMutableList()
          isBattleOn = true
 
          // Initialize model armies
@@ -53,11 +53,15 @@ class BattleManager()
          defendingTroops = monster.troops
          defendingTroops.forEachIndexed { index, troop -> troop.enterBattle(attackingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
 
+/*
          attackingTroops.clear()
          attackingTroops.add(Troop(10, "Horseman"))
          attackingTroops.add(Troop(20, "Archer"))
          attackingTroops.add(Troop(15, "Spearman"))
          attackingTroops.add(Troop(5, "Swordsman"))
+
+ */
+
          attackingTroops.forEachIndexed { index, troop -> troop.enterBattle(attackingHero.civInfo, index, attacker = true)}
 
          // Initialize turns sequence for all troops
