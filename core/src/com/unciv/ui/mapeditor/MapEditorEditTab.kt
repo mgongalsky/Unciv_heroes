@@ -67,6 +67,7 @@ class MapEditorEditTab(
         NaturalWonders("Wonders", 'w', "OtherIcons/Star", { parent, ruleset -> MapEditorEditWondersTab(parent, ruleset) }),
         Resources("Resources", 'r', "OtherIcons/Resources", { parent, ruleset -> MapEditorEditResourcesTab(parent, ruleset) }),
         Improvements("Improvements", 'i', "OtherIcons/Improvements", { parent, ruleset -> MapEditorEditImprovementsTab(parent, ruleset) }),
+        Monsters("Monsters", 'm', "OtherIcons/Shield", { parent, ruleset -> MapEditorEditMonstersTab(parent, ruleset) }),
         Rivers("Rivers", 'v', "OtherIcons/Star", { parent, ruleset -> MapEditorEditRiversTab(parent, ruleset) }),
         StartingLocations("Starting locations", 's', "OtherIcons/Nations", { parent, ruleset -> MapEditorEditStartsTab(parent, ruleset) }),
         // Units("Units", 'u', "OtherIcons/Shield", { parent, ruleset -> MapEditorEditUnitsTab(parent, ruleset) }),

@@ -2,9 +2,11 @@ package com.unciv.ui.mapeditor
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.Constants
 import com.unciv.UncivGame
+import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.RoadStatus
 import com.unciv.logic.map.TileInfo
 import com.unciv.models.ruleset.Nation
@@ -15,6 +17,7 @@ import com.unciv.models.ruleset.tile.TerrainType
 import com.unciv.models.ruleset.tile.TileImprovement
 import com.unciv.models.ruleset.tile.TileResource
 import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.translations.tr
 import com.unciv.ui.audio.MusicMood
 import com.unciv.ui.audio.MusicTrackChooserFlags
@@ -252,6 +255,84 @@ class MapEditorEditImprovementsTab(
         }
     }
 }
+
+/** Implements the Map editor Edit-Monsters UI Tab */
+class MapEditorEditMonstersTab(
+    private val editTab: MapEditorEditTab,
+    private val ruleset: Ruleset
+): Table(BaseScreen.skin), IMapEditorEditSubTabs {
+    init {
+        top()
+        defaults().pad(10f).fillX().left()
+        addMonsters()
+    }
+
+    private fun addMonsters() {
+        val eraserIcon = "Units/${ruleset.units.values.first()}"
+        val eraser = FormattedLine("Remove monster", icon = eraserIcon, size = 32, iconCrossed = true)
+        add(eraser.render(0f).apply { onClick {
+            editTab.setBrush("Remove monster", eraserIcon, true) {
+                //    tile ->
+               // tile.changeImprovement(null)
+               // tile.removeRoad()
+
+                // TODO: remove monster instructions
+            }
+        } }).padBottom(0f).row()
+        add(MarkupRenderer.render(
+            getMonsters(),
+            iconDisplay = FormattedLine.IconDisplay.NoLink
+        ) {
+                editTab.setBrush(it, "Units/$it") { tile ->
+                  //  tile.changeImprovement(it)
+
+                    // TODO: add monster here
+                }
+        }).padTop(0f).row()
+    }
+
+    private fun getMonsters(): List<FormattedLine> = sequence {
+        for (monster in ruleset.units.values) {
+            yield(FormattedLine(monster.name, monster.name, "Units/${monster.name}", size = 32))
+        }
+    }.toList()
+
+    override fun isDisabled() = false
+
+/*
+    private fun getMonsters(): List<FormattedLine> = sequence {
+        var lastGroup = 0
+        for (improvement in allowedImprovements()) {
+            val name = improvement.name
+            val group = improvement.group()
+            if (group != lastGroup) {
+                lastGroup = group
+                yield(FormattedLine(separator = true, color = "#888"))
+            }
+            yield (FormattedLine(name, name, "Improvement/$name", size = 32))
+        }
+    }.toList()
+
+ */
+/*
+    companion object {
+        //todo This should really be easier, the attributes should allow such a test in one go
+        private val disallowImprovements = listOf(
+            "Remove ", "Cancel improvement", "City center", Constants.barbarianEncampment
+        )
+        private fun TileImprovement.group() = when {
+            RoadStatus.values().any { it.name == name } -> 2
+            "Great Improvement" in uniques -> 3
+            uniqueTo != null -> 4
+            "Unpillagable" in uniques -> 5
+            else -> 0
+        }
+    }
+
+ */
+}
+
+
 
 
 /** Implements the Map editor Edit-StartingLocations UI Tab */
