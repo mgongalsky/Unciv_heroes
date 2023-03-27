@@ -131,7 +131,17 @@ class MapEditorEditTab(
 
     fun setMonster(amount: Int, monsterStr: String, tile: TileInfo)
     {
-        editorScreen.monsters.add(Monster(amount, monsterStr, tile))
+        // Draw attacking troops
+        var monsterTileList = editorScreen.mapHolder.tileGroups[tile]
+        if (monsterTileList != null) {
+
+            var monsterTile = monsterTileList.first()
+            //{ it.tileInfo.position == tile.position }
+
+
+
+            editorScreen.monsters.add(Monster(amount, monsterStr, monsterTile))
+        }
 
     }
     private fun selectPage(index: Int) = subTabs.selectPage(index)
