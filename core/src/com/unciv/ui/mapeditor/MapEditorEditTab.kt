@@ -6,6 +6,7 @@ import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.logic.map.BFS
+import com.unciv.logic.map.Monster
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.mapgenerator.MapGenerationRandomness
 import com.unciv.logic.map.mapgenerator.RiverGenerator
@@ -128,6 +129,11 @@ class MapEditorEditTab(
         keyShortcuts.add(KeyCharAndCode.ctrl('f')) { brushSize = -1 }
     }
 
+    fun setMonster(amount: Int, monsterStr: String, tile: TileInfo)
+    {
+        editorScreen.monsters.add(Monster(amount, monsterStr, tile))
+
+    }
     private fun selectPage(index: Int) = subTabs.selectPage(index)
 
     fun setBrush(name: String, icon: String, isRemove: Boolean = false, applyAction: (TileInfo)->Unit) {

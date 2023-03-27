@@ -1,16 +1,11 @@
 package com.unciv.ui.battlescreen
 
-import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.Cursor
-import com.badlogic.gdx.math.Vector
 import com.badlogic.gdx.math.Vector2
 import com.unciv.UncivGame
 import com.unciv.logic.HexMath
-import com.unciv.logic.event.hero.Monster
 import com.unciv.logic.event.hero.Troop
 import com.unciv.logic.map.MapUnit
-import com.unciv.logic.map.TileInfo
+import com.unciv.logic.map.Monster
 
 // TODO: This class is logic. And should be moved to "logic" package. However, there is internal visibility with BattleScreen class, which is UI.
 

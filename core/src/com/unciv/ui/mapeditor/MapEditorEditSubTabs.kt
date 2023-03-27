@@ -284,6 +284,7 @@ class MapEditorEditMonstersTab(
             iconDisplay = FormattedLine.IconDisplay.NoLink
         ) {
                 editTab.setBrush(it, "Units/$it") { tile ->
+                editTab.setMonster(100, it, tile)
                   //  tile.changeImprovement(it)
 
                     // TODO: add monster here

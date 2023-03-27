@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.unciv.UncivGame
 import com.unciv.logic.HexMath
+import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 import com.unciv.ui.map.TileGroupMap
@@ -39,6 +40,9 @@ class EditorMapHolder(
 
     private var savedCaptureListeners = emptyList<EventListener>()
     private var savedListeners = emptyList<EventListener>()
+
+//    val monsters: MutableList<MapUnit> = mutableListOf()
+
 
     init {
         if (editorScreen == null) touchable = Touchable.disabled
