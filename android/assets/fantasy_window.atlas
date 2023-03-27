@@ -1,0 +1,33 @@
+
+fantasy_window.png
+size: 1024, 1024
+format: RGBA8888
+filter: Nearest, Nearest
+repeat: none
+UI_button_down
+  rotate: false
+  xy: 2, 2
+  size: 177, 48
+  split: 24, 25, 14, 8
+  pad: 0, 178, 1, 49
+  orig: 177, 48
+  offset: 0, 0
+  index: -1
+UI_button_up
+  rotate: false
+  xy: 722, 962
+  size: 177, 48
+  split: 24, 25, 14, 8
+  pad: 0, 178, 0, 49
+  orig: 177, 48
+  offset: 0, 0
+  index: -1
+UI_example1_window_empty
+  rotate: false
+  xy: 2, 52
+  size: 718, 958
+  split: 33, 36, 59, 39
+  pad: 32, 36, 60, 40
+  orig: 718, 958
+  offset: 0, 0
+  index: -1
