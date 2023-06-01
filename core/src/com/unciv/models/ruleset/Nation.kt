@@ -2,6 +2,7 @@
 
 import com.badlogic.gdx.graphics.Color
 import com.unciv.Constants
+import com.unciv.logic.GameInfo
 import com.unciv.models.ruleset.unique.UniqueFlag
 import com.unciv.models.ruleset.unique.UniqueTarget
 import com.unciv.models.ruleset.unique.UniqueType
@@ -38,6 +39,7 @@ class Nation : RulesetObject() {
     var innerColor: List<Int>? = null
     var startBias = ArrayList<String>()
 
+
     var startIntroPart1 = ""
     var startIntroPart2 = ""
 
@@ -49,14 +51,30 @@ class Nation : RulesetObject() {
 
     var favoredReligion: String? = null
 
+    companion object {
+        var monsterInnerColor = listOf(0, 0, 0) // use the correct parameters for your case
+        var monsterInnerColorObject = colorFromRGB(monsterInnerColor)
+        var monsterOuterColor = listOf(0, 0, 0)
+        var monsterOuterColorObject = monsterInnerColorObject
+    }
+
     @Transient
-    private lateinit var outerColorObject: Color
+    private var outerColorObject: Color = monsterOuterColorObject
     fun getOuterColor(): Color = outerColorObject
 
     @Transient
-    private lateinit var innerColorObject: Color
+    private var innerColorObject: Color = monsterInnerColorObject
 
     fun getInnerColor(): Color = innerColorObject
+
+
+    fun setDummyColor() {
+        outerColor = listOf(0, 0, 0) // Setting color to black
+        outerColorObject = colorFromRGB(outerColor)
+        innerColor = listOf(0, 0, 0) // Setting color to black
+        innerColorObject = outerColorObject
+
+    }
 
     fun isCityState() = cityStateType != null
     fun isMajorCiv() = !isBarbarian() && !isCityState() && !isSpectator()

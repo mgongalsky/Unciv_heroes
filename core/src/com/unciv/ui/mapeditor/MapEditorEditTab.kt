@@ -5,11 +5,14 @@ import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.unciv.Constants
+import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.BFS
 import com.unciv.logic.map.Monster
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.mapgenerator.MapGenerationRandomness
 import com.unciv.logic.map.mapgenerator.RiverGenerator
+import com.unciv.models.ruleset.Nation
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.translations.tr
 import com.unciv.ui.civilopedia.FormattedLine
@@ -140,7 +143,32 @@ class MapEditorEditTab(
 
 
 
-            editorScreen.monsters.add(Monster(amount, monsterStr, monsterTile))
+            // Create a dummy Nation for the monster civilization
+            var monsterNation = Nation()
+            monsterNation.name = Constants.barbarians
+            monsterNation.setDummyColor()
+
+            // Create a dummy CivilizationInfo for the monster civilization
+            var monsterCivilization = CivilizationInfo()
+            monsterCivilization.civName = Constants.barbarians
+            monsterCivilization.nation = monsterNation
+
+            // Create the Monster unit
+            var monsterToSet = Monster(amount, monsterStr, monsterTile)
+            monsterToSet.owner = Constants.barbarians
+            monsterToSet.name = monsterStr
+            monsterToSet.civInfo = monsterCivilization  // Set the monster's civInfo to the dummy civilization
+            editorScreen.monsters.add(monsterToSet)
+            tile.militaryUnit = monsterToSet
+/*
+
+            var monsterToSet = Monster(amount, monsterStr, monsterTile)
+            monsterToSet.owner = Constants.barbarians
+            monsterToSet.name = monsterStr
+            editorScreen.monsters.add(monsterToSet)
+            tile.militaryUnit = monsterToSet
+
+ */
         }
 
     }

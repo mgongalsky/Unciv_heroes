@@ -20,8 +20,11 @@ class Monster(var amount: Int, var monsterName: String) : MapUnit() {
     lateinit var monsterImages: ArrayList<Image>
 
     init{
+        this.isMonster = true
         troops.clear()
         baseUnit = ImageGetter.ruleset.units[monsterName]!!
+        baseUnit.ruleset = ImageGetter.ruleset
+
         //   amount = amount0
         val amountOfTroops = 4
         for(i in 1..amountOfTroops)
@@ -39,7 +42,7 @@ class Monster(var amount: Int, var monsterName: String) : MapUnit() {
     {
 
         currentTile = tileGroup.tileInfo
-        drawOnBattle(tileGroup)
+        //drawOnBattle(tileGroup)
 
 
     }
@@ -83,19 +86,5 @@ class Monster(var amount: Int, var monsterName: String) : MapUnit() {
     fun remove(){
         monsterGroup.remove()
     }
-
-
-/*
-    init {
-        troops.clear()
-        val amountOfTroops = 4
-        for(i in 1..amountOfTroops)
-        {
-            troops.add(Troop(amount/amountOfTroops, unitName))
-
-        }
-    }
-
- */
 
 }

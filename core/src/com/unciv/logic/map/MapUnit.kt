@@ -40,9 +40,12 @@ import kotlin.math.pow
  */
 // That's gonna be a Hero instead of MapUnit
 open class MapUnit : IsPartOfGameInfoSerialization {
+    companion object {
+        var monsterCivInfo = CivilizationInfo() // use the correct parameters for your case
+    }
 
     @Transient
-    lateinit var civInfo: CivilizationInfo
+    var civInfo: CivilizationInfo = monsterCivInfo
 
     @Transient
     lateinit var baseUnit: BaseUnit
@@ -138,6 +141,9 @@ open class MapUnit : IsPartOfGameInfoSerialization {
     var hasStrengthBonusInRadiusUnique = false
     @Transient
     var hasCitadelPlacementUnique = false
+
+    // Is this MapUnit a Monster?
+    var isMonster: Boolean = false
 
     /** civName owning the unit */
     lateinit var owner: String

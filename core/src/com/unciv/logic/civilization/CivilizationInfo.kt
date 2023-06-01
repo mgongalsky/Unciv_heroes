@@ -62,6 +62,7 @@ enum class Proximity : IsPartOfGameInfoSerialization {
 
 class CivilizationInfo : IsPartOfGameInfoSerialization {
 
+
     @Transient
     private var workerAutomationCache: WorkerAutomation? = null
     /** Returns an instance of WorkerAutomation valid for the duration of the current turn
@@ -75,11 +76,17 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
         return workerAutomationCache!!
     }
 
-    @Transient
-    lateinit var gameInfo: GameInfo
+    companion object {
+        var monsterGameInfo = GameInfo() // use the correct parameters for your case
+        var monsterNation = Nation()
+    }
+
 
     @Transient
-    lateinit var nation: Nation
+    var gameInfo: GameInfo = monsterGameInfo
+
+    @Transient
+    var nation: Nation = monsterNation
 
     /**
      * We never add or remove from here directly, could cause comodification problems.

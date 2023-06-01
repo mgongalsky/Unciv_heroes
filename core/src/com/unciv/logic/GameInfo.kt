@@ -72,6 +72,8 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
 
         /** This is the version just before this field was introduced, i.e. all saves without any version will be from this version */
         val FIRST_WITHOUT = CompatibilityVersion(1, Version("4.1.14", 731))
+
+        var monsterRuleset = Ruleset()
     }
     //region Fields - Serialized
 
@@ -118,7 +120,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     var isUpToDate = false
 
     @Transient
-    lateinit var ruleSet: Ruleset
+    var ruleSet: Ruleset = monsterRuleset
 
     /** Simulate until any player wins,
      *  or turns exceeds indicated number

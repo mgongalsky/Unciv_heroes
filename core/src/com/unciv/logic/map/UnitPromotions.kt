@@ -108,7 +108,12 @@ class UnitPromotions : IsPartOfGameInfoSerialization {
         toReturn.XP = XP
         toReturn.promotions.addAll(promotions)
         toReturn.numberOfPromotions = numberOfPromotions
-        toReturn.unit = unit
+        // This could be inaccurate. I did not fully understand the relationship between unit and unitPromotions
+        if (this::unit.isInitialized) {
+            toReturn.unit = unit
+        }
+
+ //       toReturn.unit = unit
         return toReturn
     }
 }
