@@ -11,9 +11,9 @@ class BarbarianAutomation(val civInfo: CivilizationInfo) {
     fun automate() {
         // ranged go first, after melee and then everyone else
         // Here is actions of barbarians are switched off
-        civInfo.getCivUnits().filter { it.baseUnit.isRanged() }.forEach { automateUnit(it) }
-        civInfo.getCivUnits().filter { it.baseUnit.isMelee() }.forEach { automateUnit(it) }
-        civInfo.getCivUnits().filter { !it.baseUnit.isRanged() && !it.baseUnit.isMelee() }.forEach { automateUnit(it) }
+        //civInfo.getCivUnits().filter { it.baseUnit.isRanged() }.forEach { automateUnit(it) }
+        //civInfo.getCivUnits().filter { it.baseUnit.isMelee() }.forEach { automateUnit(it) }
+        //civInfo.getCivUnits().filter { !it.baseUnit.isRanged() && !it.baseUnit.isMelee() }.forEach { automateUnit(it) }
     }
 
     private fun automateUnit(unit: MapUnit) {
