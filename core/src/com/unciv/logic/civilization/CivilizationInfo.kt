@@ -81,6 +81,11 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
         var monsterNation = Nation()
     }
 
+    init{
+        monsterGameInfo.loadRulesetForMap()
+
+    }
+
 
     @Transient
     var gameInfo: GameInfo = monsterGameInfo

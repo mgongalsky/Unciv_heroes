@@ -439,9 +439,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         return true
     }
 
-    // All cross-game data which needs to be altered (e.g. when removing or changing a name of a building/tech)
-    // will be done here, and not in CivInfo.setTransients or CityInfo
-    fun setTransients() {
+    fun loadRulesetForMap(){
         tileMap.gameInfo = this
 
         // [TEMPORARY] Convert old saves to newer ones by moving base rulesets from the mod list to the base ruleset field
@@ -470,6 +468,18 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
 
         for (baseUnit in ruleSet.units.values)
             baseUnit.ruleset = ruleSet
+
+
+
+
+    }
+
+    // All cross-game data which needs to be altered (e.g. when removing or changing a name of a building/tech)
+    // will be done here, and not in CivInfo.setTransients or CityInfo
+    fun setTransients() {
+
+        // Load only the part, which is necessary for loading maps in the editor, not for the whole game.
+        loadRulesetForMap()
 
         // This needs to go before tileMap.setTransients, as units need to access
         // the nation of their civilization when setting transients
