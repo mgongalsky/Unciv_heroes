@@ -275,6 +275,9 @@ class MapEditorEditMonstersTab(
 
         val amountLabel = Label("Amount:", skin)
         val amountField = UncivTextField.create("Amount", "100")//TextField("100", skin) // Default value is 100
+        amountField.textFieldFilter =
+                TextField.TextFieldFilter.DigitsOnlyFilter() // Restrict input to numeric characters
+
 
         add(amountLabel).padTop(0f).left().row()
         add(amountField).padTop(0f).left().row()
@@ -296,7 +299,7 @@ class MapEditorEditMonstersTab(
             iconDisplay = FormattedLine.IconDisplay.NoLink
         ) {
                 editTab.setBrush(it, "Units/$it") { tile ->
-                editTab.setMonster(100, it, tile)
+                amountField.text?.toInt()?.let { am -> editTab.setMonster(am, it, tile) }
                   //  tile.changeImprovement(it)
 
                     // TODO: add monster here
