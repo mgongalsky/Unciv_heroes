@@ -24,6 +24,7 @@ import com.unciv.models.ruleset.unique.Unique
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.stats.Stat
 import com.unciv.models.stats.Stats
+import com.unciv.ui.battlescreen.BattleManager
 import com.unciv.ui.utils.extensions.toPercent
 import com.unciv.utils.debug
 import java.util.*
@@ -89,7 +90,13 @@ object Battle {
     fun attack(attacker: ICombatant, defender: ICombatant) {
         debug("%s %s attacked %s %s", attacker.getCivInfo().civName, attacker.getName(), defender.getCivInfo().civName, defender.getName())
         val attackedTile = defender.getTile()
-        if (attacker is MapUnitCombatant) {
+        if (attacker is MapUnitCombatant && defender is MapUnitCombatant && attacker.getCivInfo().isPlayerCivilization()) {
+            //attacker.unit.runBattle()
+            attacker.unit.civInfo.battle.startBattle(attacker.unit, defender.unit)
+            return
+        }
+
+            if (attacker is MapUnitCombatant) {
             attacker.unit.attacksSinceTurnStart.add(Vector2(attackedTile.position))
         } else {
             attacker.getCivInfo().attacksSinceTurnStart.add(CivilizationInfo.HistoricalAttackMemory(

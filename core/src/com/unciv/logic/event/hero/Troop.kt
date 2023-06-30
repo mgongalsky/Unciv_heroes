@@ -5,6 +5,8 @@ import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
+import com.badlogic.gdx.utils.Json
+import com.badlogic.gdx.utils.JsonValue
 import com.unciv.logic.HexMath
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.CivilizationInfo
@@ -16,15 +18,15 @@ import com.unciv.ui.utils.BaseScreen
 
 /** Battle units with specified [amount], [position] in hex coordinates and reference to a [baseUnit] */
 class Troop (
-    var amount: Int, // TODO: Maybe @transient is required
-    val unitName: String
-    ) : IsPartOfGameInfoSerialization {
+    var amount: Int = 0, // TODO: Maybe @transient is required
+    var unitName: String = "Spearman"
+    ) : IsPartOfGameInfoSerialization, Json.Serializable {
 
     @Transient
     lateinit var civInfo: CivilizationInfo
 
     @Transient
-    var baseUnit: BaseUnit = ruleset.units[unitName]!!
+    lateinit var baseUnit: BaseUnit // = ruleset.units[unitName]!!
 
     // Group of actors for this troop. (Mostly pixmap of the unit and its amount)
     @Transient
@@ -34,11 +36,49 @@ class Troop (
     lateinit var troopImages: ArrayList<Image>
 
     // Current amount of units and health, which can be changed during the battle.
-    var currentHealth = baseUnit.health
+    var currentHealth = 0
+    //baseUnit.health
     var currentAmount = amount
     // This is in offset coordinates:
     /** Position of a troop in hex coordinates */
     lateinit var position: Vector2 //= Vector2(2f,2f)
+
+    constructor() : this(0, "Spearman")
+
+    init {
+        initializeVariables()
+      //  if (amount == null || unitName == null) {
+        //    throw IllegalArgumentException("Amount and unitName must not be null")
+
+       // }
+    }
+
+    private fun initializeVariables() {
+        baseUnit = ruleset.units[unitName]!!
+        currentAmount = amount
+        currentHealth = baseUnit.health
+    }
+
+    override fun write(json: Json) {
+        //json.writeObjectStart()
+
+        json.writeValue("name", "Troop") // Set the name for the object
+        json.writeValue("amount", amount)
+        json.writeValue("unitName", unitName)
+      //  json.writeValue("position", position)
+        //json.writeObjectEnd()
+    }
+
+    override fun read(json: Json, jsonData: JsonValue) {
+        // Implement the read method if you also want to support deserialization
+        // Read the values and assign them to the corresponding properties
+        amount = json.readValue("amount", Int::class.java, jsonData)
+        unitName = json.readValue("unitName", String::class.java, jsonData)
+       // position = json.readValue("position", Vector2::class.java, jsonData)
+
+        initializeVariables()
+        // Read other properties if needed
+    }
 
     /** Called when battle is started (or the troop is summoned). [number] corresponds to location in the hero's army and determines initial location */
     fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean)

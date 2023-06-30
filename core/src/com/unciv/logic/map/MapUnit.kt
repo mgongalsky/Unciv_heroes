@@ -14,6 +14,7 @@ import com.unciv.logic.city.RejectionReasons
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.LocationAction
 import com.unciv.logic.civilization.NotificationIcon
+import com.unciv.logic.event.hero.TestTroop
 import com.unciv.logic.event.hero.Troop
 import com.unciv.models.UnitActionType
 import com.unciv.models.helpers.UnitMovementMemoryType
@@ -27,7 +28,9 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.models.stats.Stats
+import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.newgamescreen.NewGameScreen
+import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.extensions.filterAndLogic
 import com.unciv.ui.utils.extensions.toPercent
 import com.unciv.ui.worldscreen.WorldScreen
@@ -39,9 +42,9 @@ import kotlin.math.pow
  * The immutable properties and mutable game state of an individual unit present on the map
  */
 // That's gonna be a Hero instead of MapUnit
-open class MapUnit : IsPartOfGameInfoSerialization {
+open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSerialization {
     companion object {
-        var monsterCivInfo = CivilizationInfo() // use the correct parameters for your case
+        var monsterCivInfo = CivilizationInfo() // Dummy CivInfo for loading and saving maps
     }
 
     @Transient
@@ -92,7 +95,6 @@ open class MapUnit : IsPartOfGameInfoSerialization {
     @Transient
     var exampleTroop : Troop = Troop(10, "Spearman")
 
-    @Transient
     var troops = mutableListOf<Troop>()
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
      *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */
@@ -143,7 +145,7 @@ open class MapUnit : IsPartOfGameInfoSerialization {
     var hasCitadelPlacementUnique = false
 
     // Is this MapUnit a Monster?
-    var isMonster: Boolean = false
+   // val isMonster: Boolean// = false
 
     /** civName owning the unit */
     lateinit var owner: String
@@ -183,6 +185,7 @@ open class MapUnit : IsPartOfGameInfoSerialization {
 
     var currentMovement: Float = 0f
     var health: Int = 100
+//    open var amount: Int = 0
 
     var action: String? = null // work, automation, fortifying, I dunno what.
     @Transient
@@ -200,11 +203,69 @@ open class MapUnit : IsPartOfGameInfoSerialization {
     var religion: String? = null
     var religiousStrengthLost = 0
 
+    // Additional properties for monsters
+    var amount: Int = 0
+    //var mapUnitName: String = ""
+
+    var testTroop: TestTroop = TestTroop()
+    var testTroops = mutableListOf<TestTroop>()
+    constructor(amount: Int, name: String, tileGroup: TileGroup) : this(amount, name)
+    {
+
+        currentTile = tileGroup.tileInfo
+        //drawOnBattle(tileGroup)
+        testTroop.amount = 5
+
+    }
+
+    // Secondary constructor
+    constructor(amount: Int, name: String) : this(isMonster = true) {
+        this.amount = amount
+        this.name = name
+
+
+        testTroops.clear()
+        testTroops.add(TestTroop(5,"Spearman"))
+        testTroops.add(TestTroop(15,"Spearman"))
+
+        troops.clear()
+        baseUnit = ImageGetter.ruleset.units[name]!!
+        baseUnit.ruleset = ImageGetter.ruleset
+
+        //   amount = amount0
+        val amountOfTroops = 4
+        for (i in 1..amountOfTroops) {
+            troops.add(Troop(amount / amountOfTroops, name))
+
+        }
+
+    }
+
+    constructor():this(isMonster = true) {}
+
+  /*  constructor(isMonster: Boolean = false)
+    {
+        this.isMonster = isMonster
+    }
+
+
+   */
     init {
-        troops.add(Troop(10, "Horseman"))
-        troops.add(Troop(20, "Archer"))
-        troops.add(Troop(15, "Spearman"))
-        troops.add(Troop(5, "Swordsman"))
+
+       // if(isMonster) {
+            //val imageString = "TileSets/AbsoluteUnits/Units/" + name
+
+       // }
+        /*
+        if(!isMonster)
+        {
+            troops.add(Troop(10, "Horseman"))
+            troops.add(Troop(20, "Archer"))
+            troops.add(Troop(15, "Spearman"))
+            troops.add(Troop(5, "Swordsman"))
+        }
+
+         */
 
     }
     /**
@@ -257,6 +318,7 @@ open class MapUnit : IsPartOfGameInfoSerialization {
         toReturn.originalOwner = originalOwner
         toReturn.instanceName = instanceName
         toReturn.currentMovement = currentMovement
+        toReturn.troops = troops
         toReturn.health = health
         toReturn.action = action
         toReturn.attacksThisTurn = attacksThisTurn

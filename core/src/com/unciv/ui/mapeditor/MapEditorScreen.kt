@@ -9,7 +9,6 @@ import com.unciv.logic.map.MapShape
 import com.unciv.logic.map.MapSize
 import com.unciv.logic.map.MapSizeNew
 import com.unciv.logic.map.MapUnit
-import com.unciv.logic.map.Monster
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 import com.unciv.models.metadata.BaseRuleset
@@ -71,7 +70,7 @@ class MapEditorScreen(map: TileMap? = null): BaseScreen(), RecreateOnResize {
     var tileMatchFuzziness = MapEditorOptionsTab.TileMatchFuzziness.CompleteMatch
 
     /** List of monsters on the map */
-    val monsters: MutableList<Monster> = mutableListOf()
+    val monsters: MutableList<MapUnit> = mutableListOf()
 
 
     // UI

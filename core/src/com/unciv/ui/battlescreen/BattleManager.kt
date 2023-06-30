@@ -5,7 +5,8 @@ import com.unciv.UncivGame
 import com.unciv.logic.HexMath
 import com.unciv.logic.event.hero.Troop
 import com.unciv.logic.map.MapUnit
-import com.unciv.logic.map.Monster
+//import com.unciv.logic.map.Monster
+import com.unciv.ui.images.ImageGetter
 
 // TODO: This class is logic. And should be moved to "logic" package. However, there is internal visibility with BattleScreen class, which is UI.
 
@@ -37,17 +38,64 @@ class BattleManager()
      internal lateinit var currentTroop: Troop
 
      /** Initialization of the battle */
-     fun startBattle(attackingHero0: MapUnit)
-     {
+     fun startBattle(attackingHero0: MapUnit, defendingHero0: MapUnit? = null) {
          attackingHero = attackingHero0
+         if(attackingHero.troops.isEmpty())
+         {
+                 attackingHero.troops.add(Troop(10, "Horseman"))
+                 attackingHero.troops.add(Troop(20, "Archer"))
+                 attackingHero.troops.add(Troop(15, "Spearman"))
+                 attackingHero.troops.add(Troop(5, "Swordsman"))
+         }
          attackingTroops = attackingHero.troops.toMutableList()
          isBattleOn = true
 
          // Initialize model armies
-         var monster = Monster(40, "Crossbowman")
-         defendingTroops = monster.troops
-         defendingTroops.forEachIndexed { index, troop -> troop.enterBattle(attackingHero.civInfo.gameInfo.civilizations.first(), index, attacker = false)}
 
+         var monster = MapUnit(40, "Crossbowman") // Crossbowman means elf in our case ))
+         defendingTroops = monster.troops
+
+         if (defendingHero0 != null) {
+             /*
+             if (defendingHero0 is Monster) {
+                 defendingHero = defendingHero0
+
+                 //defendingTroops = mutableListOf()
+                 //defendingTroops = defendingHero0.troops
+                 defendingHero.apply {
+                     if (this is Monster) {
+                         troops = mutableListOf()
+                         troops.clear()
+                         baseUnit = ImageGetter.ruleset.units[monsterName]!!
+                         baseUnit.ruleset = ImageGetter.ruleset
+
+                         //   amount = amount0
+                         val amountOfTroops = 4
+                         for (i in 1..amountOfTroops) {
+                             troops.add(Troop(amount / amountOfTroops, monsterName))
+
+                         }
+                         val imageString = "TileSets/AbsoluteUnits/Units/" + monsterName
+
+                         monsterImages = ImageGetter.getLayeredImageColored(imageString, null)
+                     }
+                 }
+                 defendingTroops = (defendingHero as Monster).troops
+
+              */
+             //}
+             defendingTroops = defendingHero0.troops.toMutableList()
+         } else {
+             defendingTroops = monster.troops
+         }
+
+         defendingTroops.forEachIndexed { index, troop ->
+             troop.enterBattle(
+                 attackingHero.civInfo.gameInfo.civilizations.first(),
+                 index,
+                 attacker = false
+             )
+         }
 /*
          attackingTroops.clear()
          attackingTroops.add(Troop(10, "Horseman"))

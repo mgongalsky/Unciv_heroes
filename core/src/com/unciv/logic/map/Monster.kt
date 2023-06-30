@@ -10,6 +10,8 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.BaseScreen
 
+//TODO: remove this class and make just a MapUnit
+/*
 class Monster(var amount: Int, var monsterName: String) : MapUnit() {
  //   var troops = mutableListOf<Troop>()
  // Group of actors for this troop. (Mostly pixmap of the unit and its amount)
@@ -19,8 +21,19 @@ class Monster(var amount: Int, var monsterName: String) : MapUnit() {
     @Transient
     lateinit var monsterImages: ArrayList<Image>
 
+    override val isMonster = true
+
+    constructor(amount: Int, monsterName: String, tileGroup: TileGroup) : this(amount, monsterName)
+    {
+
+        currentTile = tileGroup.tileInfo
+        //drawOnBattle(tileGroup)
+
+
+    }
+
     init{
-        this.isMonster = true
+       // this.isMonster = true
         troops.clear()
         baseUnit = ImageGetter.ruleset.units[monsterName]!!
         baseUnit.ruleset = ImageGetter.ruleset
@@ -35,14 +48,6 @@ class Monster(var amount: Int, var monsterName: String) : MapUnit() {
         val imageString = "TileSets/AbsoluteUnits/Units/" + monsterName
 
         monsterImages = ImageGetter.getLayeredImageColored(imageString, null)
-
-
-    }
-    constructor(amount: Int, monsterName: String, tileGroup: TileGroup) : this(amount, monsterName)
-    {
-
-        currentTile = tileGroup.tileInfo
-        //drawOnBattle(tileGroup)
 
 
     }
@@ -88,3 +93,6 @@ class Monster(var amount: Int, var monsterName: String) : MapUnit() {
     }
 
 }
+
+
+ */

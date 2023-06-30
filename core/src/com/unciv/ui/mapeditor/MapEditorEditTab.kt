@@ -8,7 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.Constants
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.BFS
-import com.unciv.logic.map.Monster
+import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.mapgenerator.MapGenerationRandomness
 import com.unciv.logic.map.mapgenerator.RiverGenerator
@@ -154,7 +154,7 @@ class MapEditorEditTab(
             monsterCivilization.nation = monsterNation
 
             // Create the Monster unit
-            var monsterToSet = Monster(amount, monsterStr, monsterTile)
+            var monsterToSet = MapUnit(amount, monsterStr, monsterTile)
             monsterToSet.owner = Constants.barbarians
             monsterToSet.name = monsterStr
             monsterToSet.civInfo = monsterCivilization  // Set the monster's civInfo to the dummy civilization
