@@ -68,7 +68,7 @@ class Troop (
       //  json.writeValue("position", position)
         //json.writeObjectEnd()
     }
-
+//
     override fun read(json: Json, jsonData: JsonValue) {
         // Implement the read method if you also want to support deserialization
         // Read the values and assign them to the corresponding properties
