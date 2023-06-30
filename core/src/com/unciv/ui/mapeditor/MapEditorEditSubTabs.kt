@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.map.MapUnit
@@ -29,6 +30,7 @@ import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.tilegroups.TileSetStrings
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.TabbedPager
+import com.unciv.ui.utils.UncivTextField
 import com.unciv.ui.utils.extensions.center
 import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.toLabel
@@ -270,6 +272,13 @@ class MapEditorEditMonstersTab(
     private fun addMonsters() {
         val eraserIcon = "Units/${ruleset.units.values.first()}"
         val eraser = FormattedLine("Remove monster", icon = eraserIcon, size = 32, iconCrossed = true)
+
+        val amountLabel = Label("Amount:", skin)
+        val amountField = UncivTextField.create("Amount", "100")//TextField("100", skin) // Default value is 100
+
+        add(amountLabel).padTop(0f).left().row()
+        add(amountField).padTop(0f).left().row()
+
         add(eraser.render(0f).apply { onClick {
             editTab.setBrush("Remove monster", eraserIcon, true) {
                 //    tile ->
@@ -279,6 +288,9 @@ class MapEditorEditMonstersTab(
                 // TODO: remove monster instructions
             }
         } }).padBottom(0f).row()
+        //add(amountField)
+
+
         add(MarkupRenderer.render(
             getMonsters(),
             iconDisplay = FormattedLine.IconDisplay.NoLink
