@@ -240,6 +240,8 @@ class WorldMapHolder(
             return
         }
 
+        // Here is part for the attacking by right click. It does not work, so switched off. Need to be fixed, if we want to use it.
+        /*
         val attackableTile = BattleHelper.getAttackableEnemies(unit, unit.movement.getDistanceToTiles())
             .firstOrNull { it.tileToAttack == tile }
         if (unit.canAttack() && attackableTile != null) {
@@ -250,6 +252,8 @@ class WorldMapHolder(
             Battle.attackOrNuke(attacker, attackableTile)
             return
         }
+
+         */
 
         val canUnitReachTile = unit.movement.canReach(tile)
         if (canUnitReachTile) {
