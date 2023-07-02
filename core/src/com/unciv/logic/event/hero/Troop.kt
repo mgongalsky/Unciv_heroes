@@ -123,6 +123,8 @@ class Troop (
             troopImage.touchable = Touchable.disabled
             troopImage.name = "troopImage"
             troopGroup.name = "troopGroup"
+            troopGroup.findActor<Image>("troopImage")?.remove()
+
             troopGroup.addActor(troopImage)
         }
 
@@ -136,6 +138,8 @@ class Troop (
         hexLabel.touchable = Touchable.disabled
         amountText.name = "amountLabel"
         amountText.touchable = Touchable.disabled
+        troopGroup.findActor<Label>("amountLabel")?.remove()
+      //  troopGroup.findActor<>()
         troopGroup.addActor(amountText)
         // Uncomment this for debug with rendering of coordinates. Comment amountText label.
         //troopGroup.addActor(hexLabel)
