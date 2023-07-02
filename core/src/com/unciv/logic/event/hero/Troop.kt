@@ -35,9 +35,10 @@ class Troop (
     @Transient
     lateinit var troopImages: ArrayList<Image>
 
-    // Current amount of units and health, which can be changed during the battle.
+    /** Current amount of units and health, which can be changed during the battle. We need it for resurrection. */
     var currentHealth = 0
     //baseUnit.health
+
     var currentAmount = amount
     // This is in offset coordinates:
     /** Position of a troop in hex coordinates */

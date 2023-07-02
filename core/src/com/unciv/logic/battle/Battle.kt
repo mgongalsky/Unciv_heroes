@@ -92,11 +92,13 @@ object Battle {
         val attackedTile = defender.getTile()
         if (attacker is MapUnitCombatant && defender is MapUnitCombatant && attacker.getCivInfo().isPlayerCivilization()) {
             //attacker.unit.runBattle()
-            attacker.unit.civInfo.battle.startBattle(attacker.unit, defender.unit)
-            return
+            if(!attacker.isDefeated() && !defender.isDefeated()) {
+                attacker.unit.civInfo.battle.startBattle(attacker.unit, defender.unit)
+                return
+            }
         }
 
-            if (attacker is MapUnitCombatant) {
+        if (attacker is MapUnitCombatant) {
             attacker.unit.attacksSinceTurnStart.add(Vector2(attackedTile.position))
         } else {
             attacker.getCivInfo().attacksSinceTurnStart.add(CivilizationInfo.HistoricalAttackMemory(

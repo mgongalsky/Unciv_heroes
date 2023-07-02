@@ -3,6 +3,7 @@ package com.unciv.ui.battlescreen
 import com.badlogic.gdx.math.Vector2
 import com.unciv.UncivGame
 import com.unciv.logic.HexMath
+import com.unciv.logic.battle.Battle
 import com.unciv.logic.event.hero.Troop
 import com.unciv.logic.map.MapUnit
 //import com.unciv.logic.map.Monster
@@ -40,6 +41,7 @@ class BattleManager()
      /** Initialization of the battle */
      fun startBattle(attackingHero0: MapUnit, defendingHero0: MapUnit? = null) {
          attackingHero = attackingHero0
+         defendingHero = defendingHero0
          if(attackingHero.troops.isEmpty())
          {
                  attackingHero.troops.add(Troop(10, "Horseman"))
@@ -239,7 +241,23 @@ class BattleManager()
      /** Checks if battle is finished. If all troops of one army is gone, then finish the battle */
      fun checkBattleFinished()
      {
-         if(attackingTroops.isEmpty() || defendingTroops.isEmpty())
+         if(attackingTroops.isEmpty() || defendingTroops.isEmpty()) {
+             if(defendingTroops.isEmpty())
+             {
+                 defendingHero?.destroy()
+                 attackingTroops.forEach { troop -> troop.amount = troop.currentAmount }
+                 attackingHero.troops = attackingTroops
+             }
+             if(attackingTroops.isEmpty())
+             {
+                 attackingHero.destroy()
+                 defendingTroops.forEach { troop -> troop.amount = troop.currentAmount }
+                 defendingHero?.troops = defendingTroops
+
+
+             }
+
              finishBattle()
+         }
      }
 }
