@@ -169,6 +169,7 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
     var gold = 0
         private set
     var civName = ""
+    @Transient
     var battle = BattleManager()
     var tech = TechManager()
     var policies = PolicyManager()

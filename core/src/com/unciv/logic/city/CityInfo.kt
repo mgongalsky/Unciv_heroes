@@ -8,6 +8,7 @@ import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.logic.civilization.Proximity
 import com.unciv.logic.civilization.ReligionState
 import com.unciv.logic.civilization.diplomacy.DiplomacyFlags
+import com.unciv.logic.event.hero.Troop
 import com.unciv.logic.map.RoadStatus
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
@@ -135,6 +136,9 @@ class CityInfo : IsPartOfGameInfoSerialization {
     var avoidGrowth: Boolean = false
     @Transient var currentGPPBonus: Int = 0  // temporary variable saved for rankSpecialist()
 
+    var garnison = mutableListOf<Troop>()
+
+
     /** The very first found city is the _original_ capital,
      * while the _current_ capital can be any other city after the original one is captured.
      * It is important to distinguish them since the original cannot be razed and defines the Domination Victory. */
@@ -154,6 +158,8 @@ class CityInfo : IsPartOfGameInfoSerialization {
         turnAcquired = civInfo.gameInfo.turns
         location = cityLocation
         setTransients()
+
+
 
         name = generateNewCityName(
             civInfo,
