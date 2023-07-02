@@ -136,7 +136,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
     var avoidGrowth: Boolean = false
     @Transient var currentGPPBonus: Int = 0  // temporary variable saved for rankSpecialist()
 
-    var garnison = mutableListOf<Troop>()
+    var garrison = mutableListOf<Troop>()
 
 
     /** The very first found city is the _original_ capital,
@@ -157,6 +157,11 @@ class CityInfo : IsPartOfGameInfoSerialization {
         foundingCiv = civInfo.civName
         turnAcquired = civInfo.gameInfo.turns
         location = cityLocation
+
+        garrison.add(Troop(30, "Archer"))
+        garrison.add(Troop(20, "Spearman"))
+        garrison.add(Troop(10, "Horseman"))
+
         setTransients()
 
 

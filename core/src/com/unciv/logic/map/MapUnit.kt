@@ -207,14 +207,11 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     var amount: Int = 0
     //var mapUnitName: String = ""
 
-    var testTroop: TestTroop = TestTroop()
-    var testTroops = mutableListOf<TestTroop>()
     constructor(amount: Int, name: String, tileGroup: TileGroup) : this(amount, name)
     {
 
         currentTile = tileGroup.tileInfo
         //drawOnBattle(tileGroup)
-        testTroop.amount = 5
 
     }
 
@@ -222,11 +219,6 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     constructor(amount: Int, name: String) : this(isMonster = true) {
         this.amount = amount
         this.name = name
-
-
-        testTroops.clear()
-        testTroops.add(TestTroop(5,"Spearman"))
-        testTroops.add(TestTroop(15,"Spearman"))
 
         troops.clear()
         baseUnit = ImageGetter.ruleset.units[name]!!

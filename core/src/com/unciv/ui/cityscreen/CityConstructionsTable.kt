@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
@@ -13,6 +14,7 @@ import com.unciv.logic.city.CityInfo
 import com.unciv.logic.city.IConstruction
 import com.unciv.logic.city.INonPerpetualConstruction
 import com.unciv.logic.city.PerpetualConstruction
+import com.unciv.logic.event.hero.Troop
 import com.unciv.logic.map.TileInfo
 import com.unciv.models.UncivSound
 import com.unciv.models.ruleset.Building
@@ -70,6 +72,9 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
     private val availableConstructionsTable = Table()
     private val lowerTableScrollCell: Cell<ScrollPane>
 
+    private val garrisonWidget = Table()
+
+
     private val pad = 10f
     private val posFromEdge = CityScreen.posFromEdge
     private val stageHeight = cityScreen.stage.height
@@ -102,8 +107,76 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
             "CityScreen/CityConstructionTable/AvailableConstructionsTable",
             tintColor = Color.BLACK
         )
-        lowerTableScrollCell = lowerTable.add(availableConstructionsScrollPane).bottom()
+        // Lets keep some space (1/8) for garrison table
+        lowerTableScrollCell = lowerTable.add(availableConstructionsScrollPane).bottom().padBottom(stageHeight / 8)
+
         lowerTable.row()
+
+        garrisonWidget.bottom().left()
+        garrisonWidget.pad(10f)
+      // garrisonWidget.height(stageHeight / 8)
+        val tableHeight = stageHeight / 8f
+        garrisonWidget.height = tableHeight
+
+
+        val iconSize = garrisonWidget.height - 2 * garrisonWidget.padTop
+        val iconSpacing = 10f
+        val iconAmount = 4 // Change this value to set the number of icons
+
+        //val exampleTroop = Troop(15,"Archer")
+        //var iterTroop = cityScreen.city.garrison.iterator()
+        var i = 0
+      //  var currTroop = cityScreen.city.garrison.first()
+        cityScreen.city.garrison.forEach { currTroop ->
+           // val currTroop = cityScreen.city.garrison[i]
+            //val currTroop = iterTroop.
+            //if(currTroop == null)
+             //   continue
+            currTroop.initializeImages(cityScreen.city.civInfo)
+
+            var troopGroup = Group()
+            troopGroup.height = garrisonWidget.height
+            troopGroup.width = garrisonWidget.height
+            troopGroup.addBorder(3f, Color.WHITE, expandCell = false)
+            //garrisonWidget.add(troopGroup).size(iconSize)
+
+            val column = garrisonWidget.columnDefaults(i % 2)
+            column.spaceBottom(iconSpacing)
+            currTroop.drawInCity(troopGroup, isGarrison = true)
+
+            val cell = garrisonWidget.add(troopGroup).size(iconSize)
+
+            if (i < iconAmount) {
+                cell.spaceRight(iconSpacing)
+            }
+            //if (i < iconAmount) {
+            //    garrisonWidget.add().width(iconSpacing)
+            //}
+            i = i + 1
+        }
+/*
+        for (i in 1..iconAmount) {
+            val exampleTroop = Troop(15,"Archer")
+            //val currTroop = cityScreen.city.garrison.first()
+            val currTroop = exampleTroop
+            if(currTroop != null) {
+                val currTroopImages = ImageGetter.getLayeredImageColored(
+                    "Archer",
+                    null,
+                    cityScreen.city.civInfo.nation.getInnerColor(),
+                    cityScreen.city.civInfo.nation.getOuterColor()
+                )
+
+                garrisonWidget.add(currTroopImages?.first()).size(iconSize)
+            }
+            if (i < iconAmount) {
+                garrisonWidget.add().width(iconSpacing)
+            }
+        }
+
+
+ */
+
     }
 
     /** Forces layout calculation and returns the upper Table's (construction queue) width */
@@ -116,6 +189,8 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
     fun addActorsToStage() {
         cityScreen.stage.addActor(upperTable)
         cityScreen.stage.addActor(lowerTable)
+        cityScreen.stage.addActor(garrisonWidget)
+
         lowerTable.setPosition(posFromEdge, posFromEdge, Align.bottomLeft)
     }
 
@@ -127,7 +202,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         upperTable.setPosition(posFromEdge, stageHeight - posFromEdge, Align.topLeft)
 
         updateAvailableConstructions()
-        lowerTableScrollCell.maxHeight(stageHeight - upperTable.height - 2 * posFromEdge)
+        lowerTableScrollCell.maxHeight(stageHeight * 7 / 8 - upperTable.height - 2 * posFromEdge)
     }
 
     private fun updateButtons(construction: IConstruction?) {
