@@ -161,6 +161,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
         garrison.add(Troop(30, "Archer"))
         garrison.add(Troop(20, "Spearman"))
         garrison.add(Troop(10, "Horseman"))
+        garrison.add(Troop(15, "Swordsman"))
 
         setTransients()
 

@@ -127,7 +127,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
 
         val iconSize = garrisonWidget.height - 2 * garrisonWidget.padTop
-        val iconSpacing = 10f
+        val iconSpacing = 15f
         val iconAmount = 4 // Change this value to set the number of icons
 
         //val exampleTroop = Troop(15,"Archer")
@@ -171,18 +171,14 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
 
             val cell = garrisonWidget.add(bgGroup).size(iconSize)
+            cell.spaceRight(iconSpacing)
+
 
             //troopGroup.addBorder(3f, Color.WHITE, expandCell = false)
 
             //cell.background = drawable
 
 
-            if (i < iconAmount) {
-                cell.spaceRight(iconSpacing)
-            }
-            //if (i < iconAmount) {
-            //    garrisonWidget.add().width(iconSpacing)
-            //}
             i += 1
         }
 
