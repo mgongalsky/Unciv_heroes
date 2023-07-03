@@ -5,15 +5,20 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Sprite
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
 import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.logic.city.CityConstructions
@@ -80,6 +85,9 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
     private val lowerTableScrollCell: Cell<ScrollPane>
 
     private val garrisonWidget = Table()
+    private var currGarrisonTroop : Troop? = null
+    private var garrisonBgImages = HashMap<Troop, Image>()
+  //  private var garrisonCells = HashMap<Troop, Cell<Group>>()
 
 
     private val pad = 10f
@@ -135,8 +143,6 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         var i = 0
       //  var currTroop = cityScreen.city.garrison.first()
 
-        val shapeRenderer = ShapeRenderer()
-
 
 
         cityScreen.city.garrison.forEach { currTroop ->
@@ -154,6 +160,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
             //val bgColor = Color(0f, 0.3f, 0f, 0f)
             val bgTexture = createMonochromaticTexture(64, 64, Color.BROWN) // Adjust the dimensions and color as needed
+            val bgTextureActive = createMonochromaticTexture(64, 64, Color.OLIVE) // Adjust the dimensions and color as needed
 
             // Create a drawable with a border using the texture
             val drawable = createBorderDrawable(bgTexture, 5f, Color.WHITE) // Adjust the border width and color as needed
@@ -162,18 +169,31 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
             //val cell: Cell<*> = garrisonWidget.add()
 
 
-            val backgroundActor = Image(bgTexture)
+            val backgroundImage = Image(bgTexture)
 
 // Create a group to hold the troopGroup and the background actor
             val bgGroup = Group()
-            bgGroup.addActor(backgroundActor)
+            bgGroup.addActor(backgroundImage)
             bgGroup.addActor(troopGroup)
 
 
+
+
+            println("Trying to make a clicker.")
             val cell = garrisonWidget.add(bgGroup).size(iconSize)
+            cell.actor.touchable = Touchable.enabled
+            cell.actor.addListener(object : ClickListener() {
+
+                override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                    //selectTextureActivate(backgroundActor, bgTextureActive)
+                    selectTroopSlot(backgroundImage, currTroop)
+                }
+            } )
+
             cell.spaceRight(iconSpacing)
 
-
+           // garrisonCells[currTroop] = cell
+            garrisonBgImages[currTroop] = backgroundImage
             //troopGroup.addBorder(3f, Color.WHITE, expandCell = false)
 
             //cell.background = drawable
@@ -184,30 +204,27 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
 
 
-/*
-        for (i in 1..iconAmount) {
-            val exampleTroop = Troop(15,"Archer")
-            //val currTroop = cityScreen.city.garrison.first()
-            val currTroop = exampleTroop
-            if(currTroop != null) {
-                val currTroopImages = ImageGetter.getLayeredImageColored(
-                    "Archer",
-                    null,
-                    cityScreen.city.civInfo.nation.getInnerColor(),
-                    cityScreen.city.civInfo.nation.getOuterColor()
-                )
+    }
 
-                garrisonWidget.add(currTroopImages?.first()).size(iconSize)
-            }
-            if (i < iconAmount) {
-                garrisonWidget.add().width(iconSpacing)
-            }
+    private fun selectTroopSlot(bgImage: Image, troop2select: Troop){
+        val bgTextureInactive = createMonochromaticTexture(64, 64, Color.BROWN) // Adjust the dimensions and color as needed
+        val bgTextureActive = createMonochromaticTexture(64, 64, Color.OLIVE) // Adjust the dimensions and color as needed
+
+        bgImage.drawable = TextureRegionDrawable(TextureRegion(bgTextureActive))
+        if(currGarrisonTroop != null)
+        {
+            garrisonBgImages[currGarrisonTroop]?.drawable = TextureRegionDrawable(TextureRegion(bgTextureInactive))
         }
 
-
- */
+        // Select new slot, or remove selection if already selected troop is clicked
+        currGarrisonTroop = if(currGarrisonTroop != troop2select)
+            troop2select
+        else
+            null
 
     }
+
+
 
     fun createMonochromaticTexture(width: Int, height: Int, color: Color): Texture {
         val pixmap = Pixmap(width, height, Pixmap.Format.RGBA8888)
