@@ -87,7 +87,8 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
     private val garrisonWidget = Table()
     private var currGarrisonTroop : Troop? = null
     private var garrisonBgImages = HashMap<Troop, Image>()
-  //  private var garrisonCells = HashMap<Troop, Cell<Group>>()
+    private var garrisonCells = HashMap<Troop, Cell<Group>>()
+    private var garrisonGroup = HashMap<Troop, Group>()
 
 
     private val pad = 10f
@@ -186,14 +187,15 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
                 override fun clicked(event: InputEvent?, x: Float, y: Float) {
                     //selectTextureActivate(backgroundActor, bgTextureActive)
-                    selectTroopSlot(backgroundImage, currTroop)
+                    selectTroopSlot(backgroundImage)
                 }
             } )
 
             cell.spaceRight(iconSpacing)
 
-           // garrisonCells[currTroop] = cell
+            garrisonCells[currTroop] = cell
             garrisonBgImages[currTroop] = backgroundImage
+            garrisonGroup[currTroop] = troopGroup
             //troopGroup.addBorder(3f, Color.WHITE, expandCell = false)
 
             //cell.background = drawable
@@ -206,14 +208,60 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
     }
 
-    private fun selectTroopSlot(bgImage: Image, troop2select: Troop){
+    private fun selectTroopSlot(bgImage: Image){
         val bgTextureInactive = createMonochromaticTexture(64, 64, Color.BROWN) // Adjust the dimensions and color as needed
         val bgTextureActive = createMonochromaticTexture(64, 64, Color.OLIVE) // Adjust the dimensions and color as needed
+        var troop2select = garrisonBgImages.filterValues { img -> img == bgImage }.keys.first()
 
-        bgImage.drawable = TextureRegionDrawable(TextureRegion(bgTextureActive))
-        if(currGarrisonTroop != null)
+        if(currGarrisonTroop == null)
+            bgImage.drawable = TextureRegionDrawable(TextureRegion(bgTextureActive))
+
+        if(currGarrisonTroop != null && currGarrisonTroop != troop2select)
         {
             garrisonBgImages[currGarrisonTroop]?.drawable = TextureRegionDrawable(TextureRegion(bgTextureInactive))
+            // Swap actors of troop themselves
+            val parentOld = garrisonGroup[currGarrisonTroop]?.parent
+            val parentNew = garrisonGroup[troop2select]?.parent
+
+            parentOld?.removeActor(garrisonGroup[currGarrisonTroop])
+            parentNew?.removeActor(garrisonGroup[troop2select])
+
+            parentOld?.addActor(garrisonGroup[troop2select])
+            parentNew?.addActor(garrisonGroup[currGarrisonTroop])
+
+
+            // Swap troops in the garrison list
+            val indexNew = cityScreen.city.garrison.indexOf(troop2select)
+            val indexOld = cityScreen.city.garrison.indexOf(currGarrisonTroop)
+
+            if (indexNew != -1 && indexOld != -1) {
+                cityScreen.city.garrison[indexNew] = currGarrisonTroop!!
+                cityScreen.city.garrison[indexOld] = troop2select
+            }
+
+            // Swap cells in the HashMap
+            val cellOld = garrisonCells[currGarrisonTroop]
+            val cellNew = garrisonCells[troop2select]
+
+            if (cellOld != null && cellNew != null) {
+                // Swap the Cell<Group> values
+                garrisonCells[currGarrisonTroop!!] = cellNew
+                garrisonCells[troop2select] = cellOld
+            }
+
+            // Swap images in the HashMap
+            val imageOld = garrisonBgImages[currGarrisonTroop]
+            val imageNew = garrisonBgImages[troop2select]
+
+            if (imageOld != null && imageNew != null) {
+                // Swap the Cell<Group> values
+                garrisonBgImages[currGarrisonTroop!!] = imageNew
+                garrisonBgImages[troop2select] = imageOld
+            }
+
+            currGarrisonTroop = null
+            return
+
         }
 
         // Select new slot, or remove selection if already selected troop is clicked
