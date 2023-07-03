@@ -84,6 +84,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
     private val availableConstructionsTable = Table()
     private val lowerTableScrollCell: Cell<ScrollPane>
 
+    // Garrison section. Probably we need standalone garrison manager
     private val garrisonWidget = Table()
     private var currGarrisonTroop : Troop? = null
     private var garrisonBgImages = HashMap<Troop, Image>()
@@ -127,7 +128,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         lowerTableScrollCell = lowerTable.add(availableConstructionsScrollPane).bottom().padBottom(stageHeight / 8)
 
         lowerTable.row()
-
+/*
         garrisonWidget.bottom().left()
         garrisonWidget.pad(10f)
       // garrisonWidget.height(stageHeight / 8)
@@ -206,6 +207,8 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
 
 
+ */
+
     }
 
     private fun selectTroopSlot(bgImage: Image){
@@ -215,6 +218,10 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
         if(currGarrisonTroop == null)
             bgImage.drawable = TextureRegionDrawable(TextureRegion(bgTextureActive))
+
+        if(currGarrisonTroop == troop2select)
+            bgImage.drawable = TextureRegionDrawable(TextureRegion(bgTextureInactive))
+
 
         if(currGarrisonTroop != null && currGarrisonTroop != troop2select)
         {

@@ -243,7 +243,20 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
    */
     init {
+/*
+        if(name == "Warrior")
+        {
+            troops.clear()
+            troops.add(Troop(10, "Horseman"))
+            troops.add(Troop(20, "Archer"))
+            troops.add(Troop(15, "Spearman"))
+            troops.add(Troop(5, "Swordsman"))
 
+
+
+        }
+
+ */
        // if(isMonster) {
             //val imageString = "TileSets/AbsoluteUnits/Units/" + name
 
@@ -731,6 +744,19 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         promotions.setTransients(this)
         baseUnit = ruleset.units[name]
             ?: throw java.lang.Exception("Unit $name is not found!")
+
+        if(name == "Warrior")
+        {
+            troops.clear()
+            troops.add(Troop(10, "Horseman"))
+            troops.add(Troop(20, "Archer"))
+            troops.add(Troop(15, "Spearman"))
+            troops.add(Troop(5, "Swordsman"))
+
+
+
+        }
+
 
         updateUniques(ruleset)
     }

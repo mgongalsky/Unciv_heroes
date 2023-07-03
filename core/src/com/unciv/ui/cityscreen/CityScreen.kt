@@ -70,6 +70,9 @@ class CityScreen(
     /** Displays selected construction info, alternate with tileTable - sits on BOTTOM RIGHT */
     private var selectedConstructionTable = ConstructionInfoTable(this)
 
+    /** Displays visiting hero information, mainly his army - sits on BOTTOM RIGHT */
+    private var visitingHeroTable = VisitingHeroTable(this)
+
     /** Displays city name, allows switching between cities - sits on BOTTOM CENTER */
     private var cityPickerTable = CityScreenCityPickerTable(this)
 
@@ -126,6 +129,7 @@ class CityScreen(
         constructionsTable.addActorsToStage()
         stage.addActor(selectedConstructionTable)
         stage.addActor(tileTable)
+        stage.addActor(visitingHeroTable)
         stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
         stage.addActor(exitCityButton)
         update()
@@ -146,6 +150,8 @@ class CityScreen(
         tileTable.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
         selectedConstructionTable.update(selectedConstruction)
         selectedConstructionTable.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
+        visitingHeroTable.update()
+        visitingHeroTable.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
 
         // In portrait mode only: calculate already occupied horizontal space
         val rightMargin = when {

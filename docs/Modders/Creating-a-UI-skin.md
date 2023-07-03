@@ -50,7 +50,9 @@ These shapes are used all over Unciv and can be replaced to make a lot of UI ele
 | CityScreen/CityStatsTable/ | Background | null | |
 | CityScreen/CityStatsTable/ | InnerTable | null | |
 | CityScreen/ConstructionInfoTable/ | Background | null | |
+| CityScreen/ConstructionInfoTable/ | Background | null | |
 | CityScreen/ConstructionInfoTable/ | SelectedConstructionTable | null | |
+| CityScreen/ConstructionInfoTable/ | heroArmyTable | null | |
 | CivilopediaScreen/ | EntryButton | null | |
 | General/ | Border | null | |
 | General/ | Border | null | |
