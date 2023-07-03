@@ -116,14 +116,18 @@ class Troop (
     fun drawInCity(group: Group, isGarrison: Boolean)
     {
         // Draw amount of units
+        // TODO: Here we need to make text smaller, but looks like we need to introduce new font for this.
         val amountText = Label(currentAmount.toString(), BaseScreen.skin)
-        amountText.setScale(0.2f)
-        amountText.moveBy(group.width*0.4f, 0.5f)
+        amountText.scaleBy(0.5f)
+        //amountText.style.font.data.scale(0.5f)
+
+        amountText.moveBy(group.width*0.6f, 0.5f)
+        //amountText.style.font.data.scale(0.5f)
 
         // Draw pixmap of a troop
         for (troopImage in troopImages) {
             troopImage.setScale(-0.125f, 0.125f)
-            troopImage.moveBy(group.width*1.3f*0.5f, 0f)
+            troopImage.moveBy(group.width*0.8f, 0f)
 
             troopImage.setOrigin(group.originX, group.originY)
             /// TODO: Seems like latitude and longitude work incorrectly in main map
@@ -135,24 +139,10 @@ class Troop (
             troopGroup.addActor(troopImage)
         }
 
-        // hexCoordsLabel is used for debug only. Shows various coordinates for the troop
-        //val hexCoords = group.tileInfo.position
-        /*
-        var hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString() + "\r\n" +
-                position.x.toString() + ", " + position.y.toString() + "\r\n" +
-                group.tileInfo.position.x.toString() + ", " + group.tileInfo.position.y.toString(),
-            BaseScreen.skin)
-
-         */
-        //hexLabel.name = "hexCoordsLabel"
-        //hexLabel.touchable = Touchable.disabled
         amountText.name = "amountLabel"
         amountText.touchable = Touchable.disabled
         troopGroup.findActor<Label>("amountLabel")?.remove()
-        //  troopGroup.findActor<>()
         troopGroup.addActor(amountText)
-        // Uncomment this for debug with rendering of coordinates. Comment amountText label.
-        //troopGroup.addActor(hexLabel)
         group.addActor(troopGroup)
     }
 

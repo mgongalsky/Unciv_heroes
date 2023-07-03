@@ -1,12 +1,19 @@
 package com.unciv.ui.cityscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Pixmap
+import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.Sprite
+import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable
+import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.logic.city.CityConstructions
@@ -127,24 +134,48 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         //var iterTroop = cityScreen.city.garrison.iterator()
         var i = 0
       //  var currTroop = cityScreen.city.garrison.first()
+
+        val shapeRenderer = ShapeRenderer()
+
+
+
         cityScreen.city.garrison.forEach { currTroop ->
-           // val currTroop = cityScreen.city.garrison[i]
-            //val currTroop = iterTroop.
-            //if(currTroop == null)
-             //   continue
             currTroop.initializeImages(cityScreen.city.civInfo)
 
             var troopGroup = Group()
             troopGroup.height = garrisonWidget.height
             troopGroup.width = garrisonWidget.height
-            troopGroup.addBorder(3f, Color.WHITE, expandCell = false)
             //garrisonWidget.add(troopGroup).size(iconSize)
 
             val column = garrisonWidget.columnDefaults(i % 2)
             column.spaceBottom(iconSpacing)
             currTroop.drawInCity(troopGroup, isGarrison = true)
+            //troopGroup.addBorder(3f, Color.WHITE, expandCell = false)
 
-            val cell = garrisonWidget.add(troopGroup).size(iconSize)
+            //val bgColor = Color(0f, 0.3f, 0f, 0f)
+            val bgTexture = createMonochromaticTexture(64, 64, Color.BROWN) // Adjust the dimensions and color as needed
+
+            // Create a drawable with a border using the texture
+            val drawable = createBorderDrawable(bgTexture, 5f, Color.WHITE) // Adjust the border width and color as needed
+
+
+            //val cell: Cell<*> = garrisonWidget.add()
+
+
+            val backgroundActor = Image(bgTexture)
+
+// Create a group to hold the troopGroup and the background actor
+            val bgGroup = Group()
+            bgGroup.addActor(backgroundActor)
+            bgGroup.addActor(troopGroup)
+
+
+            val cell = garrisonWidget.add(bgGroup).size(iconSize)
+
+            //troopGroup.addBorder(3f, Color.WHITE, expandCell = false)
+
+            //cell.background = drawable
+
 
             if (i < iconAmount) {
                 cell.spaceRight(iconSpacing)
@@ -152,8 +183,11 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
             //if (i < iconAmount) {
             //    garrisonWidget.add().width(iconSpacing)
             //}
-            i = i + 1
+            i += 1
         }
+
+
+
 /*
         for (i in 1..iconAmount) {
             val exampleTroop = Troop(15,"Archer")
@@ -177,6 +211,38 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
  */
 
+    }
+
+    fun createMonochromaticTexture(width: Int, height: Int, color: Color): Texture {
+        val pixmap = Pixmap(width, height, Pixmap.Format.RGBA8888)
+        pixmap.setColor(color)
+        pixmap.fill()
+
+        val texture = Texture(pixmap)
+        pixmap.dispose()
+
+        return texture
+    }
+
+    fun createBorderDrawable(texture: Texture, borderWidth: Float, borderColor: Color): Drawable {
+        val sprite = Sprite(texture)
+        val borderSprite = Sprite(texture)
+
+        borderSprite.setSize(sprite.width + borderWidth * 2f, sprite.height + borderWidth * 2f)
+        borderSprite.setColor(borderColor)
+
+        val borderBatch = SpriteBatch()
+        borderBatch.begin()
+        borderSprite.draw(borderBatch)
+        borderBatch.end()
+
+        val drawable = SpriteDrawable(sprite)
+        drawable.leftWidth = borderWidth
+        drawable.rightWidth = borderWidth
+        drawable.topHeight = borderWidth
+        drawable.bottomHeight = borderWidth
+
+        return drawable
     }
 
     /** Forces layout calculation and returns the upper Table's (construction queue) width */
