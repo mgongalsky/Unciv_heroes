@@ -9,6 +9,7 @@ import com.unciv.UncivGame
 import com.unciv.logic.automation.Automation
 import com.unciv.logic.city.CityInfo
 import com.unciv.logic.city.IConstruction
+import com.unciv.logic.event.hero.Troop
 import com.unciv.logic.map.TileInfo
 import com.unciv.models.UncivSound
 import com.unciv.models.ruleset.Building
@@ -56,7 +57,7 @@ class CityScreen(
      *  Not a widget, but manages two: construction queue, info toggle button, buy buttons
      *  in a Table holder on upper LEFT, and available constructions in a ScrollPane lower LEFT.
      */
-    private var constructionsTable = CityConstructionsTable(this)
+    internal var constructionsTable = CityConstructionsTable(this)
 
     /** Displays raze city button - sits on TOP CENTER */
     private var razeCityButtonHolder = Table()
@@ -71,7 +72,14 @@ class CityScreen(
     private var selectedConstructionTable = ConstructionInfoTable(this)
 
     /** Displays visiting hero information, mainly his army - sits on BOTTOM RIGHT */
-    private var visitingHeroTable = VisitingHeroTable(this)
+    internal var visitingHeroTable = VisitingHeroTable(this)
+
+    /** Currently selected troop no matter in garrison or visiting hero */
+    internal var currTroop : Troop? = null
+
+    /** Flag showing if current selected troop in the garrison (true) or in visiting hero army (false) */
+    internal var isGarrisonSelected: Boolean = false
+
 
     /** Displays city name, allows switching between cities - sits on BOTTOM CENTER */
     private var cityPickerTable = CityScreenCityPickerTable(this)

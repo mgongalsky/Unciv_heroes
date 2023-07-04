@@ -31,10 +31,10 @@ class VisitingHeroTable(val cityScreen: CityScreen) : Table() {
 
 
     //private val garrisonWidget = Table()
-    private var currHeroArmyTroop : Troop? = null
-    private var heroArmyBgImages = HashMap<Troop, Image>()
-    private var heroArmyCells = HashMap<Troop, Cell<Group>>()
-    private var heroArmyGroup = HashMap<Troop, Group>()
+    //private var currHeroArmyTroop : Troop? = null
+    internal var heroArmyBgImages = HashMap<Troop, Image>()
+    internal var heroArmyCells = HashMap<Troop, Cell<Group>>()
+    internal var heroArmyGroup = HashMap<Troop, Group>()
 
     var visitingHero: MapUnit?
 
@@ -165,64 +165,143 @@ class VisitingHeroTable(val cityScreen: CityScreen) : Table() {
         val bgTextureActive = createMonochromaticTexture(64, 64, Color.OLIVE) // Adjust the dimensions and color as needed
         var troop2select = heroArmyBgImages.filterValues { img -> img == bgImage }.keys.first()
 
-        if(currHeroArmyTroop == null)
+        if(cityScreen.currTroop == null) {
             bgImage.drawable = TextureRegionDrawable(TextureRegion(bgTextureActive))
+            cityScreen.isGarrisonSelected = false
+        }
 
-        if(currHeroArmyTroop == troop2select)
+        if(cityScreen.currTroop == troop2select) {
             bgImage.drawable = TextureRegionDrawable(TextureRegion(bgTextureInactive))
+            cityScreen.currTroop = null
+            return
+        }
 
 
-        if(currHeroArmyTroop != null && currHeroArmyTroop != troop2select)
+        if(cityScreen.currTroop != null && cityScreen.currTroop != troop2select)
         {
-            heroArmyBgImages[currHeroArmyTroop]?.drawable = TextureRegionDrawable(TextureRegion(bgTextureInactive))
-            // Swap actors of troop themselves
-            val parentOld = heroArmyGroup[currHeroArmyTroop]?.parent
-            val parentNew = heroArmyGroup[troop2select]?.parent
+            if (!cityScreen.isGarrisonSelected) {
 
-            parentOld?.removeActor(heroArmyGroup[currHeroArmyTroop])
-            parentNew?.removeActor(heroArmyGroup[troop2select])
+                heroArmyBgImages[cityScreen.currTroop]?.drawable =
+                        TextureRegionDrawable(TextureRegion(bgTextureInactive))
+                // Swap actors of troop themselves
+                val parentOld = heroArmyGroup[cityScreen.currTroop]?.parent
+                val parentNew = heroArmyGroup[troop2select]?.parent
 
-            parentOld?.addActor(heroArmyGroup[troop2select])
-            parentNew?.addActor(heroArmyGroup[currHeroArmyTroop])
+                parentOld?.removeActor(heroArmyGroup[cityScreen.currTroop])
+                parentNew?.removeActor(heroArmyGroup[troop2select])
+
+                parentOld?.addActor(heroArmyGroup[troop2select])
+                parentNew?.addActor(heroArmyGroup[cityScreen.currTroop])
 
 
-            // Swap troops in the garrison list
-            val indexNew = visitingHero?.troops?.indexOf(troop2select)
-            val indexOld = visitingHero?.troops?.indexOf(currHeroArmyTroop)
+                // Swap troops in the garrison list
+                val indexNew = visitingHero?.troops?.indexOf(troop2select)
+                val indexOld = visitingHero?.troops?.indexOf(cityScreen.currTroop)
 
-            if (indexNew != null && indexOld != null)
-                if (indexNew != -1 && indexOld != -1) {
-                    visitingHero?.troops?.set(indexNew, currHeroArmyTroop!!)
-                    visitingHero?.troops?.set(indexOld, troop2select)
+                if (indexNew != null && indexOld != null)
+                    if (indexNew != -1 && indexOld != -1) {
+                        visitingHero?.troops?.set(indexNew, cityScreen.currTroop!!)
+                        visitingHero?.troops?.set(indexOld, troop2select)
+                    }
+
+                // Swap cells in the HashMap
+                val cellOld = heroArmyCells[cityScreen.currTroop]
+                val cellNew = heroArmyCells[troop2select]
+
+                if (cellOld != null && cellNew != null) {
+                    // Swap the Cell<Group> values
+                    heroArmyCells[cityScreen.currTroop!!] = cellNew
+                    heroArmyCells[troop2select] = cellOld
                 }
 
-            // Swap cells in the HashMap
-            val cellOld = heroArmyCells[currHeroArmyTroop]
-            val cellNew = heroArmyCells[troop2select]
+                // Swap images in the HashMap
+                val imageOld = heroArmyBgImages[cityScreen.currTroop]
+                val imageNew = heroArmyBgImages[troop2select]
 
-            if (cellOld != null && cellNew != null) {
-                // Swap the Cell<Group> values
-                heroArmyCells[currHeroArmyTroop!!] = cellNew
-                heroArmyCells[troop2select] = cellOld
+                if (imageOld != null && imageNew != null) {
+                    // Swap the Cell<Group> values
+                    heroArmyBgImages[cityScreen.currTroop!!] = imageNew
+                    heroArmyBgImages[troop2select] = imageOld
+                }
+
+                cityScreen.currTroop = null
+                return
+            }
+            else
+            {
+                /** GarrisonWidget short for cityScreen.selectedConstructionTable */
+                val GW = cityScreen.constructionsTable
+                GW.garrisonBgImages[cityScreen.currTroop]?.drawable =
+                        TextureRegionDrawable(TextureRegion(bgTextureInactive))
+                // Swap actors of troop themselves
+                val parentOld = GW.garrisonGroup[cityScreen.currTroop]?.parent
+                val parentNew = heroArmyGroup[troop2select]?.parent
+
+                parentOld?.removeActor(GW.garrisonGroup[cityScreen.currTroop])
+                parentNew?.removeActor(heroArmyGroup[troop2select])
+
+                parentOld?.addActor(heroArmyGroup[troop2select])
+                parentNew?.addActor(GW.garrisonGroup[cityScreen.currTroop])
+
+
+                // Swap cells in the HashMap
+                val cellOld = GW.garrisonCells[cityScreen.currTroop]
+                val cellNew = heroArmyCells[troop2select]
+
+                if (cellOld != null && cellNew != null) {
+                    // Swap the Cell<Group> values
+                    heroArmyCells.remove(troop2select)
+                    GW.garrisonCells.remove(cityScreen.currTroop!!)
+                    heroArmyCells[cityScreen.currTroop!!] = cellNew
+                    GW.garrisonCells[troop2select] = cellOld
+                }
+
+                // Swap images in the HashMap
+                val imageOld = GW.garrisonBgImages[cityScreen.currTroop]
+                val imageNew = heroArmyBgImages[troop2select]
+
+                if (imageOld != null && imageNew != null) {
+                    // Swap the Cell<Group> values
+                    heroArmyBgImages.remove(troop2select)
+                    GW.garrisonBgImages.remove(cityScreen.currTroop!!)
+                    heroArmyBgImages[cityScreen.currTroop!!] = imageNew
+                    GW.garrisonBgImages[troop2select] = imageOld
+                }
+
+                // Swap groups in the HashMap
+                val groupOld = GW.garrisonGroup[cityScreen.currTroop]
+                val groupNew = heroArmyGroup[troop2select]
+
+                if (groupOld != null && groupNew != null) {
+                    // Swap the Cell<Group> values
+                    heroArmyGroup.remove(troop2select)
+                    GW.garrisonGroup.remove(cityScreen.currTroop!!)
+                    heroArmyGroup[cityScreen.currTroop!!] = groupNew
+                    GW.garrisonGroup[troop2select] = groupOld
+                }
+
+                // Swap troops in the garrison list
+                val indexNew = visitingHero?.troops?.indexOf(troop2select)
+                val indexOld = cityScreen.city.garrison.indexOf(cityScreen.currTroop)
+
+                if (indexNew != null && indexOld != null)
+                    if (indexNew != -1 && indexOld != -1) {
+                        visitingHero?.troops?.set(indexNew, cityScreen.currTroop!!)
+                        cityScreen.city.garrison[indexOld] = troop2select
+                    }
+
+
+
+                cityScreen.currTroop = null
+                return
+
             }
 
-            // Swap images in the HashMap
-            val imageOld = heroArmyBgImages[currHeroArmyTroop]
-            val imageNew = heroArmyBgImages[troop2select]
-
-            if (imageOld != null && imageNew != null) {
-                // Swap the Cell<Group> values
-                heroArmyBgImages[currHeroArmyTroop!!] = imageNew
-                heroArmyBgImages[troop2select] = imageOld
-            }
-
-            currHeroArmyTroop = null
-            return
 
         }
 
         // Select new slot, or remove selection if already selected troop is clicked
-        currHeroArmyTroop = if(currHeroArmyTroop != troop2select)
+        cityScreen.currTroop = if(cityScreen.currTroop != troop2select)
             troop2select
         else
             null

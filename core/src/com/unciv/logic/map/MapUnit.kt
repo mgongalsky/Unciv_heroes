@@ -95,6 +95,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     @Transient
     var exampleTroop : Troop = Troop(10, "Spearman")
 
+    // TODO: troops must be changed from list to a finite array with possible empty slots. And army manager must be written.
     var troops = mutableListOf<Troop>()
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
      *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */
