@@ -147,7 +147,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         toReturn.isLand = isLand
         toReturn.isWater = isWater
         toReturn.isOcean = isOcean
-        toReturn.visitable = visitable
+        if (visitable != null) toReturn.visitable = visitable!!.clone()
         if (militaryUnit != null) toReturn.militaryUnit = militaryUnit!!.clone()
         if (civilianUnit != null) toReturn.civilianUnit = civilianUnit!!.clone()
         for (airUnit in airUnits) toReturn.airUnits.add(airUnit.clone())
