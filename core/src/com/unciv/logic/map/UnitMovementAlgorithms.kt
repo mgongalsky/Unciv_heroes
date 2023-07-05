@@ -559,6 +559,8 @@ class UnitMovementAlgorithms(val unit: MapUnit) {
             moveToTile(destination, considerZoneOfControl)
         }
 
+        unit.visitPlace(destination)
+
         unit.updateUniques(unit.currentTile.ruleset)
     }
 

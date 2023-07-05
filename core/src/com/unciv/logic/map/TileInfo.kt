@@ -121,6 +121,9 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     var roadOwner: String = "" // either who last built the road or last owner of tile
     var turnsToImprovement: Int = 0
 
+    /** A handle to a class with information about visits of the improvement */
+    var visitable: Visitable? = null
+
     fun isHill() = baseTerrain == Constants.hill || terrainFeatures.contains(Constants.hill)
 
     var hasBottomRightRiver = false
@@ -144,6 +147,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         toReturn.isLand = isLand
         toReturn.isWater = isWater
         toReturn.isOcean = isOcean
+        toReturn.visitable = visitable
         if (militaryUnit != null) toReturn.militaryUnit = militaryUnit!!.clone()
         if (civilianUnit != null) toReturn.civilianUnit = civilianUnit!!.clone()
         for (airUnit in airUnits) toReturn.airUnits.add(airUnit.clone())
@@ -1208,6 +1212,16 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         if (::tileMap.isInitialized && resource != null && tileResource.resourceType == ResourceType.Strategic && resourceAmount == 0) {
             // Let's assume it's a small deposit
             setTileResource(tileResource, majorDeposit = false)
+        }
+
+        // Here we will initialize visitable if it's present
+        if(improvement != null)
+        {
+            // TODO: Here we will assign visitability manually, but it should be specified in TimeImprovements.json
+            if(improvement == "Citadel")
+                visitable = Visitable(Visitability.once_per_hero)
+            else
+                visitable = Visitable()
         }
     }
 

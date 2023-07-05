@@ -762,8 +762,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             troops.add(Troop(20, "Archer"))
             troops.add(Troop(15, "Spearman"))
             troops.add(Troop(5, "Swordsman"))
-            heroAttackSkill = 2
-            heroDefenseSkill = 2
+            //heroAttackSkill = 2
+            //heroDefenseSkill = 2
 
 
         }
@@ -1084,11 +1084,29 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     fun removeFromTile() = currentTile.removeUnit(this)
 
+    fun visitPlace(tile: TileInfo){
+        if(civInfo.isMajorCiv() && tile.improvement != null){
+            if(tile.improvement == "Citadel")
+                heroAttackSkill += 1
+
+        }
+
+
+    }
+
     fun moveThroughTile(tile: TileInfo) {
         // addPromotion requires currentTile to be valid because it accesses ruleset through it.
         // getAncientRuinBonus, if it places a new unit, does too
         currentTile = tile
+/*
+        if(civInfo.isMajorCiv() && tile.improvement != null){
+            if(tile.improvement == "Citadel")
+                heroAttackSkill += 1
 
+        }
+
+
+ */
         if (civInfo.isMajorCiv()
             && tile.improvement != null
             && tile.getTileImprovement()!!.isAncientRuinsEquivalent()
