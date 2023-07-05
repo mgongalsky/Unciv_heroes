@@ -199,8 +199,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     var turnsFortified = 0
 
 
-    var heroAttackSkill: Int = 0
-    var heroDefenseSkill: Int = 0
+    var heroAttackSkill: Int = 5
+    var heroDefenseSkill: Int = 5
 
     var abilityUsesLeft: HashMap<String, Int> = hashMapOf()
     var maxAbilityUses: HashMap<String, Int> = hashMapOf()
@@ -230,8 +230,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         baseUnit.ruleset = ImageGetter.ruleset
 
         // TODO: It is also in setTransient, we need to exclude it in one of the places
-        heroAttackSkill = 2
-        heroDefenseSkill = 2
+        //heroAttackSkill = 2
+        //heroDefenseSkill = 2
 
 
         //   amount = amount0
@@ -333,6 +333,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         toReturn.originalOwner = originalOwner
         toReturn.instanceName = instanceName
         toReturn.currentMovement = currentMovement
+        toReturn.heroAttackSkill = heroAttackSkill
+        toReturn.heroDefenseSkill = heroDefenseSkill
         toReturn.troops = troops
         toReturn.health = health
         toReturn.action = action

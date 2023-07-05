@@ -353,6 +353,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
         toReturn.id = id
         toReturn.name = name
         toReturn.health = health
+        toReturn.garrison = garrison
         toReturn.population = population.clone()
         toReturn.cityConstructions = cityConstructions.clone()
         toReturn.expansion = expansion.clone()
