@@ -198,6 +198,10 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     var isTransported: Boolean = false
     var turnsFortified = 0
 
+
+    var heroAttackSkill: Int = 0
+    var heroDefenseSkill: Int = 0
+
     var abilityUsesLeft: HashMap<String, Int> = hashMapOf()
     var maxAbilityUses: HashMap<String, Int> = hashMapOf()
 
@@ -224,6 +228,11 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         troops.clear()
         baseUnit = ImageGetter.ruleset.units[name]!!
         baseUnit.ruleset = ImageGetter.ruleset
+
+        // TODO: It is also in setTransient, we need to exclude it in one of the places
+        heroAttackSkill = 2
+        heroDefenseSkill = 2
+
 
         //   amount = amount0
         val amountOfTroops = 4
@@ -753,7 +762,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             troops.add(Troop(20, "Archer"))
             troops.add(Troop(15, "Spearman"))
             troops.add(Troop(5, "Swordsman"))
-
+            heroAttackSkill = 2
+            heroDefenseSkill = 2
 
 
         }
