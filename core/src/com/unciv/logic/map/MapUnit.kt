@@ -1,6 +1,8 @@
 package com.unciv.logic.map
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.IsPartOfGameInfoSerialization
@@ -33,6 +35,8 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.newgamescreen.NewGameScreen
 import com.unciv.ui.popup.Popup
 import com.unciv.ui.tilegroups.TileGroup
+import com.unciv.ui.utils.BaseScreen
+import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.extensions.filterAndLogic
 import com.unciv.ui.utils.extensions.toPercent
 import com.unciv.ui.worldscreen.WorldScreen
@@ -45,7 +49,7 @@ import kotlin.math.pow
  * The immutable properties and mutable game state of an individual unit present on the map
  */
 // That's gonna be a Hero instead of MapUnit
-open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSerialization {
+open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSerialization {
     companion object {
         var monsterCivInfo = CivilizationInfo() // Dummy CivInfo for loading and saving maps
 
@@ -99,10 +103,11 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     /// TODO: Change into list of troops
     @Transient
-    var exampleTroop : Troop = Troop(10, "Spearman")
+    var exampleTroop: Troop = Troop(10, "Spearman")
 
     // TODO: troops must be changed from list to a finite array with possible empty slots. And army manager must be written.
     var troops = mutableListOf<Troop>()
+
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
      *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */
     @Transient
@@ -121,6 +126,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     /** Used for getMovementCostBetweenAdjacentTiles only, based on order of testing */
     enum class DoubleMovementTerrainTarget { Feature, Base, Hill, Filter }
+
     /** Mod-friendly cache of double-movement terrains */
     @Transient
     val doubleMovementInTerrain = HashMap<String, DoubleMovementTerrainTarget>()
@@ -148,11 +154,12 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     @Transient
     var hasStrengthBonusInRadiusUnique = false
+
     @Transient
     var hasCitadelPlacementUnique = false
 
     // Is this MapUnit a Monster?
-   // val isMonster: Boolean// = false
+    // val isMonster: Boolean// = false
 
     /** civName owning the unit */
     lateinit var owner: String
@@ -178,8 +185,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
      */
     fun displayName(): String {
         val baseName =
-            if (instanceName == null) "[$name]"
-            else "$instanceName ([$name])"
+                if (instanceName == null) "[$name]"
+                else "$instanceName ([$name])"
 
         return if (religion == null) baseName
         else "$baseName ([${getReligionDisplayName()}])"
@@ -187,7 +194,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     fun shortDisplayName(): String {
         return if (instanceName != null) "[$instanceName]"
-            else "[$name]"
+        else "[$name]"
     }
 
     var id: Int = 0
@@ -197,6 +204,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 //    open var amount: Int = 0
 
     var action: String? = null // work, automation, fortifying, I dunno what.
+
     @Transient
     var showAdditionalActions: Boolean = false
 
@@ -220,8 +228,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     var amount: Int = 0
     //var mapUnitName: String = ""
 
-    constructor(amount: Int, name: String, tileGroup: TileGroup) : this(amount, name)
-    {
+    constructor(amount: Int, name: String, tileGroup: TileGroup) : this(amount, name) {
 
         currentTile = tileGroup.tileInfo
         //drawOnBattle(tileGroup)
@@ -251,19 +258,19 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     }
 
-    constructor():this(isMonster = true) {
+    constructor() : this(isMonster = true) {
 
         id = currID
         currID += 1
     }
 
-  /*  constructor(isMonster: Boolean = false)
-    {
-        this.isMonster = isMonster
-    }
+    /*  constructor(isMonster: Boolean = false)
+      {
+          this.isMonster = isMonster
+      }
 
 
-   */
+     */
     init {
 /*
         if(name == "Warrior")
@@ -279,10 +286,10 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         }
 
  */
-       // if(isMonster) {
-            //val imageString = "TileSets/AbsoluteUnits/Units/" + name
+        // if(isMonster) {
+        //val imageString = "TileSets/AbsoluteUnits/Units/" + name
 
-       // }
+        // }
         /*
         if(!isMonster)
         {
@@ -295,6 +302,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
          */
 
     }
+
     /**
      * Container class to represent a single instant in a [MapUnit]'s recent movement history.
      *
@@ -302,9 +310,11 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
      * @property type Category of the last change in position that brought the unit to this position.
      * @see [movementMemories]
      * */
-    class UnitMovementMemory(position: Vector2, val type: UnitMovementMemoryType) : IsPartOfGameInfoSerialization {
+    class UnitMovementMemory(position: Vector2, val type: UnitMovementMemoryType) :
+        IsPartOfGameInfoSerialization {
         @Suppress("unused") // needed because this is part of a save and gets deserialized
-        constructor(): this(Vector2.Zero, UnitMovementMemoryType.UnitMoved)
+        constructor() : this(Vector2.Zero, UnitMovementMemoryType.UnitMoved)
+
         val position = Vector2(position)
 
         fun clone() = UnitMovementMemory(position, type)
@@ -370,7 +380,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     fun baseUnit(): BaseUnit = baseUnit
     fun getMovementString(): String =
-        DecimalFormat("0.#").format(currentMovement.toDouble()) + "/" + getMaxMovement()
+            DecimalFormat("0.#").format(currentMovement.toDouble()) + "/" + getMaxMovement()
 
     fun getTile(): TileInfo = currentTile
 
@@ -381,19 +391,19 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     fun getMatchingUniques(
         uniqueType: UniqueType,
-        stateForConditionals: StateForConditionals = StateForConditionals(civInfo, unit=this),
+        stateForConditionals: StateForConditionals = StateForConditionals(civInfo, unit = this),
         checkCivInfoUniques: Boolean = false
     ) = sequence {
-            yieldAll(
-                tempUniquesMap.getMatchingUniques(uniqueType, stateForConditionals)
-            )
+        yieldAll(
+            tempUniquesMap.getMatchingUniques(uniqueType, stateForConditionals)
+        )
         if (checkCivInfoUniques)
             yieldAll(civInfo.getMatchingUniques(uniqueType, stateForConditionals))
     }
 
     fun hasUnique(
         uniqueType: UniqueType,
-        stateForConditionals: StateForConditionals = StateForConditionals(civInfo, unit=this),
+        stateForConditionals: StateForConditionals = StateForConditionals(civInfo, unit = this),
         checkCivInfoUniques: Boolean = false
     ): Boolean {
         return getMatchingUniques(uniqueType, stateForConditionals, checkCivInfoUniques).any()
@@ -438,18 +448,22 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             .none { it.value != DoubleMovementTerrainTarget.Feature }
         noFilteredDoubleMovementUniques = doubleMovementInTerrain
             .none { it.value == DoubleMovementTerrainTarget.Filter }
-        costToDisembark = (getMatchingUniques(UniqueType.ReducedDisembarkCost, checkCivInfoUniques = true))
-            .minOfOrNull { it.params[0].toFloat() }
+        costToDisembark =
+                (getMatchingUniques(UniqueType.ReducedDisembarkCost, checkCivInfoUniques = true))
+                    .minOfOrNull { it.params[0].toFloat() }
         costToEmbark = getMatchingUniques(UniqueType.ReducedEmbarkCost, checkCivInfoUniques = true)
             .minOfOrNull { it.params[0].toFloat() }
 
         //todo: consider parameterizing [terrainFilter] in some of the following:
         canEnterIceTiles = hasUnique(UniqueType.CanEnterIceTiles)
-        cannotEnterOceanTiles = hasUnique(UniqueType.CannotEnterOcean, StateForConditionals(civInfo=civInfo, unit=this))
+        cannotEnterOceanTiles = hasUnique(
+            UniqueType.CannotEnterOcean,
+            StateForConditionals(civInfo = civInfo, unit = this)
+        )
 
         hasUniqueToBuildImprovements = hasUnique(UniqueType.BuildImprovements)
         canEnterForeignTerrain = hasUnique(UniqueType.CanEnterForeignTiles)
-            || hasUnique(UniqueType.CanEnterForeignTilesButLosesReligiousStrength)
+                || hasUnique(UniqueType.CanEnterForeignTilesButLosesReligiousStrength)
 
         hasStrengthBonusInRadiusUnique = hasUnique(UniqueType.StrengthBonusInRadius)
         hasCitadelPlacementUnique = getMatchingUniques(UniqueType.ConstructImprovementConsumingUnit)
@@ -476,8 +490,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     fun getMaxMovement(): Int {
         var movement =
-            if (isEmbarked()) 2
-            else baseUnit.movement
+                if (isEmbarked()) 2
+                else baseUnit.movement
 
         movement += getMatchingUniques(UniqueType.Movement, checkCivInfoUniques = true)
             .sumOf { it.params[0].toInt() }
@@ -497,11 +511,20 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
         val conditionalState = StateForConditionals(civInfo = civInfo, unit = this)
 
-        if (isEmbarked() && !hasUnique(UniqueType.NormalVisionWhenEmbarked, conditionalState, checkCivInfoUniques = true)) {
+        if (isEmbarked() && !hasUnique(
+                    UniqueType.NormalVisionWhenEmbarked,
+                    conditionalState,
+                    checkCivInfoUniques = true
+                )
+        ) {
             return 1
         }
 
-        visibilityRange += getMatchingUniques(UniqueType.Sight, conditionalState, checkCivInfoUniques = true)
+        visibilityRange += getMatchingUniques(
+            UniqueType.Sight,
+            conditionalState,
+            checkCivInfoUniques = true
+        )
             .sumOf { it.params[0].toInt() }
 
         visibilityRange += getTile().getMatchingUniques(UniqueType.Sight, conditionalState)
@@ -515,7 +538,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     /**
      * Update this unit's cache of viewable tiles and its civ's as well.
      */
-    fun updateVisibleTiles(updateCivViewableTiles:Boolean = true) {
+    fun updateVisibleTiles(updateCivViewableTiles: Boolean = true) {
         val oldViewableTiles = viewableTiles
 
         viewableTiles = when {
@@ -547,7 +570,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     fun isSetUpForSiege() = action == UnitActionType.SetUp.value
 
     /** For display in Unit Overview */
-    fun getActionLabel() = if (action == null) "" else if (isFortified()) UnitActionType.Fortify.value else if (isMoving()) "Moving" else action!!
+    fun getActionLabel() =
+            if (action == null) "" else if (isFortified()) UnitActionType.Fortify.value else if (isMoving()) "Moving" else action!!
 
     fun isMilitary() = baseUnit.isMilitary()
     fun isCivilian() = baseUnit.isCivilian()
@@ -567,7 +591,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         if (tile.improvementInProgress != null &&
                 canBuildImprovement(tile.getTileImprovementInProgress()!!) &&
                 !tile.isMarkedForCreatesOneImprovement()
-            ) return false
+        ) return false
         return !(isFortified() || isExploring() || isSleeping() || isAutomated() || isMoving())
     }
 
@@ -612,10 +636,10 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     /** Returns FULL upgrade path, without checking what we can or cannot build currently.
      * Does not contain current baseunit, so will be empty if no upgrades. */
-    fun getUpgradePath(): List<BaseUnit>{
+    fun getUpgradePath(): List<BaseUnit> {
         var currentUnit = baseUnit
         val upgradeList = arrayListOf<BaseUnit>()
-        while (currentUnit.upgradesTo != null){
+        while (currentUnit.upgradesTo != null) {
             val nextUpgrade = civInfo.getEquivalentUnit(currentUnit.upgradesTo!!)
             currentUnit = nextUpgrade
             upgradeList.add(currentUnit)
@@ -630,16 +654,16 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     fun getUnitToUpgradeTo(): BaseUnit {
         val upgradePath = getUpgradePath()
 
-        fun isInvalidUpgradeDestination(baseUnit: BaseUnit): Boolean{
+        fun isInvalidUpgradeDestination(baseUnit: BaseUnit): Boolean {
             if (baseUnit.requiredTech != null && !civInfo.tech.isResearched(baseUnit.requiredTech!!))
                 return true
             if (baseUnit.getMatchingUniques(UniqueType.OnlyAvailableWhen).any {
-                        !it.conditionalsApply(StateForConditionals(civInfo, unit = this ))
-            }) return true
+                        !it.conditionalsApply(StateForConditionals(civInfo, unit = this))
+                    }) return true
             return false
         }
 
-        for (baseUnit in upgradePath.reversed()){
+        for (baseUnit in upgradePath.reversed()) {
             if (isInvalidUpgradeDestination(baseUnit)) continue
             return baseUnit
         }
@@ -669,11 +693,14 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         val rejectionReasons = unitToUpgradeTo.getRejectionReasons(civInfo)
         civInfo.addUnit(this)
 
-        var relevantRejectionReasons = rejectionReasons.asSequence().filterNot { it.rejectionReason == RejectionReason.Unbuildable }
+        var relevantRejectionReasons = rejectionReasons.asSequence()
+            .filterNot { it.rejectionReason == RejectionReason.Unbuildable }
         if (ignoreRequirements)
-            relevantRejectionReasons = relevantRejectionReasons.filterNot { it.rejectionReason in RejectionReasons.techPolicyEraWonderRequirements }
+            relevantRejectionReasons =
+                    relevantRejectionReasons.filterNot { it.rejectionReason in RejectionReasons.techPolicyEraWonderRequirements }
         if (ignoreResources)
-            relevantRejectionReasons = relevantRejectionReasons.filterNot { it.rejectionReason == RejectionReason.ConsumesResources }
+            relevantRejectionReasons =
+                    relevantRejectionReasons.filterNot { it.rejectionReason == RejectionReason.ConsumesResources }
         return relevantRejectionReasons.none()
     }
 
@@ -706,7 +733,9 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         for (baseUnit in upgradePath) {
             // do clamping and rounding here so upgrading stepwise costs the same as upgrading far down the chain
             var stepCost = constants.base
-            stepCost += (constants.perProduction * (baseUnit.cost - currentUnit.cost)).coerceAtLeast(0f)
+            stepCost += (constants.perProduction * (baseUnit.cost - currentUnit.cost)).coerceAtLeast(
+                0f
+            )
             val era = ruleset.eras[ruleset.technologies[baseUnit.requiredTech]?.era()]
             if (era != null)
                 stepCost *= (1f + era.eraNumber * constants.eraMultiplier)
@@ -770,8 +799,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         baseUnit = ruleset.units[name]
             ?: throw java.lang.Exception("Unit $name is not found!")
 
-        if(name == "Warrior")
-        {
+        if (name == "Warrior") {
             troops.clear()
             troops.add(Troop(10, "Horseman"))
             troops.add(Troop(20, "Archer"))
@@ -779,7 +807,6 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             troops.add(Troop(5, "Swordsman"))
             //heroAttackSkill = 2
             //heroDefenseSkill = 2
-
 
         }
 
@@ -848,10 +875,10 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
                 val removedFeatureName = tile.improvementInProgress!!.removePrefix(Constants.remove)
                 val tileImprovement = tile.getTileImprovement()
                 if (tileImprovement != null
-                    && tile.terrainFeatures.any {
-                        tileImprovement.terrainsCanBeBuiltOn.contains(it) && it == removedFeatureName
-                    }
-                    && !tileImprovement.terrainsCanBeBuiltOn.contains(tile.baseTerrain)
+                        && tile.terrainFeatures.any {
+                            tileImprovement.terrainsCanBeBuiltOn.contains(it) && it == removedFeatureName
+                        }
+                        && !tileImprovement.terrainsCanBeBuiltOn.contains(tile.baseTerrain)
                 ) {
                     // We removed a terrain (e.g. Forest) and the improvement (e.g. Lumber mill) requires it!
                     tile.changeImprovement(null)
@@ -867,11 +894,18 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
                     tile.removeTerrainFeature(removedFeatureName)
                 }
             }
-            tile.improvementInProgress == RoadStatus.Road.name -> tile.addRoad(RoadStatus.Road, this.civInfo)
-            tile.improvementInProgress == RoadStatus.Railroad.name -> tile.addRoad(RoadStatus.Railroad, this.civInfo)
+            tile.improvementInProgress == RoadStatus.Road.name -> tile.addRoad(
+                RoadStatus.Road,
+                this.civInfo
+            )
+            tile.improvementInProgress == RoadStatus.Railroad.name -> tile.addRoad(
+                RoadStatus.Railroad,
+                this.civInfo
+            )
             tile.improvementInProgress == Constants.repair -> tile.setRepaired()
             else -> {
-                val improvement = civInfo.gameInfo.ruleSet.tileImprovements[tile.improvementInProgress]!!
+                val improvement =
+                        civInfo.gameInfo.ruleSet.tileImprovements[tile.improvementInProgress]!!
                 improvement.handleImprovementCompletion(this)
                 tile.changeImprovement(tile.improvementInProgress)
             }
@@ -890,7 +924,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         val distance = closestCity.getCenterTile().aerialDistanceTo(tile)
         var productionPointsToAdd = if (distance == 1) 20 else 20 - (distance - 2) * 5
         if (tile.owningCity == null || tile.owningCity!!.civInfo != civInfo) productionPointsToAdd =
-            productionPointsToAdd * 2 / 3
+                productionPointsToAdd * 2 / 3
         if (productionPointsToAdd > 0) {
             closestCity.cityConstructions.addProductionPoints(productionPointsToAdd)
             val locations = LocationAction(tile.position, closestCity.location)
@@ -914,8 +948,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     fun healBy(amount: Int) {
         health += amount *
-            if (hasUnique(UniqueType.HealingEffectsDoubled, checkCivInfoUniques = true)) 2
-            else 1
+                if (hasUnique(UniqueType.HealingEffectsDoubled, checkCivInfoUniques = true)) 2
+                else 1
         if (health > 100) health = 100
     }
 
@@ -932,13 +966,20 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             else -> 10 // Enemy territory
         }
 
-        val mayHeal = healing > 0 || (tileInfo.isWater && hasUnique(UniqueType.HealsOutsideFriendlyTerritory, checkCivInfoUniques = true))
+        val mayHeal = healing > 0 || (tileInfo.isWater && hasUnique(
+            UniqueType.HealsOutsideFriendlyTerritory,
+            checkCivInfoUniques = true
+        ))
         if (!mayHeal) return healing
 
-        healing += getMatchingUniques(UniqueType.Heal, checkCivInfoUniques = true).sumOf { it.params[0].toInt() }
+        healing += getMatchingUniques(
+            UniqueType.Heal,
+            checkCivInfoUniques = true
+        ).sumOf { it.params[0].toInt() }
 
         val healingCity = tileInfo.getTilesInDistance(1).firstOrNull {
-            it.isCityCenter() && it.getCity()!!.getMatchingUniques(UniqueType.CityHealingUnits).any()
+            it.isCityCenter() && it.getCity()!!.getMatchingUniques(UniqueType.CityHealingUnits)
+                .any()
         }?.getCity()
         if (healingCity != null) {
             for (unique in healingCity.getMatchingUniques(UniqueType.CityHealingUnits)) {
@@ -959,8 +1000,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     fun endTurn() {
         movement.clearPathfindingCache()
         if (currentMovement > 0
-            && getTile().improvementInProgress != null
-            && canBuildImprovement(getTile().getTileImprovementInProgress()!!)
+                && getTile().improvementInProgress != null
+                && canBuildImprovement(getTile().getTileImprovementInProgress()!!)
         ) workOnImprovement()
         if (currentMovement == getMaxMovement().toFloat() && isFortified() && turnsFortified < 2) {
             turnsFortified++
@@ -969,7 +1010,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             turnsFortified = 0
 
         if (currentMovement == getMaxMovement().toFloat() // didn't move this turn
-            || hasUnique(UniqueType.HealsEvenAfterAction)
+                || hasUnique(UniqueType.HealsEvenAfterAction)
         ) heal()
 
         if (action != null && health > 99)
@@ -981,18 +1022,22 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             action = null
 
         if (hasUnique(UniqueType.ReligiousUnit)
-            && getTile().getOwner() != null
-            && !getTile().getOwner()!!.isCityState()
-            && !civInfo.canPassThroughTiles(getTile().getOwner()!!)
+                && getTile().getOwner() != null
+                && !getTile().getOwner()!!.isCityState()
+                && !civInfo.canPassThroughTiles(getTile().getOwner()!!)
         ) {
             val lostReligiousStrength =
-                getMatchingUniques(UniqueType.CanEnterForeignTilesButLosesReligiousStrength)
-                    .map { it.params[0].toInt() }
-                    .minOrNull()
+                    getMatchingUniques(UniqueType.CanEnterForeignTilesButLosesReligiousStrength)
+                        .map { it.params[0].toInt() }
+                        .minOrNull()
             if (lostReligiousStrength != null)
                 religiousStrengthLost += lostReligiousStrength
             if (religiousStrengthLost >= baseUnit.religiousStrength) {
-                civInfo.addNotification("Your [${name}] lost its faith after spending too long inside enemy territory!", getTile().position, name)
+                civInfo.addNotification(
+                    "Your [${name}] lost its faith after spending too long inside enemy territory!",
+                    getTile().position,
+                    name
+                )
                 destroy()
             }
         }
@@ -1010,26 +1055,26 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         due = true
 
         // Hakkapeliitta movement boost
-        if (getTile().getUnits().count() > 1)
-        {
+        if (getTile().getUnits().count() > 1) {
             // For every double-stacked tile, check if our cohabitant can boost our speed
-            for (unit in getTile().getUnits())
-            {
+            for (unit in getTile().getUnits()) {
                 if (unit == this)
                     continue
 
                 if (unit.getMatchingUniques(UniqueType.TransferMovement)
-                        .any { matchesFilter(it.params[0]) } )
-                    currentMovement = maxOf(getMaxMovement().toFloat(), unit.getMaxMovement().toFloat())
+                            .any { matchesFilter(it.params[0]) }
+                )
+                    currentMovement =
+                            maxOf(getMaxMovement().toFloat(), unit.getMaxMovement().toFloat())
             }
         }
 
         // Wake sleeping units if there's an enemy in vision range:
         // Military units always but civilians only if not protected.
         if (isSleeping() && (isMilitary() || (currentTile.militaryUnit == null && !currentTile.isCityCenter())) &&
-            this.viewableTiles.any {
-                it.militaryUnit != null && it.militaryUnit!!.civInfo.isAtWarWith(civInfo)
-            }
+                this.viewableTiles.any {
+                    it.militaryUnit != null && it.militaryUnit!!.civInfo.isAtWarWith(civInfo)
+                }
         )
             action = null
 
@@ -1043,7 +1088,9 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     fun destroy(destroyTransportedUnit: Boolean = true) {
         val currentPosition = Vector2(getTile().position)
-        civInfo.attacksSinceTurnStart.addAll(attacksSinceTurnStart.asSequence().map { CivilizationInfo.HistoricalAttackMemory(this.name, currentPosition, it) })
+        civInfo.attacksSinceTurnStart.addAll(
+            attacksSinceTurnStart.asSequence()
+                .map { CivilizationInfo.HistoricalAttackMemory(this.name, currentPosition, it) })
         currentMovement = 0f
         removeFromTile()
         civInfo.removeUnit(this)
@@ -1094,60 +1141,69 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
         for (stat in gainedStats)
             civInfo.addStat(stat.key, stat.value.toInt())
-        civInfo.addNotification("By expending your [$name] you gained [${gainedStats}]!", getTile().position, name)
+        civInfo.addNotification(
+            "By expending your [$name] you gained [${gainedStats}]!",
+            getTile().position,
+            name
+        )
     }
 
     fun removeFromTile() = currentTile.removeUnit(this)
 
-    fun visitPlace(tile: TileInfo){
-        if(civInfo.isMajorCiv() && tile.improvement != null){
-            if(tile.improvement == "Citadel") {
-                if(!tile.visitable!!.visitedHeroesIDs.contains(this.id)) {
+    fun visitPlace(tile: TileInfo) {
+        if (civInfo.isMajorCiv() && tile.improvement != null) {
+            if (tile.improvement == "Citadel") {
+                if (!tile.visitable!!.visitedHeroesIDs.contains(this.id)) {
 
                     heroAttackSkill += 1
                     tile.visitable!!.visitedHeroesIDs.add(this.id)
                     // popup: attack +1
-                    if(UncivGame.Current.worldScreen != null){
-                        val visitingPopup = Popup(UncivGame.Current.worldScreen!!)
-                      //  visitingPopup.padTop(30f)
-                        visitingPopup.addGoodSizedLabel("You have just visited School of War.\n Your attack skill improved.\n").padTop(30f)
-                        visitingPopup.row()
-                        visitingPopup.addCloseButton("OK").center()
-                        visitingPopup.open()
-                    }
+                    openVisitingPopup("You have just visited School of War.\n Your attack skill improved.\n Attack skill +1")
+                } else
+                    openVisitingPopup("Sorry, you have already visited School of War.\n The training program is for one time only.")
 
-                    /*
-                    val popup = UncivGame.Current.worldScreen?.viewingCiv.let {
-                        Popup(it).apply {
-                            name = "ForeignCityInfoPopup"
-                            add(getIconTable(true)).fillX().padBottom(5f).colspan(3).row()
-                            add(CityReligionInfoTable(city.religion, true)).colspan(3).row()
-                            addOKButton("Diplomacy") { openDiplomacy() }
-                            add().expandX()
-                            addCloseButton()
-                        }
-                    }
-                    popup.open()
-
-                     */
-
-                }
-                else {
-                    if(UncivGame.Current.worldScreen != null){
-                        val visitingPopup = Popup(UncivGame.Current.worldScreen!!)
-                        //  visitingPopup.padTop(30f)
-                        visitingPopup.addGoodSizedLabel("Sorry, you have already visited School of War.\n The training program is for one time only.\n").padTop(30f)
-                        visitingPopup.row()
-                        visitingPopup.addCloseButton("OK").center()
-                        visitingPopup.open()
-                    }
-
-                    // popup: you already been here.
-                }
+                // popup: you already been here.
             }
         }
 
+    }
 
+    fun openVisitingPopup(text: String) {
+        if (UncivGame.Current.worldScreen == null) return
+        val visitingPopup = Popup(UncivGame.Current.worldScreen!!)
+        val stage_width = UncivGame.Current.worldScreen!!.stage.width
+        val stage_height = UncivGame.Current.worldScreen!!.stage.height
+
+        val textButtonStyle = TextButton.TextButtonStyle().apply {
+            up = BaseScreen.skin.getDrawable("UI_button_up") // Set the up image using the skin
+            down =
+                    BaseScreen.skin.getDrawable("UI_button_down") // Set the down image using the skin
+            font = BaseScreen.skin.getFont("oldLondon") // Set the font using the skin
+            fontColor = Color.WHITE // Set the font color
+
+            // Adjust the padding around the text
+            val padding = 10f // Adjust the padding value as needed
+            up?.topHeight = padding
+            up?.bottomHeight = padding
+            up?.leftWidth = padding
+            up?.rightWidth = padding
+            down?.topHeight = padding
+            down?.bottomHeight = padding
+            down?.leftWidth = padding
+            down?.rightWidth = padding
+        }
+
+// Set the font size programmatically
+        textButtonStyle.font.data.setScale(0.3f) // Adjust the scale factor as needed (0.8f is an example)
+        //textButtonStyle.font.data.
+
+        //  visitingPopup.padTop(30f)
+        visitingPopup.addGoodSizedLabel(text).padTop(30f)
+        visitingPopup.row()
+        //visitingPopup.addCloseButton("OK", KeyCharAndCode.BACK, BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)).center().maxWidth(stage_width / 20).maxHeight(stage_height/20)
+        visitingPopup.addCloseButton("OK", KeyCharAndCode.BACK, textButtonStyle)
+            .maxWidth(stage_width / 15).maxHeight(stage_height / 19)
+        visitingPopup.open()
     }
 
     fun moveThroughTile(tile: TileInfo) {
@@ -1164,8 +1220,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
  */
         if (civInfo.isMajorCiv()
-            && tile.improvement != null
-            && tile.getTileImprovement()!!.isAncientRuinsEquivalent()
+                && tile.improvement != null
+                && tile.getTileImprovement()!!.isAncientRuinsEquivalent()
         ) {
             getAncientRuinBonus(tile)
         }
@@ -1177,7 +1233,10 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         val unguardedCivilian = tile.getUnguardedCivilian(this)
         // Capture Enemy Civilian Unit if you move on top of it
         if (isMilitary() && unguardedCivilian != null && civInfo.isAtWarWith(unguardedCivilian.civInfo)) {
-            Battle.captureCivilianUnit(MapUnitCombatant(this), MapUnitCombatant(tile.civilianUnit!!))
+            Battle.captureCivilianUnit(
+                MapUnitCombatant(this),
+                MapUnitCombatant(tile.civilianUnit!!)
+            )
         }
 
         val promotionUniques = tile.neighbors
@@ -1202,7 +1261,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             else -> tile.militaryUnit = this
         }
         // this check is here in order to not load the fresh built unit into carrier right after the build
-        isTransported = !tile.isCityCenter() && baseUnit.movesLikeAirUnits()  // not moving civilians
+        isTransported =
+                !tile.isCityCenter() && baseUnit.movesLikeAirUnits()  // not moving civilians
         moveThroughTile(tile)
     }
 
@@ -1214,7 +1274,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             .forEach { it.questManager.barbarianCampCleared(civInfo, tile.position) }
 
         var goldGained =
-            civInfo.getDifficulty().clearBarbarianCampReward * civInfo.gameInfo.speed.goldCostModifier
+                civInfo.getDifficulty().clearBarbarianCampReward * civInfo.gameInfo.speed.goldCostModifier
         if (civInfo.hasUnique(UniqueType.TripleGoldFromEncampmentsAndCities))
             goldGained *= 3f
 
@@ -1241,8 +1301,9 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             if (unit.currentMovement < Constants.minimumMovementEpsilon)
                 unit.disband()
             // let's find closest city or another carrier where it can be evacuated
-            val tileCanMoveTo = unit.currentTile.getTilesInDistance(unit.getMaxMovementForAirUnits())
-                .filterNot { it == currentTile }.firstOrNull { unit.movement.canMoveTo(it) }
+            val tileCanMoveTo =
+                    unit.currentTile.getTilesInDistance(unit.getMaxMovementForAirUnits())
+                        .filterNot { it == currentTile }.firstOrNull { unit.movement.canMoveTo(it) }
 
             if (tileCanMoveTo != null)
                 unit.movement.moveToTile(tileCanMoveTo)
@@ -1289,8 +1350,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         // Air Units can only Intercept if they didn't move this turn
         if (baseUnit.isAirUnit() && currentMovement == 0f) return false
         val maxAttacksPerTurn = 1 +
-            getMatchingUniques(UniqueType.ExtraInterceptionsPerTurn)
-                .sumOf { it.params[0].toInt() }
+                getMatchingUniques(UniqueType.ExtraInterceptionsPerTurn)
+                    .sumOf { it.params[0].toInt() }
         if (attacksThisTurn >= maxAttacksPerTurn) return false
         return true
     }
@@ -1315,7 +1376,9 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     fun canTransport(unit: MapUnit): Boolean {
         if (owner != unit.owner) return false
         if (!isTransportTypeOf(unit)) return false
-        if (unit.getMatchingUniques(UniqueType.CannotBeCarriedBy).any { matchesFilter(it.params[0]) }) return false
+        if (unit.getMatchingUniques(UniqueType.CannotBeCarriedBy)
+                    .any { matchesFilter(it.params[0]) }
+        ) return false
         if (currentTile.airUnits.count { it.isTransported } >= carryCapacity(unit)) return false
         return true
     }
@@ -1360,7 +1423,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             }
         }
         // Otherwise fall back to the defined standard damage
-        return  tile.allTerrains.sumOf { it.damagePerTurn }
+        return tile.allTerrains.sumOf { it.damagePerTurn }
     }
 
     private fun doCitadelDamage() {
@@ -1368,10 +1431,11 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         val (citadelTile, damage) = currentTile.neighbors
             .filter {
                 it.getOwner() != null
-                && it.getUnpillagedImprovement() != null
-                && civInfo.isAtWarWith(it.getOwner()!!)
+                        && it.getUnpillagedImprovement() != null
+                        && civInfo.isAtWarWith(it.getOwner()!!)
             }.map { tile ->
-                tile to tile.getTileImprovement()!!.getMatchingUniques(UniqueType.DamagesAdjacentEnemyUnits)
+                tile to tile.getTileImprovement()!!
+                    .getMatchingUniques(UniqueType.DamagesAdjacentEnemyUnits)
                     .sumOf { it.params[0].toInt() }
             }.maxByOrNull { it.second }
             ?: return
@@ -1402,27 +1466,27 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         return filter.filterAndLogic { matchesFilter(it) } // multiple types at once - AND logic. Looks like:"{Military} {Land}"
             ?: when (filter) {
 
-            // todo: unit filters should be adjectives, fitting "[filterType] units"
-            // This means converting "wounded units" to "Wounded", "Barbarians" to "Barbarian"
-            "Wounded", "wounded units" -> health < 100
-            Constants.barbarians, "Barbarian" -> civInfo.isBarbarian()
-            "City-State" -> civInfo.isCityState()
-            "Embarked" -> isEmbarked()
-            "Non-City" -> true
-            else -> {
-                if (baseUnit.matchesFilter(filter)) return true
-                if (tempUniquesMap.containsKey(filter)) return true
-                return false
+                // todo: unit filters should be adjectives, fitting "[filterType] units"
+                // This means converting "wounded units" to "Wounded", "Barbarians" to "Barbarian"
+                "Wounded", "wounded units" -> health < 100
+                Constants.barbarians, "Barbarian" -> civInfo.isBarbarian()
+                "City-State" -> civInfo.isCityState()
+                "Embarked" -> isEmbarked()
+                "Non-City" -> true
+                else -> {
+                    if (baseUnit.matchesFilter(filter)) return true
+                    if (tempUniquesMap.containsKey(filter)) return true
+                    return false
+                }
             }
-        }
     }
 
     fun canBuildImprovement(improvement: TileImprovement, tile: TileInfo = currentTile): Boolean {
         // Workers (and similar) should never be able to (instantly) construct things, only build them
         // HOWEVER, they should be able to repair such things if they are pillaged
         if (improvement.turnsToBuild == 0
-            && improvement.name != Constants.cancelImprovementOrder
-            && tile.improvementInProgress != improvement.name
+                && improvement.name != Constants.cancelImprovementOrder
+                && tile.improvementInProgress != improvement.name
         ) return false
         if (tile.improvementInProgress == Constants.repair) return true
         return getMatchingUniques(UniqueType.BuildImprovements)
@@ -1455,10 +1519,10 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         for (action in religiousActionsUnitCanDo()) {
             val baseAmount = getBaseMaxActionUses(action)
             val additional =
-                if (buildCity == null) 0
-                else buildCity.getMatchingUniques(UniqueType.UnitStartingActions)
-                    .filter { matchesFilter(it.params[0]) && buildCity.matchesFilter(it.params[1]) && it.params[2] == action }
-                    .sumOf { it.params[3].toInt() }
+                    if (buildCity == null) 0
+                    else buildCity.getMatchingUniques(UniqueType.UnitStartingActions)
+                        .filter { matchesFilter(it.params[0]) && buildCity.matchesFilter(it.params[1]) && it.params[2] == action }
+                        .sumOf { it.params[3].toInt() }
 
             maxAbilityUses[action] = baseAmount + additional
             abilityUsesLeft[action] = baseAmount + additional
@@ -1469,7 +1533,10 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
     fun getPressureAddedFromSpread(): Int {
         var pressureAdded = baseUnit.religiousStrength.toFloat()
 
-        for (unique in getMatchingUniques(UniqueType.SpreadReligionStrength, checkCivInfoUniques = true))
+        for (unique in getMatchingUniques(
+            UniqueType.SpreadReligionStrength,
+            checkCivInfoUniques = true
+        ))
             pressureAdded *= unique.params[0].toPercent()
 
         return pressureAdded.toInt()
