@@ -28,12 +28,15 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.models.stats.Stats
+import com.unciv.ui.cityscreen.CityReligionInfoTable
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.newgamescreen.NewGameScreen
+import com.unciv.ui.popup.Popup
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.extensions.filterAndLogic
 import com.unciv.ui.utils.extensions.toPercent
 import com.unciv.ui.worldscreen.WorldScreen
+import com.unciv.utils.concurrency.launchOnGLThread
 import java.text.DecimalFormat
 import kotlin.math.pow
 
@@ -1104,8 +1107,41 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
                     heroAttackSkill += 1
                     tile.visitable!!.visitedHeroesIDs.add(this.id)
                     // popup: attack +1
+                    if(UncivGame.Current.worldScreen != null){
+                        val visitingPopup = Popup(UncivGame.Current.worldScreen!!)
+                      //  visitingPopup.padTop(30f)
+                        visitingPopup.addGoodSizedLabel("You have just visited School of War.\n Your attack skill improved.\n").padTop(30f)
+                        visitingPopup.row()
+                        visitingPopup.addCloseButton("OK").center()
+                        visitingPopup.open()
+                    }
+
+                    /*
+                    val popup = UncivGame.Current.worldScreen?.viewingCiv.let {
+                        Popup(it).apply {
+                            name = "ForeignCityInfoPopup"
+                            add(getIconTable(true)).fillX().padBottom(5f).colspan(3).row()
+                            add(CityReligionInfoTable(city.religion, true)).colspan(3).row()
+                            addOKButton("Diplomacy") { openDiplomacy() }
+                            add().expandX()
+                            addCloseButton()
+                        }
+                    }
+                    popup.open()
+
+                     */
+
                 }
                 else {
+                    if(UncivGame.Current.worldScreen != null){
+                        val visitingPopup = Popup(UncivGame.Current.worldScreen!!)
+                        //  visitingPopup.padTop(30f)
+                        visitingPopup.addGoodSizedLabel("Sorry, you have already visited School of War.\n The training program is for one time only.\n").padTop(30f)
+                        visitingPopup.row()
+                        visitingPopup.addCloseButton("OK").center()
+                        visitingPopup.open()
+                    }
+
                     // popup: you already been here.
                 }
             }

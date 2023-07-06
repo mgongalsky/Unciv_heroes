@@ -1218,6 +1218,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         if(improvement != null)
         {
             // TODO: Here we will assign visitability manually, but it should be specified in TimeImprovements.json
+            // We need to check if visitable is really null, otherwise we will erase its memory after deserialization
             if(visitable == null) {
                 if (improvement == "Citadel")
                     visitable = Visitable(Visitability.once_per_hero)
