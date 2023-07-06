@@ -814,6 +814,11 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         updateUniques(ruleset)
     }
 
+    fun addExtraMovementPoints (amount: Float){
+        currentMovement += amount
+
+    }
+
     fun useMovementPoints(amount: Float) {
         turnsFortified = 0
         currentMovement -= amount
@@ -1150,75 +1155,16 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     fun removeFromTile() = currentTile.removeUnit(this)
 
+    /** Triggers visit function of specific [tile], if it has [Visitable]*/
     fun visitPlace(tile: TileInfo) {
-        if (civInfo.isMajorCiv() && tile.improvement != null) {
-            if (tile.improvement == "Citadel") {
-                if (!tile.visitable!!.visitedHeroesIDs.contains(this.id)) {
-
-                    heroAttackSkill += 1
-                    tile.visitable!!.visitedHeroesIDs.add(this.id)
-                    // popup: attack +1
-                    openVisitingPopup("You have just visited School of War.\n Your attack skill improved.\n Attack skill +1")
-                } else
-                    openVisitingPopup("Sorry, you have already visited School of War.\n The training program is for one time only.")
-
-                // popup: you already been here.
-            }
-        }
-
-    }
-
-    fun openVisitingPopup(text: String) {
-        if (UncivGame.Current.worldScreen == null) return
-        val visitingPopup = Popup(UncivGame.Current.worldScreen!!)
-        val stage_width = UncivGame.Current.worldScreen!!.stage.width
-        val stage_height = UncivGame.Current.worldScreen!!.stage.height
-
-        val textButtonStyle = TextButton.TextButtonStyle().apply {
-            up = BaseScreen.skin.getDrawable("UI_button_up") // Set the up image using the skin
-            down =
-                    BaseScreen.skin.getDrawable("UI_button_down") // Set the down image using the skin
-            font = BaseScreen.skin.getFont("oldLondon") // Set the font using the skin
-            fontColor = Color.WHITE // Set the font color
-
-            // Adjust the padding around the text
-            val padding = 10f // Adjust the padding value as needed
-            up?.topHeight = padding
-            up?.bottomHeight = padding
-            up?.leftWidth = padding
-            up?.rightWidth = padding
-            down?.topHeight = padding
-            down?.bottomHeight = padding
-            down?.leftWidth = padding
-            down?.rightWidth = padding
-        }
-
-// Set the font size programmatically
-        textButtonStyle.font.data.setScale(0.3f) // Adjust the scale factor as needed (0.8f is an example)
-        //textButtonStyle.font.data.
-
-        //  visitingPopup.padTop(30f)
-        visitingPopup.addGoodSizedLabel(text).padTop(30f)
-        visitingPopup.row()
-        //visitingPopup.addCloseButton("OK", KeyCharAndCode.BACK, BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)).center().maxWidth(stage_width / 20).maxHeight(stage_height/20)
-        visitingPopup.addCloseButton("OK", KeyCharAndCode.BACK, textButtonStyle)
-            .maxWidth(stage_width / 15).maxHeight(stage_height / 19)
-        visitingPopup.open()
+        if (civInfo.isMajorCiv() && tile.improvement != null)
+            tile.visitable!!.visit(this)
     }
 
     fun moveThroughTile(tile: TileInfo) {
         // addPromotion requires currentTile to be valid because it accesses ruleset through it.
         // getAncientRuinBonus, if it places a new unit, does too
         currentTile = tile
-/*
-        if(civInfo.isMajorCiv() && tile.improvement != null){
-            if(tile.improvement == "Citadel")
-                heroAttackSkill += 1
-
-        }
-
-
- */
         if (civInfo.isMajorCiv()
                 && tile.improvement != null
                 && tile.getTileImprovement()!!.isAncientRuinsEquivalent()

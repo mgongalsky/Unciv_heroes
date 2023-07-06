@@ -307,9 +307,32 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
                 MusicMood.peaceOrWar(currentPlayerCiv.isAtWar()), MusicTrackChooserFlags.setNextTurn
             )
 
+        // Update counters in all regular visitables
+        visitableUpdater()
+
         // Start our turn immediately before the player can make decisions - affects
         // whether our units can commit automated actions and then be attacked immediately etc.
         notifyOfCloseEnemyUnits(thisPlayer)
+    }
+
+    /** Update counters in all regular visitables when finishing turn*/
+    private fun visitableUpdater()
+    {
+        // Here recalculate turnsToRefresh for all regular visitables
+        tileMap.tileMatrix.forEach { tm ->
+            tm.forEach {
+                if (it != null)
+                    if (it?.visitable != null) {
+                        val currVisit = it?.visitable!!
+                        if (currVisit.turnsToRefresh > 0)
+                            currVisit.turnsToRefresh -= 1
+
+                    }
+
+            }
+        }
+
+
     }
 
     private fun notifyOfCloseEnemyUnits(thisPlayer: CivilizationInfo) {
