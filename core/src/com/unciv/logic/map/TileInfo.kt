@@ -147,7 +147,6 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         toReturn.isLand = isLand
         toReturn.isWater = isWater
         toReturn.isOcean = isOcean
-        if (visitable != null) toReturn.visitable = visitable!!.clone()
         if (militaryUnit != null) toReturn.militaryUnit = militaryUnit!!.clone()
         if (civilianUnit != null) toReturn.civilianUnit = civilianUnit!!.clone()
         for (airUnit in airUnits) toReturn.airUnits.add(airUnit.clone())
@@ -165,6 +164,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         toReturn.roadIsPillaged = roadIsPillaged
         toReturn.roadOwner = roadOwner
         toReturn.turnsToImprovement = turnsToImprovement
+        if (visitable != null) toReturn.visitable = visitable!!.clone()
         toReturn.hasBottomLeftRiver = hasBottomLeftRiver
         toReturn.hasBottomRightRiver = hasBottomRightRiver
         toReturn.hasBottomRiver = hasBottomRiver
@@ -1218,10 +1218,12 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         if(improvement != null)
         {
             // TODO: Here we will assign visitability manually, but it should be specified in TimeImprovements.json
-            if(improvement == "Citadel")
-                visitable = Visitable(Visitability.once_per_hero)
-            else
-                visitable = Visitable()
+            if(visitable == null) {
+                if (improvement == "Citadel")
+                    visitable = Visitable(Visitability.once_per_hero)
+                else
+                    visitable = Visitable()
+            }
         }
     }
 

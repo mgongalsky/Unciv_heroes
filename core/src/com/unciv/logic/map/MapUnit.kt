@@ -45,6 +45,9 @@ import kotlin.math.pow
 open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSerialization {
     companion object {
         var monsterCivInfo = CivilizationInfo() // Dummy CivInfo for loading and saving maps
+
+        // We need to assign unique ID for each MapUnit
+        var currID: Int = 1
     }
 
     @Transient
@@ -184,6 +187,8 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
             else "[$name]"
     }
 
+    var id: Int = 0
+
     var currentMovement: Float = 0f
     var health: Int = 100
 //    open var amount: Int = 0
@@ -243,7 +248,11 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     }
 
-    constructor():this(isMonster = true) {}
+    constructor():this(isMonster = true) {
+
+        id = currID
+        currID += 1
+    }
 
   /*  constructor(isMonster: Boolean = false)
     {
@@ -336,6 +345,7 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
         toReturn.heroAttackSkill = heroAttackSkill
         toReturn.heroDefenseSkill = heroDefenseSkill
         toReturn.troops = troops
+        toReturn.id = id
         toReturn.health = health
         toReturn.action = action
         toReturn.attacksThisTurn = attacksThisTurn
@@ -1088,9 +1098,17 @@ open class MapUnit (private val isMonster: Boolean = false): IsPartOfGameInfoSer
 
     fun visitPlace(tile: TileInfo){
         if(civInfo.isMajorCiv() && tile.improvement != null){
-            if(tile.improvement == "Citadel")
-                heroAttackSkill += 1
+            if(tile.improvement == "Citadel") {
+                if(!tile.visitable!!.visitedHeroesIDs.contains(this.id)) {
 
+                    heroAttackSkill += 1
+                    tile.visitable!!.visitedHeroesIDs.add(this.id)
+                    // popup: attack +1
+                }
+                else {
+                    // popup: you already been here.
+                }
+            }
         }
 
 
