@@ -1194,6 +1194,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     fun setTransients() {
         setTerrainTransients()
         setUnitTransients(true)
+        setVisitableTransients()
         setOwnerTransients()
     }
 
@@ -1220,7 +1221,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
             // TODO: Here we will assign visitability manually, but it should be specified in TimeImprovements.json
             // We need to check if visitable is really null, otherwise we will erase its memory after deserialization
             if(visitable == null)
-                visitable = Visitable(improvement)
+                visitable = Visitable(improvement!!, this)
         }
     }
 
@@ -1231,6 +1232,23 @@ open class TileInfo : IsPartOfGameInfoSerialization {
                 unit.assignOwner(tileMap.gameInfo.getCivilization(unit.owner), false)
             unit.setTransients(ruleset)
         }
+    }
+
+    fun setVisitableTransients(){
+        visitable?.parentTile = this
+        if(improvement?.isNotEmpty()!!) {
+            visitable?.improvement = improvement!!
+            when (visitable?.improvement) {
+                "Citadel", "Manufactory" ->
+                    visitable?.visitability = Visitability.once_per_hero
+                "Trading post", "Holy site" ->
+                    visitable?.visitability = Visitability.regular
+                else ->
+                    visitable?.visitability = Visitability.none
+            }
+        }
+
+
     }
 
     fun setOwnerTransients() {

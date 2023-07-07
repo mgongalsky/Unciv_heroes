@@ -15,37 +15,64 @@ import com.unciv.ui.utils.KeyCharAndCode
 
 enum class Visitability { none, once_per_hero, once_per_civ, regular, once, next_battle }
 
-class Visitable(var visitability: Visitability = Visitability.none) :
+class Visitable() :
     IsPartOfGameInfoSerialization {
+   /*
+    companion object{
+        /** Dummy object for serialization purposes only. We need a constructor() */
+        val dummyTile = TileInfo()
+    }
+
+
+    */
+
+    @Transient
+    var improvement: String = ""
+
+    @Transient
+    lateinit var parentTile: TileInfo
     var visitedHeroesIDs = mutableSetOf<Int>()
     var visitedCivsIDs = mutableSetOf<Int>()
     var turnsToRefresh: Int = 0
-    var improvement: String? = null
 
-    constructor(improvement0: String?) : this() {
-        if (improvement0 != null) {
-            improvement = improvement0
-            when (improvement) {
-                "Citadel", "Manufactory" ->
-                    visitability = Visitability.once_per_hero
-                "Trading post", "Holy site" ->
-                    visitability = Visitability.regular
-                else ->
-                    visitability = Visitability.none
-            }
+    // We don't need to save it, because it is determined by [improvement] String
+    @Transient
+    var visitability: Visitability
 
+
+   // constructor()
+
+    constructor(improvement0: String, tile0: TileInfo): this(){
+        parentTile = tile0
+        improvement = improvement0
+
+    }
+
+    init {
+        if (improvement.isEmpty())
+            throw IllegalStateException("Improvement string cannot be empty. Specify it in the constructor and check manually, that it so not empty.")
+
+        when (improvement) {
+            "Citadel", "Manufactory" ->
+                visitability = Visitability.once_per_hero
+            "Trading post", "Holy site" ->
+                visitability = Visitability.regular
+            else ->
+                visitability = Visitability.none
         }
+
     }
 
     fun clone(): Visitable {
-        val toReturn = Visitable(visitability)
+        // Carefull here, there can be infinite loop TileInfo <-> Visitable
+        val toReturn = Visitable()
         toReturn.visitedHeroesIDs = visitedHeroesIDs
         toReturn.visitedCivsIDs = visitedCivsIDs
         //visitedHeroesIDs.forEach {it -> toReturn.visitedHeroesIDs.add(it)}
         //toReturn.visitedHeroesIDs = HashSet<Int>(visitedHeroesIDs)
         //toReturn.visitedCivsIDs = HashSet<Int>(visitedCivsIDs)
         toReturn.turnsToRefresh = turnsToRefresh
-        toReturn.improvement = improvement
+        //toReturn.improvement = improvement
         return toReturn
     }
 
