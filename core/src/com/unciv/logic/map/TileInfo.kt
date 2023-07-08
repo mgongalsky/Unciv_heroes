@@ -1226,14 +1226,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
                 if (improvement?.isNotEmpty()!!) {
                     visitable?.parentTile = this
                     visitable?.improvement = improvement!!
-                    when (improvement!!) {
-                        "Citadel", "Manufactory" ->
-                            visitable?.visitability = Visitability.once_per_hero
-                        "Trading post", "Holy site" ->
-                            visitable?.visitability = Visitability.regular
-                        else ->
-                            visitable?.visitability = Visitability.none
-                    }
+                    visitable?.setVisitability()
                 }
 
             }
@@ -1335,6 +1328,11 @@ open class TileInfo : IsPartOfGameInfoSerialization {
             civilianUnit == mapUnit -> civilianUnit = null
             militaryUnit == mapUnit -> militaryUnit = null
         }
+    }
+
+    fun removeImprovement(){
+        improvement = null
+        visitable = null
     }
 
     fun startWorkingOnImprovement(improvement: TileImprovement, civInfo: CivilizationInfo, unit: MapUnit) {

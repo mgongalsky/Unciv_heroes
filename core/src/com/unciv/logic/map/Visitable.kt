@@ -13,7 +13,7 @@ import com.unciv.ui.popup.Popup
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
 
-enum class Visitability { none, once_per_hero, once_per_civ, regular, once, next_battle }
+enum class Visitability { none, once_per_hero, once_per_civ, regular, once, next_battle, takeable }
 
 class Visitable() :
     IsPartOfGameInfoSerialization {
@@ -37,7 +37,7 @@ class Visitable() :
 
     // We don't need to save it, because it is determined by [improvement] String
     @Transient
-    var visitability: Visitability
+    var visitability: Visitability = Visitability.none
 
 
    // constructor()
@@ -50,12 +50,19 @@ class Visitable() :
     init {
         //if (improvement.isEmpty())
         //    throw IllegalStateException("Improvement string cannot be empty. Specify it in the constructor and check manually, that it so not empty.")
+        setVisitability()
 
+    }
+
+    /** Sets proper visitability. Make sure [improvement] string is correctly set. */
+    fun setVisitability() {
         when (improvement) {
             "Citadel", "Manufactory" ->
                 visitability = Visitability.once_per_hero
             "Trading post", "Holy site" ->
                 visitability = Visitability.regular
+            "Gold" ->
+                visitability = Visitability.takeable
             else ->
                 visitability = Visitability.none
         }
@@ -79,12 +86,19 @@ class Visitable() :
     /** Action when [unit] visits this visitable. Returns true, if there is an effect of visit. */
     fun visit(unit: MapUnit): Boolean {
         when (visitability) {
+            Visitability.takeable -> {
+                unit.civInfo.addGold(5)
+                parentTile.removeImprovement()
+                return true
+            }
             Visitability.once_per_hero -> {
                 if (!visitedHeroesIDs.contains(unit.id)) { // This hero visits for the first time
                     when (improvement) {
                         "Citadel" -> {
                             unit.heroAttackSkill += 1
                             openVisitingPopup("You have just visited School of War.\n Your attack skill improved.\n Attack skill +1")
+                            //parentTile.removeImprovement()
+                            //parentTile.improvement = null
                         }
                         "Manufactory" -> {
                             unit.heroDefenseSkill += 1
@@ -108,7 +122,7 @@ class Visitable() :
                     when (improvement) {
                         "Trading post" -> {
                             unit.civInfo.addGold(5)
-                            unit.civInfo.addStat(Stat.Science, 10)
+                            //unit.civInfo.addStat(Stat.Science, 10)
                             //Stat.
                             turnsToRefresh = 3
                             openVisitingPopup("You visit marketplace. You see a familiar merchant, whom you helped earlier.\n The merchant gives you some money.\n Gold +5")

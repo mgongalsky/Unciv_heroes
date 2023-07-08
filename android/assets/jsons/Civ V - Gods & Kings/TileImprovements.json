@@ -230,7 +230,15 @@
 		]
 	},
 
-	//Civilization unique improvements
+    // Bearables
+    {
+        "name": "Gold",
+        "terrainsCanBeBuiltOn": ["Land"],
+        "uniques": ["Great Improvement"]
+    },
+
+
+    //Civilization unique improvements
 	{
 		"name": "Moai",
 		"uniqueTo": "Polynesia",
