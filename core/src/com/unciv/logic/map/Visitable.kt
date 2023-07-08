@@ -45,12 +45,11 @@ class Visitable() :
     constructor(improvement0: String, tile0: TileInfo): this(){
         parentTile = tile0
         improvement = improvement0
-
     }
 
     init {
-        if (improvement.isEmpty())
-            throw IllegalStateException("Improvement string cannot be empty. Specify it in the constructor and check manually, that it so not empty.")
+        //if (improvement.isEmpty())
+        //    throw IllegalStateException("Improvement string cannot be empty. Specify it in the constructor and check manually, that it so not empty.")
 
         when (improvement) {
             "Citadel", "Manufactory" ->

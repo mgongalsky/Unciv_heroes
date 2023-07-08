@@ -1194,7 +1194,6 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     fun setTransients() {
         setTerrainTransients()
         setUnitTransients(true)
-        setVisitableTransients()
         setOwnerTransients()
     }
 
@@ -1216,12 +1215,28 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         }
 
         // Here we will initialize visitable if it's present
-        if(improvement != null)
-        {
+        if (improvement != null) {
             // TODO: Here we will assign visitability manually, but it should be specified in TimeImprovements.json
             // We need to check if visitable is really null, otherwise we will erase its memory after deserialization
-            if(visitable == null)
+            if (visitable == null)
                 visitable = Visitable(improvement!!, this)
+            if (visitable?.improvement == null)
+                visitable?.improvement = improvement!!
+            if (visitable?.improvement!! != improvement!!) {
+                if (improvement?.isNotEmpty()!!) {
+                    visitable?.parentTile = this
+                    visitable?.improvement = improvement!!
+                    when (improvement!!) {
+                        "Citadel", "Manufactory" ->
+                            visitable?.visitability = Visitability.once_per_hero
+                        "Trading post", "Holy site" ->
+                            visitable?.visitability = Visitability.regular
+                        else ->
+                            visitable?.visitability = Visitability.none
+                    }
+                }
+
+            }
         }
     }
 
@@ -1232,23 +1247,6 @@ open class TileInfo : IsPartOfGameInfoSerialization {
                 unit.assignOwner(tileMap.gameInfo.getCivilization(unit.owner), false)
             unit.setTransients(ruleset)
         }
-    }
-
-    fun setVisitableTransients(){
-        visitable?.parentTile = this
-        if(improvement?.isNotEmpty()!!) {
-            visitable?.improvement = improvement!!
-            when (visitable?.improvement) {
-                "Citadel", "Manufactory" ->
-                    visitable?.visitability = Visitability.once_per_hero
-                "Trading post", "Holy site" ->
-                    visitable?.visitability = Visitability.regular
-                else ->
-                    visitable?.visitability = Visitability.none
-            }
-        }
-
-
     }
 
     fun setOwnerTransients() {
