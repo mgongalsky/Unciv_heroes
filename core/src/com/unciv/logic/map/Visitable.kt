@@ -7,6 +7,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.unciv.UncivGame
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.CivilizationInfo
+import com.unciv.logic.civilization.NotificationIcon
+import com.unciv.logic.civilization.TechAction
 import com.unciv.logic.event.hero.Troop
 import com.unciv.models.stats.Stat
 import com.unciv.ui.popup.Popup
@@ -90,28 +92,60 @@ class Visitable() :
             Visitability.takeable -> {
                 when (improvement) {
                     "Gold" -> {
-                        unit.civInfo.addGold(5)
+                        val goldGained = 5
+
+                        unit.civInfo.addGold(goldGained)
+                        unit.civInfo.addNotification("We have received [$goldGained] Gold", NotificationIcon.Gold)
+
+                        //unit.civInfo.addNotification("Research of [$techName] has completed!", TechAction(techName), NotificationIcon.Science, techName)
+
                     }
                     "Food" -> {
                         //unit.civInfo.cities.
                         val tileBasedRandom =Random(parentTile.position.toString().hashCode())
 
                         val randomCity = unit.civInfo.cities.random(tileBasedRandom)
-                        randomCity.population.addPopulation(1)
+                        //randomCity.population.addPopulation(1)
+                        val foodGained = 20
+                        randomCity.population.addFoodPoints(foodGained)
+                        unit.civInfo.addGold(foodGained)
+                        unit.civInfo.addNotification("[Your city ${randomCity.name}] has extra food!", randomCity.location, NotificationIcon.Food)
+
+                       // unit.civInfo.addNotification("We have received [$goldGained] Gold", NotificationIcon.Gold)
+
+
+                        //randomCity.cityConstructions.addProductionPoints(10)
 
                         //unit.civInfo.addStat(Stat.Food, 10)
                         //Stat.
 
                     }
                     "Production" -> {
-                        unit.civInfo.addStat(Stat.Production, 40)
+                      //  unit.civInfo.addStat(Stat.Production, 40)
+                        val tileBasedRandom =Random(parentTile.position.toString().hashCode())
+
+                        if(unit.civInfo.cities.isNotEmpty()) {
+                            val randomCity = unit.civInfo.cities.random(tileBasedRandom)
+                            //   randomCity.population.addPopulation(1)
+                            randomCity.cityConstructions.addProductionPoints(40)
+                            unit.civInfo.addNotification("[Your city ${randomCity.name}] has extra production!", randomCity.location, NotificationIcon.Production)
+
+                        }
+
                     }
                     "Science" -> {
                         // This works
+                        val scienceGained = 20
+
+
                         unit.civInfo.addStat(Stat.Science, 30)
+                       // unit.civInfo.tech.addTechnology("Masonry")
+                        unit.civInfo.addNotification("We have received [$scienceGained] science points", NotificationIcon.Science)
+
+
                     }
                     "Happiness" -> {
-                        unit.civInfo.addStat(Stat.Happiness, 3)
+                        //unit.civInfo.addStat(Stat.Happiness, 3)
                     }
 
 
