@@ -886,7 +886,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
                         && !tileImprovement.terrainsCanBeBuiltOn.contains(tile.baseTerrain)
                 ) {
                     // We removed a terrain (e.g. Forest) and the improvement (e.g. Lumber mill) requires it!
-                    tile.changeImprovement(null)
+                    tile.removeImprovement()
                     if (tile.resource != null) civInfo.updateDetailedCivResources() // unlikely, but maybe a mod makes a resource improvement dependent on a terrain feature
                 }
                 if (RoadStatus.values().any { tile.improvementInProgress == it.removeAction }) {
@@ -1213,7 +1213,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     }
 
     private fun clearEncampment(tile: TileInfo) {
-        tile.changeImprovement(null)
+        tile.removeImprovement()
 
         // Notify City-States that this unit cleared a Barbarian Encampment, required for quests
         civInfo.gameInfo.getAliveCityStates()
@@ -1264,7 +1264,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     }
 
     private fun getAncientRuinBonus(tile: TileInfo) {
-        tile.changeImprovement(null)
+        tile.removeImprovement()
         civInfo.ruinsManager.selectNextRuinsReward(this)
     }
 

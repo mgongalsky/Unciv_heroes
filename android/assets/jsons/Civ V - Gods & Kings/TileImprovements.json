@@ -230,13 +230,32 @@
 		]
 	},
 
-    // Bearables
+    // Takeables
     {
         "name": "Gold",
         "terrainsCanBeBuiltOn": ["Land"],
         "uniques": ["Great Improvement"]
     },
-
+    {
+        "name": "Production",
+        "terrainsCanBeBuiltOn": ["Land"],
+        "uniques": ["Great Improvement"]
+    },
+    {
+        "name": "Science",
+        "terrainsCanBeBuiltOn": ["Land"],
+        "uniques": ["Great Improvement"]
+    },
+    {
+        "name": "Food",
+        "terrainsCanBeBuiltOn": ["Land"],
+        "uniques": ["Great Improvement"]
+    },
+    {
+        "name": "Happiness",
+        "terrainsCanBeBuiltOn": ["Land"],
+        "uniques": ["Great Improvement"]
+    },
 
     //Civilization unique improvements
 	{

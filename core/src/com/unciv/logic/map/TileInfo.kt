@@ -296,6 +296,8 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     fun changeImprovement(improvementStr: String?) {
         improvementIsPillaged = false
         improvement = improvementStr
+        if(improvement == null)
+            visitable = null
     }
 
     // function handling when adding a road to the tile
@@ -1331,8 +1333,9 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     }
 
     fun removeImprovement(){
-        improvement = null
-        visitable = null
+        changeImprovement(null)
+       // improvement = null
+       // visitable = null
     }
 
     fun startWorkingOnImprovement(improvement: TileImprovement, civInfo: CivilizationInfo, unit: MapUnit) {
@@ -1354,7 +1357,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
             return
         // http://well-of-souls.com/civ/civ5_improvements.html says that naval improvements are destroyed upon pillage
         //    and I can't find any other sources so I'll go with that
-        if (!isLand) { changeImprovement(null); return }
+        if (!isLand) { removeImprovement(); return }
 
         // Setting turnsToImprovement might interfere with UniqueType.CreatesOneImprovement
         removeCreatesOneImprovementMarker()
@@ -1363,7 +1366,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         // if no Repair action, destroy improvements instead
         if (ruleset.tileImprovements[Constants.repair] == null) {
             if (canPillageTileImprovement())
-                changeImprovement(null)
+                removeImprovement()
             else
                 removeRoad()
         } else {
@@ -1409,7 +1412,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
             baseTerrain = this.getNaturalWonder().turnsInto!!
             setTerrainFeatures(listOf())
             resource = null
-            changeImprovement(null)
+            removeImprovement()
         }
 
         if (!ruleset.terrains.containsKey(baseTerrain))
@@ -1442,10 +1445,10 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     private fun normalizeTileImprovement(ruleset: Ruleset) {
         val improvementObject = ruleset.tileImprovements[improvement]
         if (improvementObject == null) {
-            changeImprovement(null)
+            removeImprovement()
             return
         }
-        changeImprovement(null) // Unset, and check if it can be reset. If so, do it, if not, invalid.
+        removeImprovement() // Unset, and check if it can be reset. If so, do it, if not, invalid.
         if (canImprovementBeBuiltHere(improvementObject, stateForConditionals = StateForConditionals.IgnoreConditionals))
             changeImprovement(improvementObject.name)
     }

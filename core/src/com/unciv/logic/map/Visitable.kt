@@ -61,7 +61,7 @@ class Visitable() :
                 visitability = Visitability.once_per_hero
             "Trading post", "Holy site" ->
                 visitability = Visitability.regular
-            "Gold" ->
+            "Gold", "Production", "Science", "Happiness", "Food" ->
                 visitability = Visitability.takeable
             else ->
                 visitability = Visitability.none
@@ -87,7 +87,28 @@ class Visitable() :
     fun visit(unit: MapUnit): Boolean {
         when (visitability) {
             Visitability.takeable -> {
-                unit.civInfo.addGold(5)
+                when (improvement) {
+                    "Gold" -> {
+                        unit.civInfo.addGold(5)
+                    }
+                    "Food" -> {
+                        unit.civInfo
+                        unit.civInfo.addStat(Stat.Food, 10)
+                        //Stat.
+                    }
+                    "Production" -> {
+                        unit.civInfo.addStat(Stat.Production, 40)
+                    }
+                    "Science" -> {
+                        // This works
+                        unit.civInfo.addStat(Stat.Science, 30)
+                    }
+                    "Happiness" -> {
+                        unit.civInfo.addStat(Stat.Happiness, 3)
+                    }
+
+
+                }
                 parentTile.removeImprovement()
                 return true
             }
@@ -96,6 +117,10 @@ class Visitable() :
                     when (improvement) {
                         "Citadel" -> {
                             unit.heroAttackSkill += 1
+
+
+
+
                             openVisitingPopup("You have just visited School of War.\n Your attack skill improved.\n Attack skill +1")
                             //parentTile.removeImprovement()
                             //parentTile.improvement = null

@@ -563,7 +563,7 @@ class TileMap : IsPartOfGameInfoSerialization {
             if (tile.resource != null && !ruleSet.tileResources.containsKey(tile.resource!!))
                 tile.resource = null
             if (tile.improvement != null && !ruleSet.tileImprovements.containsKey(tile.improvement!!))
-                tile.changeImprovement(null)
+                tile.removeImprovement()
         }
         for (startingLocation in startingLocations.toList())
             if (startingLocation.nation !in ruleSet.nations.keys)
@@ -705,7 +705,7 @@ class TileMap : IsPartOfGameInfoSerialization {
             .map { it to StartingLocation(it.position, it.improvement!!.removePrefix(startingLocationPrefix)) }
             .sortedBy { it.second.nation }  // vanity, or to make diffs between un-gzipped map files easier
             .forEach { (tile, startingLocation) ->
-                tile.changeImprovement(null)
+                tile.removeImprovement()
                 startingLocations.add(startingLocation)
             }
         setStartingLocationsTransients()
