@@ -66,6 +66,9 @@ class PopulationManager : IsPartOfGameInfoSerialization {
         }
     }
 
+    fun addFoodPoints(foodToAdd: Int) {
+        foodStored += foodToAdd
+    }
 
     fun nextTurn(food: Int) {
         foodStored += food
