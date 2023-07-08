@@ -12,6 +12,7 @@ import com.unciv.models.stats.Stat
 import com.unciv.ui.popup.Popup
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
+import kotlin.random.Random
 
 enum class Visitability { none, once_per_hero, once_per_civ, regular, once, next_battle, takeable }
 
@@ -92,9 +93,15 @@ class Visitable() :
                         unit.civInfo.addGold(5)
                     }
                     "Food" -> {
-                        unit.civInfo
-                        unit.civInfo.addStat(Stat.Food, 10)
+                        //unit.civInfo.cities.
+                        val tileBasedRandom =Random(parentTile.position.toString().hashCode())
+
+                        val randomCity = unit.civInfo.cities.random(tileBasedRandom)
+                        randomCity.population.addPopulation(1)
+
+                        //unit.civInfo.addStat(Stat.Food, 10)
                         //Stat.
+
                     }
                     "Production" -> {
                         unit.civInfo.addStat(Stat.Production, 40)
