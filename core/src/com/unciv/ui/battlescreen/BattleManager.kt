@@ -109,6 +109,10 @@ class BattleManager()
              iterTroop = sequence.listIterator()
              currentTroop = iterTroop.next()
          }
+        // if(!currentTroop.civInfo.isPlayerCivilization())
+            if(screen != null)
+                 screen?.movePointerToNextTroop()
+
          AIMove()
      }
 
@@ -134,6 +138,7 @@ class BattleManager()
 
          //checkBattleFinished()
 
+         // Ranged units just shot at the best enemy
          if(currentTroop.baseUnit.isRanged()){
              if(!isTroopAttacking(currentTroop)) {
                  target = attackingTroops.maxByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
@@ -145,8 +150,12 @@ class BattleManager()
              if(target != null)
                 attack(target)
 
+             if(screen != null)
+                 screen?.refreshTargetTroop(target?.position!!)
+
              //checkBattleFinished()
              nextTurn()
+
              return
          }
 
@@ -154,14 +163,17 @@ class BattleManager()
 
          //if(!isTroopAttacking(currentTroop)) {
          // First of all we find all positions in the radius of the troop
-         val radiusPositions = HexMath.getVectorsInDistance(
+
+        // position = HexMath.evenQ2HexCoords(Vector2(6f, 3f-number.toFloat()*2))
+
+         val radiusPositionsHex = HexMath.getVectorsInDistance(
              currentTroop.position,
              currentTroop.baseUnit.speed,
              worldWrap = false
          )
 
          // Let's check which tiles we can reach in this turn
-         radiusPositions.forEach { pos ->
+         radiusPositionsHex.forEach { pos ->
              if (isHexAchievable(pos))
                  availableTiles.add(pos)
 
@@ -180,19 +192,50 @@ class BattleManager()
          if (availableTargets.isNotEmpty()) {
              // If we can attack somebody, we'll do it.
              // We'll pick up enemy with smallest damage to health ratio
-             target =
-                     availableTargets.minByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
-
+             target = availableTargets.maxByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
              // Now we need to find the proper tile to attack from
 
+             val attackPositions = HexMath.getVectorsAtDistance(target?.position!!, 1, 1, worldWrap = false)
+             var availableAttackPositions = mutableListOf<Vector2>()
+             attackPositions.forEach { pos ->
+                 if (isHexAchievable(pos) && !isTroopOnHex(pos))
+                     availableAttackPositions.add(pos)
+             }
+
+             if(availableAttackPositions.isNotEmpty()){
+                 val hexToMove = availableAttackPositions.first()
+                 attack(target)
+
+                 // Here we assume that screen == null, if quick battle goes or the battle is between two AIs
+                 if(screen != null)
+                     screen?.redrawMovedTroop(target?.position!!, hexToMove)
+
+
+                 // Remember that moveCurrentTroop triggers nextTurn() also
+                 moveCurrentTroop(hexToMove)
+
+                 //nextTurn()
+                 return
+                 //screen?.
+             }
          } else {
              // If there is nobody reachable by one turn, then go closer to the best potential target
              if(!isTroopAttacking(currentTroop)) {
-                 target = attackingTroops.minByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
+                 target = attackingTroops.maxByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
              }
              else {
-                 target = defendingTroops.minByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
+                 target = defendingTroops.maxByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
              }
+             val hexToMove = availableTiles.filter { tile -> !isTroopOnHex(tile) }.minBy { tile -> HexMath.getDistance(target?.position!!, tile) }
+
+             if(screen != null)
+                 screen?.redrawMovedTroop(target?.position!!, hexToMove)
+
+             // Remember that moveCurrentTroop triggers nextTurn() also
+             moveCurrentTroop(hexToMove)
+
+             //nextTurn()
+             return
 
          }
 

@@ -156,6 +156,8 @@ class BattleScreen(
             pointerImage.touchable = Touchable.disabled
             pointerImage.name = "pointer"
             // Here we find an actor devoted to a troop and put a pointer underneath
+            //val act = pointerTile.findActor("troopGroup")
+            //if(pointerTile.findActor("troopGroup") == null)
             pointerTile.addActorBefore(pointerTile.findActor("troopGroup"), pointerImage)
         }
 
@@ -257,6 +259,11 @@ class BattleScreen(
 
     }
 
+    fun movePointerToNextTroop() {
+        pointerPosition = manager.currentTroop.position
+        draw_pointer()
+    }
+
     /** Routing for mouse clicking a certian tile. */
     private fun tileGroupOnClick(tileGroup: TileGroup, x: Float, y: Float)
     {
@@ -269,19 +276,13 @@ class BattleScreen(
         ){
             manager.attack(manager.getTroopOnHex(targetHex))
             // We need to check that we didn't kill the troop and it still exists
-            if(manager.isTroopOnHex(targetHex)) {
-               manager.getTroopOnHex(targetHex).apply {
-                    this.troopGroup.findActor<Label>("amountLabel")
-                        ?.setText(currentAmount.toString())
-                }
-            }
+            refreshTargetTroop(targetHex)
 
             // After a shoot we turn to next troop and redraw the pointer
             tileGroup.update()
             manager.nextTurn()
-            pointerPosition = manager.currentTroop.position
-            draw_pointer()
 
+            //movePointerToNextTroop()
             return
         }
 
@@ -307,27 +308,12 @@ class BattleScreen(
                         // Attack target
                         manager.attack(targetHex)
                         // Redraw the label with amount of units in the targeted troop
-                        manager.currentTroop.apply {
-                            this.troopGroup.findActor<Label>("amountLabel")
-                                ?.setText(currentAmount.toString())
-                        }
-                        if (manager.isTroopOnHex(targetHex))
-                            manager.getTroopOnHex(targetHex).apply {
-                                this.troopGroup.findActor<Label>("amountLabel")
-                                    ?.setText(currentAmount.toString())
-                            }
-
-                        tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.apply {
-                            this.addActor(manager.currentTroop.troopGroup)
-                            this.update()
-                        }
-                        tileGroup.update()
+                        redrawMovedTroop(targetHex, hexToMove)
 
                         // Move current troop and redraw the pointer
                         manager.moveCurrentTroop(hexToMove)
 
-                        pointerPosition = manager.currentTroop.position
-                        draw_pointer()
+                        //movePointerToNextTroop()
                     }
                 }
             }
@@ -352,8 +338,42 @@ class BattleScreen(
 
         // Move to next troop and redraw the pointer
         manager.moveCurrentTroop(targetHex)
-        pointerPosition = manager.currentTroop.position
-        draw_pointer()
+        //movePointerToNextTroop()
+    }
+
+    fun refreshTargetTroop(targetHex: Vector2) {
+
+
+        if (manager.isTroopOnHex(targetHex))
+            manager.getTroopOnHex(targetHex).apply {
+                this.troopGroup.findActor<Label>("amountLabel")
+                    ?.setText(currentAmount.toString())
+            }
+
+        tileGroups[battleField[targetHex]]?.first { it.isTouchable }?.apply {
+            this.update()
+        }
+   }
+
+    //fun
+    fun redrawMovedTroop(targetHex: Vector2, hexToMove: Vector2) {
+
+        val tileGroup = tileGroups[battleField[targetHex]]?.first { it.isTouchable }!!
+        manager.currentTroop.apply {
+            this.troopGroup.findActor<Label>("amountLabel")
+                ?.setText(currentAmount.toString())
+        }
+        if (manager.isTroopOnHex(targetHex))
+            manager.getTroopOnHex(targetHex).apply {
+                this.troopGroup.findActor<Label>("amountLabel")
+                    ?.setText(currentAmount.toString())
+            }
+
+        tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.apply {
+            this.addActor(manager.currentTroop.troopGroup)
+            this.update()
+        }
+        tileGroup.update()
     }
 
     /** Routing for choose appropriate mouse cursor: for movement, attack, shooting and info. In other cases "cancel" cursor is shown */
