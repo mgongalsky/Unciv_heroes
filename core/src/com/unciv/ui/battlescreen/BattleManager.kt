@@ -6,6 +6,7 @@ import com.unciv.logic.HexMath
 import com.unciv.logic.battle.Battle
 import com.unciv.logic.event.hero.Troop
 import com.unciv.logic.map.MapUnit
+import com.unciv.logic.map.TileInfo
 //import com.unciv.logic.map.Monster
 import com.unciv.ui.images.ImageGetter
 
@@ -58,34 +59,6 @@ class BattleManager()
          defendingTroops = monster.troops
 
          if (defendingHero0 != null) {
-             /*
-             if (defendingHero0 is Monster) {
-                 defendingHero = defendingHero0
-
-                 //defendingTroops = mutableListOf()
-                 //defendingTroops = defendingHero0.troops
-                 defendingHero.apply {
-                     if (this is Monster) {
-                         troops = mutableListOf()
-                         troops.clear()
-                         baseUnit = ImageGetter.ruleset.units[monsterName]!!
-                         baseUnit.ruleset = ImageGetter.ruleset
-
-                         //   amount = amount0
-                         val amountOfTroops = 4
-                         for (i in 1..amountOfTroops) {
-                             troops.add(Troop(amount / amountOfTroops, monsterName))
-
-                         }
-                         val imageString = "TileSets/AbsoluteUnits/Units/" + monsterName
-
-                         monsterImages = ImageGetter.getLayeredImageColored(imageString, null)
-                     }
-                 }
-                 defendingTroops = (defendingHero as Monster).troops
-
-              */
-             //}
              defendingTroops = defendingHero0.troops.toMutableList()
          } else {
              defendingTroops = monster.troops
@@ -98,14 +71,6 @@ class BattleManager()
                  attacker = false
              )
          }
-/*
-         attackingTroops.clear()
-         attackingTroops.add(Troop(10, "Horseman"))
-         attackingTroops.add(Troop(20, "Archer"))
-         attackingTroops.add(Troop(15, "Spearman"))
-         attackingTroops.add(Troop(5, "Swordsman"))
-
- */
 
          attackingTroops.forEachIndexed { index, troop -> troop.enterBattle(attackingHero.civInfo, index, attacker = true)}
 
@@ -118,6 +83,8 @@ class BattleManager()
 
          screen = BattleScreen(this, attackingHero0)
          UncivGame.Current.pushScreen(screen!!)
+
+         AIMove()
      }
 
      /** Check if specified hex has a troop on it */
@@ -133,6 +100,8 @@ class BattleManager()
      /** Gives turn to next troop in the sequence */
      fun nextTurn()
      {
+         // TODO: Add morale here
+
          // If we are at the end of the sequence, go to the beginning
          if(iterTroop.hasNext())
              currentTroop = iterTroop.next()
@@ -140,6 +109,103 @@ class BattleManager()
              iterTroop = sequence.listIterator()
              currentTroop = iterTroop.next()
          }
+         AIMove()
+     }
+
+     fun isTroopAttacking(troop: Troop): Boolean{
+         if(attackingTroops.contains(troop))
+             return true
+         if(defendingTroops.contains(troop))
+             return false
+         throw Exception("The troop is not attacker and defender!")
+
+
+     }
+
+     fun AIMove(){
+         // If there is a Human player, do nothing
+         if(currentTroop.civInfo.isPlayerCivilization())
+             return
+
+         if(attackingTroops.isEmpty() || defendingTroops.isEmpty())
+             return
+
+         var target: Troop?
+
+         //checkBattleFinished()
+
+         if(currentTroop.baseUnit.isRanged()){
+             if(!isTroopAttacking(currentTroop)) {
+                 target = attackingTroops.maxByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
+             }
+             else {
+                 target = defendingTroops.maxByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
+             }
+
+             if(target != null)
+                attack(target)
+
+             //checkBattleFinished()
+             nextTurn()
+             return
+         }
+
+         var availableTiles = mutableListOf<Vector2>()
+
+         //if(!isTroopAttacking(currentTroop)) {
+         // First of all we find all positions in the radius of the troop
+         val radiusPositions = HexMath.getVectorsInDistance(
+             currentTroop.position,
+             currentTroop.baseUnit.speed,
+             worldWrap = false
+         )
+
+         // Let's check which tiles we can reach in this turn
+         radiusPositions.forEach { pos ->
+             if (isHexAchievable(pos))
+                 availableTiles.add(pos)
+
+         }
+
+         // Let's find all the enemy troop available for attack
+         var availableTargets = mutableListOf<Troop>()
+         availableTiles.forEach { pos ->
+             if (isTroopOnHex(pos)) {
+                 val troop = getTroopOnHex(pos)
+                 if (isTroopAttacking(troop) != isTroopAttacking(currentTroop))
+                     availableTargets.add(troop)
+             }
+         }
+
+         if (availableTargets.isNotEmpty()) {
+             // If we can attack somebody, we'll do it.
+             // We'll pick up enemy with smallest damage to health ratio
+             target =
+                     availableTargets.minByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
+
+             // Now we need to find the proper tile to attack from
+
+         } else {
+             // If there is nobody reachable by one turn, then go closer to the best potential target
+             if(!isTroopAttacking(currentTroop)) {
+                 target = attackingTroops.minByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
+             }
+             else {
+                 target = defendingTroops.minByOrNull { troop -> troop.baseUnit.damage.toFloat() / troop.baseUnit.health.toFloat() }
+             }
+
+         }
+
+
+
+
+
+         //}
+
+
+
+         //HexMath. currentTroop.position
+
      }
 
      /** Moves current troop to the specified [position] */
@@ -153,7 +219,7 @@ class BattleManager()
      /** Checks if the specified hex is achievable by the current troop */
      fun isHexAchievable(positionHex: Vector2): Boolean{
 
-         return HexMath.getDistance(positionHex, currentTroop.position) <= currentTroop.baseUnit.speed
+         return (HexMath.getDistance(positionHex, currentTroop.position) <= currentTroop.baseUnit.speed) && isHexOnBattleField(positionHex)
      }
 
      /** Checks if the specified hex is inside the battlefield */
