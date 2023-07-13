@@ -88,9 +88,12 @@ class Troop (
     fun showMoraleBird(){
 
         val moraleImage = ImageGetter.getExternalImage("MoraleBird.png")
+        //val moraleImage = ImageGetter.getExternalImage("LuckRainbow.png")
 
         moraleImage.setScale(0.075f, 0.075f)
+        //moraleImage.setScale(0.130f, 0.130f)
         moraleImage.moveBy(troopGroup.parent.width*(-0.035f), troopGroup.parent.height*1.85f)
+        //moraleImage.moveBy(troopGroup.parent.width*(-0.3f), troopGroup.parent.height*0.65f)
         moraleImage.touchable = Touchable.disabled
         moraleImage.name = "moraleImage"
         moraleImage.color = Color.WHITE.cpy().apply { a = 0f }
@@ -99,8 +102,46 @@ class Troop (
         val delay = Actions.delay(0.3f)  // Wait for 0.5 seconds
         val fadeOut = Actions.alpha(0f, 0.5f)  // Make image vanish over 2 seconds
 
-        moraleImage.addAction(Actions.sequence(fadeIn, delay, fadeOut))
-      //  moraleImage.addAction(Actions.alpha(1f, 0.5f))
+        val endAnimation = Actions.run {
+            // Code to execute after the animation ends
+            // This is where you could resume your game's logic
+        }
+
+        moraleImage.addAction(Actions.sequence(fadeIn, delay, fadeOut, endAnimation))
+        //  moraleImage.addAction(Actions.alpha(1f, 0.5f))
+        //moraleImage.addAction(Actions.alpha(0f, 1f))
+        troopGroup.addActor(moraleImage)
+        //troopGroup.stage.act(2f)
+        //troopGroup.stage.draw()
+
+        //stage.addActor(logoImage)
+
+    }
+
+    fun showLuckRainbow(){
+
+        //val moraleImage = ImageGetter.getExternalImage("MoraleBird.png")
+        val moraleImage = ImageGetter.getExternalImage("LuckRainbow.png")
+
+        //moraleImage.setScale(0.075f, 0.075f)
+        moraleImage.setScale(0.130f, 0.130f)
+        //moraleImage.moveBy(troopGroup.parent.width*(-0.035f), troopGroup.parent.height*1.85f)
+        moraleImage.moveBy(troopGroup.parent.width*(-0.3f), troopGroup.parent.height*0.65f)
+        moraleImage.touchable = Touchable.disabled
+        moraleImage.name = "moraleImage"
+        moraleImage.color = Color.WHITE.cpy().apply { a = 0f }
+
+        val fadeIn = Actions.alpha(1f, 0.5f)  // Make image appear over 2 seconds
+        val delay = Actions.delay(0.3f)  // Wait for 0.5 seconds
+        val fadeOut = Actions.alpha(0f, 0.5f)  // Make image vanish over 2 seconds
+
+        val endAnimation = Actions.run {
+            // Code to execute after the animation ends
+            // This is where you could resume your game's logic
+        }
+
+        moraleImage.addAction(Actions.sequence(fadeIn, delay, fadeOut, endAnimation))
+        //  moraleImage.addAction(Actions.alpha(1f, 0.5f))
         //moraleImage.addAction(Actions.alpha(0f, 1f))
         troopGroup.addActor(moraleImage)
         //troopGroup.stage.act(2f)

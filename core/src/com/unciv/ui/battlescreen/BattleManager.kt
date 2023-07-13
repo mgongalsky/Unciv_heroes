@@ -300,7 +300,14 @@ class BattleManager()
      /** Attack the target by current troop by specified [defender] troop handle */
      fun attack(defender: Troop, attacker: Troop = currentTroop){
          // Calculate maximum damage
-         val damage = attacker.currentAmount * attacker.baseUnit.damage
+         var damage = attacker.currentAmount * attacker.baseUnit.damage
+
+         if(Random.nextDouble() < 0.15) {
+             damage *= 2
+             if (screen != null) {
+                 currentTroop.showLuckRainbow()
+             }
+         }
          // We add lack of health just to simplify calculations. We add it to total amount of health
          val healthLack = defender.baseUnit.health - defender.currentHealth
          // Calculate amount of perished units
