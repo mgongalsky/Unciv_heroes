@@ -102,6 +102,8 @@ class BattleManager()
      {
          // TODO: Add morale here
 
+         currentTroop.showMoraleBird()
+
          // If we are at the end of the sequence, go to the beginning
          if(iterTroop.hasNext())
              currentTroop = iterTroop.next()

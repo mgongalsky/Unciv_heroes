@@ -1,10 +1,13 @@
 package com.unciv.logic.event.hero
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
+import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
 import com.unciv.logic.HexMath
@@ -15,6 +18,7 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.images.ImageGetter.ruleset
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.BaseScreen
+import com.unciv.ui.utils.extensions.center
 
 /** Battle units with specified [amount], [position] in hex coordinates and reference to a [baseUnit] */
 class Troop (
@@ -79,6 +83,31 @@ class Troop (
 
         initializeVariables()
         // Read other properties if needed
+    }
+
+    fun showMoraleBird(){
+
+        val moraleImage = ImageGetter.getExternalImage("MoraleBird.png")
+
+        moraleImage.setScale(0.075f, 0.075f)
+        moraleImage.moveBy(troopGroup.parent.width*(-0.035f), troopGroup.parent.height*1.85f)
+        moraleImage.touchable = Touchable.disabled
+        moraleImage.name = "moraleImage"
+        moraleImage.color = Color.WHITE.cpy().apply { a = 0f }
+
+        val fadeIn = Actions.alpha(1f, 0.5f)  // Make image appear over 2 seconds
+        val delay = Actions.delay(0.3f)  // Wait for 0.5 seconds
+        val fadeOut = Actions.alpha(0f, 0.5f)  // Make image vanish over 2 seconds
+
+        moraleImage.addAction(Actions.sequence(fadeIn, delay, fadeOut))
+      //  moraleImage.addAction(Actions.alpha(1f, 0.5f))
+        //moraleImage.addAction(Actions.alpha(0f, 1f))
+        troopGroup.addActor(moraleImage)
+        //troopGroup.stage.act(2f)
+        //troopGroup.stage.draw()
+
+        //stage.addActor(logoImage)
+
     }
 
     /** Called when battle is started (or the troop is summoned). [number] corresponds to location in the hero's army and determines initial location */
@@ -191,6 +220,8 @@ class Troop (
         // Uncomment this for debug with rendering of coordinates. Comment amountText label.
         //troopGroup.addActor(hexLabel)
         tileGroup.addActor(troopGroup)
+
+        //showMoraleBird()
     }
 
     fun perish(){

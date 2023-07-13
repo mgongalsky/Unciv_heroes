@@ -9,7 +9,7 @@ import java.lang.Math.sqrt
 
 /** A [Group] with [actions] effectively disabled. */
 abstract class ActionlessGroupWithHit : Group() {
-    override fun act(delta: Float) {}
+    //override fun act(delta: Float) {}
 }
 
 /** A [Group] with [actions] and [hit] effectively disabled. */
