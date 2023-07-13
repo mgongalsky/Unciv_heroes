@@ -188,8 +188,13 @@ object UnitActions {
         val foundAction = {
             UncivGame.Current.settings.addCompletedTutorialTask("Found city")
             unit.civInfo.addCity(tile.position)
-            if (tile.ruleset.tileImprovements.containsKey("City center"))
-                tile.changeImprovement("City center")
+            if (tile.ruleset.tileImprovements.containsKey("City center")) {
+                if(unit.civInfo.isMajorCiv())
+                    tile.changeImprovement("City center")
+                else
+                    tile.changeImprovement("Village City center")
+
+            }
             tile.removeRoad()
             unit.destroy()
             UncivGame.Current.worldScreen!!.shouldUpdate = true
