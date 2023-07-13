@@ -1368,7 +1368,9 @@ open class TileInfo : IsPartOfGameInfoSerialization {
             if (canPillageTileImprovement())
                 removeImprovement()
             else
-                removeRoad()
+                if(roadStatus != RoadStatus.None)
+                    removeRoad()
+
         } else {
             // otherwise use pillage/repair systems
             if (canPillageTileImprovement()) {
@@ -1439,7 +1441,9 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         // If we're checking this at gameInfo.setTransients, we can't check the top terrain
         if (improvement != null && ::baseTerrainObject.isInitialized) normalizeTileImprovement(ruleset)
         if (isWater || isImpassible())
-            removeRoad()
+            if(roadStatus != RoadStatus.None)
+                removeRoad()
+
     }
 
     private fun normalizeTileImprovement(ruleset: Ruleset) {

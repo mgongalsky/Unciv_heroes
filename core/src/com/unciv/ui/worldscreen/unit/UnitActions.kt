@@ -11,6 +11,7 @@ import com.unciv.logic.civilization.PlayerType
 import com.unciv.logic.civilization.diplomacy.DiplomacyFlags
 import com.unciv.logic.civilization.diplomacy.DiplomaticModifiers
 import com.unciv.logic.map.MapUnit
+import com.unciv.logic.map.RoadStatus
 import com.unciv.logic.map.TileInfo
 import com.unciv.models.Counter
 import com.unciv.models.UncivSound
@@ -197,7 +198,9 @@ object UnitActions {
                     tile.changeImprovement("Village City center")
 
             }
-            tile.removeRoad()
+            if(tile.roadStatus != RoadStatus.None)
+                tile.removeRoad()
+
             unit.destroy()
             UncivGame.Current.worldScreen!!.shouldUpdate = true
         }
