@@ -205,7 +205,8 @@ class MapEditorEditImprovementsTab(
         add(eraser.render(0f).apply { onClick {
             editTab.setBrush("Remove improvement", eraserIcon, true) { tile ->
                 tile.changeImprovement(null)
-                tile.removeRoad()
+                if(tile.roadStatus != RoadStatus.None)
+                    tile.removeRoad()
             }
         } }).padBottom(0f).row()
         add(MarkupRenderer.render(
