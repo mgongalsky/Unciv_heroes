@@ -9,6 +9,7 @@ import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 //import com.unciv.logic.map.Monster
 import com.unciv.ui.images.ImageGetter
+import kotlin.random.Random
 
 // TODO: This class is logic. And should be moved to "logic" package. However, there is internal visibility with BattleScreen class, which is UI.
 
@@ -102,19 +103,30 @@ class BattleManager()
      {
          // TODO: Add morale here
 
-         currentTroop.showMoraleBird()
+         //val morale = if (currentTroop.)
+         if(Random.nextDouble() < 0.15) {
+             currentTroop.showMoraleBird()
+             AIMove()
+             if (screen != null) {
+                 screen?.pointerPosition = currentTroop.position
+                 screen?.draw_pointer()
+             }
 
-         // If we are at the end of the sequence, go to the beginning
-         if(iterTroop.hasNext())
-             currentTroop = iterTroop.next()
-         else{
-             iterTroop = sequence.listIterator()
-             currentTroop = iterTroop.next()
+
          }
-        // if(!currentTroop.civInfo.isPlayerCivilization())
-            if(screen != null)
-                 screen?.movePointerToNextTroop()
+         else {
 
+             // If we are at the end of the sequence, go to the beginning
+             if (iterTroop.hasNext())
+                 currentTroop = iterTroop.next()
+             else {
+                 iterTroop = sequence.listIterator()
+                 currentTroop = iterTroop.next()
+             }
+             // if(!currentTroop.civInfo.isPlayerCivilization())
+             if (screen != null)
+                 screen?.movePointerToNextTroop()
+         }
          AIMove()
      }
 
