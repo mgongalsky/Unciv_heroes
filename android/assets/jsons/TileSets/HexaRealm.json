@@ -870,8 +870,21 @@
 	"Tundra+Hill+Sheep+Forest+Trading post": ["Tundra+Hill","Sheep","ForestTH","Trading postT"],
 	"Tundra+Hill+Horses+Forest+Trading post": ["Tundra+Hill","Horses","ForestTH","Trading postT"],
 
-	//Lumbermill
-	"Tundra+Forest+Lumber mill": ["Tundra","ForestT","Lumber millT"],
+
+    // Lumber resource
+    "Lumber": ["Lumber"],
+    "Forest+Lumber": ["Lumber"],
+    "Grassland+Forest+Lumber": ["Lumber"],
+    "Plains+Forest+Lumber": ["Lumber"],
+    "Tundra+Forest+Lumber": ["Lumber"],
+    "Grassland+Hill+Forest+Lumber": ["Lumber"],
+    "Plains+Hill+Forest+Lumber": ["Lumber"],
+    "Tundra+Hill+Forest+Lumber": ["Lumber"],
+
+
+    //Lumbermill
+    //"Tundra+Forest+Lumber mill": ["Tundra","ForestT","Lumber millT"],
+    //"Lumber+Lumber mill": ["Tundra","ForestT","Lumber millT"],
 	"Tundra+Deer+Forest+Lumber mill": ["Tundra","Deer","ForestT","Lumber millT"],
 	"Tundra+Stone+Forest+Lumber mill": ["Tundra","Stone","ForestT","Lumber millT"],
 	"Tundra+Iron+Forest+Lumber mill": ["Tundra","Iron","ForestT","Lumber millT"],

@@ -15,6 +15,18 @@
         "Tundra+Forest": ["Tundra","TundraForest"],
         "Tundra+Hill+Forest": ["Tundra","Hill","TundraForest"],
 
+        // Lumber resource
+        "Lumber": ["Lumber"],
+        "Forest+Lumber": ["Lumber"],
+        "Grassland+Forest+Lumber": ["Lumber"],
+        "Plains+Forest+Lumber": ["Lumber"],
+        "Tundra+Forest+Lumber": ["Lumber"],
+        "Grassland+Hill+Forest+Lumber": ["Lumber"],
+        "Plains+Hill+Forest+Lumber": ["Lumber"],
+        "Tundra+Hill+Forest+Lumber": ["Lumber"],
+
+
+
         //Snow improvements for Tundra and Snow
             //TODO hill and forest variants + new images for Landmark, etc.
         "Tundra+Barbarian encampment": ["Tundra","Barbarian encampment-Snow"],
@@ -54,7 +66,8 @@
         "Grassland+Forest+Furs": ["Grassland","Furs","GrasslandForest"],
 	"Grassland+Forest+Truffles": ["Grassland","Truffles","GrasslandForest"],
         //Grassland+Hill
-        "Grassland+Hill+Forest+Lumber mill": ["Grassland","Hill","HillForest+Lumber mill"],
+       // "Grassland+Hill+Forest+Lumber mill": ["Grassland","Hill","HillForest+Lumber mill"],
+        //"Lumber+Lumber mill": ["Grassland","Hill","HillForest+Lumber mill"],
         "Grassland+Hill+Forest+Horses": ["Grassland","Hill","Horses","Forest"],
         "Grassland+Hill+Forest+Iron": ["Grassland","Hill","Iron","Forest"],
         "Grassland+Hill+Forest+Coal": ["Grassland","Hill","Coal","Forest"],
@@ -75,7 +88,8 @@
 	"Plains+Forest+Truffles": ["Plains","Truffles","PlainsForest"],
         "Plains+Wheat+Farm": ["Plains+Farm","Wheat"],
         //Plains+Hill
-        "Plains+Hill+Forest+Lumber mill": ["Plains","Hill","HillForest+Lumber mill"],
+        //"Plains+Hill+Forest+Lumber mill": ["Plains","Hill","HillForest+Lumber mill"],
+        //"Lumber+Lumber mill": ["Plains","Hill","HillForest+Lumber mill"],
         "Plains+Hill+Forest+Horses": ["Plains","Hill","Horses","Forest"],
         "Plains+Hill+Forest+Iron": ["Plains","Hill","Iron","Forest"],
         "Plains+Hill+Forest+Coal": ["Plains","Hill","Coal","Forest"],

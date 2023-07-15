@@ -83,9 +83,10 @@
         "production": 1,
         "improvement": "Quarry",
         "improvementStats": {"production": 1},
-        "uniques": ["Generated on every [20] tiles <in [Featureless] [Grassland] tiles> <in tiles without [Fresh Water]>",
-            "Generated on every [15] tiles <in [Featureless] [Tundra] tiles>",
-            "Generated on every [19] tiles <in [Featureless] [Desert] tiles>"]
+        "uniques": ["Generated on every [10] tiles <in [Grassland] tiles> <in tiles without [Fresh Water]>",
+            "Generated on every [10] tiles <in [Plains] tiles> <in tiles without [Fresh Water]>",
+            "Generated on every [10] tiles <in [Tundra] tiles>",
+            "Generated on every [10] tiles <in [Desert] tiles>"]
     },
     {
         "name": "Clay",
@@ -95,9 +96,20 @@
         "production": 1,
         "improvement": "Clay pit",
         "improvementStats": {"production": 1},
-        "uniques": ["Generated on every [20] tiles <in [Featureless] [Grassland] tiles> <in [Fresh Water] tiles>",
-                    "Generated on every [20] tiles <in [Featureless] [Plains] tiles> <in [Fresh Water] tiles>"
+        "uniques": ["Generated on every [5] tiles <in [Grassland] tiles> <in [Fresh Water] tiles>",
+                    "Generated on every [5] tiles <in [Plains] tiles> <in [Fresh Water] tiles>"
             ]
+    },
+    {
+        "name": "Lumber",
+        "resourceType": "Strategic",
+        "terrainsCanBeFoundOn": ["Forest"],
+        "production": 1,
+        "improvement": "Lumber mill",
+        "improvementStats": {"production": 1},
+        "uniques": ["Generated on every [5] tiles <in [Grassland] tiles> <in [Forest] tiles>",
+            "Generated on every [5] tiles <in [Plains] tiles> <in [Forest] tiles>"
+        ]
     },
     {
 		"name": "Horses",
