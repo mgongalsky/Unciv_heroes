@@ -83,7 +83,14 @@
 		"uniques": ["[+1 Production] <after discovering [Chemistry]>", "Can only be built to improve a resource", "Pillaging this improvement yields approximately [+20 Gold]"],
 		"shortcutKey": "Q"
 	},
-	{
+    {
+        "name": "Clay pit",
+        "turnsToBuild": 8,
+        "techRequired": "Pottery",
+        "uniques": ["[+1 Production] <after discovering [Chemistry]>", "Can only be built to improve a resource", "Pillaging this improvement yields approximately [+20 Gold]"],
+        "shortcutKey": "Q"
+    },
+    {
 		"name": "Fishing Boats",
 		"terrainsCanBeBuiltOn": ["Coast"],
 		"food": 1,
@@ -322,16 +329,63 @@
             {"text":"Marks the center of a city"},
             {"text":"Appearance changes with the technological era of the owning civilization"}
         ]
-    },{
-    "name": "Small village",
-    "terrainsCanBeBuiltOn": ["Land"],
-    "uniques": ["Unpillagable", "Irremovable", "Unbuildable"],
-    "civilopediaText": [
-        {"text":"Marks the center of a city"},
-        {"text":"Appearance changes with the technological era of the owning civilization"}
-    ]
-},
-	{
+    },
+    {
+        "name": "Bandit camp",
+        "terrainsCanBeBuiltOn": ["Land"],
+        "uniques": ["Unpillagable", "Irremovable", "Unbuildable"],
+        "civilopediaText": [
+            {"text":"Marks the center of a city"},
+            {"text":"Appearance changes with the technological era of the owning civilization"}
+        ]
+    },
+    {
+        "name": "Tavern",
+        "terrainsCanBeBuiltOn": ["Land"],
+        "uniques": ["Unpillagable", "Irremovable", "Unbuildable"],
+        "civilopediaText": [
+            {"text":"Marks the center of a city"},
+            {"text":"Appearance changes with the technological era of the owning civilization"}
+        ]
+    },
+    {
+        "name": "Temple",
+        "terrainsCanBeBuiltOn": ["Land"],
+        "uniques": ["Unpillagable", "Irremovable", "Unbuildable"],
+        "civilopediaText": [
+            {"text":"Marks the center of a city"},
+            {"text":"Appearance changes with the technological era of the owning civilization"}
+        ]
+    },
+    {
+        "name": "Windmill",
+        "terrainsCanBeBuiltOn": ["Land"],
+        "uniques": ["Unpillagable", "Irremovable", "Unbuildable"],
+        "civilopediaText": [
+            {"text":"Marks the center of a city"},
+            {"text":"Appearance changes with the technological era of the owning civilization"}
+        ]
+    },
+    {
+        "name": "Wizard tower",
+        "terrainsCanBeBuiltOn": ["Land"],
+        "uniques": ["Unpillagable", "Irremovable", "Unbuildable"],
+        "civilopediaText": [
+            {"text":"Marks the center of a city"},
+            {"text":"Appearance changes with the technological era of the owning civilization"}
+        ]
+    },
+    {
+        "name": "Small village",
+        "terrainsCanBeBuiltOn": ["Land"],
+        "uniques": ["Unpillagable", "Irremovable", "Unbuildable"],
+        "civilopediaText": [
+            {"text":"Marks the center of a city"},
+            {"text":"Appearance changes with the technological era of the owning civilization"}
+        ]
+    },
+
+    {
 		"name": "Barbarian encampment",
 		"terrainsCanBeBuiltOn": ["Land"],
 		"uniques": ["Unpillagable", "Unbuildable"],

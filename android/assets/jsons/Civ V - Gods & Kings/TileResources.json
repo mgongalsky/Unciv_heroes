@@ -1,10 +1,11 @@
-[	
+[
 	// Bonus resources
 	{
 		"name": "Cattle",
 		"resourceType": "Bonus",
 		"terrainsCanBeFoundOn": ["Grassland"],
-		"food": 1,
+        "revealedBy": "Animal Husbandry",
+        "food": 1,
 		"improvement": "Pasture",
 		"improvementStats": {"production": 1},
 		"uniques": ["Generated on every [18] tiles <in [Featureless] [Grassland] tiles>",
@@ -56,17 +57,6 @@
 					"Generated on every [20] tiles <in [Fresh Water] [Desert] tiles> <in tiles without [Hill]> <in [Hill] Regions>"]
 	},
 	{
-		"name": "Stone",
-		"resourceType": "Bonus",
-		"terrainsCanBeFoundOn": ["Grassland","Desert","Tundra"],
-		"production": 1,
-		"improvement": "Quarry",
-		"improvementStats": {"production": 1},
-		"uniques": ["Generated on every [20] tiles <in [Featureless] [Grassland] tiles> <in tiles without [Fresh Water]>",
-					"Generated on every [15] tiles <in [Featureless] [Tundra] tiles>",
-					"Generated on every [19] tiles <in [Featureless] [Desert] tiles>"]
-	},
-	{
 		"name": "Fish",
 		"resourceType": "Bonus",
 		"terrainsCanBeFoundOn": ["Coast"],
@@ -84,9 +74,32 @@
 		"improvementStats": {"production": 1}
 	},
 	*/
-	
+
 	// Strategic resources
-	{
+    {
+        "name": "Stone",
+        "resourceType": "Strategic",
+        "terrainsCanBeFoundOn": ["Grassland","Desert","Tundra"],
+        "production": 1,
+        "improvement": "Quarry",
+        "improvementStats": {"production": 1},
+        "uniques": ["Generated on every [20] tiles <in [Featureless] [Grassland] tiles> <in tiles without [Fresh Water]>",
+            "Generated on every [15] tiles <in [Featureless] [Tundra] tiles>",
+            "Generated on every [19] tiles <in [Featureless] [Desert] tiles>"]
+    },
+    {
+        "name": "Clay",
+        "resourceType": "Strategic",
+        "terrainsCanBeFoundOn": ["Plains","Grassland"],
+        "revealedBy": "Pottery",
+        "production": 1,
+        "improvement": "Clay pit",
+        "improvementStats": {"production": 1},
+        "uniques": ["Generated on every [20] tiles <in [Featureless] [Grassland] tiles> <in [Fresh Water] tiles>",
+                    "Generated on every [20] tiles <in [Featureless] [Plains] tiles> <in [Fresh Water] tiles>"
+            ]
+    },
+    {
 		"name": "Horses",
 		"resourceType": "Strategic",
 		"revealedBy": "Animal Husbandry",
@@ -207,7 +220,7 @@
 		"majorDepositAmount": {"sparse": 2, "default": 4, "abundant": 4},
 		"minorDepositAmount": {"sparse": 1, "default": 2, "abundant": 3}
 	},
-	
+
 	// Luxury resources
 	{
 		"name": "Furs",
@@ -449,7 +462,7 @@
 					"Doesn't generate naturally <in [Jungle] tiles> <in tiles without [Hill]>",
 					"Doesn't generate naturally <in [Forest] tiles> <in tiles without [Hill]> <in tiles without [Tundra]>"]
 	},
-	/* 
+	/*
 	{
 		"name": "Cocoa",
 		"resourceType": "Luxury",
