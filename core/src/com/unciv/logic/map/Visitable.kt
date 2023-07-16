@@ -221,6 +221,10 @@ class Visitable() :
 
 fun openVisitingPopup(text: String) {
     if (UncivGame.Current.worldScreen == null) return
+    if (!UncivGame.Current.gameInfo?.currentPlayerCiv?.isPlayerCivilization()!!)
+        return
+    // TODO: remove this termination. Terminate here because of the bug
+    return
     // Probably we need to check if computer visits that place also
     // if(UncivGame.Current.gameInfo?.currentPlayerCiv != UncivGame.Current.is) return
     val visitingPopup = Popup(UncivGame.Current.worldScreen!!)

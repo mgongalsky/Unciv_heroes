@@ -19,7 +19,8 @@
 		"cost": 40,
 		"hurryCostModifier": 40,
 		"maintenance": 1,
-		"uniques": ["Destroyed when the city is captured"]
+        "requiredResource": "Clay",
+        "uniques": ["Destroyed when the city is captured"]
 	},
 	{
 		"name": "Stele",
