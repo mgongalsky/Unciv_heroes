@@ -706,12 +706,12 @@ class WorldMapHolder(
         for (attackableTile in attackableTiles) {
             for (tileGroupToAttack in tileGroups[attackableTile.tileToAttack]!!) {
                 tileGroupToAttack.showHighlight(colorFromRGB(237, 41, 57))
-                tileGroupToAttack.showCrosshair(
+                //tileGroupToAttack.showCrosshair(
                         // the targets which cannot be attacked without movements shown as orange-ish
-                        if (attackableTile.tileToAttackFrom != unit.currentTile)
-                            0.5f
-                        else 1f
-                )
+                 //       if (attackableTile.tileToAttackFrom != unit.currentTile)
+                //            0.5f
+                //        else 1f
+                //)
             }
         }
     }
@@ -723,8 +723,8 @@ class WorldMapHolder(
                 .filter { (UncivGame.Current.viewEntireMapForDebug || playerViewableTilePositions.contains(it.position)) }
         for (attackableTile in attackableTiles) {
             for (group in tileGroups[attackableTile]!!) {
-                group.showHighlight(colorFromRGB(237, 41, 57))
-                group.showCrosshair()
+                //group.showHighlight(colorFromRGB(237, 41, 57))
+                //group.showCrosshair()
             }
         }
     }

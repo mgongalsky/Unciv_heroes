@@ -415,7 +415,8 @@
    "obsoleteTech": "Civil Service",
    "attackSound": "metalhit",
    "upgradesTo": "Pikeman",
-   "civilopediaText": []
+   "civilopediaText": [],
+   "requiredTech": "Bronze Working"
 },
  {
    "name": "Hoplite",

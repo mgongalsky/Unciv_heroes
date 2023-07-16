@@ -37,8 +37,10 @@ class TileGroupIcons(val tileGroup: TileGroup) {
 
         civilianUnitIcon = newUnitIcon(tileGroup.tileInfo.civilianUnit, civilianUnitIcon,
                 tileIsViewable, -20f, viewingCiv)
-        militaryUnitIcon = newUnitIcon(tileGroup.tileInfo.militaryUnit, militaryUnitIcon,
-                tileIsViewable && showMilitaryUnit, 20f, viewingCiv)
+        //militaryUnitIcon = newUnitIcon(tileGroup.tileInfo.militaryUnit, militaryUnitIcon,
+        //        tileIsViewable && showMilitaryUnit, 20f, viewingCiv)
+        militaryUnitIcon = null
+
     }
 
     fun addPopulationIcon(icon: Image = ImageGetter.getStatIcon("Population")
