@@ -99,15 +99,40 @@ class CityExpansionManager : IsPartOfGameInfoSerialization {
         // It becomes an invisible city and weird shit starts happening
         takeOwnership(cityInfo.getCenterTile())
 
+
+        //var i: Int = 1
+        for(i in 1..cityInfo.population.population){
+            cityInfo.expansion.addNewTileForFree()
+        }
+
+        /*
         for (tile in cityInfo.getCenterTile().getTilesInDistance(1)
-                .filter { it.getCity() == null }) // can't take ownership of owned tiles (by other cities)
+            .filter { it.getCity() == null }.sortedByDescending {  }) // can't take ownership of owned tiles (by other cities){
+        {
             takeOwnership(tile)
+            if (i >= cityInfo.population.population)
+                break
+            i += 1
+        }
+
+         */
+
+
     }
 
     private fun addNewTileWithCulture(): Vector2? {
         val chosenTile = chooseNewTileToOwn()
         if (chosenTile != null) {
             cultureStored -= getCultureToNextTile()
+            takeOwnership(chosenTile)
+            return chosenTile.position
+        }
+        return null
+    }
+
+    fun addNewTileForFree(): Vector2? {
+        val chosenTile = chooseNewTileToOwn()
+        if (chosenTile != null) {
             takeOwnership(chosenTile)
             return chosenTile.position
         }
@@ -167,11 +192,14 @@ class CityExpansionManager : IsPartOfGameInfoSerialization {
     fun nextTurn(culture: Float) {
         cultureStored += culture.toInt()
         if (cultureStored >= getCultureToNextTile()) {
+            /*
             val location = addNewTileWithCulture()
             if (location != null) {
                 val locations = LocationAction(location, cityInfo.location)
                 cityInfo.civInfo.addNotification("[" + cityInfo.name + "] has expanded its borders!", locations, NotificationIcon.Culture)
             }
+
+             */
         }
     }
 

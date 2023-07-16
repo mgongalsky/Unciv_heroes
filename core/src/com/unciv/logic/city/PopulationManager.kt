@@ -45,7 +45,8 @@ class PopulationManager : IsPartOfGameInfoSerialization {
 
     fun getFoodToNextPopulation(): Int {
         // civ v math, civilization.wikia
-        var foodRequired = 15 + 6 * (population - 1) + floor((population - 1).toDouble().pow(1.8))
+        // var foodRequired = 15 + 6 * (population - 1) + floor((population - 1).toDouble().pow(1.8))
+         var foodRequired = 5 + 3 * (population - 1) + floor((population - 1).toDouble().pow(1.8))
         if (cityInfo.civInfo.isCityState())
             foodRequired *= 1.5f
         if (!cityInfo.civInfo.isPlayerCivilization())
@@ -109,6 +110,10 @@ class PopulationManager : IsPartOfGameInfoSerialization {
 
         if (cityInfo.civInfo.gameInfo.isReligionEnabled())
             cityInfo.religion.updatePressureOnPopulationChange(changedAmount)
+
+        for(i in 1..count){
+            cityInfo.expansion.addNewTileForFree()
+        }
     }
 
     fun setPopulation(count: Int) {
