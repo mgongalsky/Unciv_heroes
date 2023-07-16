@@ -378,7 +378,10 @@
     {
         "name": "Small village",
         "terrainsCanBeBuiltOn": ["Land"],
-        "uniques": ["Unpillagable", "Irremovable", "Unbuildable"],
+        "uniques": ["Unpillagable", "Irremovable", "Unbuildable", "Generated on every [10] tiles <in [Grassland] tiles>>",
+            "Generated on every [10] tiles <in [Plains] tiles> <in tiles without [Fresh Water]>",
+            "Generated on every [10] tiles <in [Tundra] tiles>",
+            "Generated on every [10] tiles <in [Desert] tiles>"],
         "civilopediaText": [
             {"text":"Marks the center of a city"},
             {"text":"Appearance changes with the technological era of the owning civilization"}

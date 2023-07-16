@@ -270,17 +270,19 @@ class MapGenerator(val ruleset: Ruleset) {
         }
     }
 
+    /** We rewrote this function for generation of Small villages */
     private fun spreadAncientRuins(map: TileMap) {
         val ruinsEquivalents = ruleset.tileImprovements.filter { it.value.isAncientRuinsEquivalent() }
         if (map.mapParameters.noRuins || ruinsEquivalents.isEmpty() )
             return
         val suitableTiles = map.values.filter { it.isLand && !it.isImpassible() }
         val locations = randomness.chooseSpreadOutLocations(
-                (suitableTiles.size * ruleset.modOptions.constants.ancientRuinCountMultiplier).roundToInt(),
+                (suitableTiles.size * ruleset.modOptions.constants.ancientRuinCountMultiplier * 5).roundToInt(),
                 suitableTiles,
                 map.mapParameters.mapSize.radius)
         for (tile in locations)
-            tile.changeImprovement(ruinsEquivalents.keys.random())
+            tile.changeImprovement("Small village")
+            //tile.changeImprovement(ruinsEquivalents.keys.random())
     }
 
     private fun spreadResources(tileMap: TileMap) {
