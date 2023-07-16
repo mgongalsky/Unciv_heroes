@@ -647,7 +647,7 @@ open class TileGroup(
         val color = when {
             isViewable && tileInfo.isPillaged() -> Color.WHITE.cpy().lerp(Color.RED.cpy(),0.5f)
             (!isViewable) -> Color.WHITE.cpy()
-                .lerp(tileSetStrings.tileSetConfig.fogOfWarColor, 0.6f)
+                .lerp(tileSetStrings.tileSetConfig.fogOfWarColor, 0.3f)
             else -> Color.WHITE.cpy()
         }
 
@@ -754,7 +754,7 @@ open class TileGroup(
         arrowsToDraw.clear()
     }
 
-    fun showHighlight(color: Color, alpha: Float = 0.3f) {
+    fun showHighlight(color: Color, alpha: Float = 0.5f) {
         highlightImage.isVisible = true
         highlightImage.color = color.cpy().apply { a = alpha }
     }
