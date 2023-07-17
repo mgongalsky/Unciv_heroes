@@ -5559,62 +5559,6 @@ size: 2048, 2048
 format: RGBA8888
 filter: Nearest, Nearest
 repeat: none
-TileSets/HexaRealm/Tiles/City center
-  rotate: false
-  xy: 776, 3
-  size: 256, 444
-  orig: 256, 444
-  offset: 0, 0
-  index: -1
-TileSets/HexaRealm/Tiles/City center-Ancient era
-  rotate: false
-  xy: 776, 3
-  size: 256, 444
-  orig: 256, 444
-  offset: 0, 0
-  index: -1
-TileSets/HexaRealm/Tiles/Lakes
-  rotate: false
-  xy: 1034, 510
-  size: 256, 384
-  orig: 256, 384
-  offset: 0, 0
-  index: -1
-TileSets/HexaRealm/Tiles/Quarry
-  rotate: false
-  xy: 1292, 957
-  size: 256, 384
-  orig: 256, 384
-  offset: 0, 0
-  index: -1
-TileSets/HexaRealm/Tiles/QuarryT
-  rotate: false
-  xy: 1292, 957
-  size: 256, 384
-  orig: 256, 384
-  offset: 0, 0
-  index: -1
-TileSets/HexaRealm/Tiles/Stone+Quarry
-  rotate: false
-  xy: 1292, 957
-  size: 256, 384
-  orig: 256, 384
-  offset: 0, 0
-  index: -1
-TileSets/HexaRealm/Tiles/Stone+QuarryT
-  rotate: false
-  xy: 1292, 957
-  size: 256, 384
-  orig: 256, 384
-  offset: 0, 0
-  index: -1
-TileSets/HexaRealm/Tiles/StoneD+Quarry
-  rotate: false
-  xy: 1292, 957
-  size: 256, 384
-  orig: 256, 384
-  offset: 0, 0
-  index: -1
 TileSets/HexaRealm/Tiles/Small village1
   rotate: false
   xy: 2, 1343
@@ -5706,20 +5650,6 @@ TileSets/HexaRealm/Tiles/Tundra+Hill4
   orig: 256, 445
   offset: 0, 0
   index: -1
-TileSets/HexaRealm/Tiles/Stone
-  rotate: false
-  xy: 1550, 1404
-  size: 256, 384
-  orig: 256, 384
-  offset: 0, 0
-  index: -1
-TileSets/HexaRealm/Tiles/StoneD
-  rotate: false
-  xy: 1550, 1404
-  size: 256, 384
-  orig: 256, 384
-  offset: 0, 0
-  index: -1
 TileSets/HexaRealm/Tiles/Tavern
   rotate: false
   xy: 518, 896
@@ -5746,13 +5676,6 @@ TileSets/HexaRealm/Tiles/Trading postT
   xy: 260, 2
   size: 256, 445
   orig: 256, 445
-  offset: 0, 0
-  index: -1
-TileSets/HexaRealm/Tiles/Tundra
-  rotate: false
-  xy: 1034, 124
-  size: 256, 384
-  orig: 256, 384
   offset: 0, 0
   index: -1
 TileSets/HexaRealm/Tiles/Village City center
@@ -5872,5 +5795,764 @@ TileSets/HexaRealm/Tiles/Wizard tower
   xy: 1292, 1343
   size: 256, 445
   orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000001-00
+  rotate: false
+  xy: 776, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000001-002
+  rotate: false
+  xy: 1034, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000001-003
+  rotate: false
+  xy: 1292, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000010-00
+  rotate: false
+  xy: 1550, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000010-002
+  rotate: false
+  xy: 1034, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000010-003
+  rotate: false
+  xy: 1292, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000011-00
+  rotate: false
+  xy: 1550, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000011-002
+  rotate: false
+  xy: 1292, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000100-00
+  rotate: false
+  xy: 1550, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000100-002
+  rotate: false
+  xy: 1550, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+
+Tilesets5.png
+size: 2048, 2048
+format: RGBA8888
+filter: Nearest, Nearest
+repeat: none
+TileSets/Roads/hexRoad-000100-003
+  rotate: false
+  xy: 2, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000101-00
+  rotate: false
+  xy: 2, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000101-002
+  rotate: false
+  xy: 260, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000110-00
+  rotate: false
+  xy: 2, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000110-002
+  rotate: false
+  xy: 260, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-000111-00
+  rotate: false
+  xy: 518, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001000-00
+  rotate: false
+  xy: 2, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001000-002
+  rotate: false
+  xy: 260, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001000-003
+  rotate: false
+  xy: 518, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001001-00
+  rotate: false
+  xy: 776, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001001-002
+  rotate: false
+  xy: 260, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001010-00
+  rotate: false
+  xy: 518, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001010-002
+  rotate: false
+  xy: 518, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001011-00
+  rotate: false
+  xy: 776, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001100-00
+  rotate: false
+  xy: 1034, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001100-002
+  rotate: false
+  xy: 518, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001101-00
+  rotate: false
+  xy: 776, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001110-00
+  rotate: false
+  xy: 1034, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-001111-00
+  rotate: false
+  xy: 1292, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010000-00
+  rotate: false
+  xy: 776, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010000-002
+  rotate: false
+  xy: 1034, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010000-003
+  rotate: false
+  xy: 1292, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010001-00
+  rotate: false
+  xy: 1550, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010001-002
+  rotate: false
+  xy: 1034, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010010-00
+  rotate: false
+  xy: 1292, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010010-002
+  rotate: false
+  xy: 1550, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010011-00
+  rotate: false
+  xy: 1292, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010100-00
+  rotate: false
+  xy: 1550, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010100-002
+  rotate: false
+  xy: 1550, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+
+Tilesets6.png
+size: 2048, 2048
+format: RGBA8888
+filter: Nearest, Nearest
+repeat: none
+TileSets/Roads/hexRoad-010101-00
+  rotate: false
+  xy: 2, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010110-00
+  rotate: false
+  xy: 2, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-010111-00
+  rotate: false
+  xy: 260, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-011000-00
+  rotate: false
+  xy: 2, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-011000-002
+  rotate: false
+  xy: 260, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-011001-00
+  rotate: false
+  xy: 518, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-011010-00
+  rotate: false
+  xy: 2, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-011011-00
+  rotate: false
+  xy: 260, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-011100-00
+  rotate: false
+  xy: 518, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-011101-00
+  rotate: false
+  xy: 776, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-011110-00
+  rotate: false
+  xy: 260, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-011111-00
+  rotate: false
+  xy: 518, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100000-00
+  rotate: false
+  xy: 776, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100000-002
+  rotate: false
+  xy: 1034, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100000-003
+  rotate: false
+  xy: 518, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100001-00
+  rotate: false
+  xy: 776, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100001-002
+  rotate: false
+  xy: 1034, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100010-00
+  rotate: false
+  xy: 1292, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100010-002
+  rotate: false
+  xy: 776, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100011-00
+  rotate: false
+  xy: 1034, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100100-00
+  rotate: false
+  xy: 1292, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100100-002
+  rotate: false
+  xy: 1550, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100101-00
+  rotate: false
+  xy: 1034, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100110-00
+  rotate: false
+  xy: 1292, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-100111-00
+  rotate: false
+  xy: 1550, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-101000-00
+  rotate: false
+  xy: 1292, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-101000-002
+  rotate: false
+  xy: 1550, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-101001-00
+  rotate: false
+  xy: 1550, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+
+Tilesets7.png
+size: 2048, 2048
+format: RGBA8888
+filter: Nearest, Nearest
+repeat: none
+TileSets/HexaRealm/Tiles/City center
+  rotate: false
+  xy: 1550, 3
+  size: 256, 444
+  orig: 256, 444
+  offset: 0, 0
+  index: -1
+TileSets/HexaRealm/Tiles/City center-Ancient era
+  rotate: false
+  xy: 1550, 3
+  size: 256, 444
+  orig: 256, 444
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-101010-00
+  rotate: false
+  xy: 2, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-101011-00
+  rotate: false
+  xy: 2, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-101100-00
+  rotate: false
+  xy: 260, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-101101-00
+  rotate: false
+  xy: 2, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-101110-00
+  rotate: false
+  xy: 260, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-101111-00
+  rotate: false
+  xy: 518, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-110000-00
+  rotate: false
+  xy: 2, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-110000-002
+  rotate: false
+  xy: 260, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-110001-00
+  rotate: false
+  xy: 518, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-110010-00
+  rotate: false
+  xy: 776, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-110011-00
+  rotate: false
+  xy: 260, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-110100-00
+  rotate: false
+  xy: 518, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-110101-00
+  rotate: false
+  xy: 776, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-110110-00
+  rotate: false
+  xy: 1034, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-110111-00
+  rotate: false
+  xy: 518, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-111000-00
+  rotate: false
+  xy: 776, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-111001-00
+  rotate: false
+  xy: 1034, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-111010-00
+  rotate: false
+  xy: 1292, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-111011-00
+  rotate: false
+  xy: 776, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-111100-00
+  rotate: false
+  xy: 1034, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-111101-00
+  rotate: false
+  xy: 1292, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-111110-00
+  rotate: false
+  xy: 1550, 1343
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-111111-00
+  rotate: false
+  xy: 1034, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoad-111111-002
+  rotate: false
+  xy: 1292, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoadBridge-001001-00
+  rotate: false
+  xy: 1550, 896
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoadBridge-010010-00
+  rotate: false
+  xy: 1292, 2
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+TileSets/Roads/hexRoadBridge-100100-00
+  rotate: false
+  xy: 1550, 449
+  size: 256, 445
+  orig: 256, 445
+  offset: 0, 0
+  index: -1
+
+Tilesets8.png
+size: 2048, 512
+format: RGBA8888
+filter: Nearest, Nearest
+repeat: none
+TileSets/HexaRealm/Tiles/Lakes
+  rotate: false
+  xy: 2, 2
+  size: 256, 384
+  orig: 256, 384
+  offset: 0, 0
+  index: -1
+TileSets/HexaRealm/Tiles/Quarry
+  rotate: false
+  xy: 260, 2
+  size: 256, 384
+  orig: 256, 384
+  offset: 0, 0
+  index: -1
+TileSets/HexaRealm/Tiles/QuarryT
+  rotate: false
+  xy: 260, 2
+  size: 256, 384
+  orig: 256, 384
+  offset: 0, 0
+  index: -1
+TileSets/HexaRealm/Tiles/Stone+Quarry
+  rotate: false
+  xy: 260, 2
+  size: 256, 384
+  orig: 256, 384
+  offset: 0, 0
+  index: -1
+TileSets/HexaRealm/Tiles/Stone+QuarryT
+  rotate: false
+  xy: 260, 2
+  size: 256, 384
+  orig: 256, 384
+  offset: 0, 0
+  index: -1
+TileSets/HexaRealm/Tiles/StoneD+Quarry
+  rotate: false
+  xy: 260, 2
+  size: 256, 384
+  orig: 256, 384
+  offset: 0, 0
+  index: -1
+TileSets/HexaRealm/Tiles/Stone
+  rotate: false
+  xy: 518, 2
+  size: 256, 384
+  orig: 256, 384
+  offset: 0, 0
+  index: -1
+TileSets/HexaRealm/Tiles/StoneD
+  rotate: false
+  xy: 518, 2
+  size: 256, 384
+  orig: 256, 384
+  offset: 0, 0
+  index: -1
+TileSets/HexaRealm/Tiles/Tundra
+  rotate: false
+  xy: 776, 2
+  size: 256, 384
+  orig: 256, 384
   offset: 0, 0
   index: -1

@@ -18,6 +18,7 @@ import com.unciv.models.helpers.MapArrowType
 import com.unciv.models.helpers.MiscArrowTypes
 import com.unciv.models.helpers.TintedMapArrow
 import com.unciv.models.helpers.UnitMovementMemoryType
+import com.unciv.ui.battlescreen.Direction
 import com.unciv.ui.cityscreen.YieldGroup
 import com.unciv.ui.images.ImageGetter
 import kotlin.math.PI
@@ -596,41 +597,152 @@ open class TileGroup(
 
     private fun updateRoadImages() {
         if (forMapEditorIcon) return
-        for (neighbor in tileInfo.neighbors) {
-            val roadImage = roadImages[neighbor] ?: RoadImage().also { roadImages[neighbor] = it }
+        var neighborsPlus = tileInfo.neighbors + tileInfo
+        //roadImages[this].
+        //neighborsPlus.add
+        //for (neighbor in tileInfo.neighbors) {
+        /*
+        for (neighbor in neighborsPlus) {
+                val roadImage = roadImages[neighbor] ?: RoadImage().also { roadImages[neighbor] = it }
 
-            val roadStatus = when {
-                tileInfo.roadStatus == RoadStatus.None || neighbor.roadStatus === RoadStatus.None -> RoadStatus.None
-                tileInfo.roadStatus == RoadStatus.Road || neighbor.roadStatus === RoadStatus.Road -> RoadStatus.Road
-                else -> RoadStatus.Railroad
-            }
-            if (roadImage.roadStatus == roadStatus) continue // the image is correct
+                val roadStatus = when {
+                    tileInfo.roadStatus == RoadStatus.None || neighbor.roadStatus === RoadStatus.None -> RoadStatus.None
+                    tileInfo.roadStatus == RoadStatus.Road || neighbor.roadStatus === RoadStatus.Road -> RoadStatus.Road
+                    else -> RoadStatus.Railroad
+                }
+                if (roadImage.roadStatus == roadStatus) continue // the image is correct
 
-            roadImage.roadStatus = roadStatus
+                roadImage.roadStatus = roadStatus
 
-            if (roadImage.image != null) {
-                roadImage.image!!.remove()
-                roadImage.image = null
-            }
-            if (roadStatus == RoadStatus.None) continue // no road image
+                if (roadImage.image != null) {
+                    roadImage.image!!.remove()
+                    roadImage.image = null
+                }
+                if (roadStatus == RoadStatus.None) continue // no road image
+                if (neighbor.roadStatus == RoadStatus.None) continue
 
-            val image = ImageGetter.getImage(tileSetStrings.orFallback { roadsMap[roadStatus]!! })
-            roadImage.image = image
+                var index: Int = 0
+                if (neighbor.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(neighbor.position,
+                            Direction.CenterLeft)}.roadStatus == RoadStatus.Road)
+                    index += 1000
+                if (neighbor.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(neighbor.position,
+                            Direction.BottomLeft)}.roadStatus == RoadStatus.Road)
+                    index += 10000
+                if (neighbor.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(neighbor.position,
+                            Direction.BottomRight)}.roadStatus == RoadStatus.Road)
+                    index += 100000
+                if (neighbor.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(neighbor.position,
+                            Direction.CenterRight)}.roadStatus == RoadStatus.Road)
+                    index += 1
+                if (neighbor.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(neighbor.position,
+                            Direction.TopRight)}.roadStatus == RoadStatus.Road)
+                    index += 10
+                if (neighbor.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(neighbor.position,
+                            Direction.TopLeft)}.roadStatus == RoadStatus.Road)
+                    index += 100
 
-            val relativeWorldPosition = tileInfo.tileMap.getNeighborTilePositionAsWorldCoords(tileInfo, neighbor)
+                if (index == 0)
+                    continue
 
-            // This is some crazy voodoo magic so I'll explain.
-            image.moveBy(25f, 25f) // Move road to center of tile
-            // in addTiles, we set   the position of groups by relative world position *0.8*groupSize, filter groupSize = 50
-            // Here, we want to have the roads start HALFWAY THERE and extend towards the tiles, so we give them a position of 0.8*25.
-            image.moveBy(-relativeWorldPosition.x * 0.8f * 25f, -relativeWorldPosition.y * 0.8f * 25f)
+                val paddedIndex = String.format("%06d", index)
+                val roadImagePath = "TileSets/Roads/hexRoad-$paddedIndex-00"
 
-            image.setSize(10f, 6f)
-            image.setOrigin(0f, 3f) // This is so that the rotation is calculated from the middle of the road and not the edge
 
-            image.rotation = (180 / Math.PI * atan2(relativeWorldPosition.y.toDouble(),relativeWorldPosition.x.toDouble())).toFloat()
-            terrainFeatureLayerGroup.addActor(image)
+                // tileInfo.neighbors.forEach {
+                //     Direction.
+                // }
+                //lateinit var image: Image
+                //val image = ImageGetter.getImage(tileSetStrings.orFallback { roadsMap[roadStatus]!! })
+                //if(roadStatus == RoadStatus.Road){
+                var image = ImageGetter.getImage(roadImagePath)
+                image.setScale(hexagonImageWidth/image.width,hexagonImageWidth/image.width)
+
+                roadImage.image = image
+                image.name = "RoadImage"
+                // }
+                //else
+                //    return
+
+
+                //val relativeWorldPosition = tileInfo.tileMap.getNeighborTilePositionAsWorldCoords(tileInfo, neighbor)
+
+                // This is some crazy voodoo magic so I'll explain.
+                //image.moveBy(25f, 25f) // Move road to center of tile
+                // in addTiles, we set   the position of groups by relative world position *0.8*groupSize, filter groupSize = 50
+                // Here, we want to have the roads start HALFWAY THERE and extend towards the tiles, so we give them a position of 0.8*25.
+                //image.moveBy(-relativeWorldPosition.x * 0.8f * 25f, -relativeWorldPosition.y * 0.8f * 25f)
+
+                //image.setSize(hexagonImageWidth)
+                //image.setOrigin(hexagonImageOrigin.first,hexagonImageOrigin.second)
+                //image.setOrigin(0f, 3f) // This is so that the rotation is calculated from the middle of the road and not the edge
+
+                //image.rotation = (180 / Math.PI * atan2(relativeWorldPosition.y.toDouble(),relativeWorldPosition.x.toDouble())).toFloat()
+                //if(tileInfo == neighbor)
+                //UncivGame.Current.worldScreen?.mapHolder?.tileGroups?.get(neighbor)?.first()?.terrainFeatureLayerGroup?.addActor(image)
+                //UncivGame.Current.
+                terrainFeatureLayerGroup.addActor(image)
+
         }
+*/
+
+        if(tileInfo.roadStatus == RoadStatus.None) {
+            var imgToRemove = terrainFeatureLayerGroup.findActor<Image>("RoadImage")
+            if (imgToRemove != null)
+                terrainFeatureLayerGroup.removeActor(imgToRemove)
+            return
+        }
+        val roadImage = roadImages[tileInfo]
+            ?: RoadImage().also { roadImages[tileInfo] = it }
+
+        roadImage.roadStatus = tileInfo.roadStatus
+
+        if (roadImage.image != null) {
+            roadImage.image!!.remove()
+            roadImage.image = null
+        }
+       // if (roadStatus == RoadStatus.None) continue // no road image
+      //  if (neighbor.roadStatus == RoadStatus.None) continue
+
+        var index: Int = 0
+        if (tileInfo.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(tileInfo.position,
+                    Direction.CenterLeft)}.roadStatus == RoadStatus.Road)
+            index += 1
+        if (tileInfo.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(tileInfo.position,
+                    Direction.BottomLeft)}.roadStatus == RoadStatus.Road)
+            index += 10
+        if (tileInfo.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(tileInfo.position,
+                    Direction.BottomRight)}.roadStatus == RoadStatus.Road)
+            index += 100
+        if (tileInfo.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(tileInfo.position,
+                    Direction.CenterRight)}.roadStatus == RoadStatus.Road)
+            index += 1000
+        if (tileInfo.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(tileInfo.position,
+                    Direction.TopRight)}.roadStatus == RoadStatus.Road)
+            index += 10000
+        if (tileInfo.neighbors.first { nb -> nb.position == HexMath.oneStepTowards(tileInfo.position,
+                    Direction.TopLeft)}.roadStatus == RoadStatus.Road)
+            index += 100000
+
+        if (index == 0) {
+            var imgToRemove = terrainFeatureLayerGroup.findActor<Image>("RoadImage")
+            if (imgToRemove != null)
+                terrainFeatureLayerGroup.removeActor(imgToRemove)
+            return
+        }
+
+        val paddedIndex = String.format("%06d", index)
+        val roadImagePath = "TileSets/Roads/hexRoad-$paddedIndex-00"
+
+
+        var image = ImageGetter.getImage(roadImagePath)
+        image.setScale(hexagonImageWidth/image.width,hexagonImageWidth/image.width)
+
+        roadImage.image = image
+        image.name = "RoadImage"
+
+
+        terrainFeatureLayerGroup.addActor(image)
+
 
     }
 
