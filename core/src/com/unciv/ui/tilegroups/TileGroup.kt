@@ -597,7 +597,7 @@ open class TileGroup(
 
     private fun updateRoadImages() {
         if (forMapEditorIcon) return
-        var neighborsPlus = tileInfo.neighbors + tileInfo
+        //var neighborsPlus = tileInfo.neighbors + tileInfo
         //roadImages[this].
         //neighborsPlus.add
         //for (neighbor in tileInfo.neighbors) {
@@ -730,6 +730,9 @@ open class TileGroup(
             return
         }
 
+        // TODO: here we don't draw road if there is another improvement, but better solution is to put road underneath
+        if (tileInfo.improvement != null)
+            return
         val paddedIndex = String.format("%06d", index)
         val roadImagePath = "TileSets/Roads/hexRoad-$paddedIndex-00"
 
@@ -740,7 +743,8 @@ open class TileGroup(
         roadImage.image = image
         image.name = "RoadImage"
 
-
+        //miscLayerGroup.
+        //terrainFeatureLayerGroup.addActorBefore(image, )
         terrainFeatureLayerGroup.addActor(image)
 
 
