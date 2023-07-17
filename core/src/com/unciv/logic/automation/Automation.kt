@@ -376,6 +376,9 @@ object Automation {
         // Higher score means tile is less likely to be picked
         var score = distance * 100
 
+        // Let's improve the importance of food
+        score -= 200 * tile.getTileStats(cityInfo.civInfo).food.toInt()
+
         // Resources are good: less points
         if (tile.hasViewableResource(cityInfo.civInfo)) {
             if (tile.tileResource.resourceType != ResourceType.Bonus) score -= 105
