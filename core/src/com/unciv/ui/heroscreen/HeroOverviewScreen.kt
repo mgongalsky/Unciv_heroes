@@ -1,7 +1,11 @@
 package com.unciv.ui.heroscreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton
+import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 import com.unciv.Constants
 import com.unciv.logic.map.MapUnit
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
@@ -45,21 +49,32 @@ class HeroOverviewScreen(
         tabbedPager.addClosePage { game.popScreen() }
 
         val pageObject = Table(BaseScreen.skin)
+        pageObject.background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
+
+        val font = BaseScreen.skin.get("smallOldLondon", BitmapFont::class.java)
+        font.data.scaleX = 0.3f // scale font width by 50%
+        font.data.scaleY = 0.3f // scale font height by 50%
+        //val font = BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)
+        //val font =
+
+     //   val labelStyle = Label.LabelStyle().apply {
+     //       this.font = BaseScreen.skin.get("oldLondon", BitmapFont::class.java)
+     //   }
+
+        //pageObject.add
         pageObject.pad(10f,0f,10f,0f)
-        pageObject.add("Glory to Ukraine!").size(200f)//.padLeft(8f)
-        pageObject.add("Hero Type").size(140f)//.padLeft(8f)
-        pageObject.add("Attack Skill").size(140f)//.padLeft(8f)
-        pageObject.add("Defense Skill").size(140f)//.padLeft(8f)
-        pageObject.add("Strength").size(140f)//.padLeft(8f)
-        pageObject.add("Health").size(140f)//.padLeft(8f)
+        pageObject.add(Label("Hero Type", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
+        pageObject.add(Label("Attack Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
+        pageObject.add(Label("Defense Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
+       // pageObject.add("Strength").size(140f)//.padLeft(8f)
+       // pageObject.add("Health").size(140f)//.padLeft(8f)
 
         pageObject.row()
-        pageObject.add("Glory to heroes!").size(200f)//.padLeft(8f)
-        pageObject.add(viewingHero.displayName()).size(140f)//.padRight(8f)
-        pageObject.add(viewingHero.heroAttackSkill.toString()).size(140f)//.padRight(8f)
-        pageObject.add(viewingHero.heroDefenseSkill.toString()).size(140f)//.padRight(8f)
-        pageObject.add(viewingHero.baseUnit.strength.toString()).size(140f)//.padRight(8f)
-        pageObject.add(viewingHero.health.toString()).size(140f)//.padRight(8f)
+        pageObject.add(Label(viewingHero.displayName(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
+        pageObject.add(Label(viewingHero.heroAttackSkill.toString(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
+        pageObject.add(Label(viewingHero.heroDefenseSkill.toString(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
+    //    pageObject.add(viewingHero.baseUnit.strength.toString()).size(140f)//.padRight(8f)
+    //    pageObject.add(viewingHero.health.toString()).size(140f)//.padRight(8f)
         //stage.addActor(pageObject)
         val index = tabbedPager.addPage(
             caption = "Heroes",

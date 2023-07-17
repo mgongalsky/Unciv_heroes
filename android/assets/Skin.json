@@ -166,7 +166,9 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
     }
 
     com.badlogic.gdx.graphics.g2d.BitmapFont: {
-    oldLondon: { file: "fantasy-font.fnt" }
+        oldLondon: { file: "fantasy-font.fnt" }
+        smallOldLondon: { file: "fantasy-font.fnt" }
+
     }
 
 
@@ -178,6 +180,14 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
         fontColor: white
     }
     }
+
+    com.badlogic.gdx.scenes.scene2d.ui.Label$LabelStyle: {
+        fantasyLabel: {
+            font: smallOldLondon,
+            fontColor: white
+        }
+    }
+
 
 
     com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable: {
