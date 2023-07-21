@@ -163,7 +163,22 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
             background: UI_example1_window_empty
             //  stageBackground: default-window-bg
         }
+
     }
+
+
+    //com.badlogic.gdx.graphics.g2d.BitmapFont: {
+  //      UI_tiled_bg: {
+   //         file: UI_tiled_bg }
+   // }
+
+    com.unciv.ui.rendering.Tiled2DDrawable: {
+        tiled_fantasy_background: {
+          //  texture: UI_tiled_bg,
+            textureRegion: UI_tiled_bg
+        }
+    }
+
 
     com.badlogic.gdx.graphics.g2d.BitmapFont: {
         oldLondon: { file: "fantasy-font.fnt" }
