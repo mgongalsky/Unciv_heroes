@@ -20,6 +20,7 @@ class Tiled2DDrawable : Drawable {
     private var anchorString = ""
     private var tilability = Tilability.PLANE
     private var tilabilityString = ""
+    private var mirroredTiling = true //false
 
     constructor() : super() {
         // no-arg constructor for JSON instantiation
@@ -27,10 +28,10 @@ class Tiled2DDrawable : Drawable {
 
     constructor(skin: Skin, jsonData: JsonValue) : this() {
         textureRegion = skin.getRegion(jsonData.getString("textureRegion"))
-
         //tilability = Tilability.valueOf(jsonData.getString("tilability"))
         tilabilityString = jsonData.getString("tilability")
         anchorString = jsonData.getString("anchorString")
+        mirroredTiling = jsonData.getString("mirroredTiling").toBoolean()
 
 
         setFromStrings()
@@ -122,25 +123,57 @@ class Tiled2DDrawable : Drawable {
         }
         drawY = startY
 
+        var i = 0
+        var j = 0
+
         when (tilability) {
             Tilability.PLANE ->
                 while (drawX * sign(stepX.toFloat()) < finishX * sign(stepX.toFloat())) {
                     drawY = startY
+                    j = 0
                     while (drawY * sign(stepY.toFloat()) < finishY * sign(stepY.toFloat())) {
-                        batch.draw(textureRegion, x + drawX, y + drawY, tileWidth, tileHeight)
+                        if(mirroredTiling) {
+                            if(i % 2 == 1 && j % 2 == 0)
+                                batch.draw(textureRegion, x + drawX + tileWidth, y + drawY, -tileWidth, tileHeight)
+                            if(i % 2 == 0 && j % 2 == 1)
+                                batch.draw(textureRegion, x + drawX, y + drawY + tileHeight, tileWidth, -tileHeight)
+                            if(i % 2 == 1 && j % 2 == 1)
+                                batch.draw(textureRegion, x + drawX + tileWidth, y + drawY + tileHeight, -tileWidth, -tileHeight)
+                            if(i % 2 == 0 && j % 2 == 0)
+                                batch.draw(textureRegion, x + drawX, y + drawY, tileWidth, tileHeight)
+
+
+                        }
+                        else
+                            batch.draw(textureRegion, x + drawX, y + drawY, tileWidth, tileHeight)
+
+                        j++
                         drawY += stepY
                     }
                     drawX += stepX
+                    i++
                 }
             Tilability.X ->
                 while (drawX * sign(stepX.toFloat()) < finishX * sign(stepX.toFloat())) {
-                    batch.draw(textureRegion, x + drawX, y + drawY, tileWidth, tileHeight)
+                    if(mirroredTiling)
+                        if(i % 2 == 0)
+                            batch.draw(textureRegion, x + drawX, y + drawY, tileWidth, tileHeight)
+                        else
+                            batch.draw(textureRegion, x + drawX + tileWidth, y + drawY, -tileWidth, tileHeight)
+
                     drawX += stepX
+                    i++
                 }
             Tilability.Y ->
                 while (drawY * sign(stepY.toFloat()) < finishY * sign(stepY.toFloat())) {
-                    batch.draw(textureRegion, x + drawX, y + drawY, tileWidth, tileHeight)
+                    if(mirroredTiling)
+                        if(j % 2 == 0)
+                            batch.draw(textureRegion, x + drawX, y + drawY, tileWidth, tileHeight)
+                        else
+                            batch.draw(textureRegion, x + drawX, y + drawY + tileHeight, tileWidth, -tileHeight)
+
                     drawY += stepY
+                    j++
                 }
         }
     }

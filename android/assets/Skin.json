@@ -176,7 +176,8 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
         tiled_fantasy_background: {
           //  texture: UI_tiled_bg,
             textureRegion: UI_tiled_bg
-            tilabilityString: PLANE
+            tilabilityString: PLANE,
+            mirroredTiling: false
         }
     }
 
