@@ -15,7 +15,7 @@ UI_button_down
   index: -1
 UI_button_up
   rotate: false
-  xy: 722, 704
+  xy: 797, 607
   size: 177, 48
   split: 24, 25, 14, 8
   pad: 0, 178, 0, 49
@@ -36,5 +36,26 @@ UI_tiled_bg
   xy: 722, 754
   size: 256, 256
   orig: 256, 256
+  offset: 0, 0
+  index: -1
+leftBorder
+  rotate: false
+  xy: 722, 452
+  size: 73, 203
+  orig: 73, 203
+  offset: 0, 0
+  index: -1
+leftTopCorner
+  rotate: false
+  xy: 722, 355
+  size: 73, 95
+  orig: 73, 95
+  offset: 0, 0
+  index: -1
+topBorder
+  rotate: false
+  xy: 722, 657
+  size: 264, 95
+  orig: 264, 95
   offset: 0, 0
   index: -1

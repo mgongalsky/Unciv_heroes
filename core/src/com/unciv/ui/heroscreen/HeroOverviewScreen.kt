@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 import com.unciv.Constants
 import com.unciv.logic.map.MapUnit
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
+import com.unciv.ui.rendering.TilableFrame
 import com.unciv.ui.rendering.Tiled2DDrawable
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
@@ -51,7 +52,8 @@ class HeroOverviewScreen(
 
         val pageObject = Table(BaseScreen.skin)
         //pageObject.background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
-        pageObject.background = BaseScreen.skin.get("tiled_fantasy_background", Tiled2DDrawable::class.java)
+        //pageObject.background = BaseScreen.skin.get("tiled_fantasy_background", Tiled2DDrawable::class.java)
+        pageObject.background = BaseScreen.skin.get("fantasy_frame", TilableFrame::class.java)
 
 
         val font = BaseScreen.skin.get("smallOldLondon", BitmapFont::class.java)

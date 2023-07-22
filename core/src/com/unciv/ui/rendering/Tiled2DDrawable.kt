@@ -8,12 +8,16 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.utils.TiledDrawable
 import com.badlogic.gdx.utils.JsonValue
+import kotlin.math.sign
 
 enum class Tilability { PLANE, X, Y}
+enum class Anchor {CENTER, LEFT_TOP, TOP, RIGHT_TOP, RIGHT, RIGHT_BOTTOM, BOTTOM, LEFT_BOTTOM, LEFT}
 
 class Tiled2DDrawable : Drawable {
     //private lateinit var texture: Texture
     private lateinit var textureRegion: TextureRegion
+    var anchor = Anchor.LEFT_TOP
+    private var anchorString = ""
     private var tilability = Tilability.PLANE
     private var tilabilityString = ""
 
@@ -26,9 +30,10 @@ class Tiled2DDrawable : Drawable {
 
         //tilability = Tilability.valueOf(jsonData.getString("tilability"))
         tilabilityString = jsonData.getString("tilability")
+        anchorString = jsonData.getString("anchorString")
 
 
-        setTilability()
+        setFromStrings()
 
 
     }
@@ -39,10 +44,10 @@ class Tiled2DDrawable : Drawable {
 
 
     init {
-        setTilability()
+        setFromStrings()
     }
 
-    private fun setTilability() {
+    private fun setFromStrings() {
 
         if (tilabilityString != "")
             tilability = when (tilabilityString) {
@@ -52,48 +57,100 @@ class Tiled2DDrawable : Drawable {
                 else -> throw IllegalArgumentException("Invalid tilability value in Skin.json")
             }
 
+        if (anchorString != "")
+            anchor = when (anchorString) {
+                "CENTER" -> Anchor.CENTER
+                "LeftTop" -> Anchor.LEFT_TOP
+                "RightTop" -> Anchor.RIGHT_TOP
+                "Top" -> Anchor.TOP
+                "LeftBottom" -> Anchor.LEFT_BOTTOM
+                "Bottom" -> Anchor.BOTTOM
+                "RightBottom" -> Anchor.RIGHT_BOTTOM
+                "Left" -> Anchor.LEFT
+                "Right" -> Anchor.RIGHT
+                else -> throw IllegalArgumentException("Invalid anchorString value in Skin.json")
+            }
+
     }
 
     override fun draw(batch: Batch, x: Float, y: Float, width: Float, height: Float) {
+        setFromStrings()
+        var tileWidth = textureRegion.regionWidth.toFloat()
+        var tileHeight = textureRegion.regionHeight.toFloat()
 
-        setTilability()
-        val tileWidth = textureRegion.regionWidth.toFloat()
-        val tileHeight = textureRegion.regionHeight.toFloat()
+        // TODO: we need to make different anchoring here
+        // TODO: add mirrored tiling (ABBAABBA instead of ABABABAB)
+        var startX: Int = 0
+        var startY: Int = 0
+        var finishX: Int = 0
+        var finishY: Int = 0
+        var stepX: Int = 0
+        var stepY: Int = 0
+        var drawX: Int = 0
+        var drawY: Int = 0
+
+        when(anchor){
+            Anchor.LEFT_TOP, Anchor.LEFT_BOTTOM, Anchor.LEFT, Anchor.CENTER, Anchor.TOP, Anchor.BOTTOM -> {
+                stepX = tileWidth.toInt()
+                startX = 0
+                finishX = width.toInt()
+            }
+            Anchor.RIGHT, Anchor.RIGHT_TOP, Anchor.RIGHT_BOTTOM -> {
+                stepX = -tileWidth.toInt()
+                startX = width.toInt()
+                finishX = 0
+                tileWidth *= -1
+            }
+        }
+        drawX = startX
+
+
+        when(anchor){
+            Anchor.LEFT_TOP, Anchor.TOP, Anchor.RIGHT_TOP, Anchor.CENTER, Anchor.LEFT, Anchor.RIGHT -> {
+                stepY = -tileHeight.toInt()
+                startY = height.toInt()
+                finishY = 0
+                tileHeight *= -1
+
+            }
+            Anchor.LEFT_BOTTOM, Anchor.BOTTOM, Anchor.RIGHT_BOTTOM -> {
+                stepY = tileHeight.toInt()
+                startY = 0
+                finishY = height.toInt()
+
+            }
+        }
+        drawY = startY
 
         when (tilability) {
             Tilability.PLANE ->
-                for (drawX in 0 until width.toInt() step tileWidth.toInt())
-                    for (drawY in 0 until height.toInt() step tileHeight.toInt()) {
+                while (drawX * sign(stepX.toFloat()) < finishX * sign(stepX.toFloat())) {
+                    drawY = startY
+                    while (drawY * sign(stepY.toFloat()) < finishY * sign(stepY.toFloat())) {
                         batch.draw(textureRegion, x + drawX, y + drawY, tileWidth, tileHeight)
+                        drawY += stepY
                     }
+                    drawX += stepX
+                }
             Tilability.X ->
-                for (drawX in 0 until width.toInt() step tileWidth.toInt())
-                    batch.draw(textureRegion, x + drawX, y, tileWidth, tileHeight)
+                while (drawX * sign(stepX.toFloat()) < finishX * sign(stepX.toFloat())) {
+                    batch.draw(textureRegion, x + drawX, y + drawY, tileWidth, tileHeight)
+                    drawX += stepX
+                }
             Tilability.Y ->
-                for (drawY in 0 until height.toInt() step tileHeight.toInt()) {
-                    batch.draw(textureRegion, x, y + drawY, tileWidth, tileHeight)
+                while (drawY * sign(stepY.toFloat()) < finishY * sign(stepY.toFloat())) {
+                    batch.draw(textureRegion, x + drawX, y + drawY, tileWidth, tileHeight)
+                    drawY += stepY
                 }
         }
-/*
-
-                } == Tilability.PLANE || tilability == Tilability.X)
-            for (drawX in 0 until width.toInt() step tileWidth.toInt()) {
-                if (tilability == Tilability.PLANE || tilability == Tilability.Y)
-                    for (drawY in 0 until height.toInt() step tileHeight.toInt()) {
-                        batch.draw(textureRegion, x + drawX, y + drawY, tileWidth, tileHeight)
-                    }
-            }
-
-
- */
     }
 
     override fun getLeftWidth() = 0f
     override fun getRightWidth() = 0f
     override fun getTopHeight() = 0f
     override fun getBottomHeight() = 0f
-    override fun getMinWidth() = 0f
-    override fun getMinHeight() = 0f
+    override fun getMinWidth() = textureRegion.regionWidth.toFloat()
+    override fun getMinHeight() = textureRegion.regionHeight.toFloat()
 
     override fun setLeftWidth(leftWidth: Float) {}
     override fun setRightWidth(rightWidth: Float) {}
@@ -101,4 +158,5 @@ class Tiled2DDrawable : Drawable {
     override fun setBottomHeight(bottomHeight: Float) {}
     override fun setMinWidth(minWidth: Float) {}
     override fun setMinHeight(minHeight: Float) {}
+
 }
