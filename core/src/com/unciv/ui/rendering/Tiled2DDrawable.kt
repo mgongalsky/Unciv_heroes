@@ -79,8 +79,6 @@ class Tiled2DDrawable : Drawable {
         var tileWidth = textureRegion.regionWidth.toFloat()
         var tileHeight = textureRegion.regionHeight.toFloat()
 
-        // TODO: we need to make different anchoring here
-        // TODO: add mirrored tiling (ABBAABBA instead of ABABABAB)
         var startX: Int = 0
         var startY: Int = 0
         var finishX: Int = 0

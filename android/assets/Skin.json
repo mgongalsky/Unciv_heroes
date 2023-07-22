@@ -205,6 +205,7 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
             leftTopDrawable: leftTopCorner,
             topDrawable: fantasy_top_border,
             leftDrawable: fantasy_left_border,
+            leftTopHorizontalDrawable: leftTopHorCorner
         }
     },
 
