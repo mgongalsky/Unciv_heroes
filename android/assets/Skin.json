@@ -172,40 +172,16 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
    //         file: UI_tiled_bg }
    // }
 
-    com.unciv.ui.rendering.Tiled2DDrawable: {
-        tiled_fantasy_background: {
-          //  texture: UI_tiled_bg,
-            textureRegion: UI_tiled_bg
-            tilabilityString: PLANE,
-            mirroredTiling: false
-        }
-    }
-
-    com.unciv.ui.rendering.Tiled2DDrawable: {
-        fantasy_top_border: {
-            //  texture: UI_tiled_bg,
-            textureRegion: topBorder,
-            tilabilityString: X,
-            anchorString: Bottom
-        }
-    }
-
-    com.unciv.ui.rendering.Tiled2DDrawable: {
-        fantasy_left_border: {
-            //  texture: UI_tiled_bg,
-            textureRegion: leftBorder,
-            tilabilityString: Y
-        }
-    }
 
 
     com.unciv.ui.rendering.TilableFrame: {
         fantasy_frame: {
-            background: tiled_fantasy_background,
+            tiledBackground: {region: UI_tiled_bg},
             leftTopDrawable: leftTopCorner,
-            topDrawable: fantasy_top_border,
-            leftDrawable: fantasy_left_border,
-            leftTopHorizontalDrawable: leftTopHorCorner
+            tiledTopDrawable: {region: topBorder},
+            leftTiledDrawable: {region: leftBorder},
+            leftTopHorizontalDrawable: leftTopHorCorner,
+            leftTopVerticalDrawable: leftTopVertBorder
         }
     },
 
