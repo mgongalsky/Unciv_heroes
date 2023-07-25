@@ -26,6 +26,8 @@ class TilableSprite : Sprite {
         val brush: Sprite = Sprite(this)
 
         if(!isTiledX && !isTiledY) {
+            // Those values have not been tested, but should work
+/*
             brush.setRegion(
                 this.u,
                 (1 - min(
@@ -39,12 +41,26 @@ class TilableSprite : Sprite {
                 this.v2
             )
 
+
+ */
+            /*
             brush.setBounds(
                 x,
                 y,
                 min(abs(this.width * scaleX) * scaleX, width),
                 min(abs(this.height * scaleY) * scaleY, height)
             )
+
+             */
+            brush.setBounds(
+                x,
+                y,
+                min(abs(this.width) * scaleX, width),
+                min(abs(this.height) * scaleY, height)
+            )
+
+
+            //brush.setBounds(x,y,width,height)
             brush.draw(batch)
         }
         else

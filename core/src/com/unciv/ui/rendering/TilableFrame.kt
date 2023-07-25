@@ -104,7 +104,7 @@ class TilableFrame : Drawable{
 
      //   topTextureRegion = skin.get(jsonData.getString("topHorizontalTextureRegion"), TextureRegion::class.java)
         topTextureRegion = skin.get(jsonData.getString("topTextureRegion"), TextureRegion::class.java)
-
+        //leftTopTilableSprite = TilableSprite(skin.get(jsonData.getString("topTextureRegion"), TextureRegion::class.java))
 
 
         scaleBackground = skin.get(jsonData.getString("scaleBackground"), Float::class.java)
@@ -156,19 +156,16 @@ class TilableFrame : Drawable{
     fun setSprites() {
 
         // Left corner
-        if(leftTopSprite == null && leftTopTextureRegion != null) {
-            leftTopSprite = Sprite(leftTopTextureRegion)
+        if(leftTopTilableSprite == null && leftTopTextureRegion != null) {
             leftTopTilableSprite = TilableSprite(leftTopTextureRegion!!)
-            leftTopSprite?.apply {
-                setOrigin(0f, height)
-                setScale(scaleFrame)
-            }
             leftTopTilableSprite?.apply {
                 setOrigin(0f, height)
                 setScale(scaleFrame)
             }
 
         }
+
+
 
         // Left horizontal border
         if(leftTopHorizontalSprite == null && leftTopHorizontalTextureRegion != null) {
@@ -340,7 +337,7 @@ class TilableFrame : Drawable{
         }
 
         leftTopHorizontalSprite?.apply {
-            val spaceX = leftTopSprite?.width!! * scaleFrame
+            val spaceX = leftTopTilableSprite?.width!! * scaleFrame
             setBounds(
                 x + spaceX,
                 y + height - this.height,
@@ -366,7 +363,7 @@ class TilableFrame : Drawable{
         }
 
         rightTopHorizontalSprite?.apply {
-            val spaceX = leftTopSprite?.width!! * scaleFrame
+            val spaceX = leftTopTilableSprite?.width!! * scaleFrame
             val dbMin = min(width/2 - spaceX, this.width)
             val oldWidth = this.width
             // Here we use abs of this.width, because it changes each time to opposite value. Abs fixes the problem, though it is indirected way (
@@ -392,12 +389,12 @@ class TilableFrame : Drawable{
         if (leftTopTilableSprite != null) {
             // leftTopDrawable.leftWidth
             leftTopTilableSprite?.apply {
-                setOrigin(0f,0f)
+                setOrigin(0f,0f)//this.height)
                 draw(batch,
-                    x+width/4,
-                    y + height/2, // - this.height,
+                    x,
+                    y + height - this.height * scaleFrame * scaleFrame,
                     width/2, //min(this.width, width / 2) + width/2,
-                    height*3/4 //- this.height
+                     this.height
                 )
                 //draw(batch)
                 //dra
