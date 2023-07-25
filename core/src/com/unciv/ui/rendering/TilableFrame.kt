@@ -395,9 +395,9 @@ class TilableFrame : Drawable{
                 setOrigin(0f,0f)
                 draw(batch,
                     x+width/4,
-                    y + height/2 - this.height,
+                    y + height/2, // - this.height,
                     width/2, //min(this.width, width / 2) + width/2,
-                    this.height
+                    height*3/4 //- this.height
                 )
                 //draw(batch)
                 //dra
