@@ -181,7 +181,13 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
             tiledTopDrawable: {region: topBorder},
             leftTiledDrawable: {region: leftBorder},
             leftTopHorizontalDrawable: leftTopHorCorner,
-            leftTopVerticalDrawable: leftTopVertBorder
+            leftTopVerticalDrawable: leftTopVertBorder,
+            scaleBackground: 0.5,
+            scaleFrame: 0.7,
+            testTexture: leftTopHorCorner,
+            leftTopHorizontalTextureRegion: leftTopHorCorner,
+            leftTopTextureRegion: leftTopCorner,
+            topTextureRegion: topBorder
         }
     },
 
