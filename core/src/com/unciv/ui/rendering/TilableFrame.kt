@@ -394,7 +394,7 @@ class TilableFrame : Drawable{
             leftTopTilableSprite?.apply {
                 setOrigin(0f,0f)
                 draw(batch,
-                    x,
+                    x+width/4,
                     y + height/2 - this.height,
                     width/2, //min(this.width, width / 2) + width/2,
                     this.height

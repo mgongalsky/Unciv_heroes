@@ -7,11 +7,15 @@ import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.scenes.scene2d.utils.TiledDrawable
 import kotlin.math.abs
 import kotlin.math.min
+import kotlin.math.sign
 
 class TilableSprite : Sprite {
 
     constructor(): super()
     constructor(textureRegion: TextureRegion) : super(textureRegion)
+
+    var isAnchoredLeft: Boolean = false
+    var isAnchoredBottom: Boolean = true
 
     // TODO: write function setBoundaries, which will make boundaries for automatic cropping
     var isTiled: Boolean = true
@@ -23,28 +27,47 @@ class TilableSprite : Sprite {
         }
         else
         {
-            val startX = x
-            val finishX = width
-            val realWidth = abs(this.width*scaleX)
-            val realHeight = abs(this.height*scaleY)
-            val stepX = abs(realWidth)
-            var currX = startX
-            //var brush: Sprite = this
+            val startX: Float
+            val finishX: Float
+            val realWidth: Float
+            val realHealth: Float
+            val stepX: Float
+            var currX: Float
+            val realHeight = abs(this.height * scaleY)
+
+            if(isAnchoredLeft) {
+                startX = x
+                finishX = width
+                realWidth = abs(this.width * scaleX)
+                stepX = abs(realWidth)
+                currX = startX
+            }
+            else{
+                startX = width
+                finishX = x
+                realWidth = abs(this.width * scaleX)
+                stepX = -abs(realWidth)
+                currX = startX
+            }
+
             val brush: Sprite = Sprite(this)
 
-            while(currX < finishX){
-                //this.boundingRectangle = Rectangle()
-               // brush.
-                brush.setRegion(this.u,
-                this.v,
-                    (min(stepX * scaleX, finishX - currX) / (stepX * scaleX) * (this.u2 - this.u) + this.u),
-                    (this.v2))
-
-
-                brush.setBounds(currX,
-                y,
-                min(stepX, (finishX - currX) / scaleX),
-                realHeight)
+            while(currX * sign(stepX.toFloat()) < finishX * sign(stepX.toFloat())){
+                brush.setRegion(
+                    this.u,
+                    this.v,
+                    min(
+                        abs(stepX * scaleX),
+                        abs(finishX - currX)
+                    ) / (abs(stepX) * scaleX) * (this.u2 - this.u) + this.u,
+                    this.v2
+                )
+                brush.setBounds(
+                    currX,
+                    y,
+                    min(abs(stepX), abs(finishX - currX) / scaleX) * sign(stepX),
+                    realHeight
+                )
                 brush.draw(batch)
 
                 //batch.
