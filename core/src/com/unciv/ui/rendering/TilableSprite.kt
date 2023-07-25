@@ -18,12 +18,34 @@ class TilableSprite : Sprite {
     var isAnchoredBottom: Boolean = false
 
     // TODO: write function setBoundaries, which will make boundaries for automatic cropping
-    var isTiled: Boolean = true
+    var isTiledX: Boolean = false
+    var isTiledY: Boolean = false
+
     fun draw(batch: Batch, x: Float, y: Float, width: Float, height: Float) {
 
-        if(!isTiled) {
-            setBounds(x, y, width, height)
-            super.draw(batch)
+        val brush: Sprite = Sprite(this)
+
+        if(!isTiledX && !isTiledY) {
+            brush.setRegion(
+                this.u,
+                (1 - min(
+                    abs(this.height * scaleY * scaleY),
+                    height - y)
+                 / (this.height * scaleY * scaleY)) * (this.v2 - this.v) + this.v,
+                min(
+                    abs(this.width * scaleX * scaleX),
+                    width - x)
+                 / (this.width * scaleX * scaleX) * (this.u2 - this.u) + this.u,
+                this.v2
+            )
+
+            brush.setBounds(
+                x,
+                y,
+                min(abs(this.width * scaleX) * scaleX, width),
+                min(abs(this.height * scaleY) * scaleY, height)
+            )
+            brush.draw(batch)
         }
         else
         {
@@ -60,35 +82,17 @@ class TilableSprite : Sprite {
             else{
                 startY = height
                 finishY = y
-                realHeight = abs(this.height * scaleX)
+                realHeight = abs(this.height * scaleY)
                 stepY = -abs(realHeight)
             }
 
 
-            val brush: Sprite = Sprite(this)
 
             currX = startX
 
             while (currX * sign(stepX.toFloat()) < finishX * sign(stepX.toFloat())) {
                 currY = startY
                 while (currY * sign(stepY.toFloat()) < finishY * sign(stepY.toFloat())) {
-
-                    /*
-                    brush.setRegion(
-                        this.u,
-                        this.v,
-                        min(
-                            abs(stepX * scaleX),
-                            abs(finishX - currX)
-                        ) / (abs(stepX) * scaleX) * (this.u2 - this.u) + this.u,
-                        min(
-                            abs(stepY * scaleY),
-                            abs(finishY - currY)
-                        ) / (abs(stepY) * scaleY) * (this.v2 - this.v) + this.v
-                    )
-
-
-                     */
 
                     brush.setRegion(
                         this.u,
@@ -111,11 +115,14 @@ class TilableSprite : Sprite {
                         //realHeight
                     )
                     brush.draw(batch)
-
+                    if(!isTiledY)
+                        break
                     //batch.
 
                     currY += stepY * scaleX
                 }
+                if(!isTiledX)
+                    break
                 currX += stepX * scaleX
 
             }
