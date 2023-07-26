@@ -40,16 +40,20 @@ class TilableFrame : Drawable{
     var leftTopTilableSprite: TilableSprite? = null
 
     var rightTopTextureRegion: TextureRegion? = null
-    var rightTopSprite: Sprite? = null
+    var rightTopTilableSprite: TilableSprite? = null
 
     var leftTopHorizontalTextureRegion: TextureRegion? = null
     var leftTopHorizontalSprite: Sprite? = null
+    var leftTopHorizontalTilableSprite: TilableSprite? = null
+
 
     var rightTopHorizontalTextureRegion: TextureRegion? = null
-    var rightTopHorizontalSprite: Sprite? = null
+    var rightTopHorizontalTilableSprite: TilableSprite? = null
+
 
     var topTextureRegion: TextureRegion? = null
     var topTiledDrawable: TiledDrawable? = null
+    var topTilableSprite: TilableSprite? = null
 
 
 
@@ -159,46 +163,72 @@ class TilableFrame : Drawable{
         if(leftTopTilableSprite == null && leftTopTextureRegion != null) {
             leftTopTilableSprite = TilableSprite(leftTopTextureRegion!!)
             leftTopTilableSprite?.apply {
-                setOrigin(0f, height)
+                setOrigin(0f, 0f)
                 setScale(scaleFrame)
             }
 
         }
 
-
-
         // Left horizontal border
-        if(leftTopHorizontalSprite == null && leftTopHorizontalTextureRegion != null) {
-            leftTopHorizontalSprite = Sprite(leftTopHorizontalTextureRegion)
-            leftTopHorizontalSprite?.apply{
-                setOrigin(0f, height)
+        if(leftTopHorizontalTilableSprite == null && leftTopHorizontalTextureRegion != null) {
+            leftTopHorizontalTilableSprite = TilableSprite(leftTopHorizontalTextureRegion!!)
+            leftTopHorizontalTilableSprite?.apply{
+                setOrigin(0f, 0f)
                 setScale(scaleFrame)
 
             }
         }
 
         // Right corner
-        if(rightTopSprite == null && (rightTopTextureRegion != null || leftTopTextureRegion != null)) {
-            rightTopSprite = Sprite(rightTopTextureRegion ?: leftTopTextureRegion)
-            rightTopSprite?.apply {
+        if(rightTopTilableSprite == null && (rightTopTextureRegion != null || leftTopTextureRegion != null)) {
+            rightTopTilableSprite = TilableSprite(rightTopTextureRegion ?: leftTopTextureRegion!!)
+            rightTopTilableSprite?.apply {
+                // TODO: flip only if rightTexture is absent
+                flip(true, false)
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+            }
+
+        }
+
+        // Right horizontal border
+        if(rightTopHorizontalTilableSprite == null && (rightTopHorizontalTextureRegion != null || leftTopHorizontalTextureRegion != null)) {
+            rightTopHorizontalTilableSprite = TilableSprite(rightTopHorizontalTextureRegion ?: leftTopHorizontalTextureRegion!!)
+            rightTopHorizontalTilableSprite?.apply{
+                // TODO: flip only if rightTexture is absent
+
+                flip(true, false)
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+
+            }
+        }
+
+
+/*
+        if(rightTopTilableSprite == null && (rightTopTextureRegion != null || leftTopTextureRegion != null)) {
+            rightTopTilableSprite = Sprite(rightTopTextureRegion ?: leftTopTextureRegion!!)
+            rightTopTilableSprite?.apply {
                 setOrigin(width, height)
                 flip(true, false)
                 setScale(scaleFrame)
             }
         }
 
-        // Right horizontal border
-        if(rightTopHorizontalSprite == null && (rightTopHorizontalTextureRegion != null || leftTopHorizontalTextureRegion != null)) {
-            rightTopHorizontalSprite = Sprite(rightTopHorizontalTextureRegion ?: leftTopHorizontalTextureRegion)
-            rightTopHorizontalSprite?.apply{
-                //if(rightTopHorizontalTextureRegion == null)
-               //     flip(true, false)
-                // setOrigin(width, height)
-                setOrigin(0f, height)
+ */
+
+
+        // Top border
+        if(topTilableSprite == null && topTextureRegion != null) {
+            topTilableSprite = TilableSprite(topTextureRegion!!)
+            topTilableSprite?.apply{
+                setOrigin(0f, 0f)
                 setScale(scaleFrame)
+                isTiledX = true
 
             }
         }
+
 
         // Top border
         /*
@@ -283,301 +313,99 @@ class TilableFrame : Drawable{
 // Assume batch is your SpriteBatch, and you want to fill an area at (50,50) with size (200,200)
         ////batch.begin()
         //tiledBackground?.draw(batch, x,y,width,height)
+        // TODO: here we need instead of dividing
         tiledBackground?.draw(
             batch,
-            x + leftTopDrawable?.minWidth!! / 2,
-            y + x + leftTopDrawable?.minHeight!! / 2,
-            width - leftTopDrawable?.minWidth!!,
-            height - leftTopDrawable?.minHeight!!
+            x + leftTopDrawable?.minWidth!! * scaleFrame * scaleFrame / 2,
+            y + x + leftTopDrawable?.minHeight!! * scaleFrame * scaleFrame  / 2,
+            width - leftTopDrawable?.minWidth!! * scaleFrame * scaleFrame ,
+            height - leftTopDrawable?.minHeight!! * scaleFrame * scaleFrame
         )
         //batch.end()
 
        // background?.draw(batch,x,y,width,height)
 
-        if(leftTiledDrawable != null) {
-            var spacerUp = 0f
-            if(leftTopDrawable != null)
-                spacerUp += leftTopDrawable?.minHeight!!
-            if(leftTopVerticalDrawable != null)
-                spacerUp += leftTopVerticalDrawable?.minHeight!!
-
-            var spacerDown = spacerUp
-
-            /*
-            tiledTopDrawable?.draw(
-                batch,
-                x + spacerLeft,
-                y + height - tiledTopDrawable?.region?.regionHeight!!.toFloat(),
-                (width - spacerLeft - spacerRight),
-                tiledTopDrawable?.region?.regionHeight!!.toFloat()
-            )
-
-
-             */
-
-            leftTiledDrawable?.draw(
-                batch,
-                x,
-                y + spacerDown,
-                leftTiledDrawable?.region?.regionWidth?.toFloat()!!,
-                height - spacerDown - spacerUp
-            )
-            if (rightTiledDrawable == null){
-                //leftTiledDrawable?.scale = -1f
-                //leftTiledDrawable.draw()
-                //TransformDrawable
-                leftTiledDrawable?.draw(
-                    batch,
-                    x + width - leftTiledDrawable?.region?.regionWidth?.toFloat()!!,
-                    y + spacerDown,
-                    leftTiledDrawable?.region?.regionWidth?.toFloat()!!,
-                    height - spacerDown - spacerUp,
-                )
-            }
-        }
-
-        leftTopHorizontalSprite?.apply {
-            val spaceX = leftTopTilableSprite?.width!! * scaleFrame
-            setBounds(
-                x + spaceX,
-                y + height - this.height,
-                min(this.width, width / 2 - spaceX),
-                this.height
-            )
-            draw(batch)
-
-        }
-
-
-
-        rightTopSprite?.apply {
-            //val spaceX = rig
-            setBounds(
-                x + width - this.width ,
-                y + height - this.height,
-                this.width,
-                this.height
-            )
-            draw(batch)
-            //dra
-        }
-
-        rightTopHorizontalSprite?.apply {
-            val spaceX = leftTopTilableSprite?.width!! * scaleFrame
-            val dbMin = min(width/2 - spaceX, this.width)
-            val oldWidth = this.width
-            // Here we use abs of this.width, because it changes each time to opposite value. Abs fixes the problem, though it is indirected way (
-            setBounds(
-                x + width - spaceX ,
-                y + height - this.height,
-                -min(width/2 - spaceX, abs(this.width)),
-                this.height
-            )
-            //flip(true, false)
-           // setOriginBasedPosition(x + width - spaceX,
-            //    y + height)
-            draw(batch)
-            //this.width = oldWidth
-
-        }
-
-       // x + spaceX,
-      //  y + height - this.height,
-      //  min(this.width, width / 2 - x - spaceX),
-      //  this.height
-
+        // Left Top Corner
         if (leftTopTilableSprite != null) {
-            // leftTopDrawable.leftWidth
             leftTopTilableSprite?.apply {
-                setOrigin(0f,0f)//this.height)
-                draw(batch,
+                draw(
+                    batch,
                     x,
                     y + height - this.height * scaleFrame * scaleFrame,
-                    width/2, //min(this.width, width / 2) + width/2,
-                     this.height
-                )
-                //draw(batch)
-                //dra
-            }
-        }
-
-            if (leftTopSprite != null) {
-            // leftTopDrawable.leftWidth
-            /*
-                leftTopSprite?.apply {
-                setBounds(
-                    x,
-                    y + height - this.height,
-                    min(this.width, width / 2),
+                    width / 2, //min(this.width, width / 2) + width/2,
                     this.height
                 )
-                draw(batch)
-                //dra
             }
-
-             */
-/*
-            if (rightTopDrawable != null) {
-                rightTopDrawable?.draw(
-                    batch,
-                    x + width - rightTopDrawable?.minWidth!!,
-                    y + height - rightTopDrawable?.minHeight!!,
-                    min(rightTopDrawable?.minWidth!!, width / 2),
-                    rightTopDrawable?.minHeight!!
-                )
-
-            } else {
-                leftTopDrawable?.draw(
-                    batch,
-                    x + width,
-                    y + height - leftTopDrawable?.minHeight!!,
-                    -min(leftTopDrawable?.minWidth!!, width / 2),
-                    leftTopDrawable?.minHeight!!
-                )
-            }
-
-
- */
-            /*
-            if(leftTopHorizontalSprite != null)
-            {
-                leftTopHorizontalSprite?.setOrigin(0f,leftTopHorizontalSprite?.height!!)
-                leftTopHorizontalSprite?.setScale(0.5f)
-                leftTopHorizontalSprite?.setPosition(x + leftTopDrawable?.minWidth!!,
-                    y + height - leftTopHorizontalSprite?.height!!)
-                leftTopHorizontalSprite?.draw(batch)
-
-
-             */
-                /*
-                leftTopHorizontalDrawableNew?.draw(
-                    batch,
-                    x + leftTopDrawable?.minWidth!!,
-                    y + height - leftTopHorizontalTextureRegion?.regionHeight!!,
-                    min(leftTopHorizontalTextureRegion?.regionWidth!!.toFloat(), width/2 - leftTopDrawable?.minWidth!!),
-                    leftTopHorizontalTextureRegion?.regionHeight!!.toFloat()
-                )
-
-                 */
-
-                // }
-
-/*
-            if(leftTopHorizontalDrawableNew != null)
-            {
-                leftTopHorizontalDrawableNew?.draw(
-                    batch,
-                    x + leftTopDrawable?.minWidth!!,
-                    y + height - leftTopHorizontalTextureRegion?.regionHeight!!,
-                    min(leftTopHorizontalTextureRegion?.regionWidth!!.toFloat(), width/2 - leftTopDrawable?.minWidth!!),
-                    leftTopHorizontalTextureRegion?.regionHeight!!.toFloat()
-                )
-
-            }
-
-
- */
-                /*
-                if(leftTopHorizontalDrawable != null){
-                    leftTopHorizontalDrawable?.draw(
-                        batch,
-                        x + leftTopDrawable?.minWidth!!,
-                        y + height - leftTopHorizontalDrawable?.minHeight!!,
-                        min(leftTopHorizontalDrawable?.minWidth!!, width/2 - leftTopDrawable?.minWidth!!),
-                        leftTopHorizontalDrawable?.minHeight!!
-                    )
-                    //leftTopHorizontalDrawable?.anchor = Anchor.RIGHT
-
-
-                 */
-                /*
-                if(rightTopHorizontalDrawable == null){
-
-
-                    // !! Note: negative width or height values works for mirroring only for DRAWABLE.
-                    //      For Tiled2DDrawables use positive values, but opposite anchoring!!
-                    leftTopHorizontalDrawable?.draw(
-                        batch,
-                        x + width - leftTopDrawable?.minWidth!!,
-                        y + height - leftTopHorizontalDrawable?.minHeight!!,
-                        -min(leftTopHorizontalDrawable?.minWidth!!, width/2 - leftTopDrawable?.minWidth!!),
-                        leftTopHorizontalDrawable?.minHeight!!
-                    )
-
-                }
-                 */
-
-
-                //}
-
-                if(leftTopVerticalDrawable != null){
-                    /*
-                    leftTopVerticalDrawable?.draw(
-                        batch,
-                        x + leftTopDrawable?.minWidth!!,
-                        y + height - leftTopVerticalDrawable?.minHeight!!,
-                        min(leftTopVerticalDrawable?.minWidth!!, width/2 - leftTopDrawable?.minWidth!!),
-                        leftTopVerticalDrawable?.minHeight!!
-                    )
-
-                     */
-                    leftTopVerticalDrawable?.draw(
-                        batch,
-                        x,
-                        y + height - leftTopDrawable?.minHeight!! -min(leftTopVerticalDrawable?.minHeight!!, height/2 - leftTopDrawable?.minHeight!!),
-                        leftTopVerticalDrawable?.minWidth!!,
-                        min(leftTopVerticalDrawable?.minHeight!!, height/2 - leftTopDrawable?.minHeight!!)
-                    )
-                    //leftTopHorizontalDrawable?.anchor = Anchor.RIGHT
-
-                    if(rightTopVerticalDrawable == null){
-
-
-                        // !! Note: negative width or height values works for mirroring only for DRAWABLE.
-                        //      For Tiled2DDrawables use positive values, but opposite anchoring!!
-                        /*
-                        leftTopVerticalDrawable?.draw(
-                            batch,
-                            x + width - leftTopDrawable?.minWidth!!,
-                            y + height - leftTopVerticalDrawable?.minHeight!!,
-                            -min(leftTopVerticalDrawable?.minWidth!!, width/2 - leftTopDrawable?.minWidth!!),
-                            leftTopVerticalDrawable?.minHeight!!
-                        )
-
-                         */
-                        leftTopVerticalDrawable?.draw(
-                            batch,
-                            x + width,// - leftTopVerticalDrawable?.minWidth!!,
-                            y + height - leftTopDrawable?.minHeight!! - min(leftTopVerticalDrawable?.minHeight!!, height/2 - leftTopDrawable?.minHeight!!),
-                            -leftTopVerticalDrawable?.minWidth!!,
-                            min(leftTopVerticalDrawable?.minHeight!!, height/2 - leftTopDrawable?.minHeight!!)
-                        )
-
-
-                    }
-                }
-            }
-
-
-     //   }
-
-        if(tiledTopDrawable != null) {
-            var spacerLeft = 0f
-            if(leftTopDrawable != null)
-                spacerLeft += leftTopDrawable?.minWidth!!
-            if(leftTopHorizontalDrawable != null)
-                spacerLeft += leftTopHorizontalDrawable?.minWidth!!
-
-            var spacerRight = spacerLeft
-
-            tiledTopDrawable?.draw(
-                batch,
-                x + spacerLeft,
-                y + height - tiledTopDrawable?.region?.regionHeight!!.toFloat(),
-                (width - spacerLeft - spacerRight),
-                tiledTopDrawable?.region?.regionHeight!!.toFloat()
-            )
         }
+
+        // Right Top Corner
+        if (rightTopTilableSprite != null) {
+            rightTopTilableSprite?.apply {
+                isAnchoredLeft = false
+                draw(
+                    batch,
+                    x + width - this.width * scaleFrame * scaleFrame,
+                    y + height - this.height * scaleFrame * scaleFrame,
+                    width, //min(this.width, width / 2) + width/2,
+                    this.height
+                )
+            }
+        }
+
+        // TODO: correct
+        // Left Top Horizontal
+        if (leftTopHorizontalTilableSprite != null) {
+            leftTopHorizontalTilableSprite?.apply {
+                // TODO: Boundaries is right, but the sprite is stretched if it is limited.
+                val spaceX = leftTopTilableSprite?.width!! * scaleFrame * scaleFrame
+                draw(
+                    batch,
+                    x + spaceX,
+                    y + height - this.height * scaleFrame * scaleFrame,
+                    min(this.width, width / 2 - spaceX) ,
+                    this.height
+                )
+            }
+        }
+
+        // Top Border
+        if (topTilableSprite != null) {
+            topTilableSprite?.apply {
+                val spaceX = (leftTopTilableSprite?.width!! + leftTopHorizontalTilableSprite?.width!!) * scaleFrame * scaleFrame
+                isTiledX = true
+                isAnchoredBottom = true
+                isAnchoredLeft = true
+                draw(
+                    batch,
+                    x + spaceX,
+                    y + height - this.height * scaleFrame * scaleFrame,
+                    width - spaceX * 2, //min(this.width, width / 2) + width/2,
+                    this.height
+                )
+            }
+        }
+
+        // Right
+
+        if (rightTopHorizontalTilableSprite != null) {
+            rightTopHorizontalTilableSprite?.apply {
+                // TODO: Here we need to crop the sprite if it goes out of right half of the screen
+                val spaceX = abs(rightTopTilableSprite?.width!! * scaleFrame * scaleFrame)
+                draw(
+                    batch,
+                    x + width - spaceX - this.width * scaleFrame * scaleFrame,
+                    y + height - this.height * scaleFrame * scaleFrame,
+                    this.width, //min(this.width, width / 2) + width/2,
+                    this.height
+                )
+            }
+        }
+
+
+
+
+
+
 
 
     }

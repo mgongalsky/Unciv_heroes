@@ -14,10 +14,10 @@ class TilableSprite : Sprite {
     constructor(): super()
     constructor(textureRegion: TextureRegion) : super(textureRegion)
 
-    var isAnchoredLeft: Boolean = false
-    var isAnchoredBottom: Boolean = false
+    var isAnchoredLeft: Boolean = true
+    var isAnchoredBottom: Boolean = true
 
-    // TODO: write function setBoundaries, which will make boundaries for automatic cropping
+    // TODO: write function setBoundaries, which will make boundaries for automatic cropping.
     var isTiledX: Boolean = false
     var isTiledY: Boolean = false
 
@@ -27,6 +27,7 @@ class TilableSprite : Sprite {
 
         if(!isTiledX && !isTiledY) {
             // Those values have not been tested, but should work
+            // TODO: this should be restored. But here we must chech the anchoring and set proper uv-tiling
 /*
             brush.setRegion(
                 this.u,
@@ -65,6 +66,20 @@ class TilableSprite : Sprite {
         }
         else
         {
+            /*brush.setBounds(
+                x,
+                y,
+                min(abs(this.width) * scaleX, width),
+                min(abs(this.height) * scaleY, height)
+            )
+
+
+            //brush.setBounds(x,y,width,height)
+            brush.draw(batch)
+
+
+             */
+
             val startX: Float
             val finishX: Float
             val startY: Float
@@ -78,12 +93,12 @@ class TilableSprite : Sprite {
 
             if(isAnchoredLeft) {
                 startX = x
-                finishX = width
+                finishX = width + x
                 realWidth = abs(this.width * scaleX)
                 stepX = abs(realWidth)
             }
             else{
-                startX = width
+                startX = width + x
                 finishX = x
                 realWidth = abs(this.width * scaleX)
                 stepX = -abs(realWidth)
@@ -91,12 +106,12 @@ class TilableSprite : Sprite {
 
             if(isAnchoredBottom) {
                 startY = y
-                finishY = height
+                finishY = height + y
                 realHeight = abs(this.height * scaleY)
                 stepY = abs(realHeight)
             }
             else{
-                startY = height
+                startY = height + y
                 finishY = y
                 realHeight = abs(this.height * scaleY)
                 stepY = -abs(realHeight)
