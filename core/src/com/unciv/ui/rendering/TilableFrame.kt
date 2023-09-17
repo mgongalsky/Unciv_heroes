@@ -317,8 +317,10 @@ class TilableFrame : Drawable{
 
         // Here we introduce Pixel ratios. Real size in physical pixels and virtual pixels
         // We have our sprites in physical pixels, but all logic of the screen in virtual pixels
-        val xPixelRatio = Gdx.graphics.width / width
-        val yPixelRatio = Gdx.graphics.height / height
+        //val xPixelRatio = Gdx.graphics.width.toFloat() / width
+       // val yPixelRatio = Gdx.graphics.height.toFloat() / height
+       // val realWidth = Gdx.graphics.width.toFloat()
+       // val realHeight = Gdx.graphics.height.toFloat()
 
         // TODO: here we need instead of dividing
         tiledBackground?.draw(
@@ -339,7 +341,7 @@ class TilableFrame : Drawable{
                     batch,
                     x,
                     y + height - this.height * scaleFrame * scaleFrame,
-                    width / 2, //min(this.width, width / 2) + width/2,
+                    width / 2f, //min(this.width, width / 2) + width/2,
                     this.height
                 )
             }
@@ -371,13 +373,13 @@ class TilableFrame : Drawable{
                 val dby1 = y + height - this.height * scaleFrame * scaleFrame
                 val dby2 = this.height
                 val dbright1 = width / 2f
-                val dbright2 = dbx1 + min(this.width, width / 2 - spaceX)
+               // val dbright2 = dbx1 + min(this.width, (width / 2 - spaceX) * xPixelRatio)
 
                 draw(
                     batch,
                     x + spaceX,
                     y + height - this.height * scaleFrame * scaleFrame,
-                    min(this.width, (width / 2 - spaceX) * xPixelRatio) ,
+                    this.width,//min(this.width, (width / 2 - spaceX )) ,
                     this.height
                 )
             }
@@ -390,6 +392,11 @@ class TilableFrame : Drawable{
                 isTiledX = true
                 isAnchoredBottom = true
                 isAnchoredLeft = true
+                val dbx1 = x + spaceX
+                val dbx2 = width - spaceX * 2
+                val dxy1 = y + height - this.height * scaleFrame * scaleFrame
+                val dby2 = this.height
+
                 draw(
                     batch,
                     x + spaceX,
