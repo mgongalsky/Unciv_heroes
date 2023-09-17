@@ -1,5 +1,6 @@
 package com.unciv.ui.rendering
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.Sprite
@@ -15,6 +16,7 @@ import com.badlogic.gdx.utils.JsonValue
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
 @Suppress("LiftReturnOrAssignment")
 class TilableFrame : Drawable{
@@ -112,8 +114,7 @@ class TilableFrame : Drawable{
 
 
         scaleBackground = skin.get(jsonData.getString("scaleBackground"), Float::class.java)
-        scaleFrame = skin.get(jsonData.getString("scaleFrame"), Float::class.java)
-
+        scaleFrame = sqrt( skin.get(jsonData.getString("scaleFrame"), Float::class.java))
         //initTiledDrawables()
 
     }
@@ -313,6 +314,12 @@ class TilableFrame : Drawable{
 // Assume batch is your SpriteBatch, and you want to fill an area at (50,50) with size (200,200)
         ////batch.begin()
         //tiledBackground?.draw(batch, x,y,width,height)
+
+        // Here we introduce Pixel ratios. Real size in physical pixels and virtual pixels
+        // We have our sprites in physical pixels, but all logic of the screen in virtual pixels
+        val xPixelRatio = Gdx.graphics.width / width
+        val yPixelRatio = Gdx.graphics.height / height
+
         // TODO: here we need instead of dividing
         tiledBackground?.draw(
             batch,
@@ -358,11 +365,19 @@ class TilableFrame : Drawable{
             leftTopHorizontalTilableSprite?.apply {
                 // TODO: Boundaries is right, but the sprite is stretched if it is limited.
                 val spaceX = leftTopTilableSprite?.width!! * scaleFrame * scaleFrame
+                val dbx1 = x + spaceX
+                val dbx2 = this.width
+                val dbx3 = this.width * width / Gdx.graphics.width
+                val dby1 = y + height - this.height * scaleFrame * scaleFrame
+                val dby2 = this.height
+                val dbright1 = width / 2f
+                val dbright2 = dbx1 + min(this.width, width / 2 - spaceX)
+
                 draw(
                     batch,
                     x + spaceX,
                     y + height - this.height * scaleFrame * scaleFrame,
-                    min(this.width, width / 2 - spaceX) ,
+                    min(this.width, (width / 2 - spaceX) * xPixelRatio) ,
                     this.height
                 )
             }
