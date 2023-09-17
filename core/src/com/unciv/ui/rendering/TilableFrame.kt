@@ -396,7 +396,7 @@ class TilableFrame : Drawable{
                 val dbx2 = width - spaceX * 2
                 val dxy1 = y + height - this.height * scaleFrame * scaleFrame
                 val dby2 = this.height
-
+/*
                 draw(
                     batch,
                     x + spaceX,
@@ -404,6 +404,27 @@ class TilableFrame : Drawable{
                     width - spaceX * 2, //min(this.width, width / 2) + width/2,
                     this.height
                 )
+
+
+ */
+                draw(
+                    batch,
+                    x + spaceX,
+                    y + height - this.height * scaleFrame * scaleFrame,
+                    width / 2f - spaceX, //min(this.width, width / 2) + width/2,
+                    this.height
+                )
+
+                isAnchoredLeft = false
+
+                draw(
+                    batch,
+                    x + width / 2f,
+                    y + height - this.height * scaleFrame * scaleFrame,
+                    width / 2f - spaceX, //min(this.width, width / 2) + width/2,
+                    this.height
+                )
+
             }
         }
 
