@@ -44,24 +44,59 @@ class TilableFrame : Drawable{
     var rightTopTextureRegion: TextureRegion? = null
     var rightTopTilableSprite: TilableSprite? = null
 
+    var leftBottomTextureRegion: TextureRegion? = null
+    var leftBottomTilableSprite: TilableSprite? = null
+
+    var rightBottomTextureRegion: TextureRegion? = null
+    var rightBottomTilableSprite: TilableSprite? = null
+
+
     var leftTopHorizontalTextureRegion: TextureRegion? = null
     var leftTopHorizontalSprite: Sprite? = null
     var leftTopHorizontalTilableSprite: TilableSprite? = null
+
+    var leftTopVerticalTextureRegion: TextureRegion? = null
+    var leftTopVerticalSprite: Sprite? = null
+    var leftTopVerticalTilableSprite: TilableSprite? = null
+
 
 
     var rightTopHorizontalTextureRegion: TextureRegion? = null
     var rightTopHorizontalTilableSprite: TilableSprite? = null
 
+    var rightTopVerticalTextureRegion: TextureRegion? = null
+    var rightTopVerticalTilableSprite: TilableSprite? = null
+
+    var leftBottomVerticalTextureRegion: TextureRegion? = null
+    var leftBottomVerticalTilableSprite: TilableSprite? = null
+
+    var rightBottomVerticalTextureRegion: TextureRegion? = null
+    var rightBottomVerticalTilableSprite: TilableSprite? = null
 
     var topTextureRegion: TextureRegion? = null
     var topTiledDrawable: TiledDrawable? = null
     var topTilableSprite: TilableSprite? = null
 
+    var bottomTextureRegion: TextureRegion? = null
+    var bottomTilableSprite: TilableSprite? = null
+
+    var leftTextureRegion: TextureRegion? = null
+    var leftTilableSprite: TilableSprite? = null
+
+    var rightTextureRegion: TextureRegion? = null
+    var rightTilableSprite: TilableSprite? = null
+
+    var leftBottomHorizontalTextureRegion: TextureRegion? = null
+    var leftBottomHorizontalTilableSprite: TilableSprite? = null
+
+    var rightBottomHorizontalTextureRegion: TextureRegion? = null
+    var rightBottomHorizontalTilableSprite: TilableSprite? = null
 
 
     var leftTopHorizontalDrawable: Drawable? = null
     var leftTopVerticalDrawable: Drawable? = null
     var rightTopHorizontalDrawable: Drawable? = null
+   // var rightTopVerticalDrawable: Drawable? = null
     var rightTopVerticalDrawable: Drawable? = null
 
     var rightTopDrawable: Drawable? = null
@@ -105,11 +140,28 @@ class TilableFrame : Drawable{
 
         leftTopHorizontalTextureRegion = skin.get(jsonData.getString("leftTopHorizontalTextureRegion"), TextureRegion::class.java)
         leftTopTextureRegion = skin.get(jsonData.getString("leftTopTextureRegion"), TextureRegion::class.java)
+        leftTopVerticalTextureRegion = skin.get(jsonData.getString("leftTopVerticalTextureRegion"), TextureRegion::class.java)
+      //  leftTopTextureRegion = skin.get(jsonData.getString("leftTopTextureRegion"), TextureRegion::class.java)
         rightTopHorizontalTextureRegion = skin.get(jsonData.getString("rightTopHorizontalTextureRegion"), TextureRegion::class.java)
         rightTopTextureRegion = skin.get(jsonData.getString("rightTopTextureRegion"), TextureRegion::class.java)
+        rightTopVerticalTextureRegion = skin.get(jsonData.getString("rightTopVerticalTextureRegion"), TextureRegion::class.java)
+       // rightTopTextureRegion = skin.get(jsonData.getString("rightTopTextureRegion"), TextureRegion::class.java)
 
-     //   topTextureRegion = skin.get(jsonData.getString("topHorizontalTextureRegion"), TextureRegion::class.java)
+        leftBottomTextureRegion = skin.get(jsonData.getString("leftBottomTextureRegion"), TextureRegion::class.java)
+        rightBottomTextureRegion = skin.get(jsonData.getString("rightBottomTextureRegion"), TextureRegion::class.java)
+
+
+        leftBottomVerticalTextureRegion = skin.get(jsonData.getString("leftBottomHorizontalTextureRegion"), TextureRegion::class.java)
+        rightBottomVerticalTextureRegion = skin.get(jsonData.getString("rightBottomHorizontalTextureRegion"), TextureRegion::class.java)
+
+        leftBottomHorizontalTextureRegion = skin.get(jsonData.getString("leftBottomHorizontalTextureRegion"), TextureRegion::class.java)
+        rightBottomHorizontalTextureRegion = skin.get(jsonData.getString("rightBottomHorizontalTextureRegion"), TextureRegion::class.java)
+
+
+        //   topTextureRegion = skin.get(jsonData.getString("topHorizontalTextureRegion"), TextureRegion::class.java)
         topTextureRegion = skin.get(jsonData.getString("topTextureRegion"), TextureRegion::class.java)
+        bottomTextureRegion = skin.get(jsonData.getString("bottomTextureRegion"), TextureRegion::class.java)
+        leftTextureRegion = skin.get(jsonData.getString("leftTextureRegion"), TextureRegion::class.java)
         //leftTopTilableSprite = TilableSprite(skin.get(jsonData.getString("topTextureRegion"), TextureRegion::class.java))
 
 
@@ -160,7 +212,7 @@ class TilableFrame : Drawable{
 
     fun setSprites() {
 
-        // Left corner
+        // Left top corner
         if(leftTopTilableSprite == null && leftTopTextureRegion != null) {
             leftTopTilableSprite = TilableSprite(leftTopTextureRegion!!)
             leftTopTilableSprite?.apply {
@@ -170,7 +222,7 @@ class TilableFrame : Drawable{
 
         }
 
-        // Left horizontal border
+        // Left top horizontal border
         if(leftTopHorizontalTilableSprite == null && leftTopHorizontalTextureRegion != null) {
             leftTopHorizontalTilableSprite = TilableSprite(leftTopHorizontalTextureRegion!!)
             leftTopHorizontalTilableSprite?.apply{
@@ -180,7 +232,7 @@ class TilableFrame : Drawable{
             }
         }
 
-        // Right corner
+        // Right top corner
         if(rightTopTilableSprite == null && (rightTopTextureRegion != null || leftTopTextureRegion != null)) {
             rightTopTilableSprite = TilableSprite(rightTopTextureRegion ?: leftTopTextureRegion!!)
             rightTopTilableSprite?.apply {
@@ -192,7 +244,7 @@ class TilableFrame : Drawable{
 
         }
 
-        // Right horizontal border
+        // Right top horizontal border
         if(rightTopHorizontalTilableSprite == null && (rightTopHorizontalTextureRegion != null || leftTopHorizontalTextureRegion != null)) {
             rightTopHorizontalTilableSprite = TilableSprite(rightTopHorizontalTextureRegion ?: leftTopHorizontalTextureRegion!!)
             rightTopHorizontalTilableSprite?.apply{
@@ -204,6 +256,70 @@ class TilableFrame : Drawable{
 
             }
         }
+
+        // Left bottom corner
+        if(leftBottomTilableSprite == null && (leftBottomTextureRegion != null || leftTopTextureRegion != null)) {
+            leftBottomTilableSprite = TilableSprite(leftBottomTextureRegion ?: leftTopTextureRegion!!)
+            leftBottomTilableSprite?.apply {
+                // TODO: flip only if rightTexture is absent
+                flip(false, true)
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+            }
+
+        }
+
+        // Right bottom corner
+        if(rightBottomTilableSprite == null && (rightBottomTextureRegion != null || leftTopTextureRegion != null)) {
+            rightBottomTilableSprite = TilableSprite(rightBottomTextureRegion ?: leftTopTextureRegion!!)
+            rightBottomTilableSprite?.apply {
+                // TODO: flip only if rightTexture is absent
+                flip(true, true)
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+            }
+
+        }
+/*
+        // Left bottom horizontal border
+        if(leftBottomHorizontalTilableSprite == null && leftBottomHorizontalTextureRegion != null) {
+            leftBottomHorizontalTilableSprite = TilableSprite(leftBottomHorizontalTextureRegion!!)
+            leftBottomHorizontalTilableSprite?.apply{
+                flip(false, true)
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+
+            }
+        }
+
+
+ */
+        // Left bottom horizontal border
+        if(leftBottomHorizontalTilableSprite == null && (leftBottomHorizontalTextureRegion != null || leftTopHorizontalTextureRegion != null)) {
+            leftBottomHorizontalTilableSprite = TilableSprite(leftBottomHorizontalTextureRegion ?: leftTopHorizontalTextureRegion!!)
+            leftBottomHorizontalTilableSprite?.apply{
+                // TODO: flip only if rightTexture is absent
+
+                flip(false, true)
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+
+            }
+        }
+
+        // Right bottom horizontal border
+        if(rightBottomHorizontalTilableSprite == null && (rightBottomHorizontalTextureRegion != null || leftTopHorizontalTextureRegion != null)) {
+            rightBottomHorizontalTilableSprite = TilableSprite(rightBottomHorizontalTextureRegion ?: leftTopHorizontalTextureRegion!!)
+            rightBottomHorizontalTilableSprite?.apply{
+                // TODO: flip only if rightTexture is absent
+
+                flip(true, true)
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+
+            }
+        }
+
 
 
 /*
@@ -230,6 +346,98 @@ class TilableFrame : Drawable{
             }
         }
 
+        // Bottom border
+        if(bottomTilableSprite == null && (bottomTextureRegion != null || topTextureRegion != null)) {
+            bottomTilableSprite = TilableSprite(bottomTextureRegion ?: topTextureRegion!!)
+            bottomTilableSprite?.apply{
+                flip(false, true)
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+                isTiledX = true
+
+            }
+        }
+
+
+        // Vertical parts:
+
+        // Left top vertical border (non-tilable)
+        if(leftTopVerticalTilableSprite == null && leftTopVerticalTextureRegion != null) {
+            leftTopVerticalTilableSprite = TilableSprite(leftTopVerticalTextureRegion!!)
+            leftTopVerticalTilableSprite?.apply{
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+
+            }
+        }
+
+        // Right vertical border
+        if(rightTopVerticalTilableSprite == null && (rightTopVerticalTextureRegion != null || leftTopVerticalTextureRegion != null)) {
+            rightTopVerticalTilableSprite = TilableSprite(rightTopVerticalTextureRegion ?: leftTopVerticalTextureRegion!!)
+            rightTopVerticalTilableSprite?.apply{
+                // TODO: flip only if rightTexture is absent
+
+                flip(true, false)
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+
+            }
+        }
+
+        // Left border
+        if(leftTilableSprite == null && leftTextureRegion != null) {
+            leftTilableSprite = TilableSprite(leftTextureRegion!!)
+            leftTilableSprite?.apply{
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+                isTiledY = true
+
+            }
+        }
+
+        // Right border
+        if(rightTilableSprite == null && (rightTextureRegion != null || leftTextureRegion != null)) {
+            rightTilableSprite = TilableSprite(rightTextureRegion ?: leftTextureRegion!!)
+            rightTilableSprite?.apply{
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+                isTiledY = true
+
+            }
+        }
+
+        // Left bottom vertical border
+        if(leftBottomVerticalTilableSprite == null && (leftBottomVerticalTextureRegion != null || leftTopVerticalTextureRegion != null)) {
+            leftBottomVerticalTilableSprite = TilableSprite(leftBottomVerticalTextureRegion ?: leftTopVerticalTextureRegion!!)
+            leftBottomVerticalTilableSprite?.apply{
+                // TODO: flip only if rightTexture is absent
+
+                flip(false, true)
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+
+            }
+        }
+
+        // Right bottom vertical border
+        if(rightBottomVerticalTilableSprite == null && (rightBottomVerticalTextureRegion != null || leftTopVerticalTextureRegion != null)) {
+            rightBottomVerticalTilableSprite = TilableSprite(rightBottomVerticalTextureRegion ?: leftTopVerticalTextureRegion!!)
+            rightBottomVerticalTilableSprite?.apply{
+                // TODO: flip only if rightTexture is absent
+
+                flip(true, true)
+                setOrigin(0f, 0f)
+                setScale(scaleFrame)
+
+            }
+        }
+
+
+
+
+
+
+
 
         // Top border
         /*
@@ -255,6 +463,11 @@ class TilableFrame : Drawable{
 
         if(leftTopHorizontalTextureRegion != null && leftTopHorizontalSprite == null){
             leftTopHorizontalSprite = Sprite(leftTopHorizontalTextureRegion)
+
+
+        }
+        if(leftTopVerticalTextureRegion != null && leftTopVerticalSprite == null){
+            leftTopVerticalSprite = Sprite(leftTopVerticalTextureRegion)
 
 
         }
@@ -361,19 +574,41 @@ class TilableFrame : Drawable{
             }
         }
 
+        // Left Bottom Corner
+        if (leftBottomTilableSprite != null) {
+            leftBottomTilableSprite?.apply {
+                isAnchoredLeft = false
+                draw(
+                    batch,
+                    x,
+                    y,
+                    this.width, //min(this.width, width / 2) + width/2,
+                    this.height
+                )
+            }
+        }
+
+        // Right Bottom Corner
+        if (rightBottomTilableSprite != null) {
+            rightBottomTilableSprite?.apply {
+                isAnchoredLeft = true
+                draw(
+                    batch,
+                    x + width - this.width * scaleFrame * scaleFrame,
+                    y,
+                    width, //min(this.width, width / 2) + width/2,
+                    this.height
+                )
+            }
+        }
+
+
         // TODO: correct
         // Left Top Horizontal
         if (leftTopHorizontalTilableSprite != null) {
             leftTopHorizontalTilableSprite?.apply {
                 // TODO: Boundaries is right, but the sprite is stretched if it is limited.
                 val spaceX = leftTopTilableSprite?.width!! * scaleFrame * scaleFrame
-                val dbx1 = x + spaceX
-                val dbx2 = this.width
-                val dbx3 = this.width * width / Gdx.graphics.width
-                val dby1 = y + height - this.height * scaleFrame * scaleFrame
-                val dby2 = this.height
-                val dbright1 = width / 2f
-               // val dbright2 = dbx1 + min(this.width, (width / 2 - spaceX) * xPixelRatio)
 
                 draw(
                     batch,
@@ -428,6 +663,55 @@ class TilableFrame : Drawable{
             }
         }
 
+        // Bottom Border
+        if (bottomTilableSprite != null) {
+            bottomTilableSprite?.apply {
+                val spaceX = (leftTopTilableSprite?.width!! + leftTopHorizontalTilableSprite?.width!!) * scaleFrame * scaleFrame
+                isTiledX = true
+                isAnchoredBottom = true
+                isAnchoredLeft = true
+
+                draw(
+                    batch,
+                    x + spaceX,
+                    y,
+                    width / 2f - spaceX, //min(this.width, width / 2) + width/2,
+                    this.height
+                )
+
+                isAnchoredLeft = false
+
+                draw(
+                    batch,
+                    x + width / 2f,
+                    y,
+                    width / 2f - spaceX, //min(this.width, width / 2) + width/2,
+                    this.height
+                )
+
+            }
+        }
+
+        // Vertical elements:
+
+        // Left Top Horizontal
+        if (leftTopVerticalTilableSprite != null) {
+            leftTopVerticalTilableSprite?.apply {
+                // TODO: Boundaries is right, but the sprite is stretched if it is limited.
+                val spaceY = leftTopTilableSprite?.height!! * scaleFrame * scaleFrame
+
+                draw(
+                    batch,
+                    x,
+                    y + height - spaceY - this.height * scaleFrame * scaleFrame,
+                    this.width,//min(this.width, (width / 2 - spaceX )) ,
+                    this.height
+                )
+            }
+        }
+
+
+
         // Right
 
         if (rightTopHorizontalTilableSprite != null) {
@@ -441,6 +725,176 @@ class TilableFrame : Drawable{
                     this.width, //min(this.width, width / 2) + width/2,
                     this.height
                 )
+
+            }
+        }
+
+        if (rightTopVerticalTilableSprite != null) {
+            rightTopVerticalTilableSprite?.apply {
+                // TODO: Here we need to crop the sprite if it goes out of right half of the screen
+                val spaceY = leftTopTilableSprite?.height!! * scaleFrame * scaleFrame
+
+                draw(
+                    batch,
+                    x + width - this.width * scaleFrame * scaleFrame,
+                    y + height - spaceY - this.height * scaleFrame * scaleFrame,
+                    this.width,//min(this.width, (width / 2 - spaceX )) ,
+                    this.height
+                )
+
+            }
+        }
+
+        // Right bottom vertical border
+        if (rightBottomVerticalTilableSprite != null) {
+            rightBottomVerticalTilableSprite?.apply {
+                // TODO: Here we need to crop the sprite if it goes out of right half of the screen
+                //isAnchoredBottom = true
+                //isAnchoredLeft = false
+       //         val spaceX = abs(leftTopTilableSprite?.width!! * scaleFrame * scaleFrame)
+
+                val spaceY = leftTopTilableSprite?.height!! * scaleFrame * scaleFrame
+/*
+                draw(
+                    batch,
+                    x, // + width - this.width * scaleFrame * scaleFrame,
+                    y + spaceY, // + height - spaceY - this.height * scaleFrame * scaleFrame,
+                    this.width,//min(this.width, (width / 2 - spaceX )) ,
+                    this.height
+                )
+
+
+ */
+                draw(
+                    batch,
+                    x + width - this.width * scaleFrame * scaleFrame,
+                    y + spaceY,// - this.height * scaleFrame * scaleFrame,
+                    this.width,//min(this.width, (width / 2 - spaceX )) ,
+                    this.height
+                )
+
+            }
+        }
+
+        if (leftBottomVerticalTilableSprite != null) {
+            leftBottomVerticalTilableSprite?.apply {
+                // TODO: Here we need to crop the sprite if it goes out of right half of the screen
+                isAnchoredBottom = true
+                isAnchoredLeft = false
+                val spaceY = leftTopTilableSprite?.height!! * scaleFrame * scaleFrame
+/*
+                draw(
+                    batch,
+                    x, // + width - this.width * scaleFrame * scaleFrame,
+                    y + spaceY, // + height - spaceY - this.height * scaleFrame * scaleFrame,
+                    this.width,//min(this.width, (width / 2 - spaceX )) ,
+                    this.height
+                )
+
+
+ */
+                draw(
+                    batch,
+                    x,
+                    y + spaceY,// - this.height * scaleFrame * scaleFrame,
+                    this.width,//min(this.width, (width / 2 - spaceX )) ,
+                    this.height
+                )
+
+            }
+        }
+
+
+        // Left Border
+        if (leftTilableSprite != null) {
+            leftTilableSprite?.apply {
+                val spaceY = (leftTopTilableSprite?.height!! + leftTopVerticalTilableSprite?.height!!) * scaleFrame * scaleFrame
+                isTiledY = true
+                isAnchoredBottom = false
+                isAnchoredLeft = true
+
+                draw(
+                    batch,
+                    x,
+                    y + height / 2f, // - this.height * scaleFrame * scaleFrame - spaceY,
+                    this.width,//width / 2f - spaceX, //min(this.width, width / 2) + width/2,
+                    height / 2f - spaceY
+                )
+
+                isAnchoredBottom = true
+
+                draw(
+                    batch,
+                    x,
+                    y + spaceY, // - this.height * scaleFrame * scaleFrame - spaceY,
+                    this.width,//width / 2f - spaceX, //min(this.width, width / 2) + width/2,
+                    height / 2f - spaceY
+                )
+
+
+            }
+        }
+
+
+        // Right Border
+        if (rightTilableSprite != null) {
+            rightTilableSprite?.apply {
+                val spaceY = (leftTopTilableSprite?.height!! + leftTopVerticalTilableSprite?.height!!) * scaleFrame * scaleFrame
+                isTiledY = true
+                isAnchoredBottom = false
+                isAnchoredLeft = false
+
+                draw(
+                    batch,
+                    x + width - this.width,
+                    y + height / 2f, // - this.height * scaleFrame * scaleFrame - spaceY,
+                    this.width,//width / 2f - spaceX, //min(this.width, width / 2) + width/2,
+                    height / 2f - spaceY
+                )
+
+                isAnchoredBottom = true
+
+                draw(
+                    batch,
+                    x + width - this.width,
+                    y + spaceY, // - this.height * scaleFrame * scaleFrame - spaceY,
+                    this.width,//width / 2f - spaceX, //min(this.width, width / 2) + width/2,
+                    height / 2f - spaceY
+                )
+
+
+            }
+        }
+
+        // Left Bottom Horizontal
+        if (leftBottomHorizontalTilableSprite != null) {
+            leftBottomHorizontalTilableSprite?.apply {
+                // TODO: Here we need to crop the sprite if it goes out of right half of the screen
+                val spaceX = abs(leftTopTilableSprite?.width!! * scaleFrame * scaleFrame)
+                draw(
+                    batch,
+                    x + spaceX,
+                    y,
+                    this.width, //min(this.width, width / 2) + width/2,
+                    this.height
+                )
+
+            }
+        }
+
+        // Right Bottom Horizontal
+        if (rightBottomHorizontalTilableSprite != null) {
+            rightBottomHorizontalTilableSprite?.apply {
+                // TODO: Here we need to crop the sprite if it goes out of right half of the screen
+                val spaceX = abs(leftTopTilableSprite?.width!! * scaleFrame * scaleFrame)
+                draw(
+                    batch,
+                    x + width - spaceX - this.width * scaleFrame * scaleFrame,
+                    y,
+                    this.width, //min(this.width, width / 2) + width/2,
+                    this.height
+                )
+
             }
         }
 

@@ -33,28 +33,28 @@ UI_example1_window_empty
   index: -1
 leftBorder
   rotate: false
-  xy: 722, 467
-  size: 103, 217
-  orig: 103, 217
+  xy: 722, 576
+  size: 103, 434
+  orig: 103, 434
   offset: 0, 0
   index: -1
 leftTopCorner
   rotate: false
-  xy: 722, 363
+  xy: 722, 146
   size: 103, 102
   orig: 103, 102
   offset: 0, 0
   index: -1
 leftTopVertBorder
   rotate: false
-  xy: 722, 686
+  xy: 722, 250
   size: 103, 324
   orig: 103, 324
   offset: 0, 0
   index: -1
 topBorder
   rotate: false
-  xy: 722, 259
+  xy: 722, 42
   size: 223, 102
   orig: 223, 102
   offset: 0, 0
