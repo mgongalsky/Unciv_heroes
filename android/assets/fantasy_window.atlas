@@ -45,6 +45,13 @@ leftTopCorner
   orig: 103, 102
   offset: 0, 0
   index: -1
+leftTopSpacer
+  rotate: false
+  xy: 827, 894
+  size: 66, 66
+  orig: 66, 66
+  offset: 0, 0
+  index: -1
 leftTopVertBorder
   rotate: false
   xy: 722, 250

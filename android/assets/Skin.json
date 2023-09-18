@@ -177,6 +177,7 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
     com.unciv.ui.rendering.TilableFrame: {
         fantasy_frame: {
             tiledBackground: {region: UI_tiled_bg},
+            leftTopSpacer: leftTopSpacer,
             leftTopDrawable: leftTopCorner,
             tiledTopDrawable: {region: topBorder},
             leftTiledDrawable: {region: leftBorder},

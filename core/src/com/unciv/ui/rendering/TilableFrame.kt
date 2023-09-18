@@ -41,6 +41,9 @@ class TilableFrame : Drawable{
     var leftTopSprite: Sprite? = null
     var leftTopTilableSprite: TilableSprite? = null
 
+    var leftTopSpacer: TextureRegion? = null
+    var rightBottomSpacer: TextureRegion? = null
+
     var rightTopTextureRegion: TextureRegion? = null
     var rightTopTilableSprite: TilableSprite? = null
 
@@ -146,6 +149,9 @@ class TilableFrame : Drawable{
         rightTopTextureRegion = skin.get(jsonData.getString("rightTopTextureRegion"), TextureRegion::class.java)
         rightTopVerticalTextureRegion = skin.get(jsonData.getString("rightTopVerticalTextureRegion"), TextureRegion::class.java)
        // rightTopTextureRegion = skin.get(jsonData.getString("rightTopTextureRegion"), TextureRegion::class.java)
+
+        leftTopSpacer = skin.get(jsonData.getString("leftTopSpacer"), TextureRegion::class.java)
+
 
         leftBottomTextureRegion = skin.get(jsonData.getString("leftBottomTextureRegion"), TextureRegion::class.java)
         rightBottomTextureRegion = skin.get(jsonData.getString("rightBottomTextureRegion"), TextureRegion::class.java)
@@ -536,6 +542,31 @@ class TilableFrame : Drawable{
        // val realHeight = Gdx.graphics.height.toFloat()
 
         // TODO: here we need instead of dividing
+        var xLeftSpacer = 0
+        var yTopSpacer = 0
+        if(leftTopSpacer != null) {
+            xLeftSpacer = leftTopSpacer?.regionWidth!! / 2
+            yTopSpacer = leftTopSpacer?.regionHeight!! / 2
+            //leftTopSpacer?.texture.
+        }
+
+        var xRightSpacer = 0
+        var yBottomSpacer = 0
+        if(leftTopSpacer != null) {
+            if(rightBottomSpacer != null){
+                xRightSpacer = rightBottomSpacer?.regionWidth!! / 2
+                yBottomSpacer = rightBottomSpacer?.regionHeight!! / 2
+            }
+            else {
+                xRightSpacer = leftTopSpacer?.regionWidth!! / 2
+                yBottomSpacer = leftTopSpacer?.regionHeight!! / 2
+            }
+        }
+
+
+
+
+/*
         tiledBackground?.draw(
             batch,
             x + leftTopDrawable?.minWidth!! * scaleFrame * scaleFrame / 2,
@@ -543,6 +574,17 @@ class TilableFrame : Drawable{
             width - leftTopDrawable?.minWidth!! * scaleFrame * scaleFrame ,
             height - leftTopDrawable?.minHeight!! * scaleFrame * scaleFrame
         )
+
+
+ */
+        tiledBackground?.draw(
+            batch,
+            x + xLeftSpacer,
+            y + yBottomSpacer,
+            width - xLeftSpacer - xRightSpacer ,
+            height - yBottomSpacer - yTopSpacer
+        )
+
         //batch.end()
 
        // background?.draw(batch,x,y,width,height)
