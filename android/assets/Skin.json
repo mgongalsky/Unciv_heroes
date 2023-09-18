@@ -194,6 +194,26 @@ com.badlogic.gdx.scenes.scene2d.ui.Skin$TintedDrawable: {
         }
     },
 
+    com.unciv.ui.rendering.TilableFrame: {
+        troop_slot: {
+            tiledBackground: {region: UI_tiled_bg},
+            leftTopSpacer: leftTopSpacer,
+            leftTopDrawable: leftTopCorner,
+            tiledTopDrawable: {region: topBorder},
+            leftTiledDrawable: {region: leftBorder},
+            leftTopHorizontalDrawable: leftTopHorCorner,
+            leftTopVerticalDrawable: leftTopVertBorder,
+            scaleBackground: 0.5,
+            scaleFrame: 0.3,
+            testTexture: leftTopHorCorner,
+            leftTopHorizontalTextureRegion: leftTopHorCorner,
+            leftTopVerticalTextureRegion: leftTopVertBorder,
+            leftTopTextureRegion: leftTopCorner,
+            topTextureRegion: topBorder,
+            leftTextureRegion: leftBorder
+        }
+    },
+
 
 
 

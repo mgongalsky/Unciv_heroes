@@ -6,6 +6,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
+import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.logic.map.MapUnit
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
@@ -50,10 +51,18 @@ class HeroOverviewScreen(
 
         tabbedPager.addClosePage { game.popScreen() }
 
-        val pageObject = Table(BaseScreen.skin)
+     //   val pageObject = Table(BaseScreen.skin)
         //pageObject.background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
         //pageObject.background = BaseScreen.skin.get("tiled_fantasy_background", Tiled2DDrawable::class.java)
-        pageObject.background = BaseScreen.skin.get("fantasy_frame", TilableFrame::class.java)
+
+        fun createTroopSlot(style: String): Table {
+            return Table().apply {
+                background = BaseScreen.skin.get(style, TilableFrame::class.java)
+                //add(Label(labelText, BaseScreen.skin, "fantasyLabel"))
+            }
+        }
+
+        val pageObject = createTroopSlot("fantasy_frame")
 
 
         val font = BaseScreen.skin.get("smallOldLondon", BitmapFont::class.java)
@@ -67,17 +76,33 @@ class HeroOverviewScreen(
      //   }
 
         //pageObject.add
-        pageObject.pad(10f,0f,10f,0f)
-        pageObject.add(Label("Hero Type", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
-        pageObject.add(Label("Attack Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
-        pageObject.add(Label("Defense Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
+        pageObject.pad(10f,0f,60f,0f).align(Align.bottom)
+        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).padLeft(50f).align(
+            Align.bottom)//.padLeft(8f)
+        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).align(
+            Align.bottom)//.padLeft(8f)
+        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).align(
+            Align.bottom)//.padLeft(8f)
+        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).align(
+            Align.bottom)//.padLeft(8f)
+        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).align(
+            Align.bottom)//.padLeft(8f)
+        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).align(
+            Align.bottom)//.padLeft(8f)
+        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(50f).align(
+            Align.bottom)//.padLeft(8f)
+//        pageObject.add(Label("Attack Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
+  //      pageObject.add(Label("Defense Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
        // pageObject.add("Strength").size(140f)//.padLeft(8f)
        // pageObject.add("Health").size(140f)//.padLeft(8f)
 
-        pageObject.row()
-        pageObject.add(Label(viewingHero.displayName(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
-        pageObject.add(Label(viewingHero.heroAttackSkill.toString(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
-        pageObject.add(Label(viewingHero.heroDefenseSkill.toString(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
+  //      pageObject.row()
+  //      pageObject.add(Label(viewingHero.displayName(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
+   //     pageObject.add(Label(viewingHero.heroAttackSkill.toString(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
+
+
+
+    //    pageObject.add(Label(viewingHero.heroDefenseSkill.toString(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
     //    pageObject.add(viewingHero.baseUnit.strength.toString()).size(140f)//.padRight(8f)
     //    pageObject.add(viewingHero.health.toString()).size(140f)//.padRight(8f)
         //stage.addActor(pageObject)

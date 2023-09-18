@@ -542,24 +542,26 @@ class TilableFrame : Drawable{
        // val realHeight = Gdx.graphics.height.toFloat()
 
         // TODO: here we need instead of dividing
-        var xLeftSpacer = 0
-        var yTopSpacer = 0
+        var xLeftSpacer = 0f
+        var yTopSpacer = 0f
+
+        val scaleSpacer = (scaleBackground )/(scaleFrame)
         if(leftTopSpacer != null) {
-            xLeftSpacer = leftTopSpacer?.regionWidth!! / 2
-            yTopSpacer = leftTopSpacer?.regionHeight!! / 2
+            xLeftSpacer = leftTopSpacer?.regionWidth!! * scaleFrame * scaleFrame
+            yTopSpacer = leftTopSpacer?.regionHeight!! * scaleFrame * scaleFrame
             //leftTopSpacer?.texture.
         }
 
-        var xRightSpacer = 0
-        var yBottomSpacer = 0
+        var xRightSpacer = 0f
+        var yBottomSpacer = 0f
         if(leftTopSpacer != null) {
             if(rightBottomSpacer != null){
-                xRightSpacer = rightBottomSpacer?.regionWidth!! / 2
-                yBottomSpacer = rightBottomSpacer?.regionHeight!! / 2
+                xRightSpacer = rightBottomSpacer?.regionWidth!! * scaleFrame * scaleFrame
+                yBottomSpacer = rightBottomSpacer?.regionHeight!! * scaleFrame * scaleFrame
             }
             else {
-                xRightSpacer = leftTopSpacer?.regionWidth!! / 2
-                yBottomSpacer = leftTopSpacer?.regionHeight!! / 2
+                xRightSpacer = leftTopSpacer?.regionWidth!! * scaleFrame * scaleFrame
+                yBottomSpacer = leftTopSpacer?.regionHeight!! * scaleFrame * scaleFrame
             }
         }
 
