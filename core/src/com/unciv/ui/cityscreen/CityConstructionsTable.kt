@@ -362,7 +362,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
     }
 
 
-
+// TB Deleted
     fun createMonochromaticTexture(width: Int, height: Int, color: Color): Texture {
         val pixmap = Pixmap(width, height, Pixmap.Format.RGBA8888)
         pixmap.setColor(color)
