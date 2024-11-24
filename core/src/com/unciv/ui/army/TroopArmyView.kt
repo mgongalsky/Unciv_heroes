@@ -23,36 +23,33 @@ class TroopArmyView(
     private lateinit var troopImages: ArrayList<Image>
 
     init {
-        initialize()
-        drawInArmy(troopGroup)
-    }
-    /** Initialize the troop's army appearance. */
-    fun initialize() {
         val unitImagePath = "TileSets/AbsoluteUnits/Units/${troopInfo.unitName}"
-        //troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, civColor, civColor)
         troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, null, null)
+
+        drawInArmy()
     }
 
-    fun updateView() {
-        //drawInArmy(troopGroup)
-
-
-    }
 
     /** Draw the troop in an army context (e.g., garrison, hero screen). */
-    fun drawInArmy(group: Group) {
+    fun drawInArmy() {
         val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin)
         amountText.scaleBy(0.5f)
-        amountText.moveBy(group.width * 0.6f, 0.5f)
+        amountText.moveBy(50f, 0.5f)
 
+        troopGroup.addActor(amountText)
         for (troopImage in troopImages) {
             troopImage.setScale(-0.125f, 0.125f)
-            troopImage.moveBy(group.width * 0.8f, 0f)
+            troopImage.moveBy(60f, 0f)
+            //troopImage.setOrigin(troopGroup.originX, troopGroup.originY)
             troopImage.touchable = Touchable.disabled
+
+            troopImage.name = "troopImage"
+            troopGroup.name = "troopGroup"
+            troopGroup.findActor<Image>("troopImage")?.remove()
             troopGroup.addActor(troopImage)
         }
 
-        troopGroup.addActor(amountText)
+
         // Here is the problem:
         addActor(troopGroup)
     }

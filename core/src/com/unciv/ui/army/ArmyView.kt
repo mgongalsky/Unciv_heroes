@@ -36,7 +36,7 @@ class ArmyView(private val armyInfo: ArmyInfo) : Table() {
                 // Если есть юнит, создаем его представление
                 val troopView = TroopArmyView(troop)
                 add(troopView).size(64f).pad(5f)
-                troopView.updateView()
+                //troopView.updateView()
             } else {
                 // Если слота нет, добавляем пустое изображение
                 val emptySlotImage =
