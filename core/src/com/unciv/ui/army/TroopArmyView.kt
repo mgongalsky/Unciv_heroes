@@ -18,14 +18,25 @@ import com.unciv.logic.army.TroopInfo
  */
 class TroopArmyView(
     private val troopInfo: TroopInfo
-) : Actor() {
+) : Group() {
     private val troopGroup = Group()
     private lateinit var troopImages: ArrayList<Image>
 
+    init {
+        initialize()
+        drawInArmy(troopGroup)
+    }
     /** Initialize the troop's army appearance. */
-    fun initialize(civColor: Color) {
+    fun initialize() {
         val unitImagePath = "TileSets/AbsoluteUnits/Units/${troopInfo.unitName}"
-        troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, civColor, civColor)
+        //troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, civColor, civColor)
+        troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, null, null)
+    }
+
+    fun updateView() {
+        //drawInArmy(troopGroup)
+
+
     }
 
     /** Draw the troop in an army context (e.g., garrison, hero screen). */
@@ -42,7 +53,8 @@ class TroopArmyView(
         }
 
         troopGroup.addActor(amountText)
-        group.addActor(troopGroup)
+        // Here is the problem:
+        addActor(troopGroup)
     }
 
     /** Handle click interaction for troop selection. */

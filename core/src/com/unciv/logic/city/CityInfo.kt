@@ -2,6 +2,7 @@ package com.unciv.logic.city
 
 import com.badlogic.gdx.math.Vector2
 import com.unciv.logic.IsPartOfGameInfoSerialization
+import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.battle.CityCombatant
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.NotificationIcon
@@ -137,6 +138,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
     @Transient var currentGPPBonus: Int = 0  // temporary variable saved for rankSpecialist()
 
     var garrison = mutableListOf<TroopInfo>()
+    var garrisonInfo = ArmyInfo()
 
 
     /** The very first found city is the _original_ capital,
@@ -158,6 +160,10 @@ class CityInfo : IsPartOfGameInfoSerialization {
         turnAcquired = civInfo.gameInfo.turns
         location = cityLocation
 
+        garrisonInfo.setTroopAt(0, TroopInfo(35, "Archer"))
+        garrisonInfo.setTroopAt(1, TroopInfo(25, "Spearman"))
+        garrisonInfo.setTroopAt(2, TroopInfo(15, "Horseman"))
+        garrisonInfo.setTroopAt(3, TroopInfo(12, "Swordsman"))
         garrison.add(TroopInfo(30, "Archer"))
         garrison.add(TroopInfo(20, "Spearman"))
         garrison.add(TroopInfo(10, "Horseman"))
@@ -354,6 +360,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
         toReturn.name = name
         toReturn.health = health
         toReturn.garrison = garrison
+        toReturn.garrisonInfo = garrisonInfo
         toReturn.population = population.clone()
         toReturn.cityConstructions = cityConstructions.clone()
         toReturn.expansion = expansion.clone()

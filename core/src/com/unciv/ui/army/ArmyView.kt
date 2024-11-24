@@ -2,6 +2,7 @@ package com.unciv.ui.army
 
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.logic.army.ArmyInfo
+import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.extensions.onClick
 
 /**
@@ -14,6 +15,12 @@ class ArmyView(private val armyInfo: ArmyInfo) : Table() {
     var onTroopClick: ((Int) -> Unit)? = null
 
     init {
+        // From CityContructionsTable
+        bottom().left()
+        pad(10f)
+        // garrisonWidget.height(stageHeight / 8)
+        //val tableHeight = stage.height / 8f
+        //height = tableHeight
         updateView()
     }
 
@@ -25,22 +32,19 @@ class ArmyView(private val armyInfo: ArmyInfo) : Table() {
 
         // Access slots directly using `armyInfo.getAllTroops()`
         armyInfo.getAllTroops().forEachIndexed { index, troop ->
-            val troopView = if (troop != null) {
-                // Create a view for an occupied slot
-                TroopArmyView(troop)
+            if (troop != null) {
+                // Если есть юнит, создаем его представление
+                val troopView = TroopArmyView(troop)
+                add(troopView).size(64f).pad(5f)
+                troopView.updateView()
             } else {
-                // Create a placeholder for an empty slot
-                EmptySlotView()
+                // Если слота нет, добавляем пустое изображение
+                val emptySlotImage =
+                        ImageGetter.getImage("OtherIcons/EmptySlot") // Укажите правильный путь
+                add(emptySlotImage).size(64f).pad(5f)
             }
-
-            // Attach a click listener to each slot
-            troopView.onClick { onTroopClick?.invoke(index) }
-
-            // Add the slot view to the table with spacing
-            add(troopView).size(64f).pad(5f) // Customize size and padding as needed
+            // Ensure layout is updated
+            pack()
         }
-
-        // Ensure layout is updated
-        pack()
     }
 }

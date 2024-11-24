@@ -5,6 +5,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.unciv.ui.images.ImageGetter
 
 /**
+ * !! Obsolete!
  * A simple placeholder view for empty slots in the [ArmyView].
  */
 class EmptySlotView : Group() {
@@ -18,4 +19,10 @@ class EmptySlotView : Group() {
         emptySlotImage.setSize(64f, 64f) // Размер пустого слота
         addActor(emptySlotImage) // Добавляем изображение как дочерний элемент
     }
+
+    fun updateView() {
+        // Пустая реализация, если для пустого слота ничего обновлять не нужно
+        println("Updating EmptySlotView")
+    }
+
 }

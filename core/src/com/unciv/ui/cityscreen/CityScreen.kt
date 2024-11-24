@@ -17,6 +17,8 @@ import com.unciv.models.ruleset.tile.TileImprovement
 import com.unciv.models.ruleset.unique.LocalUniqueCache
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.stats.Stat
+import com.unciv.ui.army.ArmyView
+import com.unciv.ui.army.TroopArmyView
 import com.unciv.ui.audio.CityAmbiencePlayer
 import com.unciv.ui.audio.SoundPlayer
 import com.unciv.ui.images.ImageGetter
@@ -73,6 +75,9 @@ class CityScreen(
 
     /** Displays visiting hero information, mainly his army - sits on BOTTOM RIGHT */
     internal var visitingHeroTable = VisitingHeroTable(this)
+
+    /** View class handler for city garrison */
+    internal var garrisonView = ArmyView(city.garrisonInfo)
 
     /** Currently selected troop no matter in garrison or visiting hero */
     internal var currTroop : TroopInfo? = null
@@ -137,7 +142,7 @@ class CityScreen(
         constructionsTable.addActorsToStage()
         stage.addActor(selectedConstructionTable)
         stage.addActor(tileTable)
-        stage.addActor(visitingHeroTable)
+        //stage.addActor(visitingHeroTable)
         stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
         stage.addActor(exitCityButton)
         update()
