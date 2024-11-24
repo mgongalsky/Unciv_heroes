@@ -1,7 +1,8 @@
-package com.unciv.ui
+package com.unciv.ui.army
 
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Touchable
@@ -17,7 +18,7 @@ import com.unciv.logic.army.TroopInfo
  */
 class TroopArmyView(
     private val troopInfo: TroopInfo
-) {
+) : Actor() {
     private val troopGroup = Group()
     private lateinit var troopImages: ArrayList<Image>
 

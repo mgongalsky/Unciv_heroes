@@ -33,11 +33,14 @@ class ArmyInfo(
         }
     }
 
-    /** Removes a troop from the given index (makes the slot empty). */
-    fun removeTroopAt(index: Int) {
+    /** Removes a troop from the given index (makes the slot empty) and returns it. */
+    fun removeTroopAt(index: Int): TroopInfo? {
         if (index in slots.indices) {
+            val removedTroop = slots[index]
             slots[index] = null
+            return removedTroop
         }
+        return null
     }
 
     /** Adds a troop to the first available slot. Returns true if successful, false if full. */
@@ -60,6 +63,11 @@ class ArmyInfo(
         }
     }
 
+    fun getAllTroops(): Array<TroopInfo?> {
+        return slots // Возвращаем внутренний массив слотов
+    }
+
+
     // ===== Serialization Methods =====
 
     override fun write(json: Json) {
@@ -77,5 +85,5 @@ class ArmyInfo(
             slots[i] = if (troopData != null) json.readValue(TroopInfo::class.java, troopData) else null
         }
     }
-}
 
+}
