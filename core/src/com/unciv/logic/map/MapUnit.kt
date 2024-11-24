@@ -1,8 +1,6 @@
 package com.unciv.logic.map
 
-import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.IsPartOfGameInfoSerialization
@@ -16,8 +14,7 @@ import com.unciv.logic.city.RejectionReasons
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.LocationAction
 import com.unciv.logic.civilization.NotificationIcon
-import com.unciv.logic.event.hero.TestTroop
-import com.unciv.logic.event.hero.Troop
+import com.unciv.logic.army.TroopInfo
 import com.unciv.models.UnitActionType
 import com.unciv.models.helpers.UnitMovementMemoryType
 import com.unciv.models.ruleset.Ruleset
@@ -30,17 +27,10 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.models.stats.Stats
-import com.unciv.ui.cityscreen.CityReligionInfoTable
 import com.unciv.ui.images.ImageGetter
-import com.unciv.ui.newgamescreen.NewGameScreen
-import com.unciv.ui.popup.Popup
 import com.unciv.ui.tilegroups.TileGroup
-import com.unciv.ui.utils.BaseScreen
-import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.extensions.filterAndLogic
 import com.unciv.ui.utils.extensions.toPercent
-import com.unciv.ui.worldscreen.WorldScreen
-import com.unciv.utils.concurrency.launchOnGLThread
 import java.text.DecimalFormat
 import kotlin.math.pow
 
@@ -103,10 +93,10 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     /// TODO: Change into list of troops
     @Transient
-    var exampleTroop: Troop = Troop(10, "Spearman")
+    var exampleTroop: TroopInfo = TroopInfo(10, "Spearman")
 
     // TODO: troops must be changed from list to a finite array with possible empty slots. And army manager must be written.
-    var troops = mutableListOf<Troop>()
+    var troops = mutableListOf<TroopInfo>()
 
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
      *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */
@@ -252,7 +242,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         //   amount = amount0
         val amountOfTroops = 4
         for (i in 1..amountOfTroops) {
-            troops.add(Troop(amount / amountOfTroops, name))
+            troops.add(TroopInfo(amount / amountOfTroops, name))
 
         }
 
@@ -801,10 +791,10 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
         if (name == "Warrior") {
             troops.clear()
-            troops.add(Troop(10, "Horseman"))
-            troops.add(Troop(20, "Archer"))
-            troops.add(Troop(15, "Spearman"))
-            troops.add(Troop(5, "Swordsman"))
+            troops.add(TroopInfo(10, "Horseman"))
+            troops.add(TroopInfo(20, "Archer"))
+            troops.add(TroopInfo(15, "Spearman"))
+            troops.add(TroopInfo(5, "Swordsman"))
             //heroAttackSkill = 2
             //heroDefenseSkill = 2
 

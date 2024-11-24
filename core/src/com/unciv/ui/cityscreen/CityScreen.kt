@@ -9,7 +9,7 @@ import com.unciv.UncivGame
 import com.unciv.logic.automation.Automation
 import com.unciv.logic.city.CityInfo
 import com.unciv.logic.city.IConstruction
-import com.unciv.logic.event.hero.Troop
+import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.TileInfo
 import com.unciv.models.UncivSound
 import com.unciv.models.ruleset.Building
@@ -75,7 +75,7 @@ class CityScreen(
     internal var visitingHeroTable = VisitingHeroTable(this)
 
     /** Currently selected troop no matter in garrison or visiting hero */
-    internal var currTroop : Troop? = null
+    internal var currTroop : TroopInfo? = null
 
     /** Flag showing if current selected troop in the garrison (true) or in visiting hero army (false) */
     internal var isGarrisonSelected: Boolean = false

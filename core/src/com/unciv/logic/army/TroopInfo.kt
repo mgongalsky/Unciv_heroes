@@ -1,4 +1,4 @@
-package com.unciv.logic.event.hero
+package com.unciv.logic.army
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
@@ -7,7 +7,6 @@ import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
-import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
 import com.unciv.logic.HexMath
@@ -18,10 +17,9 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.images.ImageGetter.ruleset
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.BaseScreen
-import com.unciv.ui.utils.extensions.center
 
 /** Battle units with specified [amount], [position] in hex coordinates and reference to a [baseUnit] */
-class Troop (
+class TroopInfo (
     var amount: Int = 0, // TODO: Maybe @transient is required
     var unitName: String = "Spearman"
     ) : IsPartOfGameInfoSerialization, Json.Serializable {

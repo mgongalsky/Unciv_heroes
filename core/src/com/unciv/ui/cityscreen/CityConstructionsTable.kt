@@ -6,8 +6,6 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Sprite
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.g2d.TextureRegion
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Touchable
@@ -26,7 +24,7 @@ import com.unciv.logic.city.CityInfo
 import com.unciv.logic.city.IConstruction
 import com.unciv.logic.city.INonPerpetualConstruction
 import com.unciv.logic.city.PerpetualConstruction
-import com.unciv.logic.event.hero.Troop
+import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.TileInfo
 import com.unciv.models.UncivSound
 import com.unciv.models.ruleset.Building
@@ -86,9 +84,9 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
     // Garrison section. Probably we need standalone garrison manager
     private val garrisonWidget = Table()
-    internal var garrisonBgImages = HashMap<Troop, Image>()
-    internal var garrisonCells = HashMap<Troop, Cell<Group>>()
-    internal var garrisonGroup = HashMap<Troop, Group>()
+    internal var garrisonBgImages = HashMap<TroopInfo, Image>()
+    internal var garrisonCells = HashMap<TroopInfo, Cell<Group>>()
+    internal var garrisonGroup = HashMap<TroopInfo, Group>()
 
 
     private val pad = 10f

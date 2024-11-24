@@ -17,8 +17,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
 import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
-import com.unciv.logic.city.IConstruction
-import com.unciv.logic.event.hero.Troop
+import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.MapUnit
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.darken
@@ -32,9 +31,9 @@ class VisitingHeroTable(val cityScreen: CityScreen) : Table() {
 
     //private val garrisonWidget = Table()
     //private var currHeroArmyTroop : Troop? = null
-    internal var heroArmyBgImages = HashMap<Troop, Image>()
-    internal var heroArmyCells = HashMap<Troop, Cell<Group>>()
-    internal var heroArmyGroup = HashMap<Troop, Group>()
+    internal var heroArmyBgImages = HashMap<TroopInfo, Image>()
+    internal var heroArmyCells = HashMap<TroopInfo, Cell<Group>>()
+    internal var heroArmyGroup = HashMap<TroopInfo, Group>()
 
     var visitingHero: MapUnit?
 

@@ -3,12 +3,9 @@ package com.unciv.ui.battlescreen
 import com.badlogic.gdx.math.Vector2
 import com.unciv.UncivGame
 import com.unciv.logic.HexMath
-import com.unciv.logic.battle.Battle
-import com.unciv.logic.event.hero.Troop
+import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.MapUnit
-import com.unciv.logic.map.TileInfo
 //import com.unciv.logic.map.Monster
-import com.unciv.ui.images.ImageGetter
 import kotlin.random.Random
 
 // TODO: This class is logic. And should be moved to "logic" package. However, there is internal visibility with BattleScreen class, which is UI.
@@ -30,15 +27,15 @@ class BattleManager()
      /** Reference to a hero unit on a world map.
       * Currently used only for determining of terrain land and a handle to hero parameters */
      internal lateinit var attackingHero: MapUnit
-     internal lateinit var attackingTroops: MutableList<Troop>
+     internal lateinit var attackingTroops: MutableList<TroopInfo>
      internal var defendingHero: MapUnit? = null
-     internal lateinit var defendingTroops: MutableList<Troop>
-     internal lateinit var sequence: MutableList<Troop>
+     internal lateinit var defendingTroops: MutableList<TroopInfo>
+     internal lateinit var sequence: MutableList<TroopInfo>
      internal var screen: BattleScreen? = null
      /** Iterator to a currently active troop */
-     private lateinit var iterTroop: MutableListIterator<Troop>
+     private lateinit var iterTroop: MutableListIterator<TroopInfo>
      /** Reference to a currently active troop. Must be changed just after iterator [iterTroop] changed ( */
-     internal lateinit var currentTroop: Troop
+     internal lateinit var currentTroop: TroopInfo
 
      /** Initialization of the battle */
      fun startBattle(attackingHero0: MapUnit, defendingHero0: MapUnit? = null) {
@@ -46,10 +43,10 @@ class BattleManager()
          defendingHero = defendingHero0
          if(attackingHero.troops.isEmpty())
          {
-                 attackingHero.troops.add(Troop(10, "Horseman"))
-                 attackingHero.troops.add(Troop(20, "Archer"))
-                 attackingHero.troops.add(Troop(15, "Spearman"))
-                 attackingHero.troops.add(Troop(5, "Swordsman"))
+                 attackingHero.troops.add(TroopInfo(10, "Horseman"))
+                 attackingHero.troops.add(TroopInfo(20, "Archer"))
+                 attackingHero.troops.add(TroopInfo(15, "Spearman"))
+                 attackingHero.troops.add(TroopInfo(5, "Swordsman"))
          }
          attackingTroops = attackingHero.troops.toMutableList()
          isBattleOn = true
@@ -94,7 +91,7 @@ class BattleManager()
      }
 
      /** Get a troop on the specified hex. Check if there is any by call [isTroopOnHex] first */
-     fun getTroopOnHex(positionHex: Vector2): Troop {
+     fun getTroopOnHex(positionHex: Vector2): TroopInfo {
          return sequence.first { it.position == positionHex }
      }
 
@@ -130,7 +127,7 @@ class BattleManager()
          AIMove()
      }
 
-     fun isTroopAttacking(troop: Troop): Boolean{
+     fun isTroopAttacking(troop: TroopInfo): Boolean{
          if(attackingTroops.contains(troop))
              return true
          if(defendingTroops.contains(troop))
@@ -148,7 +145,7 @@ class BattleManager()
          if(attackingTroops.isEmpty() || defendingTroops.isEmpty())
              return
 
-         var target: Troop?
+         var target: TroopInfo?
 
          //checkBattleFinished()
 
@@ -194,7 +191,7 @@ class BattleManager()
          }
 
          // Let's find all the enemy troop available for attack
-         var availableTargets = mutableListOf<Troop>()
+         var availableTargets = mutableListOf<TroopInfo>()
          availableTiles.forEach { pos ->
              if (isTroopOnHex(pos)) {
                  val troop = getTroopOnHex(pos)
@@ -291,14 +288,14 @@ class BattleManager()
      }
 
      /** Attack the target by current troop by specified [defenderHex] position */
-     fun attack(defenderHex: Vector2, attacker: Troop = currentTroop){
+     fun attack(defenderHex: Vector2, attacker: TroopInfo = currentTroop){
          if (isTroopOnHex(defenderHex)) {
              attack(getTroopOnHex(defenderHex), attacker)
          }
      }
 
      /** Attack the target by current troop by specified [defender] troop handle */
-     fun attack(defender: Troop, attacker: Troop = currentTroop){
+     fun attack(defender: TroopInfo, attacker: TroopInfo = currentTroop){
          // Calculate maximum damage
          var damage = attacker.currentAmount * attacker.baseUnit.damage
 
@@ -325,7 +322,7 @@ class BattleManager()
      }
 
      /** Routine for perished troops. Removal from all lists. */
-     fun perishTroop(troop: Troop){
+     fun perishTroop(troop: TroopInfo){
          troop.perish()
          // TODO: That is ugly, but that's how iterators in kotlin work ( We must redefine all iterators after removing the element.
          // Otherwise, everything crashes ( Ideally, we need to invent our own IteratableList class, or switch to Int iterators.

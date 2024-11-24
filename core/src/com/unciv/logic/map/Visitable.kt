@@ -1,15 +1,10 @@
 package com.unciv.logic.map
 
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.unciv.UncivGame
 import com.unciv.logic.IsPartOfGameInfoSerialization
-import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.NotificationIcon
-import com.unciv.logic.civilization.TechAction
-import com.unciv.logic.event.hero.Troop
 import com.unciv.models.stats.Stat
 import com.unciv.ui.popup.Popup
 import com.unciv.ui.utils.BaseScreen

@@ -8,7 +8,7 @@ import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.logic.civilization.Proximity
 import com.unciv.logic.civilization.ReligionState
 import com.unciv.logic.civilization.diplomacy.DiplomacyFlags
-import com.unciv.logic.event.hero.Troop
+import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.RoadStatus
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
@@ -136,7 +136,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
     var avoidGrowth: Boolean = false
     @Transient var currentGPPBonus: Int = 0  // temporary variable saved for rankSpecialist()
 
-    var garrison = mutableListOf<Troop>()
+    var garrison = mutableListOf<TroopInfo>()
 
 
     /** The very first found city is the _original_ capital,
@@ -158,10 +158,10 @@ class CityInfo : IsPartOfGameInfoSerialization {
         turnAcquired = civInfo.gameInfo.turns
         location = cityLocation
 
-        garrison.add(Troop(30, "Archer"))
-        garrison.add(Troop(20, "Spearman"))
-        garrison.add(Troop(10, "Horseman"))
-        garrison.add(Troop(15, "Swordsman"))
+        garrison.add(TroopInfo(30, "Archer"))
+        garrison.add(TroopInfo(20, "Spearman"))
+        garrison.add(TroopInfo(10, "Horseman"))
+        garrison.add(TroopInfo(15, "Swordsman"))
 
         setTransients()
 

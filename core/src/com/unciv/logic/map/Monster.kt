@@ -1,15 +1,5 @@
 package com.unciv.logic.map
 
-import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.scenes.scene2d.Group
-import com.badlogic.gdx.scenes.scene2d.Touchable
-import com.badlogic.gdx.scenes.scene2d.ui.Image
-import com.badlogic.gdx.scenes.scene2d.ui.Label
-import com.unciv.logic.event.hero.Troop
-import com.unciv.ui.images.ImageGetter
-import com.unciv.ui.tilegroups.TileGroup
-import com.unciv.ui.utils.BaseScreen
-
 //TODO: remove this class and make just a MapUnit
 /*
 class Monster(var amount: Int, var monsterName: String) : MapUnit() {

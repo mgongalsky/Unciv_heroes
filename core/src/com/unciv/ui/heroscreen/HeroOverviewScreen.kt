@@ -91,10 +91,10 @@ class HeroOverviewScreen(
             Align.bottom)//.padLeft(8f)
         pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(50f).align(
             Align.bottom)//.padLeft(8f)
-//        pageObject.add(Label("Attack Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
-  //      pageObject.add(Label("Defense Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
-       // pageObject.add("Strength").size(140f)//.padLeft(8f)
-       // pageObject.add("Health").size(140f)//.padLeft(8f)
+        //pageObject.add(Label("Attack Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
+        //pageObject.add(Label("Defense Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
+        //pageObject.add("Strength").size(140f)//.padLeft(8f)
+        //pageObject.add("Health").size(140f)//.padLeft(8f)
 
   //      pageObject.row()
   //      pageObject.add(Label(viewingHero.displayName(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
