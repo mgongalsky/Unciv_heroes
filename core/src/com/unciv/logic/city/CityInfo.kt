@@ -161,7 +161,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
         location = cityLocation
 
         garrisonInfo.setTroopAt(0, TroopInfo(35, "Archer"))
-        garrisonInfo.setTroopAt(1, TroopInfo(25, "Spearman"))
+        //garrisonInfo.setTroopAt(1, TroopInfo(25, "Spearman"))
         garrisonInfo.setTroopAt(2, TroopInfo(15, "Horseman"))
         garrisonInfo.setTroopAt(3, TroopInfo(12, "Swordsman"))
         garrison.add(TroopInfo(30, "Archer"))

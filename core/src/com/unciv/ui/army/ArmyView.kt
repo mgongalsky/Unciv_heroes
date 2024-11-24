@@ -40,7 +40,7 @@ class ArmyView(private val armyInfo: ArmyInfo) : Table() {
             } else {
                 // Если слота нет, добавляем пустое изображение
                 val emptySlotImage =
-                        ImageGetter.getImage("OtherIcons/EmptySlot") // Укажите правильный путь
+                        ImageGetter.getImage("OtherIcons/Wait") // Укажите правильный путь
                 add(emptySlotImage).size(64f).pad(5f)
             }
             // Ensure layout is updated

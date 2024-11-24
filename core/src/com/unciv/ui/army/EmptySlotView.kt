@@ -13,7 +13,7 @@ class EmptySlotView : Group() {
     init {
         // Используем изображение для пустого слота
         // TODO: Create an image for EmptySlot
-        val emptySlotImage = ImageGetter.getImage("OtherIcons/EmptySlot") // Replace with your placeholder image path
+        val emptySlotImage = ImageGetter.getImage("OtherIcons/Wait") // Replace with your placeholder image path
 
         // Устанавливаем размер и добавляем изображение в группу
         emptySlotImage.setSize(64f, 64f) // Размер пустого слота
