@@ -1,104 +1,173 @@
 package com.unciv.ui.army
 
-
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
-import com.badlogic.gdx.graphics.g2d.Sprite
-import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.scenes.scene2d.Group
-import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
-import com.badlogic.gdx.scenes.scene2d.utils.Drawable
-import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable
+import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.logic.army.TroopInfo
-import com.unciv.ui.utils.TextureUtils.createBorderDrawable
-import com.unciv.ui.utils.TextureUtils.createMonochromaticTexture
+import com.unciv.ui.utils.TextureUtils
 
 /**
- * Represents the view of a troop in an army context (e.g., garrison, hero screen).
+ * Represents the visual representation of a single troop in an army.
+ * Includes functionality for selection/deselection and updating the display accordingly.
  */
 class TroopArmyView(
     private val troopInfo: TroopInfo
 ) : Group() {
-    private val troopGroup = Group()
-    private lateinit var troopImages: ArrayList<Image>
+    private val troopGroup = Group() // A group to contain all troop-related visuals
+    private lateinit var troopImages: ArrayList<Image> // Images representing the troop's layers
+    private var selected: Boolean = false // Indicates whether the troop is selected
+
+    // Preload textures for selection states to avoid creating them repeatedly
+    private val defaultTexture = TextureUtils.createMonochromaticTexture(64, 64, Color.BROWN)
+    private val selectedTexture = TextureUtils.createMonochromaticTexture(64, 64, Color.GOLD)
+
+    companion object {
+        var isVerbose = false // Flag to enable or disable verbose output
+    }
 
     init {
+        // Load troop images based on the troop's unit name
         val unitImagePath = "TileSets/AbsoluteUnits/Units/${troopInfo.unitName}"
         troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, null, null)
 
-        drawInArmy()
+        // Initial drawing of the troop view
+        draw()
+        setupClickListener()
     }
 
+    /**
+     * Marks the troop as selected and updates its appearance.
+     */
+    fun select() {
+        if (!selected) {
+            logVerbose("Troop selected: ${troopInfo.unitName}")
+            selected = true
+            updateViewForSelection()
+        }
+    }
 
+    /**
+     * Marks the troop as deselected and updates its appearance.
+     */
+    fun deselect() {
+        if (selected) {
+            logVerbose("Troop deselected: ${troopInfo.unitName}")
+            selected = false
+            updateViewForSelection()
+        }
+    }
 
+    /**
+     * Updates the view to reflect the current selection state by changing the texture within the drawable.
+     */
+    private fun updateViewForSelection() {
+        val newTexture = if (selected) selectedTexture else defaultTexture
 
-    /** Draw the troop in an army context (e.g., garrison, hero screen). */
-    fun drawInArmy() {
+        // Get the background image by its name
+        val backgroundImage = troopGroup.findActor<Image>("backgroundImage")
 
-        val bgTexture = createMonochromaticTexture(64, 64, Color.BROWN) // Adjust the dimensions and color as needed
-        val bgTextureActive = createMonochromaticTexture(64, 64, Color.OLIVE) // Adjust the dimensions and color as needed
+        if (backgroundImage != null) {
+            logVerbose("Updating background texture for ${troopInfo.unitName}")
 
-        // Create a drawable with a border using the texture
-        val drawable = createBorderDrawable(bgTexture, 5f, Color.WHITE) // Adjust the border width and color as needed
+            // Ensure the drawable is of type TextureRegionDrawable
+            val drawable = backgroundImage.drawable
+            if (drawable is TextureRegionDrawable) {
+                drawable.region.texture = newTexture
+                logVerbose("Texture updated successfully for ${troopInfo.unitName}")
+            } else {
+                logVerbose("Drawable is not of type TextureRegionDrawable for ${troopInfo.unitName}")
+            }
 
+            // Notify the parent that the visuals need a refresh
+            backgroundImage.invalidateHierarchy()
+        } else {
+            logVerbose("Background image not found for ${troopInfo.unitName}")
+        }
+    }
 
-        //val cell: Cell<*> = garrisonWidget.add()
+    /**
+     * Draws the troop's visual components, including the interactive background.
+     */
+    fun draw() {
+        // Create a background image and assign it a name for easy reference
+        val backgroundImage = Image(defaultTexture).apply {
+            name = "backgroundImage"
+            touchable = Touchable.enabled // Enable interactivity for the background
 
-
-        val backgroundImage = Image(bgTexture)
-
-        // Create a group to hold the troopGroup and the background actor
-        //val bgGroup = Group()
+        }
         troopGroup.addActor(backgroundImage)
 
-
-        val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin)
-        amountText.scaleBy(0.5f)
-        amountText.moveBy(50f, 0.5f)
-
-        amountText.name = "amountLabel"
-        amountText.touchable = Touchable.disabled
-        troopGroup.findActor<Label>("amountLabel")?.remove()
+        // Create and add a label showing the troop's current amount
+        val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
+            scaleBy(0.5f)
+            moveBy(50f, 0.5f)
+            name = "amountLabel"
+            touchable = Touchable.disabled // Label should not be interactive
+        }
+        troopGroup.findActor<Label>("amountLabel")?.remove() // Remove old label if it exists
         troopGroup.addActor(amountText)
 
+        // Add troop images to the group
         for (troopImage in troopImages) {
-            troopImage.setScale(-0.125f, 0.125f)
-            troopImage.moveBy(60f, 0f)
-            //troopImage.setOrigin(troopGroup.originX, troopGroup.originY)
-            troopImage.touchable = Touchable.disabled
-
-            troopImage.name = "troopImage"
-            troopGroup.name = "troopGroup"
-            troopGroup.findActor<Image>("troopImage")?.remove()
+            troopImage.setScale(-0.125f, 0.125f) // Adjust scaling
+            troopImage.moveBy(60f, 0f) // Offset the image position
+            troopImage.touchable = Touchable.disabled // Images should not be interactive
+            troopImage.name = "troopImage" // Assign a name for easy reference
+            troopGroup.findActor<Image>("troopImage")?.remove() // Remove old image if it exists
             troopGroup.addActor(troopImage)
         }
 
-
-        // Here is the problem:
+        // Add the troop group to this view
         addActor(troopGroup)
     }
 
-    /** Handle click interaction for troop selection. */
-    fun onClick(action: () -> Unit) {
-        troopGroup.touchable = Touchable.enabled // Разрешить взаимодействие с группой
-        troopGroup.addListener(object : ClickListener() { // Добавляем слушатель клика
+    /**
+     * Sets up a click listener to toggle the selection state when the troop is clicked.
+     */
+    private fun setupClickListener() {
+        troopGroup.touchable = Touchable.enabled // Allow interactions with the group
+        troopGroup.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                action() // Выполняем переданное действие
+                logVerbose("Troop clicked: ${troopInfo.unitName}")
+                toggleSelection() // Toggle selection state on click
             }
         })
     }
 
+    /**
+     * Toggles the troop's selection state between selected and deselected.
+     */
+    private fun toggleSelection() {
+        if (selected) {
+            deselect()
+        } else {
+            select()
+        }
+    }
 
-    /** Remove the troop from the view (e.g., when dismissed). */
+    /**
+     * Removes the troop view, typically when the troop is dismissed or removed from the army.
+     */
     fun dismiss() {
+        logVerbose("Troop dismissed: ${troopInfo.unitName}")
         troopGroup.remove()
+    }
+
+    /**
+     * Logs a message to the console if verbose logging is enabled.
+     */
+    private fun logVerbose(message: String) {
+        if (isVerbose) {
+            println(message)
+        }
     }
 }
