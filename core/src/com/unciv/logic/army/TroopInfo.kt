@@ -181,7 +181,7 @@ class TroopInfo (
     }
 
     /** Draw the troop in a city within specifed [Group]*/
-    fun drawInCity(group: Group, isGarrison: Boolean)
+    fun DeleteDrawInCity(group: Group, isGarrison: Boolean)
     {
         // Draw amount of units
         // TODO: Here we need to make text smaller, but looks like we need to introduce new font for this.

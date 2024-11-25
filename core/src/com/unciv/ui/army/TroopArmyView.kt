@@ -18,6 +18,8 @@ import com.badlogic.gdx.scenes.scene2d.utils.SpriteDrawable
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.logic.army.TroopInfo
+import com.unciv.ui.utils.TextureUtils.createBorderDrawable
+import com.unciv.ui.utils.TextureUtils.createMonochromaticTexture
 
 /**
  * Represents the view of a troop in an army context (e.g., garrison, hero screen).
@@ -35,37 +37,7 @@ class TroopArmyView(
         drawInArmy()
     }
 
-    fun createMonochromaticTexture(width: Int, height: Int, color: Color): Texture {
-        val pixmap = Pixmap(width, height, Pixmap.Format.RGBA8888)
-        pixmap.setColor(color)
-        pixmap.fill()
 
-        val texture = Texture(pixmap)
-        pixmap.dispose()
-
-        return texture
-    }
-
-    fun createBorderDrawable(texture: Texture, borderWidth: Float, borderColor: Color): Drawable {
-        val sprite = Sprite(texture)
-        val borderSprite = Sprite(texture)
-
-        borderSprite.setSize(sprite.width + borderWidth * 2f, sprite.height + borderWidth * 2f)
-        borderSprite.setColor(borderColor)
-
-        val borderBatch = SpriteBatch()
-        borderBatch.begin()
-        borderSprite.draw(borderBatch)
-        borderBatch.end()
-
-        val drawable = SpriteDrawable(sprite)
-        drawable.leftWidth = borderWidth
-        drawable.rightWidth = borderWidth
-        drawable.topHeight = borderWidth
-        drawable.bottomHeight = borderWidth
-
-        return drawable
-    }
 
 
     /** Draw the troop in an army context (e.g., garrison, hero screen). */

@@ -156,7 +156,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
             val column = garrisonWidget.columnDefaults(i % 2)
             column.spaceBottom(iconSpacing)
-            currTroop.drawInCity(troopGroup, isGarrison = true)
+            //currTroop.drawInCity(troopGroup, isGarrison = true)
             //troopGroup.addBorder(3f, Color.WHITE, expandCell = false)
 
             //val bgColor = Color(0f, 0.3f, 0f, 0f)
