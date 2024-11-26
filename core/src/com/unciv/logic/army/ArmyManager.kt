@@ -64,12 +64,26 @@ class ArmyManager(
         val targetArmy = if (isArmy1) army1 else army2 ?: return false
 
         // Retrieve both troops
-        val firstTroop = targetArmy.getTroopAt(firstIndex) ?: return false
-        val secondTroop = targetArmy.getTroopAt(secondIndex) ?: return false
+        val firstTroop = targetArmy.getTroopAt(firstIndex)
+        val secondTroop = targetArmy.getTroopAt(secondIndex)
+
+        // If both slots are empty
+        if (firstTroop == null && secondTroop == null) {
+            println("Error: two empty slot are selected")
+            return false
+        }
 
         // Set them in their new positions
-        targetArmy.setTroopAt(firstIndex, secondTroop)
-        targetArmy.setTroopAt(secondIndex, firstTroop)
+        if(secondTroop != null)
+            targetArmy.setTroopAt(firstIndex, secondTroop)
+        else
+            targetArmy.removeTroopAt(firstIndex)
+        if(firstTroop != null)
+            targetArmy.setTroopAt(secondIndex, firstTroop)
+        else
+            targetArmy.removeTroopAt(secondIndex)
+
+
 
         return true
     }

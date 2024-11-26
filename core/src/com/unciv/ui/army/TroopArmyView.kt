@@ -20,7 +20,7 @@ import com.unciv.ui.utils.TextureUtils
  * Includes functionality for selection/deselection and updating the display accordingly.
  */
 class TroopArmyView(
-    private val troopInfo: TroopInfo,
+    private val troopInfo: TroopInfo?, // Null indicates an empty slot
     private val armyView: ArmyView
 ) : Group() {
     private val troopGroup = Group() // A group to contain all troop-related visuals
@@ -37,12 +37,17 @@ class TroopArmyView(
 
     init {
         // Load troop images based on the troop's unit name
-        val unitImagePath = "TileSets/AbsoluteUnits/Units/${troopInfo.unitName}"
-        troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, null, null)
-
+        if(troopInfo != null) {
+            val unitImagePath = "TileSets/AbsoluteUnits/Units/${troopInfo.unitName}"
+            troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, null, null)
+        }
         // Initial drawing of the troop view
         draw()
         setupClickListener()
+    }
+
+    fun isEmptySlot(): Boolean {
+        return troopInfo == null
     }
 
     /**
@@ -50,7 +55,11 @@ class TroopArmyView(
      */
     fun select() {
         if (!selected) {
-            logVerbose("Troop selected: ${troopInfo.unitName}")
+            if(troopInfo != null)
+                logVerbose("Troop selected: ${troopInfo.unitName}")
+            else
+                logVerbose("Empty slot selected")
+
             selected = true
             updateViewForSelection()
         }
@@ -61,7 +70,10 @@ class TroopArmyView(
      */
     fun deselect() {
         if (selected) {
-            logVerbose("Troop deselected: ${troopInfo.unitName}")
+            if(troopInfo != null)
+                logVerbose("Troop deselected: ${troopInfo.unitName}")
+            else
+                logVerbose("Empty slot deselected")
             selected = false
             updateViewForSelection()
         }
@@ -77,21 +89,21 @@ class TroopArmyView(
         val backgroundImage = troopGroup.findActor<Image>("backgroundImage")
 
         if (backgroundImage != null) {
-            logVerbose("Updating background texture for ${troopInfo.unitName}")
+            logVerbose("Updating background texture ")
 
             // Ensure the drawable is of type TextureRegionDrawable
             val drawable = backgroundImage.drawable
             if (drawable is TextureRegionDrawable) {
                 drawable.region.texture = newTexture
-                logVerbose("Texture updated successfully for ${troopInfo.unitName}")
+                logVerbose("Texture updated successfully")
             } else {
-                logVerbose("Drawable is not of type TextureRegionDrawable for ${troopInfo.unitName}")
+                logVerbose("Drawable is not of type TextureRegionDrawable")
             }
 
             // Notify the parent that the visuals need a refresh
             backgroundImage.invalidateHierarchy()
         } else {
-            logVerbose("Background image not found for ${troopInfo.unitName}")
+            logVerbose("Background image not found")
         }
     }
 
@@ -107,26 +119,28 @@ class TroopArmyView(
         }
         troopGroup.addActor(backgroundImage)
 
-        // Create and add a label showing the troop's current amount
-        val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
-            scaleBy(0.5f)
-            moveBy(50f, 0.5f)
-            name = "amountLabel"
-            touchable = Touchable.disabled // Label should not be interactive
-        }
-        troopGroup.findActor<Label>("amountLabel")?.remove() // Remove old label if it exists
-        troopGroup.addActor(amountText)
+        if(troopInfo != null) {
+            // Create and add a label showing the troop's current amount
 
-        // Add troop images to the group
-        for (troopImage in troopImages) {
-            troopImage.setScale(-0.125f, 0.125f) // Adjust scaling
-            troopImage.moveBy(60f, 0f) // Offset the image position
-            troopImage.touchable = Touchable.disabled // Images should not be interactive
-            troopImage.name = "troopImage" // Assign a name for easy reference
-            troopGroup.findActor<Image>("troopImage")?.remove() // Remove old image if it exists
-            troopGroup.addActor(troopImage)
-        }
+            val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
+                scaleBy(0.5f)
+                moveBy(50f, 0.5f)
+                name = "amountLabel"
+                touchable = Touchable.disabled // Label should not be interactive
+            }
+            troopGroup.findActor<Label>("amountLabel")?.remove() // Remove old label if it exists
+            troopGroup.addActor(amountText)
 
+            // Add troop images to the group
+            for (troopImage in troopImages) {
+                troopImage.setScale(-0.125f, 0.125f) // Adjust scaling
+                troopImage.moveBy(60f, 0f) // Offset the image position
+                troopImage.touchable = Touchable.disabled // Images should not be interactive
+                troopImage.name = "troopImage" // Assign a name for easy reference
+                troopGroup.findActor<Image>("troopImage")?.remove() // Remove old image if it exists
+                troopGroup.addActor(troopImage)
+            }
+        }
         // Add the troop group to this view
         addActor(troopGroup)
     }
@@ -138,7 +152,11 @@ class TroopArmyView(
         troopGroup.touchable = Touchable.enabled // Allow interactions with the group
         troopGroup.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                logVerbose("Troop clicked: ${troopInfo.unitName}")
+                if(troopInfo != null)
+                    logVerbose("Troop clicked: ${troopInfo.unitName}")
+                else
+                    logVerbose("Empty slot clicked")
+
                 armyView.onTroopClicked(this@TroopArmyView)
 
 //                toggleSelection() // Toggle selection state on click
@@ -161,8 +179,9 @@ class TroopArmyView(
      * Removes the troop view, typically when the troop is dismissed or removed from the army.
      */
     fun dismiss() {
-        logVerbose("Troop dismissed: ${troopInfo.unitName}")
-        troopGroup.remove()
+        // TODO: need to rewrite. do not remove, but substitute into empty slot
+        //logVerbose("Troop dismissed: ${troopInfo.unitName}")
+        //troopGroup.remove()
     }
 
     /**

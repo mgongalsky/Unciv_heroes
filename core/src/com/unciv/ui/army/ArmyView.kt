@@ -33,17 +33,9 @@ class ArmyView(private val armyInfo: ArmyInfo, private val armyManager: ArmyMana
 
         // Iterate through slots and create/update views
         armyInfo.getAllTroops().forEachIndexed { index, troop ->
-            if (troop != null) {
-                // If the troop exists, create its view
                 val troopView = TroopArmyView(troop, this) // Pass ArmyView for interaction
                 troopViewsArray[index] = troopView // Save to array
                 add(troopView).size(64f).pad(5f)
-            } else {
-                // If the slot is empty, add a placeholder image
-                val emptySlotImage = ImageGetter.getImage("OtherIcons/Wait")
-                troopViewsArray[index] = null // Save null to array
-                add(emptySlotImage).size(64f).pad(5f)
-            }
         }
 
         pack() // Ensure layout is updated
@@ -113,8 +105,11 @@ class ArmyView(private val armyInfo: ArmyInfo, private val armyManager: ArmyMana
             selectedTroop = null // Clear selection after swap
         } else {
             // If no troop is selected, select the clicked troop
-            selectedTroop = clickedTroopView
-            clickedTroopView.select()
+            // But only non-empty slot can be selected
+            if(!clickedTroopView.isEmptySlot()) {
+                selectedTroop = clickedTroopView
+                clickedTroopView.select()
+            }
         }
     }
 }
