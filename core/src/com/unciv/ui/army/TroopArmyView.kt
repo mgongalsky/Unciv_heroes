@@ -20,7 +20,8 @@ import com.unciv.ui.utils.TextureUtils
  * Includes functionality for selection/deselection and updating the display accordingly.
  */
 class TroopArmyView(
-    private val troopInfo: TroopInfo
+    private val troopInfo: TroopInfo,
+    private val armyView: ArmyView
 ) : Group() {
     private val troopGroup = Group() // A group to contain all troop-related visuals
     private lateinit var troopImages: ArrayList<Image> // Images representing the troop's layers
@@ -138,7 +139,9 @@ class TroopArmyView(
         troopGroup.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
                 logVerbose("Troop clicked: ${troopInfo.unitName}")
-                toggleSelection() // Toggle selection state on click
+                armyView.onTroopClicked(this@TroopArmyView)
+
+//                toggleSelection() // Toggle selection state on click
             }
         })
     }
