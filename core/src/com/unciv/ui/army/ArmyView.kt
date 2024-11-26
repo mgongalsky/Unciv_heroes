@@ -2,6 +2,7 @@ package com.unciv.ui.army
 
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.logic.army.ArmyInfo
+import com.unciv.logic.army.ArmyManager
 import com.unciv.logic.army.TroopInfo
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.extensions.onClick
@@ -10,21 +11,17 @@ import com.unciv.ui.utils.extensions.onClick
  * A view for displaying an [ArmyInfo] in the UI.
  * Handles rendering of troops or empty slots and interactions.
  */
-class ArmyView(private val armyInfo: ArmyInfo) : Table() {
+class ArmyView(private val armyInfo: ArmyInfo, private val armyManager: ArmyManager) : Table() {
 
-    // Массив для хранения TroopArmyView или null для пустых слотов
+    // Array to store TroopArmyView or null for empty slots
     private val troopViewsArray: Array<TroopArmyView?> = arrayOfNulls(armyInfo.getAllTroops().size)
 
-    private var selectedTroop: TroopArmyView? = null // Ссылка на выделенный юнит
-
+    private var selectedTroop: TroopArmyView? = null // Reference to the selected troop
 
     init {
-        // From CityContructionsTable
+        // Align the table and set padding
         bottom().left()
         pad(10f)
-        // garrisonWidget.height(stageHeight / 8)
-        //val tableHeight = stage.height / 8f
-        //height = tableHeight
         updateView()
     }
 
@@ -38,7 +35,7 @@ class ArmyView(private val armyInfo: ArmyInfo) : Table() {
         armyInfo.getAllTroops().forEachIndexed { index, troop ->
             if (troop != null) {
                 // If the troop exists, create its view
-                val troopView = TroopArmyView(troop, this) // Передаем ArmyView для взаимодействия
+                val troopView = TroopArmyView(troop, this) // Pass ArmyView for interaction
                 troopViewsArray[index] = troopView // Save to array
                 add(troopView).size(64f).pad(5f)
             } else {
@@ -99,15 +96,25 @@ class ArmyView(private val armyInfo: ArmyInfo) : Table() {
 
     /**
      * Callback for when a TroopArmyView is clicked.
-     * This method is called by TroopArmyView and manages selection logic.
+     * This method is called by TroopArmyView and delegates to ArmyManager.
      * @param clickedTroopView The clicked TroopArmyView instance.
      */
     fun onTroopClicked(clickedTroopView: TroopArmyView) {
-        troopViewsArray.forEach { troopView ->
-            if (troopView != clickedTroopView) {
-                troopView?.deselect() // Deselect all other troops
+        val clickedIndex = troopViewsArray.indexOf(clickedTroopView)
+        if (clickedIndex == -1) return // If the troop is not found, do nothing
+
+        if (selectedTroop != null) {
+            val selectedIndex = troopViewsArray.indexOf(selectedTroop)
+            if (selectedIndex != -1) {
+                // Swap the selected troop with the clicked troop
+                armyManager.swapTroops(selectedIndex, clickedIndex, true)
+                updateView() // Refresh the view to reflect the change
             }
+            selectedTroop = null // Clear selection after swap
+        } else {
+            // If no troop is selected, select the clicked troop
+            selectedTroop = clickedTroopView
+            clickedTroopView.select()
         }
-        clickedTroopView.select() // Select the clicked troop
     }
 }

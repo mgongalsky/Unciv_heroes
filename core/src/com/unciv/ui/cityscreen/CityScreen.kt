@@ -6,6 +6,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.UncivGame
+import com.unciv.logic.army.ArmyManager
 import com.unciv.logic.automation.Automation
 import com.unciv.logic.city.CityInfo
 import com.unciv.logic.city.IConstruction
@@ -77,7 +78,9 @@ class CityScreen(
     internal var visitingHeroTable = VisitingHeroTable(this)
 
     /** View class handler for city garrison */
-    internal var garrisonView = ArmyView(city.garrisonInfo)
+    internal var armyManager = ArmyManager(city.garrisonInfo) // Create ArmyManager with the city's garrisonInfo
+    internal var garrisonView = ArmyView(city.garrisonInfo, armyManager) // Pass the ArmyManager to the ArmyView
+
 
     /** Currently selected troop no matter in garrison or visiting hero */
     internal var currTroop : TroopInfo? = null
