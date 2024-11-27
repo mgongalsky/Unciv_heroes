@@ -1,15 +1,16 @@
 package com.unciv.logic.army
 
-
 import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
 import com.unciv.logic.IsPartOfGameInfoSerialization
+import com.unciv.logic.civilization.CivilizationInfo
 
 /**
  * Represents an army consisting of a fixed number of slots,
  * where each slot can hold a [TroopInfo] or be empty (null).
  */
 class ArmyInfo(
+    var civInfo: CivilizationInfo,
     private val maxSlots: Int = DEFAULT_ARMY_SIZE
 ) : IsPartOfGameInfoSerialization, Json.Serializable {
 
@@ -20,6 +21,26 @@ class ArmyInfo(
 
     // Array to hold troop slots (null means the slot is empty)
     private val slots: Array<TroopInfo?> = Array(maxSlots) { null }
+
+
+    /** Convenience constructor to initialize army with a list of troops */
+    constructor(civInfo: CivilizationInfo, vararg troops: Pair<String, Int>) : this(civInfo, maxSlots = maxOf(DEFAULT_ARMY_SIZE, troops.size)) {
+        initializeTroops(troops)
+    }
+
+    /** Initializes troops in slots from a list of pairs (name, count) */
+    private fun initializeTroops(troops: Array<out Pair<String, Int>>) {
+        for ((index, troop) in troops.withIndex()) {
+            if (index >= maxSlots) break
+            val (name, count) = troop
+            slots[index] = TroopInfo(name, count, civInfo)
+        }
+        // Fill remaining slots with null if the number of troops is less than maxSlots
+        for (index in troops.size until maxSlots) {
+            slots[index] = null // Explicitly mark the slot as empty
+        }
+    }
+
 
     /** Returns the troop at the given index or null if the slot is empty. */
     fun getTroopAt(index: Int): TroopInfo? {
@@ -67,7 +88,6 @@ class ArmyInfo(
         return slots // Возвращаем внутренний массив слотов
     }
 
-
     // ===== Serialization Methods =====
 
     override fun write(json: Json) {
@@ -85,5 +105,4 @@ class ArmyInfo(
             slots[i] = if (troopData != null) json.readValue(TroopInfo::class.java, troopData) else null
         }
     }
-
 }

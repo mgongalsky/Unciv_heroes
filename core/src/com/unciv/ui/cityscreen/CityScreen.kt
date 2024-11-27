@@ -74,12 +74,18 @@ class CityScreen(
     /** Displays selected construction info, alternate with tileTable - sits on BOTTOM RIGHT */
     private var selectedConstructionTable = ConstructionInfoTable(this)
 
+
     /** Displays visiting hero information, mainly his army - sits on BOTTOM RIGHT */
     internal var visitingHeroTable = VisitingHeroTable(this)
+    internal val visitingHero = city.tileMap[city.location].militaryUnit
+
 
     /** View class handler for city garrison */
-    internal var armyManager = ArmyManager(city.garrisonInfo) // Create ArmyManager with the city's garrisonInfo
+    internal var armyManager = ArmyManager(city.garrisonInfo, visitingHero?.army) // Create ArmyManager with the city's garrisonInfo
     internal var garrisonView = ArmyView(city.garrisonInfo, armyManager) // Pass the ArmyManager to the ArmyView
+
+    val visitingArmyView: ArmyView?
+        get() = visitingHero?.let { ArmyView(it.army, armyManager) }
 
 
     /** Currently selected troop no matter in garrison or visiting hero */
@@ -132,6 +138,9 @@ class CityScreen(
     private val cityAmbiencePlayer = CityAmbiencePlayer(city)
 
     init {
+
+
+
         if (city.isWeLoveTheKingDayActive() && UncivGame.Current.settings.citySoundsVolume > 0) {
             SoundPlayer.play(UncivSound("WLTK"))
         }

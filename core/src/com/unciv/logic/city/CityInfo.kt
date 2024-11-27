@@ -138,7 +138,9 @@ class CityInfo : IsPartOfGameInfoSerialization {
     @Transient var currentGPPBonus: Int = 0  // temporary variable saved for rankSpecialist()
 
     var garrison = mutableListOf<TroopInfo>()
-    var garrisonInfo = ArmyInfo()
+    // TODO: need to get rid of those lateinits
+    lateinit var garrisonInfo : ArmyInfo
+
 
 
     /** The very first found city is the _original_ capital,
@@ -160,10 +162,15 @@ class CityInfo : IsPartOfGameInfoSerialization {
         turnAcquired = civInfo.gameInfo.turns
         location = cityLocation
 
-        garrisonInfo.setTroopAt(0, TroopInfo(35, "Archer"))
-        //garrisonInfo.setTroopAt(1, TroopInfo(25, "Spearman"))
-        garrisonInfo.setTroopAt(2, TroopInfo(15, "Horseman"))
-        garrisonInfo.setTroopAt(3, TroopInfo(12, "Swordsman"))
+        // Initialize the garrisonInfo with predefined troops
+        garrisonInfo = ArmyInfo(
+            civInfo,
+            "Archer" to 35,
+            // "Spearman" to 25, // Uncomment if needed
+            "Horseman" to 15,
+            "Swordsman" to 12
+        )
+
         garrison.add(TroopInfo(30, "Archer"))
         garrison.add(TroopInfo(20, "Spearman"))
         garrison.add(TroopInfo(10, "Horseman"))

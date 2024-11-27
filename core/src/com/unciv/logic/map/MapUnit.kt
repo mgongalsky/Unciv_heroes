@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Vector2
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.IsPartOfGameInfoSerialization
+import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.automation.unit.UnitAutomation
 import com.unciv.logic.automation.unit.WorkerAutomation
 import com.unciv.logic.battle.Battle
@@ -97,6 +98,12 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     // TODO: troops must be changed from list to a finite array with possible empty slots. And army manager must be written.
     var troops = mutableListOf<TroopInfo>()
+
+    var army: ArmyInfo = ArmyInfo(
+        civInfo,
+        "Archer" to 30,
+        "Horseman" to 20
+    )
 
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
      *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */
@@ -1259,10 +1266,18 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     }
 
     fun assignOwner(civInfo: CivilizationInfo, updateCivInfo: Boolean = true) {
+        // Update the owner and civInfo for this MapUnit
         owner = civInfo.civName
         this.civInfo = civInfo
         civInfo.addUnit(this, updateCivInfo)
+
+        // TODO: Exclude this! I hate those lateinits. There is no reason for the troop to change civilization!
+        // If the MapUnit has an army, update civInfo for all troops in the army
+        army.getAllTroops().forEach { troop ->
+            troop?.civInfo = civInfo // Update civInfo only for non-null troops
+        }
     }
+
 
     fun capturedBy(captor: CivilizationInfo) {
         civInfo.removeUnit(this)

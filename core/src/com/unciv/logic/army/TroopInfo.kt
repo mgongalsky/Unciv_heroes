@@ -46,6 +46,12 @@ class TroopInfo (
     /** Position of a troop in hex coordinates */
     lateinit var position: Vector2 //= Vector2(2f,2f)
 
+    // Новый удобный конструктор
+    constructor(unitName: String, amount: Int, civInfo: CivilizationInfo) : this(amount, unitName) {
+        this.civInfo = civInfo
+        initializeVariables()
+    }
+
     constructor() : this(0, "Spearman")
 
     init {
