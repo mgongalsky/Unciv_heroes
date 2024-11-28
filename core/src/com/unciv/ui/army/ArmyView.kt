@@ -181,7 +181,7 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
                 }
             }
         } else {
-            // Handle single-army interaction
+        // Handle single-army interaction
             if (selectedTroop != null) {
                 val selectedIndex = troopViewsArray.indexOf(selectedTroop)
                 if (selectedIndex != -1 && selectedIndex != clickedIndex) {
@@ -199,13 +199,16 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
                         updateView() // Refresh the view to reflect the change
                     }
                 }
-                deselectAllTroops() // Clear selection in the current army
+                //deselectAllTroops() // Clear selection in the current army
+                selectedTroop = null // Clear selection after swap
+
             } else {
                 // If no troop is selected, select the clicked troop
                 if (!clickedTroopView.isEmptySlot()) {
-                    deselectAllTroops() // Deselect all troops in the current army
-                    clickedTroopView.select()
+                    //deselectAllTroops() // Deselect all troops in the current army
                     selectedTroop = clickedTroopView
+
+                    clickedTroopView.select()
                 }
             }
         }
