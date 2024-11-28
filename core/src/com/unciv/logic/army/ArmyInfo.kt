@@ -48,14 +48,14 @@ class ArmyInfo(
     }
 
     /** Sets a troop at the given index. If the index is out of bounds, nothing happens. */
-    fun setTroopAt(index: Int, troop: TroopInfo?) {
+    internal fun setTroopAt(index: Int, troop: TroopInfo?) {
         if (index in slots.indices) {
             slots[index] = troop
         }
     }
 
     /** Removes a troop from the given index (makes the slot empty) and returns it. */
-    fun removeTroopAt(index: Int): TroopInfo? {
+    internal fun removeTroopAt(index: Int): TroopInfo? {
         if (index in slots.indices) {
             val removedTroop = slots[index]
             slots[index] = null
@@ -65,7 +65,7 @@ class ArmyInfo(
     }
 
     /** Adds a troop to the first available slot. Returns true if successful, false if full. */
-    fun addTroop(troop: TroopInfo): Boolean {
+    internal fun addTroop(troop: TroopInfo): Boolean {
         val emptySlotIndex = slots.indexOfFirst { it == null }
         return if (emptySlotIndex != -1) {
             slots[emptySlotIndex] = troop
@@ -76,7 +76,7 @@ class ArmyInfo(
     }
 
     /** Swaps two troops in the array by their indices. */
-    fun swapTroops(index1: Int, index2: Int) {
+    internal fun swapTroops(index1: Int, index2: Int) {
         if (index1 in slots.indices && index2 in slots.indices) {
             val temp = slots[index1]
             slots[index1] = slots[index2]

@@ -54,36 +54,41 @@ class ArmyManager(
     }
 
     /**
-     * Swaps two troops within the same army.
-     * @param firstIndex The index of the first troop.
-     * @param secondIndex The index of the second troop.
-     * @param isArmy1 If true, the operation is performed on army1; otherwise, on army2.
+     * Swaps two troops between the same or different armies.
+     * @param firstArmy The first army involved in the swap.
+     * @param firstIndex The index of the troop in the first army.
+     * @param secondArmy The second army involved in the swap.
+     * @param secondIndex The index of the troop in the second army.
      * @return True if the swap was successful, false otherwise.
      */
-    fun swapTroops(firstIndex: Int, secondIndex: Int, isArmy1: Boolean): Boolean {
-        val targetArmy = if (isArmy1) army1 else army2 ?: return false
-
-        // Retrieve both troops
-        val firstTroop = targetArmy.getTroopAt(firstIndex)
-        val secondTroop = targetArmy.getTroopAt(secondIndex)
+    fun swapTroops(
+        firstArmy: ArmyInfo,
+        firstIndex: Int,
+        secondArmy: ArmyInfo,
+        secondIndex: Int
+    ): Boolean {
+        // Retrieve troops from both armies
+        val firstTroop = firstArmy.getTroopAt(firstIndex)
+        val secondTroop = secondArmy.getTroopAt(secondIndex)
 
         // If both slots are empty
         if (firstTroop == null && secondTroop == null) {
-            println("Error: two empty slot are selected")
+            println("Error: two empty slots are selected")
             return false
         }
 
-        // Set them in their new positions
-        if(secondTroop != null)
-            targetArmy.setTroopAt(firstIndex, secondTroop)
-        else
-            targetArmy.removeTroopAt(firstIndex)
-        if(firstTroop != null)
-            targetArmy.setTroopAt(secondIndex, firstTroop)
-        else
-            targetArmy.removeTroopAt(secondIndex)
+        // Perform the swap
+        if (secondTroop != null) {
+            firstArmy.setTroopAt(firstIndex, secondTroop)
+        } else {
+            firstArmy.removeTroopAt(firstIndex)
+        }
 
-
+        if (firstTroop != null) {
+            secondArmy.setTroopAt(secondIndex, firstTroop)
+        } else {
+            secondArmy.removeTroopAt(secondIndex)
+        }
 
         return true
     }

@@ -139,7 +139,11 @@ class CityScreen(
 
     init {
 
-
+        // Link garrison and visiting hero ArmyViews, if there is a visitor
+        if(visitingArmyView.isHero()) {
+            garrisonView.setExchangeArmyView(visitingArmyView)
+            visitingArmyView.setExchangeArmyView(garrisonView)
+        }
 
         if (city.isWeLoveTheKingDayActive() && UncivGame.Current.settings.citySoundsVolume > 0) {
             SoundPlayer.play(UncivSound("WLTK"))

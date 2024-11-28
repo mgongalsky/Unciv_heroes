@@ -23,6 +23,9 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
 
     private var selectedTroop: TroopArmyView? = null // Reference to the selected troop
 
+    // Reference to another ArmyView for potential exchanges
+    private var exchangeArmyView: ArmyView? = null
+
     init {
         // Align the table and set padding
         //right().bottom()
@@ -76,6 +79,18 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
     }
 
     /**
+     * Returns the index of the selected troop in the army.
+     * @return The index of the selected troop, or null if no troop is selected.
+     */
+    internal fun getSelectedTroopIndex(): Int? {
+        // Если selectedTroop равен null, значит ничего не выделено
+        if (selectedTroop == null) return null
+
+        // Ищем индекс выделенного отряда в массиве
+        return troopViewsArray.indexOf(selectedTroop).takeIf { it != -1 }
+    }
+
+    /**
      * Deselects all troops in the army.
      */
     fun deselectAllTroops() {
@@ -83,6 +98,15 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
             troopView?.deselect() // Call deselect for all non-null TroopArmyView instances
         }
     }
+
+    /**
+     * Sets the reference to another ArmyView for exchanges.
+     * @param armyView The other ArmyView.
+     */
+    fun setExchangeArmyView(armyView: ArmyView?) {
+        exchangeArmyView = armyView
+    }
+
 
     /**
      * Checks if the ArmyInfo is null.
@@ -105,27 +129,88 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
     /**
      * Callback for when a TroopArmyView is clicked.
      * This method is called by TroopArmyView and delegates to ArmyManager.
+     * Handles cross-army selection if exchangeArmyView is set.
      * @param clickedTroopView The clicked TroopArmyView instance.
      */
     fun onTroopClicked(clickedTroopView: TroopArmyView) {
         val clickedIndex = troopViewsArray.indexOf(clickedTroopView)
         if (clickedIndex == -1) return // If the troop is not found, do nothing
 
-        if (selectedTroop != null) {
-            val selectedIndex = troopViewsArray.indexOf(selectedTroop)
-            if (selectedIndex != -1) {
-                // Swap the selected troop with the clicked troop
-                armyManager.swapTroops(selectedIndex, clickedIndex, true)
-                updateView() // Refresh the view to reflect the change
+        if (exchangeArmyView != null) {
+            // Handle cross-army interaction
+            val exchangeSelectedIndex = exchangeArmyView?.getSelectedTroopIndex()
+            if (exchangeSelectedIndex != null) {
+                // Perform troop swap between the two armies
+                val currentArmyInfo = armyInfo ?: return
+                val exchangeArmyInfo = exchangeArmyView?.armyInfo ?: return
+
+                val success = armyManager.swapTroops(
+                    currentArmyInfo,
+                    clickedIndex,
+                    exchangeArmyInfo,
+                    exchangeSelectedIndex
+                )
+
+                if (success) {
+                    updateView() // Refresh the current army view
+                    exchangeArmyView?.updateView() // Refresh the exchange army view
+                    exchangeArmyView?.deselectAllTroops() // Clear selection in the exchange army
+                    deselectAllTroops() // Clear selection in the current army
+                }
+            } else {
+                // Check if there's a selected troop in the current army
+                val currentSelectedIndex = getSelectedTroopIndex()
+                if (currentSelectedIndex != null) {
+                    // Swap the selected troop in the current army with the clicked troop
+                    val currentArmyInfo = armyInfo ?: return
+                    val success = armyManager.swapTroops(
+                        currentArmyInfo,
+                        currentSelectedIndex,
+                        currentArmyInfo,
+                        clickedIndex
+                    )
+                    if (success) {
+                        updateView() // Refresh the current army view
+                    }
+                    deselectAllTroops() // Clear selection in the current army
+                } else {
+                    // No troop selected in the current army, select the clicked troop here
+                    deselectAllTroops() // Deselect all troops in the current army
+                    clickedTroopView.select()
+                    selectedTroop = clickedTroopView
+                }
             }
-            selectedTroop = null // Clear selection after swap
         } else {
-            // If no troop is selected, select the clicked troop
-            // But only non-empty slot can be selected
-            if(!clickedTroopView.isEmptySlot()) {
-                selectedTroop = clickedTroopView
-                clickedTroopView.select()
+            // Handle single-army interaction
+            if (selectedTroop != null) {
+                val selectedIndex = troopViewsArray.indexOf(selectedTroop)
+                if (selectedIndex != -1 && selectedIndex != clickedIndex) {
+                    // Swap the selected troop with the clicked troop within the same army
+                    val currentArmyInfo = armyInfo ?: return
+
+                    val success = armyManager.swapTroops(
+                        currentArmyInfo,
+                        selectedIndex,
+                        currentArmyInfo,
+                        clickedIndex
+                    )
+
+                    if (success) {
+                        updateView() // Refresh the view to reflect the change
+                    }
+                }
+                deselectAllTroops() // Clear selection in the current army
+            } else {
+                // If no troop is selected, select the clicked troop
+                if (!clickedTroopView.isEmptySlot()) {
+                    deselectAllTroops() // Deselect all troops in the current army
+                    clickedTroopView.select()
+                    selectedTroop = clickedTroopView
+                }
             }
         }
     }
+
+
+
 }
