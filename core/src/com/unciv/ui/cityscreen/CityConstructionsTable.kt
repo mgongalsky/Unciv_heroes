@@ -405,8 +405,6 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
     fun addActorsToStage() {
         cityScreen.stage.addActor(upperTable)
         cityScreen.stage.addActor(lowerTable)
-        //cityScreen.stage.addActor(garrisonWidget)
-        cityScreen.stage.addActor(cityScreen.garrisonView)
 
         lowerTable.setPosition(posFromEdge, posFromEdge, Align.bottomLeft)
     }

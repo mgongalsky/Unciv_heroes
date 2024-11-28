@@ -11,17 +11,24 @@ import com.unciv.ui.utils.extensions.onClick
  * A view for displaying an [ArmyInfo] in the UI.
  * Handles rendering of troops or empty slots and interactions.
  */
-class ArmyView(private val armyInfo: ArmyInfo, private val armyManager: ArmyManager) : Table() {
+class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyManager) : Table() {
+    // !! Note here, ArmyInfo is nullable, which is weird, but unfortunately it's the easiest way to handle the bug
+    // of libGDX, which goes crazy if you feed it nullable (but not null!) Table-derived class.
+    // So visitingArmyView exists always, but there might be no visiting hero ) Crazy, but it works.
+    // Need to be corrected if the bug in libGDX fixed
 
     // Array to store TroopArmyView or null for empty slots
-    private val troopViewsArray: Array<TroopArmyView?> = arrayOfNulls(armyInfo.getAllTroops().size)
+    private val troopViewsArray: Array<TroopArmyView?> =
+            Array(armyInfo?.getAllTroops()?.size ?: 0) { null }
 
     private var selectedTroop: TroopArmyView? = null // Reference to the selected troop
 
     init {
         // Align the table and set padding
-        bottom().left()
-        pad(10f)
+        //right().bottom()
+
+        //bottom().left()
+        //pad(10f)
         updateView()
     }
 
@@ -31,8 +38,9 @@ class ArmyView(private val armyInfo: ArmyInfo, private val armyManager: ArmyMana
     fun updateView() {
         clear() // Remove existing actors from the table
 
+
         // Iterate through slots and create/update views
-        armyInfo.getAllTroops().forEachIndexed { index, troop ->
+        armyInfo?.getAllTroops()?.forEachIndexed { index, troop ->
                 val troopView = TroopArmyView(troop, this) // Pass ArmyView for interaction
                 troopViewsArray[index] = troopView // Save to array
                 add(troopView).size(64f).pad(5f)
@@ -74,6 +82,14 @@ class ArmyView(private val armyInfo: ArmyInfo, private val armyManager: ArmyMana
         troopViewsArray.forEach { troopView ->
             troopView?.deselect() // Call deselect for all non-null TroopArmyView instances
         }
+    }
+
+    /**
+     * Checks if the ArmyInfo is null.
+     * @return True if the army is not null,  otherwise, false.
+     */
+    fun isHero(): Boolean {
+        return armyInfo != null
     }
 
     /**

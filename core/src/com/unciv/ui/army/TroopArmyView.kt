@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
+import com.badlogic.gdx.utils.Align
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.logic.army.TroopInfo
@@ -120,17 +121,6 @@ class TroopArmyView(
         troopGroup.addActor(backgroundImage)
 
         if(troopInfo != null) {
-            // Create and add a label showing the troop's current amount
-
-            val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
-                scaleBy(0.5f)
-                moveBy(50f, 0.5f)
-                name = "amountLabel"
-                touchable = Touchable.disabled // Label should not be interactive
-            }
-            troopGroup.findActor<Label>("amountLabel")?.remove() // Remove old label if it exists
-            troopGroup.addActor(amountText)
-
             // Add troop images to the group
             for (troopImage in troopImages) {
                 troopImage.setScale(-0.125f, 0.125f) // Adjust scaling
@@ -140,6 +130,17 @@ class TroopArmyView(
                 troopGroup.findActor<Image>("troopImage")?.remove() // Remove old image if it exists
                 troopGroup.addActor(troopImage)
             }
+
+            // Create and add a label showing the troop's current amount
+            val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
+                setAlignment(Align.right) // Align text to the right
+                scaleBy(0.5f)
+                moveBy(40f, 0.5f)
+                name = "amountLabel"
+                touchable = Touchable.disabled // Label should not be interactive
+            }
+            troopGroup.findActor<Label>("amountLabel")?.remove() // Remove old label if it exists
+            troopGroup.addActor(amountText)
         }
         // Add the troop group to this view
         addActor(troopGroup)

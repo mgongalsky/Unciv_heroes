@@ -51,7 +51,7 @@ class VisitingHeroTable(val cityScreen: CityScreen) : Table() {
         )
 
 
-        heroArmyTable.right().bottom()
+        //heroArmyTable.right().bottom()
         // Here is code dubbing from CityConstructionTable.kt init
         // garrisonWidget.height(stageHeight / 8)
         val tableHeight = stageHeight / 8f

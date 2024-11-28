@@ -84,9 +84,9 @@ class CityScreen(
     internal var armyManager = ArmyManager(city.garrisonInfo, visitingHero?.army) // Create ArmyManager with the city's garrisonInfo
     internal var garrisonView = ArmyView(city.garrisonInfo, armyManager) // Pass the ArmyManager to the ArmyView
 
-    val visitingArmyView: ArmyView?
-        get() = visitingHero?.let { ArmyView(it.army, armyManager) }
-
+        //  val visitingArmyView: ArmyView?
+  //      get() = visitingHero?.let { ArmyView(it.army, armyManager) }
+    private val visitingArmyView = ArmyView(visitingHero?.army, armyManager)
 
     /** Currently selected troop no matter in garrison or visiting hero */
     internal var currTroop : TroopInfo? = null
@@ -149,12 +149,23 @@ class CityScreen(
 
         addTiles()
 
-        //stage.setDebugTableUnderMouse(true)
+        stage.setDebugTableUnderMouse(true)
         stage.addActor(cityStatsTable)
         constructionsTable.addActorsToStage()
+        garrisonView.bottom().left()//.pad(10f)
+        stage.addActor(garrisonView)
+        visitingArmyView.setPosition(posFromEdge, posFromEdge, Align.bottomLeft)
+
         stage.addActor(selectedConstructionTable)
         stage.addActor(tileTable)
-        //stage.addActor(visitingHeroTable)
+
+        // Here is weird condition, because visitingArmyView always exists, but may contain no actual visiting Hero
+        // That's because of the bug in libGDX, which does not like nullable objects as Tables
+        if(visitingArmyView.isHero()) {
+            stage.addActor(visitingArmyView)
+            visitingArmyView.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
+        }
+
         stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
         stage.addActor(exitCityButton)
         update()
@@ -175,8 +186,18 @@ class CityScreen(
         tileTable.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
         selectedConstructionTable.update(selectedConstruction)
         selectedConstructionTable.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
-        visitingHeroTable.update()
-        visitingHeroTable.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
+        //visitingHeroTable.update()
+        //visitingHeroTable.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
+
+        if(visitingArmyView.isHero())
+        {
+            visitingArmyView.isVisible = true
+            visitingArmyView.updateView()
+            visitingArmyView.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
+        }
+        else
+            visitingArmyView.isVisible = false
+
 
         // In portrait mode only: calculate already occupied horizontal space
         val rightMargin = when {
