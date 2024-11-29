@@ -1,5 +1,7 @@
 package com.unciv.ui.army
 
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.TextureRegion
@@ -21,7 +23,7 @@ import com.unciv.ui.utils.TextureUtils
  * Includes functionality for selection/deselection and updating the display accordingly.
  */
 class TroopArmyView(
-    private val troopInfo: TroopInfo?, // Null indicates an empty slot
+    internal val troopInfo: TroopInfo?, // Null indicates an empty slot
     private val armyView: ArmyView
 ) : Group() {
     private val troopGroup = Group() // A group to contain all troop-related visuals
@@ -120,17 +122,9 @@ class TroopArmyView(
         }
         troopGroup.addActor(backgroundImage)
 
-        if(troopInfo != null) {
-            // Add troop images to the group
-            for (troopImage in troopImages) {
-                troopImage.setScale(-0.125f, 0.125f) // Adjust scaling
-                troopImage.moveBy(60f, 0f) // Offset the image position
-                troopImage.touchable = Touchable.disabled // Images should not be interactive
-                troopImage.name = "troopImage" // Assign a name for easy reference
-                troopGroup.findActor<Image>("troopImage")?.remove() // Remove old image if it exists
-                troopGroup.addActor(troopImage)
-            }
+        drawAvatar()
 
+        if(troopInfo != null) {
             // Create and add a label showing the troop's current amount
             val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
                 setAlignment(Align.right) // Align text to the right
@@ -147,23 +141,41 @@ class TroopArmyView(
     }
 
     /**
+     * Draws only the avatar of the troop (without count or other details).
+     */
+    fun drawAvatar() {
+        if (troopInfo != null) {
+            // Add troop images to the group
+            for (troopImage in troopImages) {
+                troopImage.setScale(-0.125f, 0.125f) // Adjust scaling
+                troopImage.moveBy(60f, 0f) // Offset the image position
+                troopImage.touchable = Touchable.disabled // Images should not be interactive
+                troopImage.name = "troopImage" // Assign a name for easy reference
+                troopGroup.findActor<Image>("troopImage")?.remove() // Remove old image if it exists
+                troopGroup.addActor(troopImage)
+            }
+        }
+    }
+    /**
      * Sets up a click listener to toggle the selection state when the troop is clicked.
      */
     private fun setupClickListener() {
         troopGroup.touchable = Touchable.enabled // Allow interactions with the group
         troopGroup.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                if(troopInfo != null)
+                if (troopInfo != null)
                     logVerbose("Troop clicked: ${troopInfo.unitName}")
                 else
                     logVerbose("Empty slot clicked")
 
-                armyView.onTroopClicked(this@TroopArmyView)
-
-//                toggleSelection() // Toggle selection state on click
+                // Check if Shift key is pressed
+                val isShiftPressed = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)
+                // Pass the shift state to the ArmyView
+                armyView.onTroopClicked(this@TroopArmyView, isShiftPressed)
             }
         })
     }
+
 
     /**
      * Toggles the troop's selection state between selected and deselected.

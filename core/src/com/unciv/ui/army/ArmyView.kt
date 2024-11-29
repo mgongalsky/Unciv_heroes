@@ -5,13 +5,16 @@ import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.army.ArmyManager
 import com.unciv.logic.army.TroopInfo
 import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.popup.SimplePopup
+import com.unciv.ui.popup.SplitTroopPopup
+import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.onClick
 
 /**
  * A view for displaying an [ArmyInfo] in the UI.
  * Handles rendering of troops or empty slots and interactions.
  */
-class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyManager) : Table() {
+class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyManager, private val screen: BaseScreen) : Table() {
     // !! Note here, ArmyInfo is nullable, which is weird, but unfortunately it's the easiest way to handle the bug
     // of libGDX, which goes crazy if you feed it nullable (but not null!) Table-derived class.
     // So visitingArmyView exists always, but there might be no visiting hero ) Crazy, but it works.
@@ -134,9 +137,48 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
      * Handles cross-army selection if exchangeArmyView is set.
      * @param clickedTroopView The clicked TroopArmyView instance.
      */
-    fun onTroopClicked(clickedTroopView: TroopArmyView) {
+    fun onTroopClicked(clickedTroopView: TroopArmyView, isTroopSplitting : Boolean) {
         val clickedIndex = troopViewsArray.indexOf(clickedTroopView)
         if (clickedIndex == -1) return // If the troop is not found, do nothing
+
+        if (armyInfo == null)
+            return
+
+        if (isTroopSplitting) {
+            // Handle splitting logic if Shift is pressed
+            val selectedIndex = getSelectedTroopIndex()
+            if (selectedIndex != null && selectedIndex != clickedIndex) {
+                // Show the split popup for troop redistribution
+                val sourceTroop = armyInfo.getTroopAt(selectedIndex) ?: return
+                val targetTroop = armyInfo.getTroopAt(clickedIndex)
+
+                if (targetTroop == null || sourceTroop.unitName == targetTroop.unitName) {
+                    val selectedTroopView = troopViewsArray[selectedIndex] ?: return // Берем выбранный TroopArmyView
+                    //SimplePopup(screen, troopView = selectedTroopView).open() // Передаем в попап
+                    //SimplePopup(screen, troopView = clickedTroopView).open()
+
+                    SplitTroopPopup(
+                        screen = screen, // Передаем текущий экран
+                        troopView = selectedTroopView, // Передаем готовый TroopArmyView
+                        onSplit = { firstPart, secondPart ->
+                            armyManager.splitTroop(
+                                sourceArmy = armyInfo,
+                                sourceIndex = selectedIndex,
+                                targetArmy = armyInfo,
+                                targetIndex = clickedIndex,
+                                splitAmount = firstPart
+                            )
+                            updateView() // Обновляем отображение армии
+                        }
+                    ).open()
+
+
+                }
+            }
+            return
+        }
+
+
 
         if (exchangeArmyView != null) {
             // Handle cross-army interaction

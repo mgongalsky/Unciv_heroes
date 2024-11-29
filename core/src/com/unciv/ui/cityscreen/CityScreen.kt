@@ -82,11 +82,11 @@ class CityScreen(
 
     /** View class handler for city garrison */
     internal var armyManager = ArmyManager(city.garrisonInfo, visitingHero?.army) // Create ArmyManager with the city's garrisonInfo
-    internal var garrisonView = ArmyView(city.garrisonInfo, armyManager) // Pass the ArmyManager to the ArmyView
+    internal var garrisonView = ArmyView(city.garrisonInfo, armyManager, this) // Pass the ArmyManager to the ArmyView
 
         //  val visitingArmyView: ArmyView?
   //      get() = visitingHero?.let { ArmyView(it.army, armyManager) }
-    private val visitingArmyView = ArmyView(visitingHero?.army, armyManager)
+    private val visitingArmyView = ArmyView(visitingHero?.army, armyManager, this)
 
     /** Currently selected troop no matter in garrison or visiting hero */
     internal var currTroop : TroopInfo? = null
