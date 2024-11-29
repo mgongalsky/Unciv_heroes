@@ -126,6 +126,8 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
         troopViewsArray[index]?.select() // Select the specified troop
     }
 
+
+    // TODO: Enhance management: allow to combine, split troops (with splitting popup window), and maybe split to two/three/etc equal group.
     /**
      * Callback for when a TroopArmyView is clicked.
      * This method is called by TroopArmyView and delegates to ArmyManager.
@@ -144,11 +146,12 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
                 val currentArmyInfo = armyInfo ?: return
                 val exchangeArmyInfo = exchangeArmyView?.armyInfo ?: return
 
-                val success = armyManager.swapTroops(
+                val success = armyManager.swapOrCombineTroops(
                     currentArmyInfo,
                     clickedIndex,
                     exchangeArmyInfo,
-                    exchangeSelectedIndex
+                    exchangeSelectedIndex,
+                    combine = true
                 )
 
                 if (success) {
@@ -163,11 +166,12 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
                 if (currentSelectedIndex != null) {
                     // Swap the selected troop in the current army with the clicked troop
                     val currentArmyInfo = armyInfo ?: return
-                    val success = armyManager.swapTroops(
+                    val success = armyManager.swapOrCombineTroops(
                         currentArmyInfo,
                         currentSelectedIndex,
                         currentArmyInfo,
-                        clickedIndex
+                        clickedIndex,
+                        combine = true
                     )
                     if (success) {
                         updateView() // Refresh the current army view
@@ -188,11 +192,12 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
                     // Swap the selected troop with the clicked troop within the same army
                     val currentArmyInfo = armyInfo ?: return
 
-                    val success = armyManager.swapTroops(
+                    val success = armyManager.swapOrCombineTroops(
                         currentArmyInfo,
                         selectedIndex,
                         currentArmyInfo,
-                        clickedIndex
+                        clickedIndex,
+                        combine = true
                     )
 
                     if (success) {

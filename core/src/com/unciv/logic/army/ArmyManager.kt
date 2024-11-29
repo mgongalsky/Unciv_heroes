@@ -4,6 +4,9 @@ class ArmyManager(
     private val army1: ArmyInfo, // The first army
     private val army2: ArmyInfo? = null // The second army for exchange operations (optional)
 ) {
+
+
+    // Not tested
     /**
      * Adds a troop to the specified army.
      * @param troop The troop to add.
@@ -15,6 +18,7 @@ class ArmyManager(
         return targetArmy.addTroop(troop)
     }
 
+    // Not tested
     /**
      * Removes a troop from the specified army.
      * @param index The index of the troop to remove.
@@ -26,21 +30,7 @@ class ArmyManager(
         return targetArmy.removeTroopAt(index)
     }
 
-    /**
-     * Transfers a troop between armies.
-     * @param index The index of the troop to transfer.
-     * @param toArmy1 If true, transfers to army1; otherwise, to army2.
-     * @return True if the transfer was successful, false otherwise.
-     */
-    fun transferTroop(index: Int, toArmy1: Boolean): Boolean {
-        if (army2 == null) return false // Transfer is impossible if there is no second army
 
-        val fromArmy = if (toArmy1) army2 else army1
-        val toArmy = if (toArmy1) army1 else army2
-
-        val troop = fromArmy.removeTroopAt(index) ?: return false
-        return toArmy.addTroop(troop)
-    }
 
     /**
      * Retrieves a troop by index from the specified army.
@@ -54,18 +44,20 @@ class ArmyManager(
     }
 
     /**
-     * Swaps two troops between the same or different armies.
-     * @param firstArmy The first army involved in the swap.
+     * Swaps or combines two troops between the same or different armies.
+     * @param firstArmy The first army involved in the operation.
      * @param firstIndex The index of the troop in the first army.
-     * @param secondArmy The second army involved in the swap.
+     * @param secondArmy The second army involved in the operation.
      * @param secondIndex The index of the troop in the second army.
-     * @return True if the swap was successful, false otherwise.
+     * @param combine If true, attempts to combine troops if they are of the same type; otherwise, swaps them.
+     * @return True if the operation was successful, false otherwise.
      */
-    fun swapTroops(
+    fun swapOrCombineTroops(
         firstArmy: ArmyInfo,
         firstIndex: Int,
         secondArmy: ArmyInfo,
-        secondIndex: Int
+        secondIndex: Int,
+        combine: Boolean = true
     ): Boolean {
         // Retrieve troops from both armies
         val firstTroop = firstArmy.getTroopAt(firstIndex)
@@ -77,19 +69,26 @@ class ArmyManager(
             return false
         }
 
-        // Perform the swap
-        if (secondTroop != null) {
-            firstArmy.setTroopAt(firstIndex, secondTroop)
-        } else {
-            firstArmy.removeTroopAt(firstIndex)
-        }
-
-        if (firstTroop != null) {
-            secondArmy.setTroopAt(secondIndex, firstTroop)
-        } else {
+        if (combine && firstTroop != null && secondTroop != null && firstTroop.unitName == secondTroop.unitName) {
+            // Combine troops if they are of the same type and combining is enabled
+            firstTroop.currentAmount += secondTroop.currentAmount
             secondArmy.removeTroopAt(secondIndex)
-        }
+            return true
+        } else {
+            // Perform the swap
+            if (secondTroop != null) {
+                firstArmy.setTroopAt(firstIndex, secondTroop)
+            } else {
+                firstArmy.removeTroopAt(firstIndex)
+            }
 
-        return true
+            if (firstTroop != null) {
+                secondArmy.setTroopAt(secondIndex, firstTroop)
+            } else {
+                secondArmy.removeTroopAt(secondIndex)
+            }
+
+            return true
+        }
     }
 }
