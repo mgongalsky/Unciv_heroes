@@ -167,7 +167,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
             civInfo,
             "Archer" to 35,
             // "Spearman" to 25, // Uncomment if needed
-            "Horseman" to 15,
+            "Horseman" to 8,
             "Swordsman" to 12
         )
 

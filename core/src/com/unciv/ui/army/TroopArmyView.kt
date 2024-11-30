@@ -145,10 +145,13 @@ class TroopArmyView(
                 val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
                     setAlignment(Align.right) // Align text to the right
                     scaleBy(0.5f)
-                    moveBy(backgroundImage.width * 0.6f - 0.5f, 0.5f)
+                    moveBy(backgroundImage.width * 0.95f, 0.5f)
+                    setPosition(x, y, Align.bottomRight)
+
                     name = "amountLabel"
                     touchable = Touchable.disabled // Label should not be interactive
                 }
+
                 troopGroup.findActor<Label>("amountLabel")
                     ?.remove() // Remove old label if it exists
                 troopGroup.addActor(amountText)
