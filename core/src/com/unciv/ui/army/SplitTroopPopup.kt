@@ -6,6 +6,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.utils.Align
 import com.unciv.ui.army.TroopArmyView
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.toLabel
@@ -34,17 +35,13 @@ class SplitTroopPopup(
             // Set minimum popup size
             this.setSize(400f, 300f)
 
-            // Wrapper for avatar and label
-            val wrapper = Table()
-            wrapper.defaults().pad(10f)
-
             // Add avatar from TroopArmyView
             troopView.drawAvatar()
-            wrapper.add(troopView).size(80f).padBottom(10f).row()
+            add(troopView).size(80f).padBottom(10f).colspan(2).row()
 
             // Add "Adjust troop split" label
             val label = "Adjust troop split".toLabel(fontSize = 20)
-            wrapper.add(label).expandX().left().padBottom(10f).row()
+            add(label).expandX().left().padBottom(10f).colspan(2).row()
 
             // Create labels for left and right troop counts
             val leftCountLabel = Label("0", BaseScreen.skin)
@@ -67,38 +64,35 @@ class SplitTroopPopup(
             sliderTable.add(leftCountLabel).padRight(10f)
             sliderTable.add(troopSlider).growX().pad(5f)
             sliderTable.add(rightCountLabel).padLeft(10f)
-            wrapper.add(sliderTable).growX().row()
+            add(sliderTable).growX().colspan(2).row()
 
-            // Add wrapper to popup
-            add(wrapper).expand().fill().row()
+            // Add "OK" button using the predefined addOKButton method
+            addOKButton(
+                text = "OK",
+                style = BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java),
+                validate = { true } // Always true, adjust if validation is needed
+            ) {
+                val leftCount = troopSlider.value.roundToInt()
+                val rightCount = troopCount - leftCount
+                onSplit(leftCount, rightCount) // Perform the split logic
+            }.apply {
+                actor.label.setFontScale(0.4f) // Adjust text size relative to the button
+                actor.label.setAlignment(Align.center) // Center-align the text
+                actor.pad(5f, 10f, 5f, 10f) // Add padding for better appearance
+            }
 
-            // Create button table
-            val buttonTable = Table()
-            buttonTable.defaults().pad(10f)
+            // Add "Close" button using the predefined addCloseButton method
+            addCloseButton(
+                text = "Close",
+                style = BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)
+            ) {
+                // Additional actions (if any) can be added here
+            }.apply {
+                actor.label.setFontScale(0.4f) // Adjust text size relative to the button
+                actor.label.setAlignment(Align.center) // Center-align the text
+                actor.pad(5f, 10f, 5f, 10f) // Add padding for better appearance
+            }
 
-            // Add "Close" button
-            val closeButton = TextButton("Close", BaseScreen.skin)
-            closeButton.addListener(object : ClickListener() {
-                override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                    remove() // Close popup when clicked
-                }
-            })
-            buttonTable.add(closeButton).padRight(10f)
-
-            // Add "OK" button
-            val okButton = TextButton("OK", BaseScreen.skin)
-            okButton.addListener(object : ClickListener() {
-                override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                    val leftCount = troopSlider.value.roundToInt()
-                    val rightCount = troopCount - leftCount
-                    onSplit(leftCount, rightCount) // Perform action on confirmation
-                    remove() // Close popup
-                }
-            })
-            buttonTable.add(okButton)
-
-            // Add button table to popup
-            add(buttonTable).expandX().fillX().padTop(20f).row()
         }
     }
 }
