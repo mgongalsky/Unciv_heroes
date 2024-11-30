@@ -130,6 +130,50 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
     }
 
 
+    /**
+     * Handles the logic for splitting troops between slots in an army.
+     * If the target slot is in a different army (`isSameArmy` is false), the function exits early.
+     * Otherwise, it checks if a valid source and target slot exist and opens a popup
+     * to allow the user to split the troop between the selected slot and the clicked slot.
+     *
+     * @param clickedIndex The index of the clicked troop slot.
+     * @param isSameArmy A boolean indicating whether the target slot belongs to the same army.
+     */
+    private fun handleTroopSplitting(clickedIndex: Int, isSameArmy: Boolean) {
+        // Exit if the target is in a different army
+        if (!isSameArmy) return
+
+        // Get the index of the currently selected troop
+        val selectedIndex = getSelectedTroopIndex()
+        if (selectedIndex != null && selectedIndex != clickedIndex) {
+            // Retrieve the source and target troops
+            val sourceTroop = armyInfo?.getTroopAt(selectedIndex) ?: return
+            val targetTroop = armyInfo.getTroopAt(clickedIndex)
+
+            // Check if the target slot is empty or matches the source troop type
+            if (targetTroop == null || sourceTroop.unitName == targetTroop.unitName) {
+                val selectedTroopView = troopViewsArray[selectedIndex] ?: return // Retrieve the selected TroopArmyView
+
+                // Open the split popup for troop redistribution
+                SplitTroopPopup(
+                    screen = screen, // Use the current screen
+                    troopView = selectedTroopView, // Pass the selected TroopArmyView
+                    onSplit = { firstPart, secondPart ->
+                        armyManager.splitTroop(
+                            sourceArmy = armyInfo, // Source army is already verified
+                            sourceIndex = selectedIndex,
+                            targetArmy = armyInfo,
+                            targetIndex = clickedIndex,
+                            splitAmount = firstPart
+                        )
+                        updateView() // Refresh the army view
+                    }
+                ).open()
+            }
+        }
+    }
+
+
     // TODO: Enhance management: allow to combine, split troops (with splitting popup window), and maybe split to two/three/etc equal group.
     /**
      * Callback for when a TroopArmyView is clicked.
@@ -144,37 +188,9 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
         if (armyInfo == null)
             return
 
-        if (isTroopSplitting) {
-            // Handle splitting logic if Shift is pressed
-            val selectedIndex = getSelectedTroopIndex()
-            if (selectedIndex != null && selectedIndex != clickedIndex) {
-                // Show the split popup for troop redistribution
-                val sourceTroop = armyInfo.getTroopAt(selectedIndex) ?: return
-                val targetTroop = armyInfo.getTroopAt(clickedIndex)
-
-                if (targetTroop == null || sourceTroop.unitName == targetTroop.unitName) {
-                    val selectedTroopView = troopViewsArray[selectedIndex] ?: return // Берем выбранный TroopArmyView
-                    //SimplePopup(screen, troopView = selectedTroopView).open() // Передаем в попап
-                    //SimplePopup(screen, troopView = clickedTroopView).open()
-
-                    SplitTroopPopup(
-                        screen = screen, // Передаем текущий экран
-                        troopView = selectedTroopView, // Передаем готовый TroopArmyView
-                        onSplit = { firstPart, secondPart ->
-                            armyManager.splitTroop(
-                                sourceArmy = armyInfo,
-                                sourceIndex = selectedIndex,
-                                targetArmy = armyInfo,
-                                targetIndex = clickedIndex,
-                                splitAmount = firstPart
-                            )
-                            updateView() // Обновляем отображение армии
-                        }
-                    ).open()
-
-
-                }
-            }
+        if (isTroopSplitting)
+        {
+            handleTroopSplitting(clickedIndex, isSameArmy = true)
             return
         }
 
