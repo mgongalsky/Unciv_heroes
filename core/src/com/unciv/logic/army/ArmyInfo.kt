@@ -41,6 +41,41 @@ class ArmyInfo(
         }
     }
 
+    /** Convenience constructor to initialize army with a list of troops */
+    constructor(civInfo: CivilizationInfo, unitName: String, totalCount: Int) : this(civInfo, maxSlots = DEFAULT_ARMY_SIZE) {
+        fillArmy(unitName, totalCount)
+    }
+    /**
+     * Fills the army slots with troops of the given name and total count.
+     * Distributes the total count evenly across all slots, with differences of at most 1.
+     *
+     * @param unitName The name of the troop unit to fill the army with.
+     * @param totalCount The total number of troops to distribute across all slots.
+     */
+    fun fillArmy(unitName: String, totalCount: Int) {
+        // Validate inputs
+        if (totalCount <= 0 || unitName.isBlank()) {
+            throw IllegalArgumentException("Invalid unit name or total count")
+        }
+
+        // Clear current slots
+        for (i in slots.indices) {
+            slots[i] = null
+        }
+
+        // Calculate even distribution of troops across slots
+        val troopsPerSlot = totalCount / maxSlots
+        val remainder = totalCount % maxSlots
+
+        // Distribute troops to each slot
+        for (i in slots.indices) {
+            val countForThisSlot = troopsPerSlot + if (i < remainder) 1 else 0
+            if (countForThisSlot > 0) {
+                slots[i] = TroopInfo(unitName, countForThisSlot, civInfo)
+            }
+        }
+    }
+
 
     /** Returns the troop at the given index or null if the slot is empty. */
     fun getTroopAt(index: Int): TroopInfo? {

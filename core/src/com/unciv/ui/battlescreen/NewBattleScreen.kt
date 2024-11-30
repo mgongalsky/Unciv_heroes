@@ -94,6 +94,17 @@ class NewBattleScreen(
             }
         }
 
+        // Iterate through slots and create/update views
+        defenderHero.army.getAllTroops()?.forEachIndexed { index, troop ->
+            if(troop != null) {
+                troop.enterBattle(defenderHero.civInfo, index, attacker = false, oldVersion = false)
+                val troopView = TroopBattleView(troop, this) // Pass ArmyView for interaction
+                defenderTroopViewsArray[index] = troopView // Save to array
+                //add(troopView).size(64f).pad(5f)
+            }
+        }
+
+
         // Load cursor pixmaps
         cursorMove = loadCursor("BattleMoveCursor128.png", 32,64)
         cursorShoot = loadCursor("BattleArrowCursor128.png", 64,64)
@@ -205,7 +216,18 @@ class NewBattleScreen(
                 troopView.draw(troopTile, attacker = true)
             }
         }
-      //  manager.attackingTroops.forEach { troop ->
+
+        // Draw defending troops
+        defenderTroopViewsArray.forEach { troopView ->
+            if (troopView != null) {
+                var troopTile =
+                        daTileGroups.first { it.tileInfo.position == troopView.getBattlefieldPosition() }
+                troopView.draw(troopTile, attacker = false)
+            }
+        }
+
+
+        //  manager.attackingTroops.forEach { troop ->
       //      var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
      //       troop.drawOnBattle(troopTile, attacker = true)
      //   }

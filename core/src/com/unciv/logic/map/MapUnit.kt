@@ -99,10 +99,16 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     // TODO: troops must be changed from list to a finite array with possible empty slots. And army manager must be written.
     var troops = mutableListOf<TroopInfo>()
 
-    var army: ArmyInfo = ArmyInfo(
+  /*  var army: ArmyInfo = ArmyInfo(
         civInfo,
         "Archer" to 30,
         "Horseman" to 20
+    )
+
+   */
+    var army: ArmyInfo = ArmyInfo(
+        civInfo,
+        "Swordsman", 30
     )
 
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
@@ -244,12 +250,13 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         // TODO: It is also in setTransient, we need to exclude it in one of the places
         //heroAttackSkill = 2
         //heroDefenseSkill = 2
-
+        //army.fillArmy(name, amount)
 
         //   amount = amount0
         val amountOfTroops = 4
         for (i in 1..amountOfTroops) {
             troops.add(TroopInfo(amount / amountOfTroops, name))
+
 
         }
 
@@ -269,6 +276,9 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
      */
     init {
+        //if(isMonster)
+        //    army.fillArmy(name, amount)
+
 /*
         if(name == "Warrior")
         {
@@ -355,6 +365,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         toReturn.heroAttackSkill = heroAttackSkill
         toReturn.heroDefenseSkill = heroDefenseSkill
         toReturn.troops = troops
+        toReturn.army = army
         toReturn.id = id
         toReturn.health = health
         toReturn.action = action

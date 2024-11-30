@@ -97,7 +97,7 @@ object Battle {
             if(!attacker.isDefeated() && !defender.isDefeated()) {
                 //attacker.unit.civInfo.battle.startBattle(attacker.unit, defender.unit)
                 val screen = NewBattleScreen(attacker.unit, defender.unit)
-                UncivGame.Current.pushScreen(screen!!)
+                UncivGame.Current.pushScreen(screen)
 
                 return
             }
