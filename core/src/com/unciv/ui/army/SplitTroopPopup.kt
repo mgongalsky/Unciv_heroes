@@ -20,54 +20,52 @@ import kotlin.math.roundToInt
  */
 class SplitTroopPopup(
     screen: BaseScreen,
-    troopView: TroopArmyView,
+    sourceTroopView: TroopArmyView,
+    targetTroopView: TroopArmyView,
     onSplit: (Int, Int) -> Unit
 ) : Popup(screen) {
 
     init {
-        // Check if troopInfo is null
-        if (troopView.troopInfo == null) {
-            remove() // Close popup if troopInfo is null
+        // Check if sourceTroopView contains valid data
+        if (sourceTroopView.troopInfo == null) {
+            remove() // Close the popup if there is no troop info
         } else {
+            val sourceCount = sourceTroopView.troopInfo.currentAmount
+            val targetCount = if (targetTroopView.isEmptySlot()) 0 else targetTroopView.troopInfo?.currentAmount ?: 0
+            val totalCount = sourceCount + targetCount
 
-            val troopCount = troopView.troopInfo.currentAmount
-
-            // Set minimum popup size
+            // Set the minimum size of the popup
             this.setSize(400f, 300f)
 
-            // Create a new instance of TroopArmyView for the popup
-            val popupTroopView = TroopArmyView(troopView, true)
-            popupTroopView.deselect()
+            // Create a visual component for sourceTroopView
+            val popupSourceView = TroopArmyView(sourceTroopView, true)
+            popupSourceView.deselect()
 
-            // Draw the avatar for the new instance
-            //popupTroopView.drawAvatar()
+            // Add the avatar of the source troop
+            add(popupSourceView).size(80f).padBottom(10f).padTop(10f).colspan(2).row()
 
-            // Add the new instance to the popup
-            add(popupTroopView).size(80f).padBottom(10f).padTop(10f).colspan(2).row()
-
-
-            // Add "Split [Unit Name]" label
-            val troopName = troopView.troopInfo.unitName  // Use unit name or default to "Troop"
+            // Add a header label
+            val troopName = sourceTroopView.troopInfo.unitName
             val label = "Split $troopName".toLabel(fontSize = 20)
             add(label).expandX().left().padBottom(10f).colspan(2).align(Align.center).row()
 
+            // Current values for troop distribution
+            val leftCountLabel = Label(sourceCount.toString(), BaseScreen.skin)
+            val rightCountLabel = Label(targetCount.toString(), BaseScreen.skin)
 
-            // Create labels for left and right troop counts
-            val leftCountLabel = Label("0", BaseScreen.skin)
-            val rightCountLabel = Label(troopCount.toString(), BaseScreen.skin)
-
-            // Create slider
-            val troopSlider = Slider(0f, troopCount.toFloat(), 1f, false, BaseScreen.skin)
-            troopSlider.value = 0f
+            // Create a slider
+            val troopSlider = Slider(0f, totalCount.toFloat(), 1f, false, BaseScreen.skin)
+            troopSlider.value = targetCount.toFloat() // Initial position is the current targetCount
             troopSlider.addListener { _ ->
-                val leftCount = troopSlider.value.roundToInt()
-                val rightCount = troopCount - leftCount
+                val rightCount = troopSlider.value.roundToInt()
+                val leftCount = totalCount - rightCount
+
                 leftCountLabel.setText(leftCount.toString())
                 rightCountLabel.setText(rightCount.toString())
                 false
             }
 
-            // Create table for slider and labels
+            // Table for the slider and labels
             val sliderTable = Table()
             sliderTable.defaults().pad(5f)
             sliderTable.add(leftCountLabel).padRight(10f)
@@ -75,33 +73,30 @@ class SplitTroopPopup(
             sliderTable.add(rightCountLabel).padLeft(10f)
             add(sliderTable).growX().colspan(2).row()
 
-            // Add "OK" button using the predefined addOKButton method
+            // Add "OK" button
             addOKButton(
                 text = "OK",
                 style = BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java),
-                validate = { true } // Always true, adjust if validation is needed
+                validate = { true } // Always true; add validation if necessary
             ) {
-                val leftCount = troopSlider.value.roundToInt()
-                val rightCount = troopCount - leftCount
+                val rightCount = troopSlider.value.roundToInt()
+                val leftCount = totalCount - rightCount
                 onSplit(leftCount, rightCount) // Perform the split logic
             }.apply {
-                actor.label.setFontScale(0.4f) // Adjust text size relative to the button
-                actor.label.setAlignment(Align.center) // Center-align the text
-                actor.pad(5f, 10f, 5f, 10f) // Add padding for better appearance
+                actor.label.setFontScale(0.4f)
+                actor.label.setAlignment(Align.center)
+                actor.pad(5f, 10f, 5f, 10f)
             }
 
-            // Add "Close" button using the predefined addCloseButton method
+            // Add "Close" button
             addCloseButton(
                 text = "Close",
                 style = BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)
-            ) {
-                // Additional actions (if any) can be added here
-            }.apply {
-                actor.label.setFontScale(0.4f) // Adjust text size relative to the button
-                actor.label.setAlignment(Align.center) // Center-align the text
-                actor.pad(5f, 10f, 5f, 10f) // Add padding for better appearance
+            ).apply {
+                actor.label.setFontScale(0.4f)
+                actor.label.setAlignment(Align.center)
+                actor.pad(5f, 10f, 5f, 10f)
             }
-
         }
     }
 }

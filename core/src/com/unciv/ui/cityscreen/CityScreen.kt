@@ -153,7 +153,7 @@ class CityScreen(
 
         addTiles()
 
-        stage.setDebugTableUnderMouse(true)
+        //stage.setDebugTableUnderMouse(true)
         stage.addActor(cityStatsTable)
         constructionsTable.addActorsToStage()
         garrisonView.bottom().left()//.pad(10f)

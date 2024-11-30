@@ -98,7 +98,7 @@ class ArmyManager(
      * @param sourceIndex The index of the troop to split in the source army.
      * @param targetArmy The army where the split portion will be placed.
      * @param targetIndex The index in the target army where the split portion will go.
-     * @param splitAmount The number of units to transfer from the source troop.
+     * @param finalFirstTroopCount The final number of units that should remain in the source troop.
      * @return True if the split was successful, false otherwise.
      */
     fun splitTroop(
@@ -106,31 +106,29 @@ class ArmyManager(
         sourceIndex: Int,
         targetArmy: ArmyInfo,
         targetIndex: Int,
-        splitAmount: Int
+        finalFirstTroopCount: Int
     ): Boolean {
         val sourceTroop = sourceArmy.getTroopAt(sourceIndex) ?: return false
 
-        // Validate split amount
-        if (splitAmount <= 0 || splitAmount >= sourceTroop.currentAmount) return false
+        // Validate the final count for the first troop
+        if (finalFirstTroopCount < 0 || finalFirstTroopCount >= sourceTroop.currentAmount) return false
 
         val targetTroop = targetArmy.getTroopAt(targetIndex)
+        val splitAmount = sourceTroop.currentAmount - finalFirstTroopCount
 
         // Check if the target slot is empty or contains the same type of troop
         if (targetTroop == null) {
-            // Create a new troop in the target slot
-            // Уменьшаем количество юнитов в исходном отряде
-            sourceTroop.currentAmount -= splitAmount
-
-            // Устанавливаем измененный отряд в исходную армию
+            // Update the source troop count
+            sourceTroop.currentAmount = finalFirstTroopCount
             sourceArmy.setTroopAt(sourceIndex, sourceTroop)
 
-            // Создаем новый отряд в целевом слоте с заданным количеством
+            // Create a new troop in the target slot
             targetArmy.setTroopAt(targetIndex, TroopInfo(splitAmount, sourceTroop.unitName))
 
         } else if (targetTroop.unitName == sourceTroop.unitName) {
             // Combine with an existing troop in the target slot
             targetTroop.currentAmount += splitAmount
-            sourceTroop.currentAmount -= splitAmount
+            sourceTroop.currentAmount = finalFirstTroopCount
             if (sourceTroop.currentAmount == 0) {
                 sourceArmy.removeTroopAt(sourceIndex)
             }

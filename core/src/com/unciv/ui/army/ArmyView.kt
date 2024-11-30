@@ -193,26 +193,25 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
 
 
         if (isTroopSplitting) {
-            // Check if the target slot is empty or matches the source troop type
-            if (targetTroop == null || sourceTroop?.unitName == targetTroop.unitName) {
-                // Open the split popup for troop redistribution
-                SplitTroopPopup(
-                    screen = screen, // Use the current screen
-                    troopView = sourceTroopView, // Pass the selected TroopArmyView
-                    onSplit = { firstPart, secondPart ->
-                        armyManager.splitTroop(
-                            sourceArmy = sourceArmyInfo!!,
-                            sourceIndex = sourceIndex,
-                            targetArmy = targetArmyInfo,
-                            targetIndex = clickedIndex,
-                            splitAmount = firstPart
-                        )
-                        updateView()
-                    }
-                ).open()
-            }
-        }
-        else {
+            // Open the split popup with updated logic for handling two non-empty slots
+            SplitTroopPopup(
+                screen = screen,
+                sourceTroopView = sourceTroopView,
+                targetTroopView = clickedTroopView, // Pass the clicked TroopArmyView as the target
+                onSplit = { firstPart, secondPart ->
+                    armyManager.splitTroop(
+                        sourceArmy = sourceArmyInfo,
+                        sourceIndex = sourceIndex,
+                        targetArmy = targetArmyInfo,
+                        targetIndex = clickedIndex,
+                        finalFirstTroopCount = firstPart
+                    )
+                    updateView()
+                    if (!isSameArmy)
+                        exchangeArmyView?.updateView()
+                }
+            ).open()
+        } else {
             val success = armyManager.swapOrCombineTroops(
                 firstArmy = sourceArmyInfo,
                 firstIndex = sourceIndex,
