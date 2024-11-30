@@ -25,6 +25,8 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.stats.Stat
 import com.unciv.models.stats.Stats
 import com.unciv.ui.battlescreen.BattleManager
+import com.unciv.ui.battlescreen.BattleScreen
+import com.unciv.ui.battlescreen.NewBattleScreen
 import com.unciv.ui.utils.extensions.toPercent
 import com.unciv.utils.debug
 import java.util.*
@@ -93,7 +95,10 @@ object Battle {
         if (attacker is MapUnitCombatant && defender is MapUnitCombatant && attacker.getCivInfo().isPlayerCivilization()) {
             //attacker.unit.runBattle()
             if(!attacker.isDefeated() && !defender.isDefeated()) {
-                attacker.unit.civInfo.battle.startBattle(attacker.unit, defender.unit)
+                //attacker.unit.civInfo.battle.startBattle(attacker.unit, defender.unit)
+                val screen = NewBattleScreen(attacker.unit, defender.unit)
+                UncivGame.Current.pushScreen(screen!!)
+
                 return
             }
         }

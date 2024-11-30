@@ -881,7 +881,8 @@ object UnitActions {
         actionList += UnitAction(UnitActionType.RunBattle,
             //        action = { unit.heroView() })
     //        action = { UncivGame.Current.pushScreen(BattleScreen(unit)) })
-              action = { unit.civInfo.battle.startBattle(unit) })
+            //  action = { unit.civInfo.battle.startBattle(unit) })
+        action = {})
     }
 
     private fun addSleepActions(actionList: ArrayList<UnitAction>, unit: MapUnit, showingAdditionalActions: Boolean) {
