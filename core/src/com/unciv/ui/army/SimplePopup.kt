@@ -11,6 +11,7 @@ import com.unciv.ui.utils.BaseScreen
 import kotlin.math.roundToInt
 
 /**
+ * Test class for popups. Actual splitting class is SplitTroopPopup
  * A popup for splitting troops into two parts.
  * @param screen The screen from which the popup is opened.
  * @param troopView The TroopArmyView representing the troop.

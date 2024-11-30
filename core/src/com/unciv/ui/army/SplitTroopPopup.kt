@@ -3,6 +3,9 @@ package com.unciv.ui.popup
 import com.badlogic.gdx.scenes.scene2d.ui.Slider
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.Label
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
+import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.unciv.ui.army.TroopArmyView
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.toLabel
@@ -21,33 +24,33 @@ class SplitTroopPopup(
 ) : Popup(screen) {
 
     init {
-
-        // Проверяем, что troopInfo не null
+        // Check if troopInfo is null
         if (troopView.troopInfo == null) {
-            closePopup() // Закрываем попап, если слот пустой
+            remove() // Close popup if troopInfo is null
         } else {
+
             val troopCount = troopView.troopInfo.currentAmount
 
-            // Устанавливаем минимальные размеры попапа
-            this.setSize(400f, 300f) // Можно настроить размеры на ваше усмотрение
+            // Set minimum popup size
+            this.setSize(400f, 300f)
 
-            // Wrapper для иконки и текста
+            // Wrapper for avatar and label
             val wrapper = Table()
-            wrapper.defaults().pad(10f) // Задает отступы для всех элементов внутри wrapper
+            wrapper.defaults().pad(10f)
 
-            // Добавляем аватар из TroopArmyView
+            // Add avatar from TroopArmyView
             troopView.drawAvatar()
             wrapper.add(troopView).size(80f).padBottom(10f).row()
 
-            // Текст "Adjust troop split"
+            // Add "Adjust troop split" label
             val label = "Adjust troop split".toLabel(fontSize = 20)
             wrapper.add(label).expandX().left().padBottom(10f).row()
 
-            // Лейблы для левой и правой частей
+            // Create labels for left and right troop counts
             val leftCountLabel = Label("0", BaseScreen.skin)
             val rightCountLabel = Label(troopCount.toString(), BaseScreen.skin)
 
-            // Ползунок
+            // Create slider
             val troopSlider = Slider(0f, troopCount.toFloat(), 1f, false, BaseScreen.skin)
             troopSlider.value = 0f
             troopSlider.addListener { _ ->
@@ -58,32 +61,44 @@ class SplitTroopPopup(
                 false
             }
 
-            // Таблица для ползунка и лейблов
+            // Create table for slider and labels
             val sliderTable = Table()
-            sliderTable.defaults().pad(5f) // Общие отступы для всех элементов в sliderTable
+            sliderTable.defaults().pad(5f)
             sliderTable.add(leftCountLabel).padRight(10f)
             sliderTable.add(troopSlider).growX().pad(5f)
             sliderTable.add(rightCountLabel).padLeft(10f)
             wrapper.add(sliderTable).growX().row()
 
-            add(wrapper).expand().fill().row() // Добавляем wrapper в попап
+            // Add wrapper to popup
+            add(wrapper).expand().fill().row()
 
-            // Добавляем кнопки OK и Cancel
-            addCloseButton()
-            addOKButton {
-                val leftCount = troopSlider.value.roundToInt()
-                val rightCount = troopCount - leftCount
-                onSplit(leftCount, rightCount)
-            }
-            equalizeLastTwoButtonWidths()
+            // Create button table
+            val buttonTable = Table()
+            buttonTable.defaults().pad(10f)
+
+            // Add "Close" button
+            val closeButton = TextButton("Close", BaseScreen.skin)
+            closeButton.addListener(object : ClickListener() {
+                override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                    remove() // Close popup when clicked
+                }
+            })
+            buttonTable.add(closeButton).padRight(10f)
+
+            // Add "OK" button
+            val okButton = TextButton("OK", BaseScreen.skin)
+            okButton.addListener(object : ClickListener() {
+                override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                    val leftCount = troopSlider.value.roundToInt()
+                    val rightCount = troopCount - leftCount
+                    onSplit(leftCount, rightCount) // Perform action on confirmation
+                    remove() // Close popup
+                }
+            })
+            buttonTable.add(okButton)
+
+            // Add button table to popup
+            add(buttonTable).expandX().fillX().padTop(20f).row()
         }
     }
-
-    /**
-     * Закрывает попап, если слот пустой.
-     */
-    private fun closePopup() {
-        this.remove() // Удаляем попап со сцены
-    }
 }
-
