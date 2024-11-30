@@ -1,5 +1,6 @@
 package com.unciv.logic.battle
 
+import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.map.MapUnit
 import com.unciv.ui.battlescreen.BattleScreen
 
@@ -14,8 +15,8 @@ enum class Direction(val num: Int) {
  */
 class NewBattleManager(
 
-    private var attackingHero: MapUnit,
-    private var defendingHero: MapUnit
+    private var attackerArmy: ArmyInfo,
+    private var defenderArmy: ArmyInfo
 
 )
 {

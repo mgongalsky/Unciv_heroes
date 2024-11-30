@@ -22,6 +22,7 @@ import com.unciv.logic.HexMath
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
+import com.unciv.ui.army.TroopArmyView
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.map.TileGroupMap
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
@@ -39,19 +40,26 @@ import com.unciv.ui.utils.extensions.onClick
 
 /** Screen for a battle. Visual routines are here, logic of the battle is in [BattleManager] class. Must not be used for AI duels. */
 class NewBattleScreen(
-    private var viewingHero: MapUnit,
-    private var defendingHero: MapUnit,
+    private var attackerHero: MapUnit,
+    private var defenderHero: MapUnit,
     defaultPage: String = "",
     selection: String = ""
 ) : BaseScreen(), RecreateOnResize {
-    private var manager = NewBattleManager(viewingHero, defendingHero)
+    private var manager = NewBattleManager(attackerHero.army, defenderHero.army)
+
+    // Array to store TroopArmyView or null for empty slots
+    private val attackerTroopViewsArray: Array<TroopBattleView?> =
+            Array(attackerHero.army.getAllTroops().size ?: 0) { null }
+    private val defenderTroopViewsArray: Array<TroopBattleView?> =
+            Array(defenderHero.army.getAllTroops().size ?: 0) { null }
+
 
     // 50 normal button height + 2*10 topTable padding + 2 Separator + 2*5 centerTable padding
     // Since a resize recreates this screen this should be fine as a val
     internal val centerAreaHeight = stage.height - 82f
     internal val BFwidth : Int = 14
     internal val BFheight : Int = 8
-    private val battleField : TileMap = TileMap(BFwidth, BFheight,  game.gameInfo!!.ruleSet, viewingHero.currentTile.baseTerrain)
+    private val battleField : TileMap = TileMap(BFwidth, BFheight,  game.gameInfo!!.ruleSet, attackerHero.currentTile.baseTerrain)
     val tileGroups = HashMap<TileInfo, List<TileGroup>>()
     private lateinit var tileGroupMap: TileGroupMap<TileGroup>
     private val allTileGroups = ArrayList<TileGroup>()
@@ -75,6 +83,17 @@ class NewBattleScreen(
     }
 
     init {
+
+        // Iterate through slots and create/update views
+        attackerHero.army.getAllTroops()?.forEachIndexed { index, troop ->
+            if(troop != null) {
+                troop.enterBattle(attackerHero.civInfo, index, attacker = true, oldVersion = false)
+                val troopView = TroopBattleView(troop, this) // Pass ArmyView for interaction
+                attackerTroopViewsArray[index] = troopView // Save to array
+                //add(troopView).size(64f).pad(5f)
+            }
+        }
+
         // Load cursor pixmaps
         cursorMove = loadCursor("BattleMoveCursor128.png", 32,64)
         cursorShoot = loadCursor("BattleArrowCursor128.png", 64,64)
@@ -177,6 +196,20 @@ class NewBattleScreen(
     fun addTiles(){
 
         tileGroupMap = TileGroupMap(daTileGroups)
+
+        // Draw attacking troops
+        attackerTroopViewsArray.forEach { troopView ->
+            if (troopView != null) {
+                var troopTile =
+                        daTileGroups.first { it.tileInfo.position == troopView.getBattlefieldPosition() }
+                troopView.draw(troopTile, attacker = true)
+            }
+        }
+      //  manager.attackingTroops.forEach { troop ->
+      //      var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
+     //       troop.drawOnBattle(troopTile, attacker = true)
+     //   }
+
 
         /*
         // Draw defending troops
@@ -487,7 +520,7 @@ class NewBattleScreen(
     }
 
     override fun recreate(): BaseScreen {
-        return NewBattleScreen(viewingHero, defendingHero)
+        return NewBattleScreen(attackerHero, defenderHero)
     }
 
     fun resizePage(tab: EmpireOverviewTab) {

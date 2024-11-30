@@ -1,6 +1,7 @@
 package com.unciv.ui.battlescreen
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Image
@@ -10,24 +11,39 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.logic.army.TroopInfo
+import com.unciv.ui.army.ArmyView
 
 /**
  * Represents the view of a troop in battles.
  */
 class TroopBattleView(
-    private val troopInfo: TroopInfo
-) {
+    private val troopInfo: TroopInfo,
+    private val battleScreen: NewBattleScreen
+    ) {
     private val troopGroup = Group()
-    private lateinit var troopImages: ArrayList<Image>
+    private var troopImages: ArrayList<Image>
 
     /** Initialize the troop's battle appearance. */
+    // Deprecated. To be removed
     fun initialize(civColor: Color) {
         val unitImagePath = "TileSets/AbsoluteUnits/Units/${troopInfo.unitName}"
         troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, civColor, civColor)
     }
 
+    init {
+        val unitImagePath = "TileSets/AbsoluteUnits/Units/${troopInfo.unitName}"
+        troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, null, null)
+
+
+    }
+
+    fun getBattlefieldPosition(): Vector2 {
+        return troopInfo.position
+    }
+
+
     /** Draw the troop on the battle field. */
-    fun drawOnBattle(tileGroup: TileGroup, attacker: Boolean) {
+    fun draw(tileGroup: TileGroup, attacker: Boolean) {
         val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin)
         amountText.moveBy(tileGroup.width * 0.5f, 0f)
 
