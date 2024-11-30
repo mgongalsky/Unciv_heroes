@@ -71,8 +71,8 @@ class ArmyManager(
 
         if (combine && firstTroop != null && secondTroop != null && firstTroop.unitName == secondTroop.unitName) {
             // Combine troops if they are of the same type and combining is enabled
-            firstTroop.currentAmount += secondTroop.currentAmount
-            secondArmy.removeTroopAt(secondIndex)
+            secondTroop.currentAmount += firstTroop.currentAmount
+            firstArmy.removeTroopAt(firstIndex)
             return true
         } else {
             // Perform the swap

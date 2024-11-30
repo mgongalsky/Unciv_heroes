@@ -189,10 +189,10 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
                 val exchangeArmyInfo = exchangeArmyView?.armyInfo ?: return
 
                 val success = armyManager.swapOrCombineTroops(
-                    currentArmyInfo,
-                    clickedIndex,
                     exchangeArmyInfo,
                     exchangeSelectedIndex,
+                    currentArmyInfo,
+                    clickedIndex,
                     combine = true
                 )
 
