@@ -62,6 +62,30 @@ class TroopInfo (
        // }
     }
 
+    /**
+     * Creates a deep copy of the current TroopInfo instance.
+     */
+    fun copy(): TroopInfo {
+        val copiedTroop = TroopInfo(
+            amount = this.amount,
+            unitName = this.unitName
+        )
+        copiedTroop.currentAmount = this.currentAmount
+        copiedTroop.currentHealth = this.currentHealth
+        //copiedTroop.position = this.position.cpy() // Ensures position is not shared by reference
+
+        if (::civInfo.isInitialized) {
+            copiedTroop.civInfo = this.civInfo
+        }
+
+        if (::baseUnit.isInitialized) {
+            copiedTroop.baseUnit = this.baseUnit
+        }
+
+        return copiedTroop
+    }
+
+
     private fun initializeVariables() {
         baseUnit = ruleset.units[unitName]!!
         currentAmount = amount

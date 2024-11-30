@@ -35,13 +35,22 @@ class SplitTroopPopup(
             // Set minimum popup size
             this.setSize(400f, 300f)
 
-            // Add avatar from TroopArmyView
-            troopView.drawAvatar()
-            add(troopView).size(80f).padBottom(10f).colspan(2).row()
+            // Create a new instance of TroopArmyView for the popup
+            val popupTroopView = TroopArmyView(troopView, true)
+            popupTroopView.deselect()
 
-            // Add "Adjust troop split" label
-            val label = "Adjust troop split".toLabel(fontSize = 20)
-            add(label).expandX().left().padBottom(10f).colspan(2).row()
+            // Draw the avatar for the new instance
+            //popupTroopView.drawAvatar()
+
+            // Add the new instance to the popup
+            add(popupTroopView).size(80f).padBottom(10f).padTop(10f).colspan(2).row()
+
+
+            // Add "Split [Unit Name]" label
+            val troopName = troopView.troopInfo.unitName  // Use unit name or default to "Troop"
+            val label = "Split $troopName".toLabel(fontSize = 20)
+            add(label).expandX().left().padBottom(10f).colspan(2).align(Align.center).row()
+
 
             // Create labels for left and right troop counts
             val leftCountLabel = Label("0", BaseScreen.skin)

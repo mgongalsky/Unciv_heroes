@@ -24,7 +24,8 @@ import com.unciv.ui.utils.TextureUtils
  */
 class TroopArmyView(
     internal val troopInfo: TroopInfo?, // Null indicates an empty slot
-    private val armyView: ArmyView
+    private val armyView: ArmyView,
+    private val avatarOnly: Boolean = false // avatar-only mode
 ) : Group() {
     private val troopGroup = Group() // A group to contain all troop-related visuals
     private lateinit var troopImages: ArrayList<Image> // Images representing the troop's layers
@@ -34,8 +35,22 @@ class TroopArmyView(
     private val defaultTexture = TextureUtils.createMonochromaticTexture(64, 64, Color.BROWN)
     private val selectedTexture = TextureUtils.createMonochromaticTexture(64, 64, Color.GOLD)
 
+
     companion object {
         var isVerbose = false // Flag to enable or disable verbose output
+    }
+
+    /**
+     * Copy constructor to create a new TroopArmyView based on an existing one.
+     * Copies `troopInfo` and initializes `armyView` for standalone usage.
+     */
+    constructor(original: TroopArmyView, isAvatarOnly: Boolean) : this(
+        troopInfo = original.troopInfo?.copy(), // Copy troopInfo to ensure it's not the same reference
+        armyView = original.armyView, // ArmyView reference remains the same, modify if needed for detached usage
+        avatarOnly = isAvatarOnly
+            ) {
+
+
     }
 
     init {
@@ -118,23 +133,26 @@ class TroopArmyView(
         val backgroundImage = Image(defaultTexture).apply {
             name = "backgroundImage"
             touchable = Touchable.enabled // Enable interactivity for the background
-
+            align = Align.center
         }
         troopGroup.addActor(backgroundImage)
 
         drawAvatar()
 
-        if(troopInfo != null) {
-            // Create and add a label showing the troop's current amount
-            val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
-                setAlignment(Align.right) // Align text to the right
-                scaleBy(0.5f)
-                moveBy(40f, 0.5f)
-                name = "amountLabel"
-                touchable = Touchable.disabled // Label should not be interactive
+        if(!avatarOnly) {
+            if (troopInfo != null) {
+                // Create and add a label showing the troop's current amount
+                val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
+                    setAlignment(Align.right) // Align text to the right
+                    scaleBy(0.5f)
+                    moveBy(backgroundImage.width * 0.6f - 0.5f, 0.5f)
+                    name = "amountLabel"
+                    touchable = Touchable.disabled // Label should not be interactive
+                }
+                troopGroup.findActor<Label>("amountLabel")
+                    ?.remove() // Remove old label if it exists
+                troopGroup.addActor(amountText)
             }
-            troopGroup.findActor<Label>("amountLabel")?.remove() // Remove old label if it exists
-            troopGroup.addActor(amountText)
         }
         // Add the troop group to this view
         addActor(troopGroup)
@@ -147,8 +165,13 @@ class TroopArmyView(
         if (troopInfo != null) {
             // Add troop images to the group
             for (troopImage in troopImages) {
-                troopImage.setScale(-0.125f, 0.125f) // Adjust scaling
-                troopImage.moveBy(60f, 0f) // Offset the image position
+                val scaleFactor = 1/8f
+                troopImage.setScale(-scaleFactor, scaleFactor) // Adjust scaling
+                troopImage.align = Align.center
+
+                // TODO: create Offset function and commit to libGDX for Image class. moveBy is very inconvenient, because shifts twice if function is called twice
+                troopImage.moveBy(troopImage. width * scaleFactor, 0f)
+
                 troopImage.touchable = Touchable.disabled // Images should not be interactive
                 troopImage.name = "troopImage" // Assign a name for easy reference
                 troopGroup.findActor<Image>("troopImage")?.remove() // Remove old image if it exists
