@@ -131,108 +131,111 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
 
 
     /**
-     * Handles the logic for splitting troops between slots in an army.
-     * If the target slot is in a different army (`isSameArmy` is false), the function exits early.
-     * Otherwise, it checks if a valid source and target slot exist and opens a popup
-     * to allow the user to split the troop between the selected slot and the clicked slot.
+     * Handles the logic for splitting troops between slots in one or two armies.
+     * Supports splitting troops across different armies if `isSameArmy` is false.
      *
-     * @param clickedIndex The index of the clicked troop slot.
+     * @param clickedIndex The index of the clicked troop slot in the target army.
      * @param isSameArmy A boolean indicating whether the target slot belongs to the same army.
      */
     private fun handleTroopSplitting(clickedIndex: Int, isSameArmy: Boolean) {
-        // Exit if the target is in a different army
-        if (!isSameArmy) return
+        val selectedIndex = if (isSameArmy) {
+            getSelectedTroopIndex()
+        } else {
+            exchangeArmyView?.getSelectedTroopIndex()
+        }
 
-        // Get the index of the currently selected troop
-        val selectedIndex = getSelectedTroopIndex()
-        if (selectedIndex != null && selectedIndex != clickedIndex) {
-            // Retrieve the source and target troops
-            val sourceTroop = armyInfo?.getTroopAt(selectedIndex) ?: return
-            val targetTroop = armyInfo.getTroopAt(clickedIndex)
+        if (selectedIndex == null) //Problem with selection -> get out
+            return
+        if (selectedIndex == clickedIndex && isSameArmy) return // Same troop in the same army was chosen
 
-            // Check if the target slot is empty or matches the source troop type
-            if (targetTroop == null || sourceTroop.unitName == targetTroop.unitName) {
-                val selectedTroopView = troopViewsArray[selectedIndex] ?: return // Retrieve the selected TroopArmyView
+        val sourceArmyView = if (isSameArmy) this else exchangeArmyView ?: return
+        val sourceArmyInfo = if (isSameArmy) armyInfo else exchangeArmyView?.armyInfo ?: return
+        val sourceTroop = sourceArmyInfo?.getTroopAt(selectedIndex)
+        val sourceTroopView = sourceArmyView.troopViewsArray[selectedIndex] ?: return
 
-                // Open the split popup for troop redistribution
-                SplitTroopPopup(
-                    screen = screen, // Use the current screen
-                    troopView = selectedTroopView, // Pass the selected TroopArmyView
-                    onSplit = { firstPart, secondPart ->
-                        armyManager.splitTroop(
-                            sourceArmy = armyInfo, // Source army is already verified
-                            sourceIndex = selectedIndex,
-                            targetArmy = armyInfo,
-                            targetIndex = clickedIndex,
-                            splitAmount = firstPart
-                        )
-                        updateView() // Refresh the army view
-                    }
-                ).open()
-            }
+
+        val targetArmyInfo = armyInfo ?: return
+        val targetTroop = targetArmyInfo.getTroopAt(clickedIndex)
+
+
+        // Check if the target slot is empty or matches the source troop type
+        if (targetTroop == null || sourceTroop?.unitName == targetTroop.unitName) {
+            // Open the split popup for troop redistribution
+            SplitTroopPopup(
+                screen = screen, // Use the current screen
+                troopView = sourceTroopView, // Pass the selected TroopArmyView
+                onSplit = { firstPart, secondPart ->
+                    armyManager.splitTroop(
+                        sourceArmy = sourceArmyInfo!!,
+                        sourceIndex = selectedIndex,
+                        targetArmy = targetArmyInfo,
+                        targetIndex = clickedIndex,
+                        splitAmount = firstPart
+                    )
+                    updateView()
+
+                    // Refresh views for exchange army
+                    if (!isSameArmy)
+                        exchangeArmyView?.updateView() // Refresh the exchange army view
+
+                }
+            ).open()
         }
     }
 
 
-    // TODO: Enhance management: allow to combine, split troops (with splitting popup window), and maybe split to two/three/etc equal group.
-    /**
-     * Callback for when a TroopArmyView is clicked.
-     * This method is called by TroopArmyView and delegates to ArmyManager.
-     * Handles cross-army selection if exchangeArmyView is set.
-     * @param clickedTroopView The clicked TroopArmyView instance.
-     */
-    fun onTroopClicked(clickedTroopView: TroopArmyView, isTroopSplitting : Boolean) {
+    fun onTroopClicked(clickedTroopView: TroopArmyView, isTroopSplitting: Boolean) {
         val clickedIndex = troopViewsArray.indexOf(clickedTroopView)
         if (clickedIndex == -1) return // If the troop is not found, do nothing
 
-        if (armyInfo == null)
-            return
-
-        if (isTroopSplitting)
-        {
-            handleTroopSplitting(clickedIndex, isSameArmy = true)
-            return
-        }
-
-
+        if (armyInfo == null) return
 
         if (exchangeArmyView != null) {
             // Handle cross-army interaction
             val exchangeSelectedIndex = exchangeArmyView?.getSelectedTroopIndex()
             if (exchangeSelectedIndex != null) {
-                // Perform troop swap between the two armies
-                val currentArmyInfo = armyInfo ?: return
-                val exchangeArmyInfo = exchangeArmyView?.armyInfo ?: return
-
-                val success = armyManager.swapOrCombineTroops(
-                    exchangeArmyInfo,
-                    exchangeSelectedIndex,
-                    currentArmyInfo,
-                    clickedIndex,
-                    combine = true
-                )
-
-                if (success) {
-                    updateView() // Refresh the current army view
-                    exchangeArmyView?.updateView() // Refresh the exchange army view
-                    exchangeArmyView?.deselectAllTroops() // Clear selection in the exchange army
-                    deselectAllTroops() // Clear selection in the current army
-                }
-            } else {
-                // Check if there's a selected troop in the current army
-                val currentSelectedIndex = getSelectedTroopIndex()
-                if (currentSelectedIndex != null) {
-                    // Swap the selected troop in the current army with the clicked troop
+                if (isTroopSplitting) {
+                    // Handle splitting across different armies
+                    handleTroopSplitting(clickedIndex, isSameArmy = false)
+                } else {
+                    // Perform troop swap between the two armies
                     val currentArmyInfo = armyInfo ?: return
+                    val exchangeArmyInfo = exchangeArmyView?.armyInfo ?: return
+
                     val success = armyManager.swapOrCombineTroops(
-                        currentArmyInfo,
-                        currentSelectedIndex,
+                        exchangeArmyInfo,
+                        exchangeSelectedIndex,
                         currentArmyInfo,
                         clickedIndex,
                         combine = true
                     )
+
                     if (success) {
                         updateView() // Refresh the current army view
+                        exchangeArmyView?.updateView() // Refresh the exchange army view
+                        exchangeArmyView?.deselectAllTroops() // Clear selection in the exchange army
+                        deselectAllTroops() // Clear selection in the current army
+                    }
+                }
+            } else { // Interaction within one army, but when exchange army exists
+                // Check if there's a selected troop in the current army
+                val currentSelectedIndex = getSelectedTroopIndex()
+                if (currentSelectedIndex != null) {
+                    if (isTroopSplitting) {
+                        handleTroopSplitting(clickedIndex, isSameArmy = true)
+                    } else {
+                        // Swap the selected troop in the current army with the clicked troop
+                        val currentArmyInfo = armyInfo ?: return
+                        val success = armyManager.swapOrCombineTroops(
+                            currentArmyInfo,
+                            currentSelectedIndex,
+                            currentArmyInfo,
+                            clickedIndex,
+                            combine = true
+                        )
+                        if (success) {
+                            updateView() // Refresh the current army view
+                        }
                     }
                     deselectAllTroops() // Clear selection in the current army
                 } else {
@@ -243,40 +246,38 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
                 }
             }
         } else {
-        // Handle single-army interaction
+            // Handle single-army interaction
             if (selectedTroop != null) {
                 val selectedIndex = troopViewsArray.indexOf(selectedTroop)
                 if (selectedIndex != -1 && selectedIndex != clickedIndex) {
-                    // Swap the selected troop with the clicked troop within the same army
-                    val currentArmyInfo = armyInfo ?: return
+                    if (isTroopSplitting) {
+                        handleTroopSplitting(clickedIndex, isSameArmy = true)
+                    } else {
+                        // Swap the selected troop with the clicked troop within the same army
+                        val currentArmyInfo = armyInfo ?: return
+                        val success = armyManager.swapOrCombineTroops(
+                            currentArmyInfo,
+                            selectedIndex,
+                            currentArmyInfo,
+                            clickedIndex,
+                            combine = true
+                        )
 
-                    val success = armyManager.swapOrCombineTroops(
-                        currentArmyInfo,
-                        selectedIndex,
-                        currentArmyInfo,
-                        clickedIndex,
-                        combine = true
-                    )
-
-                    if (success) {
-                        updateView() // Refresh the view to reflect the change
+                        if (success) {
+                            updateView() // Refresh the view to reflect the change
+                        }
                     }
                 }
-                //deselectAllTroops() // Clear selection in the current army
                 selectedTroop = null // Clear selection after swap
-
             } else {
                 // If no troop is selected, select the clicked troop
                 if (!clickedTroopView.isEmptySlot()) {
-                    //deselectAllTroops() // Deselect all troops in the current army
                     selectedTroop = clickedTroopView
-
                     clickedTroopView.select()
                 }
             }
         }
     }
-
 
 
 }
