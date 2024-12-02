@@ -92,6 +92,10 @@ class TroopInfo (
         currentHealth = baseUnit.health
     }
 
+    fun isPlayerControlled(): Boolean {
+        return civInfo.isPlayerCivilization()
+    }
+
     override fun write(json: Json) {
         //json.writeObjectStart()
 

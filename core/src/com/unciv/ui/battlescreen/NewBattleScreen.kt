@@ -1,5 +1,6 @@
 package com.unciv.ui.battlescreen
 
+import ErrorId
 import com.unciv.logic.battle.NewBattleManager
 
 import com.badlogic.gdx.Gdx
@@ -14,6 +15,7 @@ import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
@@ -34,6 +36,12 @@ import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
 import com.unciv.ui.utils.extensions.onChange
 import com.unciv.ui.utils.extensions.onClick
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 // Now it's just copied from HeroOverviewScreen
 // All coordinates are hex, not offset
@@ -44,7 +52,7 @@ class NewBattleScreen(
     private var defenderHero: MapUnit,
     defaultPage: String = "",
     selection: String = ""
-) : BaseScreen(), RecreateOnResize {
+) : BaseScreen(), RecreateOnResize{
     private var manager = NewBattleManager(attackerHero.army, defenderHero.army)
 
     // Array to store TroopArmyView or null for empty slots
@@ -83,6 +91,8 @@ class NewBattleScreen(
     }
 
     init {
+
+        manager.initializeTurnQueue()
 
         // Iterate through slots and create/update views
         attackerHero.army.getAllTroops()?.forEachIndexed { index, troop ->
@@ -165,6 +175,13 @@ class NewBattleScreen(
 
         tabbedPager.setFillParent(true)
 
+        //coroutineScope{launch {
+        GlobalScope.launch {
+            runBattleLoop()
+        }
+    //}
+        //}
+
     }
 
     fun loadCursor(filename: String, xHotspot: Int, yHotspot: Int) : Cursor{
@@ -175,6 +192,111 @@ class NewBattleScreen(
         return Gdx.graphics.newCursor(pixmap, xHotspot, yHotspot)
 
     }
+
+    suspend fun runBattleLoop() = coroutineScope {
+        while (manager.isBattleOn()) {
+            val currentTroop = manager.getCurrentTroop()
+
+            if (currentTroop.isPlayerControlled()) {
+                val action = waitForPlayerAction() // Асинхронное ожидание действия игрока
+                val result = manager.performTurn(action)
+
+                if (!result.success) {
+                    handleActionError(result.errorId)
+                    continue // Ждем повторного действия игрока
+                }
+            } else {
+                //val aiAction = aiController.decideAction(currentTroop)
+                //manager.performTurn(aiAction)
+            }
+
+            manager.advanceTurn()
+        }
+    }
+
+    suspend fun waitForPlayerAction(): BattleActionRequest {
+        return suspendCancellableCoroutine { continuation ->
+            // Устанавливаем callback для обработки действия
+            onPlayerActionReceived = { action ->
+                continuation.resume(action) // Возвращаем результат действия
+            }
+
+            // Если корутина отменена, очищаем callback
+            continuation.invokeOnCancellation {
+                onPlayerActionReceived = null
+            }
+        }
+    }
+
+
+    fun handlePlayerMove(tileGroup: TileGroup) {
+        // Получаем текущий TroopBattleView
+        val currentTroopView = getCurrentTroopView()
+
+        if (currentTroopView == null) {
+            println("Error: Current troop's view not found!")
+            return
+        }
+
+        // Определяем целевую позицию
+        val targetPosition = tileGroup.tileInfo.position
+
+        // Создаем запрос на действие
+        val actionRequest = BattleActionRequest(
+            troop = currentTroopView.getTroopInfo(),
+            targetPosition = targetPosition,
+            actionType = ActionType.MOVE
+        )
+
+        // Передаем действие в callback (корутину, которая ждёт действия)
+        onPlayerActionReceived?.invoke(actionRequest)
+    }
+
+
+    private var onPlayerActionReceived: ((BattleActionRequest) -> Unit)? = null
+
+
+    fun moveTroopView(troopView: TroopBattleView, targetTileGroup: TileGroup) {
+    }
+
+
+    private fun handleActionError(errorId: ErrorId?) {
+        when (errorId) {
+            ErrorId.TOO_FAR -> showError("Target is too far away!")
+            ErrorId.OCCUPIED_BY_ALLY -> showError("Target tile is occupied by an ally!")
+            ErrorId.NOT_IMPLEMENTED -> showError("This action is not implemented yet!")
+            ErrorId.INVALID_TARGET -> showError("Invalid target!")
+            else -> showError("An unknown error occurred!")
+        }
+    }
+
+    private fun showError(message: String) {
+        // Простое сообщение в консоль для отладки
+        println("Error: $message")
+
+        // Not tested below:
+        /*
+        // Отобразим сообщение игроку, например, через всплывающее окно
+        val errorLabel = Label(message, BaseScreen.skin).apply {
+            color = Color.RED
+            setFontScale(1.2f)
+            setPosition(stage.width / 2 - width / 2, stage.height - 100f)
+        }
+
+        stage.addActor(errorLabel)
+
+        // Удалим сообщение через 3 секунды
+        errorLabel.addAction(
+            Actions.sequence(
+            Actions.delay(3f),
+            Actions.fadeOut(0.5f),
+            Actions.removeActor()
+        ))
+
+         */
+    }
+
+
 
     /** Draw a pointer to a currently active troop. */
     fun draw_pointer() {
@@ -321,6 +443,12 @@ class NewBattleScreen(
         tileGroupMap.setSize(stage.width, stage.height)
         stage.addActor(tileGroupMap)
 
+    }
+
+    fun getCurrentTroopView(): TroopBattleView? {
+        val currentTroop = manager.getCurrentTroop()
+        return attackerTroopViewsArray.find { it?.getTroopInfo() == currentTroop }
+            ?: defenderTroopViewsArray.find { it?.getTroopInfo() == currentTroop }
     }
 
     fun movePointerToNextTroop() {

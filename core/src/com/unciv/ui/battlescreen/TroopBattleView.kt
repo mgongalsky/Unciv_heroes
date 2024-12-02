@@ -41,6 +41,9 @@ class TroopBattleView(
         return troopInfo.position
     }
 
+    fun getTroopInfo(): TroopInfo{
+        return troopInfo
+    }
 
     /** Draw the troop on the battle field. */
     fun draw(tileGroup: TileGroup, attacker: Boolean) {
