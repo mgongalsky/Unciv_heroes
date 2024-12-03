@@ -78,6 +78,8 @@ class NewBattleManager(
                 // Успешное перемещение
                 val oldPosition = troop.position
                 troop.position = targetPosition
+                println("Manager moves to position: (${targetPosition.x}, ${targetPosition.y})")
+
                 return BattleActionResult(
                     actionType = ActionType.MOVE,
                     success = true,

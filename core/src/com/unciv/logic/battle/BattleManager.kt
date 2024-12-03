@@ -1,5 +1,6 @@
 package com.unciv.ui.battlescreen
 
+import BattleActionResult
 import com.badlogic.gdx.math.Vector2
 import com.unciv.UncivGame
 import com.unciv.logic.HexMath
@@ -126,6 +127,50 @@ class BattleManager()
          }
          AIMove()
      }
+
+     /**
+      * Checks if the specified position is occupied by another troop.
+      *
+      * @param position The position to check.
+      * @return True if the position is occupied, false otherwise.
+      */
+     fun isPositionOccupied(position: Vector2): Boolean {
+         return sequence.any { it.position == position }
+     }
+
+     /**
+      * Attempts to move a troop to the specified target position.
+      * Checks if the target position is occupied by another troop.
+      *
+      * @param troop The troop attempting to move.
+      * @param targetPosition The target position to move to.
+      * @return A [BattleActionResult] indicating success or failure and any associated error.
+      */
+     fun performMove(troop: TroopInfo, targetPosition: Vector2): BattleActionResult {
+         // Check if the target position is occupied
+         if (isPositionOccupied(targetPosition)) {
+             // The target position is occupied
+             return BattleActionResult(
+                 actionType = ActionType.MOVE,
+                 success = false,
+                 errorId = ErrorId.HEX_OCCUPIED
+             )
+         }
+
+         // Save the previous position for the result
+         val previousPosition = troop.position
+
+         // Update the troop's position
+         troop.position = targetPosition
+
+         return BattleActionResult(
+             actionType = ActionType.MOVE,
+             success = true,
+             movedFrom = previousPosition,
+             movedTo = targetPosition
+         )
+     }
+
 
      fun isTroopAttacking(troop: TroopInfo): Boolean{
          if(attackingTroops.contains(troop))

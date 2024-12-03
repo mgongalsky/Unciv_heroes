@@ -21,6 +21,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.unciv.Constants
 import com.unciv.logic.HexMath
+import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
@@ -198,30 +199,62 @@ class NewBattleScreen(
             val currentTroop = manager.getCurrentTroop()
 
             if (currentTroop.isPlayerControlled()) {
-                val action = waitForPlayerAction() // Асинхронное ожидание действия игрока
-                val result = manager.performTurn(action)
+                while (true) {
+                    val (action, targetTileGroup) = waitForPlayerAction() // Получаем кортеж
+                    val result = manager.performTurn(action)
 
-                if (!result.success) {
-                    handleActionError(result.errorId)
-                    continue // Ждем повторного действия игрока
+                    if (result.success) {
+                        val currentTroopView = getTroopViewFor(currentTroop)
+                        if (currentTroopView != null) {
+                            currentTroopView.updatePosition(targetTileGroup)
+                        } else {
+                            println("Error: Unable to find TroopBattleView for movement")
+                        }
+                        break
+                    } else {
+                        handleActionError(result.errorId)
+                    }
                 }
             } else {
-                //val aiAction = aiController.decideAction(currentTroop)
-                //manager.performTurn(aiAction)
+                // Логика для AI
             }
 
             manager.advanceTurn()
         }
+        println("Battle has ended!")
     }
 
-    suspend fun waitForPlayerAction(): BattleActionRequest {
+    /**
+     * Finds the TroopBattleView corresponding to the given TroopInfo.
+     *
+     * @param troop The TroopInfo for which the view is needed.
+     * @return The corresponding TroopBattleView, or null if not found.
+     */
+    fun getTroopViewFor(troop: TroopInfo): TroopBattleView? {
+        // Search in the attacker's troop views
+        attackerTroopViewsArray.forEach { troopView ->
+            if (troopView?.getTroopInfo() == troop) {
+                return troopView
+            }
+        }
+
+        // Search in the defender's troop views
+        defenderTroopViewsArray.forEach { troopView ->
+            if (troopView?.getTroopInfo() == troop) {
+                return troopView
+            }
+        }
+
+        return null // Not found
+    }
+
+
+    suspend fun waitForPlayerAction(): Pair<BattleActionRequest, TileGroup> {
         return suspendCancellableCoroutine { continuation ->
-            // Устанавливаем callback для обработки действия
-            onPlayerActionReceived = { action ->
-                continuation.resume(action) // Возвращаем результат действия
+            onPlayerActionReceived = { actionAndTileGroup ->
+                continuation.resume(actionAndTileGroup) // Возвращаем кортеж
             }
 
-            // Если корутина отменена, очищаем callback
             continuation.invokeOnCancellation {
                 onPlayerActionReceived = null
             }
@@ -249,14 +282,15 @@ class NewBattleScreen(
         )
 
         // Передаем действие в callback (корутину, которая ждёт действия)
-        onPlayerActionReceived?.invoke(actionRequest)
+        onPlayerActionReceived?.invoke(Pair(actionRequest, tileGroup))
     }
 
 
-    private var onPlayerActionReceived: ((BattleActionRequest) -> Unit)? = null
+    private var onPlayerActionReceived: ((Pair<BattleActionRequest, TileGroup>) -> Unit)? = null
 
 
     fun moveTroopView(troopView: TroopBattleView, targetTileGroup: TileGroup) {
+        troopView.updatePosition(targetTileGroup = targetTileGroup) // Обновить внутреннюю позицию и представление
     }
 
 
@@ -386,7 +420,13 @@ class NewBattleScreen(
                 }
 
                 override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                    //tileGroupOnClick(tileGroup, x, y)
+                    // Выводим координаты тайла в консоль
+                    println("Tile clicked: position=${tileGroup.tileInfo.position}")
+
+                    // Или через логгирование GDX
+                    Gdx.app.log("TileClick", "Tile clicked at position=${tileGroup.tileInfo.position}")
+
+                    handleTileClick(tileGroup) // Обрабатываем клик на тайл
                 }
 
                 override fun enter(
@@ -444,6 +484,29 @@ class NewBattleScreen(
         stage.addActor(tileGroupMap)
 
     }
+
+    private fun handleTileClick(tileGroup: TileGroup) {
+        if (onPlayerActionReceived == null) {
+            println("Player action is not expected at the moment.")
+            return
+        }
+
+        val currentTroopView = getCurrentTroopView()
+        if (currentTroopView == null) {
+            println("Error: No current troop selected for player action.")
+            return
+        }
+
+        val actionRequest = BattleActionRequest(
+            troop = currentTroopView.getTroopInfo(),
+            targetPosition = tileGroup.tileInfo.position,
+            actionType = ActionType.MOVE
+        )
+
+        // Передаем кортеж
+        onPlayerActionReceived?.invoke(Pair(actionRequest, tileGroup))
+    }
+
 
     fun getCurrentTroopView(): TroopBattleView? {
         val currentTroop = manager.getCurrentTroop()

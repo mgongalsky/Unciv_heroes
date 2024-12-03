@@ -7,7 +7,8 @@ enum class ErrorId {
     OCCUPIED_BY_ALLY,    // Целевая клетка занята союзником
     NOT_IMPLEMENTED,     // Функция ещё не реализована
     INVALID_TARGET,      // Цель недействительна
-    UNKNOWN_ERROR        // Неизвестная ошибка
+    UNKNOWN_ERROR,        // Неизвестная ошибка
+    HEX_OCCUPIED
 }
 
 

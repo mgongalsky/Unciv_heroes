@@ -45,6 +45,45 @@ class TroopBattleView(
         return troopInfo
     }
 
+    /** Returns the current group of the troop for rendering. */
+    fun getCurrentGroup(): Group {
+        return troopGroup
+    }
+
+
+    // Глобальный флаг для управления логами (можно сделать локальным, если логика более узкая)
+    private val DEBUG_LOGS_ENABLED = true
+
+
+    /**
+     * Updates the position of the troop in the view.
+     * This moves the visual representation of the troop to the new position on the battlefield.
+     *
+     * @param tileGroups The list of tile groups for finding the target tile.
+     */
+    fun updatePosition(targetTileGroup: TileGroup?) {
+        if (targetTileGroup == null) {
+            if (DEBUG_LOGS_ENABLED) println("Error: Target tile group is null!")
+            return
+        }
+
+        // Удаляем текущую привязку troopGroup к старому тайлу
+        troopGroup.remove()
+        if (DEBUG_LOGS_ENABLED) println("Troop removed from previous tile.")
+
+        // Перемещаем troopGroup в новый тайл
+        troopGroup.setPosition(targetTileGroup.x, targetTileGroup.y)
+        if (DEBUG_LOGS_ENABLED) println("Troop moved to new tile at position: (${targetTileGroup.x}, ${targetTileGroup.y})")
+
+        // Добавляем troopGroup как дочерний элемент нового тайла
+        targetTileGroup.addActor(troopGroup)
+        if (DEBUG_LOGS_ENABLED) println("Troop added to target tile group.")
+
+        // Обновляем логическую позицию troopInfo, чтобы соответствовать новому тайлу
+        troopInfo.position = targetTileGroup.tileInfo.position
+        if (DEBUG_LOGS_ENABLED) println("Troop logical position updated to: ${troopInfo.position}")
+    }
+
     /** Draw the troop on the battle field. */
     fun draw(tileGroup: TileGroup, attacker: Boolean) {
         val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin)
