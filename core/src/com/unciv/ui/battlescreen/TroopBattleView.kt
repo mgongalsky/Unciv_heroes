@@ -72,16 +72,18 @@ class TroopBattleView(
         if (DEBUG_LOGS_ENABLED) println("Troop removed from previous tile.")
 
         // Перемещаем troopGroup в новый тайл
-        troopGroup.setPosition(targetTileGroup.x, targetTileGroup.y)
+        //troopGroup.setPosition(targetTileGroup.x, targetTileGroup.y)
         if (DEBUG_LOGS_ENABLED) println("Troop moved to new tile at position: (${targetTileGroup.x}, ${targetTileGroup.y})")
 
         // Добавляем troopGroup как дочерний элемент нового тайла
         targetTileGroup.addActor(troopGroup)
+        targetTileGroup.update()
         if (DEBUG_LOGS_ENABLED) println("Troop added to target tile group.")
 
+
         // Обновляем логическую позицию troopInfo, чтобы соответствовать новому тайлу
-        troopInfo.position = targetTileGroup.tileInfo.position
-        if (DEBUG_LOGS_ENABLED) println("Troop logical position updated to: ${troopInfo.position}")
+        //troopInfo.position = targetTileGroup.tileInfo.position
+        //if (DEBUG_LOGS_ENABLED) println("Troop logical position updated to: ${troopInfo.position}")
     }
 
     /** Draw the troop on the battle field. */
