@@ -206,8 +206,8 @@ class BattleManager()
              if(target != null)
                 attack(target)
 
-             if(screen != null)
-                 screen?.refreshTargetTroop(target?.position!!)
+             //if(screen != null)
+             //    screen?.refreshTargetTroop(target?.position!!)
 
              //checkBattleFinished()
              nextTurn()

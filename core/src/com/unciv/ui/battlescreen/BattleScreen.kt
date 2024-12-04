@@ -276,7 +276,8 @@ class BattleScreen(
         ){
             manager.attack(manager.getTroopOnHex(targetHex))
             // We need to check that we didn't kill the troop and it still exists
-            refreshTargetTroop(targetHex)
+            //ref
+            //refreshTargetTroop(targetHex)
 
             // After a shoot we turn to next troop and redraw the pointer
             tileGroup.update()
@@ -341,6 +342,7 @@ class BattleScreen(
         //movePointerToNextTroop()
     }
 
+    /*
     fun refreshTargetTroop(targetHex: Vector2) {
 
 
@@ -354,6 +356,8 @@ class BattleScreen(
             this.update()
         }
    }
+
+     */
 
     //fun
     fun redrawMovedTroop(targetHex: Vector2, hexToMove: Vector2) {

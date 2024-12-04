@@ -11,7 +11,7 @@ import com.unciv.logic.civilization.CivilizationInfo
  */
 class ArmyInfo(
     var civInfo: CivilizationInfo,
-    private val maxSlots: Int = DEFAULT_ARMY_SIZE
+    val maxSlots: Int = DEFAULT_ARMY_SIZE
 ) : IsPartOfGameInfoSerialization, Json.Serializable {
 
     companion object {

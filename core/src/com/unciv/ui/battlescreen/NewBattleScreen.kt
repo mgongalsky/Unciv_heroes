@@ -241,6 +241,11 @@ class NewBattleScreen(
                                 }
                             }
 
+                            ActionType.SHOOT -> {
+                                refreshTroopViews()
+
+                            }
+
                             ActionType.MOVE -> {
                                 // Обновляем UI для перемещения
                                 val currentTroopView = getTroopViewFor(currentTroop)
@@ -251,6 +256,7 @@ class NewBattleScreen(
                         break
                     } else {
                         if (verboseTurn) println("Action ${action.actionType} failed with error: ${result.errorId}")
+                        //refreshTroopViews()
                         handleActionError(result.errorId)
                     }
                 }
@@ -285,12 +291,14 @@ class NewBattleScreen(
             }
 
             for (i in defenderTroopViewsArray.indices) {
-                val troop = manager.getDefenderArmy().getTroopAt(i)
-                if (troop == null) {
-                    defenderTroopViewsArray[i]?.perish()
-                    defenderTroopViewsArray[i] = null
-                } else {
-                    defenderTroopViewsArray[i]?.updateStats()
+                if (i < defenderHero.army.maxSlots) {
+                    val troop = manager.getDefenderArmy().getTroopAt(i)
+                    if (troop == null) {
+                        defenderTroopViewsArray[i]?.perish()
+                        defenderTroopViewsArray[i] = null
+                    } else {
+                        defenderTroopViewsArray[i]?.updateStats()
+                    }
                 }
             }
         }
@@ -307,10 +315,11 @@ class NewBattleScreen(
                 if (existingView != null) {
                     existingView.updateStats()
                 } else {
+                    println("View for defender troop does not exist")
                     // Если вью отсутствует, создаем новое
-                    defenderTroopViewsArray[index] = TroopBattleView(troop, this)
-                    val troopTileGroup = daTileGroups.firstOrNull { it.tileInfo.position == troop.position }
-                    troopTileGroup?.let { defenderTroopViewsArray[index]?.draw(it, attacker = false) }
+                    //defenderTroopViewsArray[index] = TroopBattleView(troop, this)
+                    //val troopTileGroup = daTileGroups.firstOrNull { it.tileInfo.position == troop.position }
+                    //troopTileGroup?.let { defenderTroopViewsArray[index]?.draw(it, attacker = false) }
                 }
             }
         }
@@ -591,6 +600,17 @@ class NewBattleScreen(
 
         val currentTroop = currentTroopView.getTroopInfo()
         val targetPosition = tileGroup.tileInfo.position
+
+        // Проверяем, можно ли стрелять
+        if (manager.canShoot(currentTroop) && manager.isHexOccupiedByEnemy(currentTroop, targetPosition)) {
+            val actionRequest = BattleActionRequest(
+                troop = currentTroop,
+                targetPosition = targetPosition,
+                actionType = ActionType.SHOOT
+            )
+            onPlayerActionReceived?.invoke(Pair(actionRequest, tileGroup))
+            return
+        }
 
         if (!manager.isHexAchievable(currentTroop, targetPosition))
             return

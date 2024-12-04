@@ -5,7 +5,8 @@ import com.unciv.logic.army.TroopInfo
 
 enum class ActionType {
     MOVE,
-    ATTACK
+    ATTACK,
+    SHOOT // Новый тип действия для стрельбы
 }
 
 data class BattleActionRequest(

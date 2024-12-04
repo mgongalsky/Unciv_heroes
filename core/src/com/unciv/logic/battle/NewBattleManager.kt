@@ -153,12 +153,12 @@ class NewBattleManager(
 
                 if (verboseAttack) println("Attack performed on defender at $targetPosition")
 
-                if (defender.currentAmount <= 0) {
-                    removeTroop(defender)
-                    if (verboseAttack) {
-                        println("Defender defeated at $targetPosition")
-                    }
-                }
+                //if (defender.currentAmount <= 0) {
+                //    removeTroop(defender)
+                //    if (verboseAttack) {
+                //        println("Defender defeated at $targetPosition")
+                //    }
+                //}
 
                 return BattleActionResult(
                     actionType = ActionType.ATTACK,
@@ -166,6 +166,61 @@ class NewBattleManager(
                     movedFrom = oldPosition,
                     movedTo = attackPosition
                 )
+            }
+
+            ActionType.SHOOT -> {
+                if (verboseAttack) println("Starting ActionType.SHOOT for troop: ${troop.unitName} at position: ${troop.position}")
+
+                // Получаем защищающегося
+                val defender = getTroopOnHex(targetPosition)
+                    ?: return BattleActionResult(
+                        actionType = ActionType.SHOOT,
+                        success = false,
+                        errorId = ErrorId.INVALID_TARGET
+                    ).also {
+                        if (verboseAttack) println("Error: No troop found on target position: $targetPosition")
+                    }
+
+                // Проверяем возможность стрельбы
+                if (!canShoot(troop)) {
+                    if (verboseAttack) println("Error: Troop ${troop.unitName} cannot shoot")
+                    return BattleActionResult(
+                        actionType = ActionType.SHOOT,
+                        success = false,
+                        errorId = ErrorId.NOT_IMPLEMENTED
+                    )
+                }
+
+                if (!isHexOccupiedByEnemy(troop, targetPosition)) {
+                    if (verboseAttack) println("Error: Target position $targetPosition is not occupied by an enemy")
+                    return BattleActionResult(
+                        actionType = ActionType.SHOOT,
+                        success = false,
+                        errorId = ErrorId.INVALID_TARGET
+                    )
+                }
+
+                if (verboseAttack) println("Troop ${troop.unitName} is shooting at target: ${defender.unitName} on position: ${targetPosition}")
+
+                // Выполняем стрельбу
+                attack(defender, troop) // Используем ту же логику атаки
+
+                // Проверяем, уничтожен ли юнит
+                if (defender.currentAmount <= 0) {
+                    if (verboseAttack) println("Defender ${defender.unitName} at position $targetPosition defeated.")
+                    removeTroop(defender)
+                } else {
+                    if (verboseAttack) println("Defender ${defender.unitName} survived with ${defender.currentAmount} units.")
+                }
+
+                return BattleActionResult(
+                    actionType = ActionType.SHOOT,
+                    success = true,
+                    movedFrom = null,
+                    movedTo = null
+                ).also {
+                    if (verboseAttack) println("ActionType.SHOOT completed successfully for troop: ${troop.unitName}")
+                }
             }
         }
     }
@@ -307,35 +362,40 @@ class NewBattleManager(
      * @param attacker The attacking troop. Defaults to the current troop.
      */
     fun attack(defender: TroopInfo, attacker: TroopInfo = getCurrentTroop()) {
-        // Calculate maximum damage
-        var damage = attacker.currentAmount * attacker.baseUnit.damage
-
-        /*
-        // Apply a critical hit with a 15% chance
-        if (Random.nextDouble() < 0.15) {
-            damage *= 2
-            println("Critical hit! Damage doubled.")
-            // Display critical hit visuals if needed
-            attacker.showLuckRainbow()
+        if (verboseAttack) {
+            println("Starting attack: ${attacker.unitName} (Position: ${attacker.position}) attacking ${defender.unitName} (Position: ${defender.position})")
+            println("Initial attacker amount: ${attacker.currentAmount}, Initial defender amount: ${defender.currentAmount}")
         }
 
-         */
+        // Calculate maximum damage
+        var damage = attacker.currentAmount * attacker.baseUnit.damage
+        if (verboseAttack) println("Base damage calculated: $damage")
 
         // Include health lack in the calculation
         val healthLack = defender.baseUnit.health - defender.currentHealth
+        if (verboseAttack) println("Defender health lack: $healthLack")
+
         val totalDamage = damage + healthLack
+        if (verboseAttack) println("Total damage after health lack adjustment: $totalDamage")
 
         // Calculate the number of perished units
         val perished = (totalDamage / defender.baseUnit.health).toInt()
         defender.currentAmount -= perished
         defender.currentHealth = defender.baseUnit.health - (totalDamage % defender.baseUnit.health)
 
+        if (verboseAttack) {
+            println("Perished units: $perished")
+            println("Defender remaining amount: ${defender.currentAmount}, Remaining health: ${defender.currentHealth}")
+        }
+
         if (defender.currentAmount <= 0) {
             defender.currentAmount = 0
+            if (verboseAttack) println("Defender ${defender.unitName} at position ${defender.position} has been defeated.")
+            //defender.perish()
             perishTroop(defender)
         }
 
-        println("Attack complete: $attacker attacked $defender causing $damage damage. Remaining defenders: ${defender.currentAmount}.")
+        if (verboseAttack) println("Attack complete: ${attacker.unitName} caused $damage damage to ${defender.unitName}.")
     }
 
     /**
@@ -344,7 +404,7 @@ class NewBattleManager(
      * @param troop The troop to remove.
      */
     fun perishTroop(troop: TroopInfo) {
-        troop.perish() // Trigger any visual or logical effects for troop death
+        //troop.perish() // Trigger any visual or logical effects for troop death
         removeTroop(troop)
         println("Troop ${troop.baseUnit.name} has perished.")
     }
@@ -367,10 +427,11 @@ class NewBattleManager(
             defenderArmy.removeTroop(troop)
         }
 
+        // TODO: here we need to handle the situation when current troop is killed (weird)
         // Обновляем итератор очереди
-        if (getCurrentTroop() == troop) {
-            advanceTurn() // Переход к следующему юниту
-        }
+        //if (getCurrentTroop() == troop) {
+        //    advanceTurn() // Переход к следующему юниту
+        //}
 
         println("Troop ${troop.baseUnit.name} removed from the battle.")
     }

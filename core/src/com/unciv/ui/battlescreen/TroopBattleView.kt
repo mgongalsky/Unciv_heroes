@@ -131,8 +131,6 @@ class TroopBattleView(
         troopGroup.addActor(moraleImage)
     }
     /** Обновляет визуальные параметры отряда (например, количество юнитов). */
-    /** Обновляет визуальные параметры отряда (например, количество юнитов). */
-    /** Обновляет визуальные параметры отряда (например, количество юнитов). */
     fun updateStats() {
         Gdx.app.postRunnable {
             // Проверяем, есть ли уже Label для отображения количества юнитов
@@ -142,11 +140,12 @@ class TroopBattleView(
                 amountLabel.setText(troopInfo.currentAmount.toString())
             } else {
                 // Если Label отсутствует, создаем его
-                val newAmountLabel = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
-                    name = "amountLabel" // Устанавливаем имя для поиска в будущем
-                    setPosition(troopGroup.width * 0.5f, 0f) // Позиция внутри группы
-                }
-                troopGroup.addActor(newAmountLabel) // Добавляем новый Label в группу
+                println("Amount Label not found")
+                //val newAmountLabel = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
+                 //   name = "amountLabel" // Устанавливаем имя для поиска в будущем
+                //    setPosition(troopGroup.width * 0.5f, 0f) // Позиция внутри группы
+                //}
+                //troopGroup.addActor(newAmountLabel) // Добавляем новый Label в группу
             }
             println("Troop stats updated: ${troopInfo.unitName}, Amount: ${troopInfo.currentAmount}")
         }
