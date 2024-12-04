@@ -175,6 +175,7 @@ class NewBattleScreen(
         tabbedPager.selectPage(index)
 
         tabbedPager.setFillParent(true)
+        updateTilesShadowing()
 
         //coroutineScope{launch {
         GlobalScope.launch {
@@ -220,6 +221,7 @@ class NewBattleScreen(
             }
 
             manager.advanceTurn()
+            updateTilesShadowing()
         }
         println("Battle has ended!")
     }
@@ -442,7 +444,7 @@ class NewBattleScreen(
                     // Choose apropriate crosshair
                     if(fromActor != null) {
                         val width = fromActor.width
-                        //chooseCrosshair(tileGroup, x, y, width)
+                        chooseCrosshair(tileGroup, x, y, width)
                     }
 
                     super.enter(event, x, y, pointer, fromActor)
@@ -457,15 +459,15 @@ class NewBattleScreen(
                     toActor: Actor?
                 ) {
                     // TODO: This must be rewritten to avoid code doubling
-                    /*
-                    if(manager.isHexAchievable(tileGroup.tileInfo.position))
+                    val currentTroop = getCurrentTroopView() ?: return
+                    if(manager.isHexAchievable(currentTroop.getTroopInfo(), tileGroup.tileInfo.position))
                         tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
                     else
                         tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
 
                     super.exit(event, x, y, pointer, toActor)
 
-                     */
+
                 }
             })
 
@@ -512,6 +514,28 @@ class NewBattleScreen(
         val currentTroop = manager.getCurrentTroop()
         return attackerTroopViewsArray.find { it?.getTroopInfo() == currentTroop }
             ?: defenderTroopViewsArray.find { it?.getTroopInfo() == currentTroop }
+    }
+
+
+    private fun updateTilesShadowing(){
+
+        val currentTroop = getCurrentTroopView() ?: return
+        // Now we highlight achievable hexes by transparency. First of all we make all hexes non-transparent.
+       // for (tileGroup in daTileGroups)
+       //     tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
+        // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
+        daTileGroups.forEach {
+            if (manager.isHexAchievable(currentTroop.getTroopInfo(), it.tileInfo.position))
+                it.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
+            else
+                it.baseLayerGroup.color = Color(1f,1f,1f,1f)
+
+
+        }
+     //   var achievableHexes = daTileGroups.filter { manager.isHexAchievable(currentTroop.getTroopInfo(), it.tileInfo.position) }
+      //  for (achievableHex in achievableHexes)
+      //      achievableHex.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
+     //   else
     }
 
     fun movePointerToNextTroop() {
@@ -642,10 +666,11 @@ class NewBattleScreen(
     /** Routing for choose appropriate mouse cursor: for movement, attack, shooting and info. In other cases "cancel" cursor is shown */
     fun chooseCrosshair(tileGroup:TileGroup, x: Float, y: Float, width: Float)
     {
-        /*
+
         // The code is similar to onClick routines. See details comments there.
         val targetHex = tileGroup.tileInfo.position
 
+        /*
         // if current troop can shoot:
         if(manager.currentTroop.baseUnit.rangedStrength != 0 &&
                 manager.isTroopOnHex(targetHex) &&
@@ -656,11 +681,15 @@ class NewBattleScreen(
             return
         }
 
+
+         */
+        val currentTroop = getCurrentTroopView() ?: return
         // for non-shooting troops:
-        if(!manager.isHexAchievable(targetHex))
+        if(!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
             Gdx.graphics.setCursor(cursorCancel)
 
         else {
+            /*
             if(manager.isTroopOnHex(targetHex)){
                 if (manager.getTroopOnHex(targetHex).civInfo != manager.currentTroop.civInfo) {
 
@@ -682,11 +711,13 @@ class NewBattleScreen(
                 return
             }
 
+
+             */
             Gdx.graphics.setCursor(cursorMove)
         }
 
 
-         */
+
     }
 
     /** Determine direction of the supposed attack by position of the mouse pointer */

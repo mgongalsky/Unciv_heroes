@@ -130,13 +130,20 @@ class NewBattleManager(
     }
 
     /**
+     * Checks if hex is free.
+     */
+    fun isHexFree(targetPosition: Vector2) = turnQueue.none { it.position == targetPosition }
+
+
+
+    /**
      * Checks if the target position is achievable by the given troop.
      *
      * @param troop The troop attempting to move.
      * @param targetPosition The target position to check.
      * @return True if the target position is within movement range and on the battlefield, false otherwise.
      */
-    private fun isHexAchievable(troop: TroopInfo, targetPosition: Vector2): Boolean {
+    fun isHexAchievable(troop: TroopInfo, targetPosition: Vector2): Boolean {
         // Check if the target position is within the troop's movement range
         val distance = HexMath.getDistance(troop.position, targetPosition)
         if (distance > troop.baseUnit.speed) {
