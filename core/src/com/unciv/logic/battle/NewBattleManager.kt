@@ -6,6 +6,7 @@ import com.unciv.logic.army.TroopInfo
 import com.unciv.ui.battlescreen.ActionType
 import com.unciv.ui.battlescreen.BattleActionRequest
 import com.badlogic.gdx.math.Vector2
+import com.unciv.logic.HexMath
 
 
 /** Logical part of a battle. No visual part here. */
@@ -128,8 +129,55 @@ class NewBattleManager(
         }
     }
 
+    /**
+     * Checks if the target position is achievable by the given troop.
+     *
+     * @param troop The troop attempting to move.
+     * @param targetPosition The target position to check.
+     * @return True if the target position is within movement range and on the battlefield, false otherwise.
+     */
     private fun isHexAchievable(troop: TroopInfo, targetPosition: Vector2): Boolean {
+        // Check if the target position is within the troop's movement range
+        val distance = HexMath.getDistance(troop.position, targetPosition)
+        if (distance > troop.baseUnit.speed) {
+            println("Target position is too far: distance=$distance, speed=${troop.baseUnit.speed}")
+            return false
+        }
+
+        // Check if the target position is on the battlefield
+        if (!isHexOnBattleField(targetPosition)) {
+            println("Target position $targetPosition is outside the battlefield.")
+            return false
+        }
+
+        // If all checks pass, the hex is achievable
         return true
+    }
+
+    /**
+     * Checks if the specified hex is inside the battlefield boundaries.
+     *
+     * @param positionHex The position in hexagonal coordinates to check.
+     * @return True if the position is within the predefined battlefield bounds, false otherwise.
+     */
+    fun isHexOnBattleField(positionHex: Vector2): Boolean {
+        // Convert hexagonal coordinates to offset coordinates (even-q)
+        val positionOffset = HexMath.hex2EvenQCoords(positionHex)
+
+        // Hardcoded battlefield dimensions (same as in the old version)
+        val minX = -7f
+        val maxX = 6f
+        val minY = -4f
+        val maxY = 3f
+
+        // Check if the position is within bounds
+        val isWithinBounds = positionOffset.x in minX..maxX && positionOffset.y in minY..maxY
+
+        if (!isWithinBounds) {
+            println("Position $positionOffset is outside the hardcoded battlefield bounds.")
+        }
+
+        return isWithinBounds
     }
 
 
