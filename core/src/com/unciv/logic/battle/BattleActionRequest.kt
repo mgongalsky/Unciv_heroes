@@ -11,6 +11,8 @@ enum class ActionType {
 data class BattleActionRequest(
     val troop: TroopInfo,
     val targetPosition: Vector2,
-    val actionType: ActionType
+    val actionType: ActionType,
+    val direction: Direction? = null // Направление атаки
 )
+
 

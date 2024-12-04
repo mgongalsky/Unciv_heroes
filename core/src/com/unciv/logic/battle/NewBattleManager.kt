@@ -56,6 +56,19 @@ class NewBattleManager(
         // Add logic to clean up battle state or notify the screen to close.
     }
 
+
+    /**
+     * Возвращает юнит, находящийся на заданной позиции, или null, если клетка пуста.
+     *
+     * @param positionHex Позиция в гексагональных координатах.
+     * @return Найденный юнит [TroopInfo] или null, если юнита нет.
+     */
+    fun getTroopOnHex(positionHex: Vector2): TroopInfo? {
+        return turnQueue.find { it.position == positionHex }
+    }
+
+    private val verboseAttack = true // Флаг для включения/выключения вербозинга атак
+
     fun performTurn(actionRequest: BattleActionRequest): BattleActionResult {
         val troop = actionRequest.troop
         val targetPosition = actionRequest.targetPosition
@@ -63,6 +76,7 @@ class NewBattleManager(
         when (actionRequest.actionType) {
             ActionType.MOVE -> {
                 if (!isHexAchievable(troop, targetPosition)) {
+                    if (verboseAttack) println("Hex not achievable for troop at position $targetPosition")
                     return BattleActionResult(
                         actionType = ActionType.MOVE,
                         success = false,
@@ -70,16 +84,18 @@ class NewBattleManager(
                     )
                 }
                 if (isHexOccupiedByAlly(troop, targetPosition)) {
+                    if (verboseAttack) println("Hex occupied by ally at position $targetPosition")
                     return BattleActionResult(
                         actionType = ActionType.MOVE,
                         success = false,
                         errorId = ErrorId.OCCUPIED_BY_ALLY
                     )
                 }
+
                 // Успешное перемещение
                 val oldPosition = troop.position
                 troop.position = targetPosition
-                println("Manager moves to position: (${targetPosition.x}, ${targetPosition.y})")
+                if (verboseAttack) println("Troop moved from $oldPosition to $targetPosition")
 
                 return BattleActionResult(
                     actionType = ActionType.MOVE,
@@ -90,11 +106,65 @@ class NewBattleManager(
             }
 
             ActionType.ATTACK -> {
-                // Здесь позже добавим логику атаки
+                val direction = actionRequest.direction
+                    ?: return BattleActionResult(
+                        actionType = ActionType.ATTACK,
+                        success = false,
+                        errorId = ErrorId.INVALID_TARGET
+                    )
+
+                if (verboseAttack) println("Attempting attack with direction $direction")
+
+                val defender = getTroopOnHex(targetPosition)
+                    ?: return BattleActionResult(
+                        actionType = ActionType.ATTACK,
+                        success = false,
+                        errorId = ErrorId.INVALID_TARGET
+                    )
+
+                if (!isHexOccupiedByEnemy(troop, targetPosition)) {
+                    if (verboseAttack) println("No enemy found at $targetPosition")
+                    return BattleActionResult(
+                        actionType = ActionType.ATTACK,
+                        success = false,
+                        errorId = ErrorId.INVALID_TARGET
+                    )
+                }
+
+                val attackPosition = HexMath.oneStepTowards(targetPosition, direction)
+                if (!isHexAchievable(troop, attackPosition) || !isHexFree(attackPosition)) {
+                    if (verboseAttack) {
+                        println("Attack position $attackPosition not achievable or not free")
+                    }
+                    return BattleActionResult(
+                        actionType = ActionType.ATTACK,
+                        success = false,
+                        errorId = ErrorId.INVALID_TARGET
+                    )
+                }
+
+                // Перемещаем атакующего юнита в позицию атаки
+                val oldPosition = troop.position
+                troop.position = attackPosition
+                if (verboseAttack) println("Troop moved to attack position $attackPosition")
+
+                // Выполняем атаку
+                attack(defender, troop)
+
+                if (verboseAttack) println("Attack performed on defender at $targetPosition")
+
+                if (defender.currentAmount <= 0) {
+                    removeTroop(defender)
+                    if (verboseAttack) {
+                        println("Defender defeated at $targetPosition")
+                    }
+                }
+
                 return BattleActionResult(
                     actionType = ActionType.ATTACK,
-                    success = false,
-                    errorId = ErrorId.NOT_IMPLEMENTED
+                    success = true,
+                    movedFrom = oldPosition,
+                    movedTo = attackPosition
                 )
             }
         }
@@ -169,7 +239,7 @@ class NewBattleManager(
         // Check if the target position is within the troop's movement range
         val distance = HexMath.getDistance(troop.position, targetPosition)
         if (distance > troop.baseUnit.speed) {
-            println("Target position is too far: distance=$distance, speed=${troop.baseUnit.speed}")
+            //println("Target position is too far: distance=$distance, speed=${troop.baseUnit.speed}")
             return false
         }
 
@@ -209,17 +279,121 @@ class NewBattleManager(
         return isWithinBounds
     }
 
+    fun getAttackerArmy() =  attackerArmy
+    fun getDefenderArmy() =  defenderArmy
+
+    /**
+     * Handles an attack by the current troop on a specified hex position.
+     *
+     * @param defenderHex The position of the defending troop.
+     * @param attacker The attacking troop. Defaults to the current troop.
+     */
+    /*
+    fun attack(defenderHex: Vector2, attacker: TroopInfo = manager.getCurrentTroop()) {
+        val defender = manager.getTroopAt(defenderHex)
+        if (defender != null) {
+            attack(defender, attacker)
+        } else {
+            println("Error: No troop found at position $defenderHex.")
+        }
+    }
+
+     */
+
+    /**
+     * Executes an attack by one troop on another troop.
+     *
+     * @param defender The defending troop.
+     * @param attacker The attacking troop. Defaults to the current troop.
+     */
+    fun attack(defender: TroopInfo, attacker: TroopInfo = getCurrentTroop()) {
+        // Calculate maximum damage
+        var damage = attacker.currentAmount * attacker.baseUnit.damage
+
+        /*
+        // Apply a critical hit with a 15% chance
+        if (Random.nextDouble() < 0.15) {
+            damage *= 2
+            println("Critical hit! Damage doubled.")
+            // Display critical hit visuals if needed
+            attacker.showLuckRainbow()
+        }
+
+         */
+
+        // Include health lack in the calculation
+        val healthLack = defender.baseUnit.health - defender.currentHealth
+        val totalDamage = damage + healthLack
+
+        // Calculate the number of perished units
+        val perished = (totalDamage / defender.baseUnit.health).toInt()
+        defender.currentAmount -= perished
+        defender.currentHealth = defender.baseUnit.health - (totalDamage % defender.baseUnit.health)
+
+        if (defender.currentAmount <= 0) {
+            defender.currentAmount = 0
+            perishTroop(defender)
+        }
+
+        println("Attack complete: $attacker attacked $defender causing $damage damage. Remaining defenders: ${defender.currentAmount}.")
+    }
+
+    /**
+     * Handles the removal of a perished troop.
+     *
+     * @param troop The troop to remove.
+     */
+    fun perishTroop(troop: TroopInfo) {
+        troop.perish() // Trigger any visual or logical effects for troop death
+        removeTroop(troop)
+        println("Troop ${troop.baseUnit.name} has perished.")
+    }
+
+
+
+    /**
+     * Removes a troop from the battle.
+     *
+     * @param troop The troop to remove.
+     */
+    fun removeTroop(troop: TroopInfo) {
+        // Удаляем из очереди хода
+        turnQueue.remove(troop)
+
+        // Удаляем из армии атакующих или защищающихся
+        if (attackerArmy.contains(troop)) {
+            attackerArmy.removeTroop(troop)
+        } else if (defenderArmy.contains(troop)) {
+            defenderArmy.removeTroop(troop)
+        }
+
+        // Обновляем итератор очереди
+        if (getCurrentTroop() == troop) {
+            advanceTurn() // Переход к следующему юниту
+        }
+
+        println("Troop ${troop.baseUnit.name} removed from the battle.")
+    }
+
 
     /**
      * Advances the turn to the next troop in the queue.
      * If the end of the queue is reached, it loops back to the start.
      */
     fun advanceTurn() {
-        if (turnQueue.isNotEmpty()) {
-            currentTurnIndex = (currentTurnIndex + 1) % turnQueue.size
-        }
-    }
+        //if (turnQueue.isNotEmpty()) {
+        //    currentTurnIndex = (currentTurnIndex + 1) % turnQueue.size
+       // }
 
+        if (turnQueue.isEmpty()) {
+            println("The turn queue is empty. Ending battle...")
+            finishBattle()
+            return
+        }
+
+        currentTurnIndex = (currentTurnIndex + 1) % turnQueue.size
+        //currentTroop = turnQueue[currentTroopIndex]
+    }
     /**
      * Checks if the given troop can shoot.
      *

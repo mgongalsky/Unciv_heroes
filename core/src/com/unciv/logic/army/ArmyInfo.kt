@@ -92,6 +92,22 @@ class ArmyInfo(
         return slots.any { it == troop }
     }
 
+    /**
+     * Removes the specified troop from the army.
+     *
+     * @param troop The troop to remove.
+     * @return True if the troop was successfully removed, false if not found.
+     */
+    fun removeTroop(troop: TroopInfo): Boolean {
+        // Ищем индекс юнита в массиве слотов
+        val index = slots.indexOfFirst { it == troop }
+        if (index != -1) {
+            slots[index] = null // Очищаем слот
+            return true
+        }
+        return false // Юнит не найден
+    }
+
 
     /** Sets a troop at the given index. If the index is out of bounds, nothing happens. */
     internal fun setTroopAt(index: Int, troop: TroopInfo?) {

@@ -195,35 +195,125 @@ class NewBattleScreen(
 
     }
 
+    private val verboseTurn = true // Флаг для включения/выключения вербозинга хода
+
     suspend fun runBattleLoop() = coroutineScope {
         while (manager.isBattleOn()) {
             val currentTroop = manager.getCurrentTroop()
 
+            if (verboseTurn) {
+                println("Current troop: ${currentTroop.baseUnit.name} at position ${currentTroop.position}")
+            }
+
             if (currentTroop.isPlayerControlled()) {
                 while (true) {
-                    val (action, targetTileGroup) = waitForPlayerAction() // Получаем кортеж
+                    if (verboseTurn) println("Waiting for player action...")
+                    val (action, targetTileGroup) = waitForPlayerAction()
+
+                    if (verboseTurn) {
+                        println("Received action: ${action.actionType} targeting ${action.targetPosition}")
+                        if (action.actionType == ActionType.ATTACK) {
+                            println("Direction for attack: ${action.direction}")
+                        }
+                    }
+
                     val result = manager.performTurn(action)
 
                     if (result.success) {
-                        val currentTroopView = getTroopViewFor(currentTroop)
-                        if (currentTroopView != null) {
-                            currentTroopView.updatePosition(targetTileGroup)
-                        } else {
-                            println("Error: Unable to find TroopBattleView for movement")
+                        if (verboseTurn) {
+                            println("Action ${action.actionType} succeeded")
+                            println("Moved from: ${result.movedFrom}, Moved to: ${result.movedTo}")
+                        }
+
+                        when (action.actionType) {
+                            ActionType.ATTACK -> {
+                                // Обновляем состояние после атаки
+
+                                refreshTroopViews()
+                                // Обновляем UI: перемещение атакующего юнита
+                                val attackingTroopView = getTroopViewFor(currentTroop)
+                                val attackPosition = HexMath.oneStepTowards(action.targetPosition, action.direction!!)
+                                val attackTileGroup = daTileGroups.firstOrNull { it.tileInfo.position == attackPosition }
+
+                                if (attackTileGroup != null && attackingTroopView != null) {
+                                    attackingTroopView.updatePosition(attackTileGroup)
+                                    if (verboseTurn) println("Updated attacking troop view to position $attackPosition")
+                                }
+                            }
+
+                            ActionType.MOVE -> {
+                                // Обновляем UI для перемещения
+                                val currentTroopView = getTroopViewFor(currentTroop)
+                                currentTroopView?.updatePosition(targetTileGroup)
+                                if (verboseTurn) println("Moved troop view to ${targetTileGroup.tileInfo.position}")
+                            }
                         }
                         break
                     } else {
+                        if (verboseTurn) println("Action ${action.actionType} failed with error: ${result.errorId}")
                         handleActionError(result.errorId)
                     }
                 }
             } else {
+                if (verboseTurn) println("AI logic not implemented yet for troop: ${currentTroop.baseUnit.name}")
                 // Логика для AI
             }
 
             manager.advanceTurn()
+            if (verboseTurn) println("Turn advanced to next troop")
             updateTilesShadowing()
         }
         println("Battle has ended!")
+    }
+
+
+    /**
+     * Обновляет массивы attackerTroopViewsArray и defenderTroopViewsArray
+     * на основе текущего состояния армии в менеджере.
+     */
+    fun refreshTroopViews() {
+        Gdx.app.postRunnable {
+            // Убедитесь, что операции обновления происходят в графическом потоке
+            for (i in attackerTroopViewsArray.indices) {
+                val troop = manager.getAttackerArmy().getTroopAt(i)
+                if (troop == null) {
+                    attackerTroopViewsArray[i]?.perish()
+                    attackerTroopViewsArray[i] = null
+                } else {
+                    attackerTroopViewsArray[i]?.updateStats()
+                }
+            }
+
+            for (i in defenderTroopViewsArray.indices) {
+                val troop = manager.getDefenderArmy().getTroopAt(i)
+                if (troop == null) {
+                    defenderTroopViewsArray[i]?.perish()
+                    defenderTroopViewsArray[i] = null
+                } else {
+                    defenderTroopViewsArray[i]?.updateStats()
+                }
+            }
+        }
+
+        // Обновляем массивы для защищающейся армии
+        manager.getDefenderArmy().getAllTroops().forEachIndexed { index, troop ->
+            if (troop == null) {
+                // Удаляем вью для уничтоженного отряда
+                defenderTroopViewsArray[index]?.perish()
+                defenderTroopViewsArray[index] = null
+            } else {
+                // Если вью уже существует, обновляем его параметры
+                val existingView = defenderTroopViewsArray[index]
+                if (existingView != null) {
+                    existingView.updateStats()
+                } else {
+                    // Если вью отсутствует, создаем новое
+                    defenderTroopViewsArray[index] = TroopBattleView(troop, this)
+                    val troopTileGroup = daTileGroups.firstOrNull { it.tileInfo.position == troop.position }
+                    troopTileGroup?.let { defenderTroopViewsArray[index]?.draw(it, attacker = false) }
+                }
+            }
+        }
     }
 
     /**
@@ -428,7 +518,7 @@ class NewBattleScreen(
                     // Или через логгирование GDX
                     Gdx.app.log("TileClick", "Tile clicked at position=${tileGroup.tileInfo.position}")
 
-                    handleTileClick(tileGroup) // Обрабатываем клик на тайл
+                    handleTileClick(tileGroup, x, y) // Обрабатываем клик на тайл
                 }
 
                 override fun enter(
@@ -487,7 +577,7 @@ class NewBattleScreen(
 
     }
 
-    private fun handleTileClick(tileGroup: TileGroup) {
+    private fun handleTileClick(tileGroup: TileGroup, x: Float, y: Float) {
         if (onPlayerActionReceived == null) {
             println("Player action is not expected at the moment.")
             return
@@ -499,14 +589,37 @@ class NewBattleScreen(
             return
         }
 
-        val actionRequest = BattleActionRequest(
-            troop = currentTroopView.getTroopInfo(),
-            targetPosition = tileGroup.tileInfo.position,
-            actionType = ActionType.MOVE
-        )
+        val currentTroop = currentTroopView.getTroopInfo()
+        val targetPosition = tileGroup.tileInfo.position
 
-        // Передаем кортеж
-        onPlayerActionReceived?.invoke(Pair(actionRequest, tileGroup))
+        if (!manager.isHexAchievable(currentTroop, targetPosition))
+            return
+
+        // Проверяем, можем ли атаковать
+        if (manager.isHexOccupiedByEnemy(currentTroop, targetPosition)) {
+            // Вычисляем направление атаки
+            val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
+
+            // Создаём запрос атаки
+            val attackRequest = BattleActionRequest(
+                troop = currentTroop,
+                targetPosition = targetPosition,
+                actionType = ActionType.ATTACK,
+                direction = direction
+            )
+
+            // Передаём запрос
+            onPlayerActionReceived?.invoke(Pair(attackRequest, tileGroup))
+        } else {
+            // Иначе создаём запрос перемещения
+            val moveRequest = BattleActionRequest(
+                troop = currentTroop,
+                targetPosition = targetPosition,
+                actionType = ActionType.MOVE
+            )
+
+            onPlayerActionReceived?.invoke(Pair(moveRequest, tileGroup))
+        }
     }
 
 
@@ -669,19 +782,6 @@ class NewBattleScreen(
             return
         }
 
-        /*
-        // if current troop can shoot:
-        if(manager.currentTroop.baseUnit.rangedStrength != 0 &&
-                manager.isTroopOnHex(targetHex) &&
-                targetHex != manager.currentTroop.position &&
-                manager.getTroopOnHex(targetHex).civInfo != manager.currentTroop.civInfo
-        ){
-            Gdx.graphics.setCursor(cursorShoot)
-            return
-        }
-
-
-         */
         // for non-shooting troops:
         if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
             Gdx.graphics.setCursor(cursorCancel)
@@ -705,30 +805,6 @@ class NewBattleScreen(
                 return
             }
 
-                /*
-                if(manager.isTroopOnHex(targetHex)){
-                    if (manager.getTroopOnHex(targetHex).civInfo != manager.currentTroop.civInfo) {
-
-                        val direction = pixelToDirection(x, y, width)
-                        val hexToMove = HexMath.oneStepTowards(targetHex, direction)
-                        if(!manager.isHexOnBattleField(hexToMove)){
-                            Gdx.graphics.setCursor(cursorCancel)
-                            return
-                        }
-                        if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.position) &&
-                                manager.isHexAchievable(hexToMove))
-                            Gdx.graphics.setCursor(cursorAttack[direction.num])
-                        else
-                            Gdx.graphics.setCursor(cursorCancel)
-                    }
-                    else
-                        Gdx.graphics.setCursor(cursorCancel)  /// TODO: change to question
-
-                    return
-                }
-
-
-                 */
             Gdx.graphics.setCursor(cursorMove)
         }
 

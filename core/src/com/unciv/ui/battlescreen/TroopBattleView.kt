@@ -1,5 +1,6 @@
 package com.unciv.ui.battlescreen
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Group
@@ -88,12 +89,16 @@ class TroopBattleView(
 
     /** Draw the troop on the battle field. */
     fun draw(tileGroup: TileGroup, attacker: Boolean) {
-        val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin)
-        amountText.moveBy(tileGroup.width * 0.5f, 0f)
+        // Создаем или обновляем Label для отображения количества юнитов
+        val amountLabel = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
+            name = "amountLabel" // Устанавливаем имя для последующего поиска
+            setPosition(tileGroup.width * 0.5f, 0f) // Позиция внутри группы
+        }
 
+        // Устанавливаем изображение отряда
         for (troopImage in troopImages) {
             troopImage.setScale(if (attacker) -0.25f else 0.25f, 0.25f)
-            troopImage.moveBy(
+            troopImage.setPosition(
                 if (attacker) tileGroup.width * 1.3f else tileGroup.width * -0.3f,
                 tileGroup.height * 0.15f
             )
@@ -101,7 +106,8 @@ class TroopBattleView(
             troopGroup.addActor(troopImage)
         }
 
-        troopGroup.addActor(amountText)
+        // Добавляем Label и всю группу отряда в текущий TileGroup
+        troopGroup.addActor(amountLabel)
         tileGroup.addActor(troopGroup)
     }
 
@@ -124,6 +130,28 @@ class TroopBattleView(
 
         troopGroup.addActor(moraleImage)
     }
+    /** Обновляет визуальные параметры отряда (например, количество юнитов). */
+    /** Обновляет визуальные параметры отряда (например, количество юнитов). */
+    /** Обновляет визуальные параметры отряда (например, количество юнитов). */
+    fun updateStats() {
+        Gdx.app.postRunnable {
+            // Проверяем, есть ли уже Label для отображения количества юнитов
+            val amountLabel = troopGroup.findActor<Label>("amountLabel")
+            if (amountLabel != null) {
+                // Обновляем текст в существующем Label
+                amountLabel.setText(troopInfo.currentAmount.toString())
+            } else {
+                // Если Label отсутствует, создаем его
+                val newAmountLabel = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
+                    name = "amountLabel" // Устанавливаем имя для поиска в будущем
+                    setPosition(troopGroup.width * 0.5f, 0f) // Позиция внутри группы
+                }
+                troopGroup.addActor(newAmountLabel) // Добавляем новый Label в группу
+            }
+            println("Troop stats updated: ${troopInfo.unitName}, Amount: ${troopInfo.currentAmount}")
+        }
+    }
+
 
     /** Remove the troop's group from the stage when it perishes. */
     fun perish() {
