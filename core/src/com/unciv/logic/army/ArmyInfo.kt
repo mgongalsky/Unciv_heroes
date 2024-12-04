@@ -82,6 +82,17 @@ class ArmyInfo(
         return slots.getOrNull(index)
     }
 
+    /**
+     * Checks if the given troop is part of this army.
+     *
+     * @param troop The troop to check.
+     * @return True if the troop belongs to this army, false otherwise.
+     */
+    fun contains(troop: TroopInfo): Boolean {
+        return slots.any { it == troop }
+    }
+
+
     /** Sets a troop at the given index. If the index is out of bounds, nothing happens. */
     internal fun setTroopAt(index: Int, troop: TroopInfo?) {
         if (index in slots.indices) {

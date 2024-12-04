@@ -107,8 +107,25 @@ class NewBattleManager(
         return attackerHasTroops && defenderHasTroops
     }
 
+    /**
+     * Checks if the target position is occupied by an allied troop.
+     *
+     * @param troop The troop attempting to move.
+     * @param targetPosition The position to check.
+     * @return True if the position is occupied by an allied troop, false otherwise.
+     */
     private fun isHexOccupiedByAlly(troop: TroopInfo, targetPosition: Vector2): Boolean {
-        return false
+        // Get all allied troops
+        val alliedTroops = if (attackerArmy.contains(troop)) {
+            attackerArmy.getAllTroops()
+        } else {
+            defenderArmy.getAllTroops()
+        }
+
+        // Check if any allied troop occupies the target position
+        return alliedTroops.any { alliedTroop ->
+            alliedTroop != null && alliedTroop != troop && alliedTroop.position == targetPosition
+        }
     }
 
     private fun isHexAchievable(troop: TroopInfo, targetPosition: Vector2): Boolean {
