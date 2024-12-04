@@ -417,7 +417,7 @@ class NewBattleScreen(
             tileGroup.addListener(object : ClickListener() {
                 override fun mouseMoved(event: InputEvent?, x: Float, y: Float): Boolean {
                     // TODO: it is better to use width directly from Hexagon actor rather than baseLayerGroup actors
-                    //chooseCrosshair(tileGroup, x, y, tileGroup.baseLayerGroup.width)
+                    chooseCrosshair(tileGroup, x, y, tileGroup.baseLayerGroup.width)
                     return super.mouseMoved(event, x, y)
                 }
 
@@ -518,11 +518,7 @@ class NewBattleScreen(
 
 
     private fun updateTilesShadowing(){
-
         val currentTroop = getCurrentTroopView() ?: return
-        // Now we highlight achievable hexes by transparency. First of all we make all hexes non-transparent.
-       // for (tileGroup in daTileGroups)
-       //     tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
         // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
         daTileGroups.forEach {
             if (manager.isHexAchievable(currentTroop.getTroopInfo(), it.tileInfo.position))
@@ -532,10 +528,6 @@ class NewBattleScreen(
 
 
         }
-     //   var achievableHexes = daTileGroups.filter { manager.isHexAchievable(currentTroop.getTroopInfo(), it.tileInfo.position) }
-      //  for (achievableHex in achievableHexes)
-      //      achievableHex.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
-     //   else
     }
 
     fun movePointerToNextTroop() {
@@ -685,34 +677,52 @@ class NewBattleScreen(
          */
         val currentTroop = getCurrentTroopView() ?: return
         // for non-shooting troops:
-        if(!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
+        if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
             Gdx.graphics.setCursor(cursorCancel)
-
         else {
-            /*
-            if(manager.isTroopOnHex(targetHex)){
-                if (manager.getTroopOnHex(targetHex).civInfo != manager.currentTroop.civInfo) {
-
-                    val direction = pixelToDirection(x, y, width)
-                    val hexToMove = HexMath.oneStepTowards(targetHex, direction)
-                    if(!manager.isHexOnBattleField(hexToMove)){
-                        Gdx.graphics.setCursor(cursorCancel)
-                        return
-                    }
-                    if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.position) &&
-                            manager.isHexAchievable(hexToMove))
-                        Gdx.graphics.setCursor(cursorAttack[direction.num])
-                    else
-                        Gdx.graphics.setCursor(cursorCancel)
-                }
-                else
-                    Gdx.graphics.setCursor(cursorCancel)  /// TODO: change to question
-
+            if (manager.isHexOccupiedByAlly(currentTroop.getTroopInfo(), targetHex)) {
+                Gdx.graphics.setCursor(cursorCancel)
                 return
             }
 
+            if (manager.isHexOccupiedByEnemy(currentTroop.getTroopInfo(), targetHex)) {
+                val direction = pixelToDirection(x, y, width)
+                val hexToMove = HexMath.oneStepTowards(targetHex, direction)
+                if(!manager.isHexOnBattleField(hexToMove)){
+                    Gdx.graphics.setCursor(cursorCancel)
+                    return
+                }
+                if (manager.isHexAchievable(currentTroop.getTroopInfo(), hexToMove))
+                    Gdx.graphics.setCursor(cursorAttack[direction.num])
+                else
+                    Gdx.graphics.setCursor(cursorCancel)
+                return
+            }
 
-             */
+                /*
+                if(manager.isTroopOnHex(targetHex)){
+                    if (manager.getTroopOnHex(targetHex).civInfo != manager.currentTroop.civInfo) {
+
+                        val direction = pixelToDirection(x, y, width)
+                        val hexToMove = HexMath.oneStepTowards(targetHex, direction)
+                        if(!manager.isHexOnBattleField(hexToMove)){
+                            Gdx.graphics.setCursor(cursorCancel)
+                            return
+                        }
+                        if ((!manager.isTroopOnHex(hexToMove) || hexToMove == manager.currentTroop.position) &&
+                                manager.isHexAchievable(hexToMove))
+                            Gdx.graphics.setCursor(cursorAttack[direction.num])
+                        else
+                            Gdx.graphics.setCursor(cursorCancel)
+                    }
+                    else
+                        Gdx.graphics.setCursor(cursorCancel)  /// TODO: change to question
+
+                    return
+                }
+
+
+                 */
             Gdx.graphics.setCursor(cursorMove)
         }
 

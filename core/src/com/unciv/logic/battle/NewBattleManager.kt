@@ -115,7 +115,7 @@ class NewBattleManager(
      * @param targetPosition The position to check.
      * @return True if the position is occupied by an allied troop, false otherwise.
      */
-    private fun isHexOccupiedByAlly(troop: TroopInfo, targetPosition: Vector2): Boolean {
+    fun isHexOccupiedByAlly(troop: TroopInfo, targetPosition: Vector2): Boolean {
         // Get all allied troops
         val alliedTroops = if (attackerArmy.contains(troop)) {
             attackerArmy.getAllTroops()
@@ -128,6 +128,28 @@ class NewBattleManager(
             alliedTroop != null && alliedTroop != troop && alliedTroop.position == targetPosition
         }
     }
+
+    /**
+     * Checks if the target position is occupied by an enemy troop.
+     *
+     * @param troop The troop attempting to move.
+     * @param targetPosition The position to check.
+     * @return True if the position is occupied by an enemy troop, false otherwise.
+     */
+    fun isHexOccupiedByEnemy(troop: TroopInfo, targetPosition: Vector2): Boolean {
+        // Get all enemy troops
+        val enemyTroops = if (attackerArmy.contains(troop)) {
+            defenderArmy.getAllTroops()
+        } else {
+            attackerArmy.getAllTroops()
+        }
+
+        // Check if any enemy troop occupies the target position
+        return enemyTroops.any { enemyTroop ->
+            enemyTroop != null && enemyTroop.position == targetPosition
+        }
+    }
+
 
     /**
      * Checks if hex is free.
