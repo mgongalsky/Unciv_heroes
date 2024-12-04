@@ -661,6 +661,13 @@ class NewBattleScreen(
 
         // The code is similar to onClick routines. See details comments there.
         val targetHex = tileGroup.tileInfo.position
+        val currentTroop = getCurrentTroopView() ?: return
+
+        if (    manager.canShoot(currentTroop.getTroopInfo()) &&
+                manager.isHexOccupiedByEnemy(currentTroop.getTroopInfo(), targetHex)){
+            Gdx.graphics.setCursor(cursorShoot)
+            return
+        }
 
         /*
         // if current troop can shoot:
@@ -675,13 +682,12 @@ class NewBattleScreen(
 
 
          */
-        val currentTroop = getCurrentTroopView() ?: return
         // for non-shooting troops:
         if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
             Gdx.graphics.setCursor(cursorCancel)
         else {
             if (manager.isHexOccupiedByAlly(currentTroop.getTroopInfo(), targetHex)) {
-                Gdx.graphics.setCursor(cursorCancel)
+                Gdx.graphics.setCursor(cursorCancel) /// TODO: change to question
                 return
             }
 

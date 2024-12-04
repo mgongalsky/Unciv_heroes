@@ -221,6 +221,17 @@ class NewBattleManager(
     }
 
     /**
+     * Checks if the given troop can shoot.
+     *
+     * @param troop The troop to check.
+     * @return True if the troop can shoot, false otherwise.
+     */
+    fun canShoot(troop: TroopInfo): Boolean {
+        return troop.baseUnit.rangedStrength != 0
+    }
+
+
+    /**
      * Returns the current turn queue (for debugging or visualization).
      */
     fun getTurnQueue(): List<TroopInfo> {
