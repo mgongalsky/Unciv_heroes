@@ -140,7 +140,10 @@ class NewBattleManager(
                 }
 
                 val attackPosition = HexMath.oneStepTowards(targetPosition, direction)
-                if (!isHexAchievable(troop, attackPosition) || !isHexFree(attackPosition)) {
+                // If troop:
+                // 1. Cannot achieve hex for attack
+                // 2. That hex is occupied, but not by that troop
+                if (!isHexAchievable(troop, attackPosition) || (!isHexFree(attackPosition) && troop.position != attackPosition)) {
                     if (verboseAttack) {
                         println("Attack position $attackPosition not achievable or not free")
                     }
