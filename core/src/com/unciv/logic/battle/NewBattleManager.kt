@@ -44,11 +44,18 @@ class NewBattleManager(
     /**
      * Returns the troop currently taking its turn.
      */
-    fun getCurrentTroop(): TroopInfo {
+    fun getCurrentTroop(): TroopInfo? {
         if (turnQueue.isEmpty()) {
-            finishBattle()
-            throw IllegalStateException("Battle has ended. No troops left in the queue.")
+            println("Warning: turnQueue is empty. No troops left to process. Battle likely ended.")
+            return null // Возвращаем null, если очередь пуста
         }
+
+        // Проверяем, находится ли currentTurnIndex в допустимых границах
+        if (currentTurnIndex >= turnQueue.size) {
+            println("Warning: currentTurnIndex ($currentTurnIndex) is out of bounds. Adjusting to last valid index (${turnQueue.size - 1}).")
+            currentTurnIndex = turnQueue.size - 1 // Корректируем индекс, чтобы он не выходил за границы
+        }
+
         return turnQueue[currentTurnIndex]
     }
 
@@ -101,7 +108,8 @@ class NewBattleManager(
                     actionType = ActionType.MOVE,
                     success = true,
                     movedFrom = oldPosition,
-                    movedTo = targetPosition
+                    movedTo = targetPosition,
+                    battleEnded = !isBattleOn()
                 )
             }
 
@@ -164,7 +172,8 @@ class NewBattleManager(
                     actionType = ActionType.ATTACK,
                     success = true,
                     movedFrom = oldPosition,
-                    movedTo = attackPosition
+                    movedTo = attackPosition,
+                    battleEnded = !isBattleOn()
                 )
             }
 
@@ -217,7 +226,8 @@ class NewBattleManager(
                     actionType = ActionType.SHOOT,
                     success = true,
                     movedFrom = null,
-                    movedTo = null
+                    movedTo = null,
+                    battleEnded = !isBattleOn()
                 ).also {
                     if (verboseAttack) println("ActionType.SHOOT completed successfully for troop: ${troop.unitName}")
                 }
@@ -361,7 +371,11 @@ class NewBattleManager(
      * @param defender The defending troop.
      * @param attacker The attacking troop. Defaults to the current troop.
      */
-    fun attack(defender: TroopInfo, attacker: TroopInfo = getCurrentTroop()) {
+    fun attack(defender: TroopInfo, attacker: TroopInfo? = getCurrentTroop()) {
+        if (attacker == null){
+
+            return
+        }
         if (verboseAttack) {
             println("Starting attack: ${attacker.unitName} (Position: ${attacker.position}) attacking ${defender.unitName} (Position: ${defender.position})")
             println("Initial attacker amount: ${attacker.currentAmount}, Initial defender amount: ${defender.currentAmount}")

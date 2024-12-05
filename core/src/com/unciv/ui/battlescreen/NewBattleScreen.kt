@@ -181,6 +181,7 @@ class NewBattleScreen(
         GlobalScope.launch {
             runBattleLoop()
         }
+        //shutdownScreen()
     //}
         //}
 
@@ -201,8 +202,15 @@ class NewBattleScreen(
         while (manager.isBattleOn()) {
             val currentTroop = manager.getCurrentTroop()
 
+            if (currentTroop == null){
+                Gdx.app.postRunnable {
+                    shutdownScreen() // Закрываем экран в UI-потоке
+                }
+                return@coroutineScope // Немедленно выходим из корутины
+
+            }
             if (verboseTurn) {
-                println("Current troop: ${currentTroop.baseUnit.name} at position ${currentTroop.position}")
+                println("Current troop: ${currentTroop?.baseUnit?.name} at position ${currentTroop?.position}")
             }
 
             if (currentTroop.isPlayerControlled()) {
@@ -218,6 +226,8 @@ class NewBattleScreen(
                     }
 
                     val result = manager.performTurn(action)
+
+
 
                     if (result.success) {
                         if (verboseTurn) {
@@ -243,6 +253,14 @@ class NewBattleScreen(
 
                             ActionType.SHOOT -> {
                                 refreshTroopViews()
+                                if (result.battleEnded) {
+                                    if (verboseTurn) println("Battle finished after action ${action.actionType}. Closing screen.")
+                                    Gdx.app.postRunnable {
+                                        shutdownScreen() // Закрываем экран в UI-потоке
+                                    }
+                                    return@coroutineScope // Немедленно выходим из корутины
+                                }
+
 
                             }
 
@@ -253,23 +271,39 @@ class NewBattleScreen(
                                 if (verboseTurn) println("Moved troop view to ${targetTileGroup.tileInfo.position}")
                             }
                         }
+
+
+                        //if(result.battleEnded != null)
+                        //if(result.battleEnded)
+                        //    return@coroutineScope
+
                         break
                     } else {
                         if (verboseTurn) println("Action ${action.actionType} failed with error: ${result.errorId}")
                         //refreshTroopViews()
                         handleActionError(result.errorId)
                     }
+                    if (result.battleEnded) {
+                        if (verboseTurn) println("Battle finished after action ${action.actionType}. Closing screen.")
+                        Gdx.app.postRunnable {
+                            shutdownScreen() // Закрываем экран в UI-потоке
+                        }
+                        return@coroutineScope // Немедленно выходим из корутины
+                    }
+
                 }
             } else {
                 if (verboseTurn) println("AI logic not implemented yet for troop: ${currentTroop.baseUnit.name}")
                 // Логика для AI
             }
-
             manager.advanceTurn()
             if (verboseTurn) println("Turn advanced to next troop")
             updateTilesShadowing()
         }
+
+
         println("Battle has ended!")
+        //shutdownScreen()
     }
 
 
@@ -558,13 +592,20 @@ class NewBattleScreen(
                     toActor: Actor?
                 ) {
                     // TODO: This must be rewritten to avoid code doubling
-                    val currentTroop = getCurrentTroopView() ?: return
-                    if(manager.isHexAchievable(currentTroop.getTroopInfo(), tileGroup.tileInfo.position))
-                        tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
-                    else
-                        tileGroup.baseLayerGroup.color = Color(1f,1f,1f,1f)
+                    if(manager.isBattleOn()) {
 
-                    super.exit(event, x, y, pointer, toActor)
+                        val currentTroop = getCurrentTroopView() ?: return
+                        if (manager.isHexAchievable(
+                                    currentTroop.getTroopInfo(),
+                                    tileGroup.tileInfo.position
+                                )
+                        )
+                            tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, 0.7f)
+                        else
+                            tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, 1f)
+
+                        super.exit(event, x, y, pointer, toActor)
+                    }
 
 
                 }
@@ -882,7 +923,7 @@ class NewBattleScreen(
     fun resizePage(tab: EmpireOverviewTab) {
     }
 
-    internal fun shutdownScreen(calledFromManager: Boolean = false)
+    private fun shutdownScreen()
     {
         // Change cursor to arrow, default for map view.
         Gdx.graphics.setSystemCursor(SystemCursor.Arrow)

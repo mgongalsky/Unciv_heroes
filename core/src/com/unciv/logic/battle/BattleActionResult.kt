@@ -15,8 +15,9 @@ enum class ErrorId {
 data class BattleActionResult(
     val actionType: ActionType,
     val success: Boolean,
-    val errorId: ErrorId? = null, // Используем enum для ошибок
     val movedFrom: Vector2? = null,
-    val movedTo: Vector2? = null
+    val movedTo: Vector2? = null,
+    val errorId: ErrorId? = null,
+    val battleEnded: Boolean = false // Флаг завершения битвы
 )
 
