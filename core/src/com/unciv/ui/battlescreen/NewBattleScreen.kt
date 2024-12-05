@@ -297,6 +297,7 @@ class NewBattleScreen(
                 // Логика для AI
             }
             manager.advanceTurn()
+            movePointerToNextTroop()
             if (verboseTurn) println("Turn advanced to next troop")
             updateTilesShadowing()
         }
@@ -470,7 +471,11 @@ class NewBattleScreen(
     /** Draw a pointer to a currently active troop. */
     fun draw_pointer() {
         // Find a tileGroup with specified pointer position
-        var pointerTile = daTileGroups.first { it.tileInfo.position == pointerPosition }
+        val pointerTile = daTileGroups.firstOrNull { it.tileInfo.position == pointerPosition }
+        if (pointerTile == null) {
+            println("Error: No tile found at position $pointerPosition during drawing a pointer")
+            return // Или другая логика для обработки отсутствия тайла
+        }
         for (pointerImage in pointerImages) {
             // Note that here fixed sizes are used. Must be improved.
             pointerImage.setScale(pointerTile.width / 256f, pointerTile.width / 256f * 0.5f)
@@ -479,15 +484,28 @@ class NewBattleScreen(
             pointerImage.setOrigin(pointerTile.originX, pointerTile.originY)
             pointerImage.touchable = Touchable.disabled
             pointerImage.name = "pointer"
+
+            // Set the pointer image color to white (but it is black in fact)
+            pointerImage.color = Color.WHITE
+
+
             // Here we find an actor devoted to a troop and put a pointer underneath
             //val act = pointerTile.findActor("troopGroup")
             //if(pointerTile.findActor("troopGroup") == null)
-            pointerTile.addActorBefore(pointerTile.findActor("troopGroup"), pointerImage)
+            val troopGroupActor = pointerTile.findActor<Group>("troopGroup")
+            if (troopGroupActor != null) {
+                pointerTile.addActorBefore(troopGroupActor, pointerImage)
+            } else {
+                println("Warning: troopGroup not found in pointerTile. Adding pointerImage directly.")
+                pointerTile.addActor(pointerImage)
+            }
+
+            //pointerTile.addActorBefore(pointerTile.findActor("troopGroup"), pointerImage)
         }
 
         // Now we highlight achievable hexes by transparency. First of all we make all hexes non-transparent.
-        for (tileGroup in daTileGroups)
-            tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, 1f)
+        //for (tileGroup in daTileGroups)
+        //    tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, 1f)
         // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
         // var achievableHexes = daTileGroups.filter { manager.isHexAchievable(it.tileInfo.position) }
         // for (achievableHex in achievableHexes)
@@ -543,6 +561,16 @@ class NewBattleScreen(
 
          */
 
+        // Set pointer to first troop
+        val currentTroop = manager.getCurrentTroop()
+        if (currentTroop == null) {
+            println("No troops in both armies at the beggining of the battle")
+            shutdownScreen()
+            return
+        }
+        pointerPosition = currentTroop.position
+        draw_pointer()
+
         // Add various mouse listeners to each tile
         for (tileGroup in daTileGroups)
         {
@@ -594,9 +622,9 @@ class NewBattleScreen(
                     // TODO: This must be rewritten to avoid code doubling
                     if(manager.isBattleOn()) {
 
-                        val currentTroop = getCurrentTroopView() ?: return
+                        val currentTroopOnTile = getCurrentTroopView() ?: return
                         if (manager.isHexAchievable(
-                                    currentTroop.getTroopInfo(),
+                                    currentTroopOnTile.getTroopInfo(),
                                     tileGroup.tileInfo.position
                                 )
                         )
@@ -705,8 +733,12 @@ class NewBattleScreen(
     }
 
     fun movePointerToNextTroop() {
-        //pointerPosition = manager.currentTroop.position
-        //draw_pointer()
+        val currentTroop = manager.getCurrentTroop()
+        if (currentTroop != null){
+            pointerPosition = currentTroop.position
+            draw_pointer()
+        } else
+            println("Queue is empty, nowhere to put pointer")
     }
 
     /** Routing for mouse clicking a certian tile. */

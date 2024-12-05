@@ -34,6 +34,7 @@ class TroopBattleView(
     init {
         val unitImagePath = "TileSets/AbsoluteUnits/Units/${troopInfo.unitName}"
         troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, null, null)
+        troopGroup.name = "troopGroup"
 
 
     }
