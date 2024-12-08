@@ -20,7 +20,7 @@ class NewBattleManager(
 
 
     companion object {
-        const val LUCK_PROBABILITY = 0.15
+        const val LUCK_PROBABILITY = 0.75
         const val MORALE_PROBABILITY = 0.15
     }
 

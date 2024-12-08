@@ -19,6 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
+import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.logic.HexMath
 import com.unciv.logic.army.TroopInfo
@@ -810,14 +811,27 @@ class NewBattleScreen(
     }
 
     fun showMoraleBird(troopView: TroopBattleView) {
+        val troopGroup = troopView.getCurrentGroup()
+
+        // Ищем потомка с именем "troopImage"
+        val troopImageActor = troopGroup.findActor<Image>("troopImage")
+        if (troopImageActor == null) {
+            println("Error: No actor named 'troopImage' found in troop group.")
+            return
+        }
+
+        // Учитываем размеры и масштаб "troopImage"
+        val troopWidth = troopImageActor.width * troopImageActor.scaleX
+        val troopHeight = troopImageActor.height * troopImageActor.scaleY
+
         // Создаем изображение птицы морали
         moraleImage.apply {
             setScale(0.075f) // Настраиваем масштаб
-            // Устанавливаем позицию птицы относительно группы отряда
-            val troopGroup = troopView.getCurrentGroup()
-            moveBy(
-                troopGroup.width * -0.035f, // Сдвиг влево
-                troopGroup.height * 1.85f  // Сдвиг вверх
+            // TODO: those numbers are magical, we need to apply normal object hierarchy
+
+            setPosition(
+                troopWidth * -0.035f,  // Сдвиг влево
+                troopHeight * 1.10f    // Сдвиг вверх
             )
             touchable = Touchable.disabled // Птица не кликабельна
             color = Color.WHITE.cpy().apply { a = 0f } // Начальная прозрачность
@@ -836,28 +850,50 @@ class NewBattleScreen(
         moraleImage.addAction(Actions.sequence(fadeIn, delay, fadeOut, removeActor))
 
         // Добавляем изображение в группу отряда
-        troopView.getCurrentGroup().addActor(moraleImage)
+        troopGroup.addActor(moraleImage)
     }
 
 
     fun showLuckRainbow(troopView: TroopBattleView) {
-
-        // Настраиваем масштабирование
-        luckRainbowImage.setScale(0.130f, 0.130f)
-
-        // Устанавливаем позицию радуги относительно отряда
         val troopGroup = troopView.getCurrentGroup()
-        luckRainbowImage.moveBy(
-            troopGroup.width * (-0.3f),  // Сдвиг влево
-            troopGroup.height * 0.65f   // Сдвиг вверх
-        )
-        luckRainbowImage.touchable = Touchable.disabled
-        luckRainbowImage.name = "luckRainbowImage"
-        luckRainbowImage.color = Color.WHITE.cpy().apply { a = 0f } // Начальная прозрачность
+
+        // Ищем потомка с именем "troopImage"
+        val troopImageActor = troopGroup.findActor<Image>("troopImage")
+        if (troopImageActor == null) {
+            println("Error: No actor named 'troopImage' found in troop group.")
+            return
+        }
+
+        // Учитываем размеры и масштаб "troopImage"
+        val troopWidth = troopImageActor.width * troopImageActor.scaleX
+        val troopHeight = troopImageActor.height * troopImageActor.scaleY
+
+        // Создаем изображение радуги удачи
+        luckRainbowImage.apply {
+            val scaleRainbowImage = 0.130f
+            setScale(scaleRainbowImage) // Настраиваем масштаб
+            //setOrigin(Align.center)
+            align = Align.topRight
+            // TODO: those numbers are magical, we need to apply normal object hierarchy
+            setPosition(-width*scaleRainbowImage*0.2f,height*scaleRainbowImage*0.4f)
+            //setPosition(
+            //    troopWidth * -0.25f,  // Сдвиг влево
+            //    troopHeight * 0.30f    // Сдвиг вверх
+            //)
+
+            //setPosition(0f, 0f, Align.center)
+            //setPosition(
+             //   troopWidth * 0f - width/2/0.13f,  // Сдвиг влево
+            //    troopHeight * 0.55f  // Сдвиг вверх
+            //)
+            touchable = Touchable.disabled // Радуга не кликабельна
+            color = Color.WHITE.cpy().apply { a = 0f } // Начальная прозрачность
+            name = "luckRainbowImage" // Уникальное имя для отладки
+        }
 
         // Анимация: появление -> задержка -> исчезновение
         val fadeIn = Actions.alpha(1f, 0.5f)  // Плавное появление (0.5 секунды)
-        val delay = Actions.delay(0.3f)       // Задержка (0.3 секунды)
+        val delay = Actions.delay(5.3f)       // Задержка (0.3 секунды)
         val fadeOut = Actions.alpha(0f, 0.5f) // Плавное исчезновение (0.5 секунды)
         val removeActor = Actions.run {
             luckRainbowImage.remove() // Удаляем изображение после завершения анимации
@@ -869,7 +905,6 @@ class NewBattleScreen(
         // Добавляем изображение в группу отряда
         troopGroup.addActor(luckRainbowImage)
     }
-
 
     /** Routing for mouse clicking a certian tile. */
     private fun tileGroupOnClick(tileGroup: TileGroup, x: Float, y: Float)

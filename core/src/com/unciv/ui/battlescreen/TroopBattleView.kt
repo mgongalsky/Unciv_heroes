@@ -99,11 +99,14 @@ class TroopBattleView(
         // Устанавливаем изображение отряда
         for (troopImage in troopImages) {
             troopImage.setScale(if (attacker) -0.25f else 0.25f, 0.25f)
+            // TODO: those numbers are magical, we need to apply normal object hierarchy
+
             troopImage.setPosition(
                 if (attacker) tileGroup.width * 1.3f else tileGroup.width * -0.3f,
                 tileGroup.height * 0.15f
             )
             troopImage.setOrigin(tileGroup.originX, tileGroup.originY)
+            troopImage.name = "troopImage"
             troopGroup.addActor(troopImage)
         }
 
