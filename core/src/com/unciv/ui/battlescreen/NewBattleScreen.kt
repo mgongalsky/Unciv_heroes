@@ -84,6 +84,7 @@ class NewBattleScreen(
 
     // Создаем изображение радуги
     val luckRainbowImage = ImageGetter.getExternalImage("LuckRainbow.png")
+    val moraleImage = ImageGetter.getExternalImage("MoraleBird.png")
 
 
     /** Handle for a table with a battlefield. Could be obsolete in future */
@@ -205,6 +206,7 @@ class NewBattleScreen(
     suspend fun runBattleLoop() = coroutineScope {
         while (manager.isBattleOn()) {
             val currentTroop = manager.getCurrentTroop()
+            var isMorale = false
 
             if (currentTroop == null){
                 Gdx.app.postRunnable {
@@ -218,6 +220,7 @@ class NewBattleScreen(
             }
 
             if (currentTroop.isPlayerControlled()) {
+
                 while (true) {
                     if (verboseTurn) println("Waiting for player action...")
                     val (action, targetTileGroup) = waitForPlayerAction()
@@ -240,6 +243,7 @@ class NewBattleScreen(
                         }
 
                         when (action.actionType) {
+                            ///////////////////// ATTACK
                             ActionType.ATTACK -> {
                                 if (result.isLuck) {
                                     val troopView = getTroopViewFor(currentTroop)
@@ -258,8 +262,24 @@ class NewBattleScreen(
                                     attackingTroopView.updatePosition(attackTileGroup)
                                     if (verboseTurn) println("Updated attacking troop view to position $attackPosition")
                                 }
+
+                                if (result.isMorale && manager.isBattleOn()) {
+                                    isMorale = result.isMorale
+                                    val troopView = getTroopViewFor(currentTroop)
+                                    troopView?.let { showMoraleBird(it) }
+                                }
+
+                                if (result.battleEnded) {
+                                    if (verboseTurn) println("Battle finished after action ${action.actionType}. Closing screen.")
+                                    Gdx.app.postRunnable {
+                                        shutdownScreen() // Закрываем экран в UI-потоке
+                                    }
+                                    return@coroutineScope // Немедленно выходим из корутины
+                                }
+
                             }
 
+                            ///////////////////// SHOOT
                             ActionType.SHOOT -> {
                                 if (result.isLuck) {
                                     val troopView = getTroopViewFor(currentTroop)
@@ -267,6 +287,12 @@ class NewBattleScreen(
                                 }
 
                                 refreshTroopViews()
+                                if (result.isMorale && manager.isBattleOn()) {
+                                    isMorale = result.isMorale
+                                    val troopView = getTroopViewFor(currentTroop)
+                                    troopView?.let { showMoraleBird(it) }
+                                }
+
                                 if (result.battleEnded) {
                                     if (verboseTurn) println("Battle finished after action ${action.actionType}. Closing screen.")
                                     Gdx.app.postRunnable {
@@ -276,14 +302,25 @@ class NewBattleScreen(
                                 }
 
 
+
                             }
 
+                            /////////////////////////////// MOVE
                             ActionType.MOVE -> {
                                 // Обновляем UI для перемещения
                                 val currentTroopView = getTroopViewFor(currentTroop)
                                 currentTroopView?.updatePosition(targetTileGroup)
                                 if (verboseTurn) println("Moved troop view to ${targetTileGroup.tileInfo.position}")
+                                if (result.isMorale && manager.isBattleOn()) {
+                                    isMorale = result.isMorale
+                                    val troopView = getTroopViewFor(currentTroop)
+                                    troopView?.let { showMoraleBird(it) }
+                                }
+
+
                             }
+
+
                         }
 
 
@@ -305,14 +342,22 @@ class NewBattleScreen(
                         return@coroutineScope // Немедленно выходим из корутины
                     }
 
+
+
                 }
             } else {
                 if (verboseTurn) println("AI logic not implemented yet for troop: ${currentTroop.baseUnit.name}")
                 // Логика для AI
             }
-            manager.advanceTurn()
+
+            if (!isMorale)  {
+                manager.advanceTurn()
+                if (verboseTurn) println("Turn advanced to next troop")
+            } else
+                if (verboseTurn) println("Current troop has morale")
+
+
             movePointerToNextTroop()
-            if (verboseTurn) println("Turn advanced to next troop")
             updateTilesShadowing()
         }
 
@@ -591,19 +636,26 @@ class NewBattleScreen(
             // Right mouse click listener
             tileGroup.addListener(object : ClickListener() {
                 override fun mouseMoved(event: InputEvent?, x: Float, y: Float): Boolean {
-                    // TODO: it is better to use width directly from Hexagon actor rather than baseLayerGroup actors
-                    chooseCrosshair(tileGroup, x, y, tileGroup.baseLayerGroup.width)
-                    return super.mouseMoved(event, x, y)
+                    if(manager.isBattleOn()) {
+                        // TODO: it is better to use width directly from Hexagon actor rather than baseLayerGroup actors
+                        chooseCrosshair(tileGroup, x, y, tileGroup.baseLayerGroup.width)
+                    }
+                        return super.mouseMoved(event, x, y)
                 }
 
                 override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                    // Выводим координаты тайла в консоль
-                    println("Tile clicked: position=${tileGroup.tileInfo.position}")
+                    if(manager.isBattleOn()) {
+                        // Выводим координаты тайла в консоль
+                        println("Tile clicked: position=${tileGroup.tileInfo.position}")
 
-                    // Или через логгирование GDX
-                    Gdx.app.log("TileClick", "Tile clicked at position=${tileGroup.tileInfo.position}")
+                        // Или через логгирование GDX
+                        Gdx.app.log(
+                            "TileClick",
+                            "Tile clicked at position=${tileGroup.tileInfo.position}"
+                        )
 
-                    handleTileClick(tileGroup, x, y) // Обрабатываем клик на тайл
+                        handleTileClick(tileGroup, x, y) // Обрабатываем клик на тайл
+                    }
                 }
 
                 override fun enter(
@@ -613,16 +665,18 @@ class NewBattleScreen(
                     pointer: Int,
                     fromActor: Actor?
                 ) {
-                    // Highlight a tile as currently targeted by mouse pointer
-                    tileGroup.baseLayerGroup.color = Color(1f,1f,1f,0.5f)
+                    if(manager.isBattleOn()) {
+                        // Highlight a tile as currently targeted by mouse pointer
+                        tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, 0.5f)
 
-                    // Choose apropriate crosshair
-                    if(fromActor != null) {
-                        val width = fromActor.width
-                        chooseCrosshair(tileGroup, x, y, width)
+                        // Choose apropriate crosshair
+                        if (fromActor != null) {
+                            val width = fromActor.width
+                            chooseCrosshair(tileGroup, x, y, width)
+                        }
+
+                        super.enter(event, x, y, pointer, fromActor)
                     }
-
-                    super.enter(event, x, y, pointer, fromActor)
                 }
 
                 // Restore the tile after mouse pointer exited it
@@ -754,6 +808,37 @@ class NewBattleScreen(
         } else
             println("Queue is empty, nowhere to put pointer")
     }
+
+    fun showMoraleBird(troopView: TroopBattleView) {
+        // Создаем изображение птицы морали
+        moraleImage.apply {
+            setScale(0.075f) // Настраиваем масштаб
+            // Устанавливаем позицию птицы относительно группы отряда
+            val troopGroup = troopView.getCurrentGroup()
+            moveBy(
+                troopGroup.width * -0.035f, // Сдвиг влево
+                troopGroup.height * 1.85f  // Сдвиг вверх
+            )
+            touchable = Touchable.disabled // Птица не кликабельна
+            color = Color.WHITE.cpy().apply { a = 0f } // Начальная прозрачность
+            name = "moraleBirdImage" // Уникальное имя для отладки
+        }
+
+        // Анимация: появление -> задержка -> исчезновение
+        val fadeIn = Actions.alpha(1f, 0.5f)  // Плавное появление (0.5 секунды)
+        val delay = Actions.delay(0.3f)       // Задержка (0.3 секунды)
+        val fadeOut = Actions.alpha(0f, 0.5f) // Плавное исчезновение (0.5 секунды)
+        val removeActor = Actions.run {
+            moraleImage.remove() // Удаляем изображение после завершения анимации
+        }
+
+        // Привязываем последовательность действий к изображению
+        moraleImage.addAction(Actions.sequence(fadeIn, delay, fadeOut, removeActor))
+
+        // Добавляем изображение в группу отряда
+        troopView.getCurrentGroup().addActor(moraleImage)
+    }
+
 
     fun showLuckRainbow(troopView: TroopBattleView) {
 

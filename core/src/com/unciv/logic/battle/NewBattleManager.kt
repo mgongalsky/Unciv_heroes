@@ -21,6 +21,7 @@ class NewBattleManager(
 
     companion object {
         const val LUCK_PROBABILITY = 0.15
+        const val MORALE_PROBABILITY = 0.15
     }
 
     /**
@@ -86,6 +87,10 @@ class NewBattleManager(
         val troop = actionRequest.troop
         val targetPosition = actionRequest.targetPosition
 
+        val isMorale = (Random.nextDouble() < MORALE_PROBABILITY)
+        if (verboseAttack && isMorale) println("Troop ${troop.baseUnit.name} has morale")
+
+
         when (actionRequest.actionType) {
             ActionType.MOVE -> {
                 if (!isHexAchievable(troop, targetPosition)) {
@@ -115,6 +120,7 @@ class NewBattleManager(
                     success = true,
                     movedFrom = oldPosition,
                     movedTo = targetPosition,
+                    isMorale = isMorale,
                     battleEnded = !isBattleOn()
                 )
             }
@@ -183,6 +189,7 @@ class NewBattleManager(
                     movedFrom = oldPosition,
                     movedTo = attackPosition,
                     isLuck = isLuck,
+                    isMorale = isMorale,
                     battleEnded = !isBattleOn()
                 )
             }
@@ -238,6 +245,7 @@ class NewBattleManager(
                     movedFrom = null,
                     movedTo = null,
                     isLuck = isLuck,
+                    isMorale = isMorale,
                     battleEnded = !isBattleOn()
                 ).also {
                     if (verboseAttack) println("ActionType.SHOOT completed successfully for troop: ${troop.unitName}")
