@@ -82,6 +82,10 @@ class NewBattleScreen(
     // val cursorQuestion : Cursor
     var cursorAttack : ArrayList<Cursor> = ArrayList()
 
+    // Создаем изображение радуги
+    val luckRainbowImage = ImageGetter.getExternalImage("LuckRainbow.png")
+
+
     /** Handle for a table with a battlefield. Could be obsolete in future */
     private val tabbedPager: TabbedPager
 
@@ -237,6 +241,11 @@ class NewBattleScreen(
 
                         when (action.actionType) {
                             ActionType.ATTACK -> {
+                                if (result.isLuck) {
+                                    val troopView = getTroopViewFor(currentTroop)
+                                    troopView?.let { showLuckRainbow(it) }
+                                }
+
                                 // Обновляем состояние после атаки
 
                                 refreshTroopViews()
@@ -252,6 +261,11 @@ class NewBattleScreen(
                             }
 
                             ActionType.SHOOT -> {
+                                if (result.isLuck) {
+                                    val troopView = getTroopViewFor(currentTroop)
+                                    troopView?.let { showLuckRainbow(it) }
+                                }
+
                                 refreshTroopViews()
                                 if (result.battleEnded) {
                                     if (verboseTurn) println("Battle finished after action ${action.actionType}. Closing screen.")
@@ -740,6 +754,37 @@ class NewBattleScreen(
         } else
             println("Queue is empty, nowhere to put pointer")
     }
+
+    fun showLuckRainbow(troopView: TroopBattleView) {
+
+        // Настраиваем масштабирование
+        luckRainbowImage.setScale(0.130f, 0.130f)
+
+        // Устанавливаем позицию радуги относительно отряда
+        val troopGroup = troopView.getCurrentGroup()
+        luckRainbowImage.moveBy(
+            troopGroup.width * (-0.3f),  // Сдвиг влево
+            troopGroup.height * 0.65f   // Сдвиг вверх
+        )
+        luckRainbowImage.touchable = Touchable.disabled
+        luckRainbowImage.name = "luckRainbowImage"
+        luckRainbowImage.color = Color.WHITE.cpy().apply { a = 0f } // Начальная прозрачность
+
+        // Анимация: появление -> задержка -> исчезновение
+        val fadeIn = Actions.alpha(1f, 0.5f)  // Плавное появление (0.5 секунды)
+        val delay = Actions.delay(0.3f)       // Задержка (0.3 секунды)
+        val fadeOut = Actions.alpha(0f, 0.5f) // Плавное исчезновение (0.5 секунды)
+        val removeActor = Actions.run {
+            luckRainbowImage.remove() // Удаляем изображение после завершения анимации
+        }
+
+        // Привязываем последовательность действий к изображению
+        luckRainbowImage.addAction(Actions.sequence(fadeIn, delay, fadeOut, removeActor))
+
+        // Добавляем изображение в группу отряда
+        troopGroup.addActor(luckRainbowImage)
+    }
+
 
     /** Routing for mouse clicking a certian tile. */
     private fun tileGroupOnClick(tileGroup: TileGroup, x: Float, y: Float)

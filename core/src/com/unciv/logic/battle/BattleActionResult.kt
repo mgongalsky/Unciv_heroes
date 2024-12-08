@@ -18,6 +18,7 @@ data class BattleActionResult(
     val movedFrom: Vector2? = null,
     val movedTo: Vector2? = null,
     val errorId: ErrorId? = null,
+    val isLuck: Boolean = false,
     val battleEnded: Boolean = false // Флаг завершения битвы
 )
 

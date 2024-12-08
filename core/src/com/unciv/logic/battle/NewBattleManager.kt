@@ -7,6 +7,7 @@ import com.unciv.ui.battlescreen.ActionType
 import com.unciv.ui.battlescreen.BattleActionRequest
 import com.badlogic.gdx.math.Vector2
 import com.unciv.logic.HexMath
+import kotlin.random.Random
 
 
 /** Logical part of a battle. No visual part here. */
@@ -16,6 +17,11 @@ class NewBattleManager(
 ) {
     private val turnQueue: MutableList<TroopInfo> = mutableListOf() // Queue of troops for turn order
     private var currentTurnIndex: Int = 0 // Index of the current troop's turn
+
+
+    companion object {
+        const val LUCK_PROBABILITY = 0.15
+    }
 
     /**
      * Initializes the turn queue based on troop speed and priority rules.
@@ -160,7 +166,7 @@ class NewBattleManager(
                 if (verboseAttack) println("Troop moved to attack position $attackPosition")
 
                 // Выполняем атаку
-                attack(defender, troop)
+                val isLuck = attack(defender, troop)
 
                 if (verboseAttack) println("Attack performed on defender at $targetPosition")
 
@@ -176,6 +182,7 @@ class NewBattleManager(
                     success = true,
                     movedFrom = oldPosition,
                     movedTo = attackPosition,
+                    isLuck = isLuck,
                     battleEnded = !isBattleOn()
                 )
             }
@@ -215,7 +222,7 @@ class NewBattleManager(
                 if (verboseAttack) println("Troop ${troop.unitName} is shooting at target: ${defender.unitName} on position: ${targetPosition}")
 
                 // Выполняем стрельбу
-                attack(defender, troop) // Используем ту же логику атаки
+                val isLuck = attack(defender, troop) // Используем ту же логику атаки
 
                 // Проверяем, уничтожен ли юнит
                 if (defender.currentAmount <= 0) {
@@ -230,6 +237,7 @@ class NewBattleManager(
                     success = true,
                     movedFrom = null,
                     movedTo = null,
+                    isLuck = isLuck,
                     battleEnded = !isBattleOn()
                 ).also {
                     if (verboseAttack) println("ActionType.SHOOT completed successfully for troop: ${troop.unitName}")
@@ -374,10 +382,11 @@ class NewBattleManager(
      * @param defender The defending troop.
      * @param attacker The attacking troop. Defaults to the current troop.
      */
-    fun attack(defender: TroopInfo, attacker: TroopInfo? = getCurrentTroop()) {
+    fun attack(defender: TroopInfo, attacker: TroopInfo? = getCurrentTroop()) : Boolean{
+        var isLuck = false
         if (attacker == null){
 
-            return
+            return isLuck
         }
         if (verboseAttack) {
             println("Starting attack: ${attacker.unitName} (Position: ${attacker.position}) attacking ${defender.unitName} (Position: ${defender.position})")
@@ -386,7 +395,15 @@ class NewBattleManager(
 
         // Calculate maximum damage
         var damage = attacker.currentAmount * attacker.baseUnit.damage
-        if (verboseAttack) println("Base damage calculated: $damage")
+
+        if(Random.nextDouble() < LUCK_PROBABILITY) {
+            damage *= 2
+            isLuck = true
+            if (verboseAttack) println("Troop ${attacker.baseUnit.name} has luck")
+        }
+
+
+            if (verboseAttack) println("Base damage calculated: $damage")
 
         // Include health lack in the calculation
         val healthLack = defender.baseUnit.health - defender.currentHealth
@@ -413,6 +430,7 @@ class NewBattleManager(
         }
 
         if (verboseAttack) println("Attack complete: ${attacker.unitName} caused $damage damage to ${defender.unitName}.")
+        return isLuck
     }
 
     /**
