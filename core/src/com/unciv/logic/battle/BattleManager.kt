@@ -11,7 +11,7 @@ import kotlin.random.Random
 
 
 /** Logical part of a battle. No visual part here. */
-class NewBattleManager(
+class BattleManager(
     private var attackerArmy: ArmyInfo,
     private var defenderArmy: ArmyInfo
 ) {
@@ -310,6 +310,45 @@ class NewBattleManager(
      */
     fun isHexFree(targetPosition: Vector2) = turnQueue.none { it.position == targetPosition }
 
+
+    fun getEnemies(troop: TroopInfo): List<TroopInfo> {
+        return if (attackerArmy.contains(troop)) {
+            defenderArmy.getAllTroops().filterNotNull().toList()
+        } else if (defenderArmy.contains(troop)) {
+            attackerArmy.getAllTroops().filterNotNull().toList()
+        } else {
+            emptyList() // Пустой список напрямую
+        }
+    }
+
+
+    /**
+     * Returns a list of reachable tiles for the given troop based on its speed and current position.
+     *
+     * @param troop The troop for which to calculate reachable tiles.
+     * @return A list of reachable tiles as Vector2.
+     */
+    /**
+     * Returns a list of reachable tiles for the given troop by checking all battlefield tiles.
+     *
+     * @param troop The troop for which to calculate reachable tiles.
+     * @return A list of reachable tiles as Vector2.
+     */
+    fun getReachableTiles(troop: TroopInfo): List<Vector2> {
+        val reachableTiles = mutableListOf<Vector2>()
+
+        // Перебираем все клетки на поле боя
+        for (x in -7..6) {  // X-координаты поля
+            for (y in -4..3) { // Y-координаты поля
+                val tilePosition = HexMath.evenQ2HexCoords(Vector2(x.toFloat(), y.toFloat()))
+                if (isHexAchievable(troop, tilePosition)) {
+                    reachableTiles.add(tilePosition)
+                }
+            }
+        }
+
+        return reachableTiles
+    }
 
 
     /**

@@ -1,16 +1,14 @@
 package com.unciv.ui.battlescreen
 
 import ErrorId
-import com.unciv.logic.battle.NewBattleManager
+import com.unciv.logic.battle.BattleManager
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Cursor
 import com.badlogic.gdx.graphics.Cursor.SystemCursor
-import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.unciv.logic.Direction
-import com.badlogic.gdx.math.Vector
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
@@ -18,16 +16,13 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
-import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.Align
-import com.unciv.Constants
 import com.unciv.logic.HexMath
 import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
-import com.unciv.ui.army.TroopArmyView
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.map.TileGroupMap
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
@@ -37,12 +32,9 @@ import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
-import com.unciv.ui.utils.extensions.onChange
-import com.unciv.ui.utils.extensions.onClick
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
@@ -50,13 +42,13 @@ import kotlin.coroutines.resume
 // All coordinates are hex, not offset
 
 /** Screen for a battle. Visual routines are here, logic of the battle is in [BattleManager] class. Must not be used for AI duels. */
-class NewBattleScreen(
+class BattleScreen(
     private var attackerHero: MapUnit,
     private var defenderHero: MapUnit,
     defaultPage: String = "",
     selection: String = ""
 ) : BaseScreen(), RecreateOnResize{
-    private var manager = NewBattleManager(attackerHero.army, defenderHero.army)
+    private var manager = BattleManager(attackerHero.army, defenderHero.army)
 
     // Array to store TroopArmyView or null for empty slots
     private val attackerTroopViewsArray: Array<TroopBattleView?> =
@@ -1115,7 +1107,7 @@ class NewBattleScreen(
     }
 
     override fun recreate(): BaseScreen {
-        return NewBattleScreen(attackerHero, defenderHero)
+        return BattleScreen(attackerHero, defenderHero)
     }
 
     fun resizePage(tab: EmpireOverviewTab) {

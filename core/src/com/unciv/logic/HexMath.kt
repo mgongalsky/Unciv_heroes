@@ -98,6 +98,22 @@ object HexMath {
         //return vector.x - vector.y
     }
 
+    fun getDirection(from: Vector2, to: Vector2): Direction {
+        val dx = to.x - from.x
+        val dy = to.y - from.y
+
+        return when {
+            dx == 0f && dy > 0f -> Direction.TopLeft
+            dx > 0f && dy == 0f -> Direction.CenterRight
+            dx == 0f && dy < 0f -> Direction.BottomRight
+            dx < 0f && dy == 0f -> Direction.CenterLeft
+            dx > 0f && dy > 0f -> Direction.TopRight
+            dx < 0f && dy < 0f -> Direction.BottomLeft
+            else -> Direction.DirError
+        }
+    }
+
+
     /**
      * Convert a latitude and longitude back into a hex coordinate.
      * Inverse function of [getLatitude] and [getLongitude].
@@ -269,6 +285,42 @@ object HexMath {
             rz = -rx - ry
 
         return Vector3(rx, ry, rz)
+    }
+
+    fun rotateClockwise(direction: Direction, steps: Int): Direction {
+        val directions = listOf(
+            Direction.TopRight,
+            Direction.CenterRight,
+            Direction.BottomRight,
+            Direction.BottomLeft,
+            Direction.CenterLeft,
+            Direction.TopLeft
+        )
+
+        val currentIndex = directions.indexOf(direction)
+        if (currentIndex == -1) return Direction.DirError
+
+        // Рассчитываем новый индекс с учетом количества шагов
+        val newIndex = (currentIndex + steps) % directions.size
+        return directions[newIndex]
+    }
+
+    fun rotateCounterClockwise(direction: Direction, steps: Int): Direction {
+        val directions = listOf(
+            Direction.TopRight,
+            Direction.CenterRight,
+            Direction.BottomRight,
+            Direction.BottomLeft,
+            Direction.CenterLeft,
+            Direction.TopLeft
+        )
+
+        val currentIndex = directions.indexOf(direction)
+        if (currentIndex == -1) return Direction.DirError
+
+        // Рассчитываем новый индекс с учетом количества шагов
+        val newIndex = (currentIndex - steps + directions.size) % directions.size
+        return directions[newIndex]
     }
 
     fun roundHexCoords(hexCoord: Vector2): Vector2 {

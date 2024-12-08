@@ -8,7 +8,10 @@ enum class ErrorId {
     NOT_IMPLEMENTED,     // Функция ещё не реализована
     INVALID_TARGET,      // Цель недействительна
     UNKNOWN_ERROR,        // Неизвестная ошибка
-    HEX_OCCUPIED
+    HEX_OCCUPIED,
+    AI_NO_VALID_MOVE,
+    AI_NO_TARGET,
+    AI_NO_ENEMIES
 }
 
 

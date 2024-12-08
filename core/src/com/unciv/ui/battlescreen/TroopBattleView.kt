@@ -12,14 +12,13 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.logic.army.TroopInfo
-import com.unciv.ui.army.ArmyView
 
 /**
  * Represents the view of a troop in battles.
  */
 class TroopBattleView(
     private val troopInfo: TroopInfo,
-    private val battleScreen: NewBattleScreen
+    private val battleScreen: BattleScreen
     ) {
     private val troopGroup = Group()
     private var troopImages: ArrayList<Image>
