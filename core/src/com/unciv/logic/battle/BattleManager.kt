@@ -109,6 +109,15 @@ class BattleManager(
                         errorId = ErrorId.OCCUPIED_BY_ALLY
                     )
                 }
+                if (!isHexFree(targetPosition)) {
+                    if (verboseAttack) println("Hex occupied by another troop $targetPosition")
+                    return BattleActionResult(
+                        actionType = ActionType.MOVE,
+                        success = false,
+                        errorId = ErrorId.HEX_OCCUPIED
+                    )
+                }
+
 
                 // Успешное перемещение
                 val oldPosition = troop.position
@@ -341,7 +350,7 @@ class BattleManager(
         for (x in -7..6) {  // X-координаты поля
             for (y in -4..3) { // Y-координаты поля
                 val tilePosition = HexMath.evenQ2HexCoords(Vector2(x.toFloat(), y.toFloat()))
-                if (isHexAchievable(troop, tilePosition)) {
+                if (isHexAchievable(troop, tilePosition) && isHexFree(tilePosition)) {
                     reachableTiles.add(tilePosition)
                 }
             }

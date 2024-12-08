@@ -1,5 +1,6 @@
 package com.unciv.ui.battlescreen
 
+import BattleActionResult
 import ErrorId
 import com.unciv.logic.battle.BattleManager
 
@@ -18,6 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.Align
+import com.unciv.ai.AIBattle
 import com.unciv.logic.HexMath
 import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.MapUnit
@@ -202,19 +204,18 @@ class BattleScreen(
             val currentTroop = manager.getCurrentTroop()
             var isMorale = false
 
-            if (currentTroop == null){
+            if (currentTroop == null) {
                 Gdx.app.postRunnable {
                     shutdownScreen() // Закрываем экран в UI-потоке
                 }
                 return@coroutineScope // Немедленно выходим из корутины
-
             }
+
             if (verboseTurn) {
-                println("Current troop: ${currentTroop?.baseUnit?.name} at position ${currentTroop?.position}")
+                println("Current troop: ${currentTroop.baseUnit.name} at position ${currentTroop.position}")
             }
 
             if (currentTroop.isPlayerControlled()) {
-
                 while (true) {
                     if (verboseTurn) println("Waiting for player action...")
                     val (action, targetTileGroup) = waitForPlayerAction()
@@ -228,136 +229,110 @@ class BattleScreen(
 
                     val result = manager.performTurn(action)
 
-
-
-                    if (result.success) {
-                        if (verboseTurn) {
-                            println("Action ${action.actionType} succeeded")
-                            println("Moved from: ${result.movedFrom}, Moved to: ${result.movedTo}")
-                        }
-
-                        when (action.actionType) {
-                            ///////////////////// ATTACK
-                            ActionType.ATTACK -> {
-                                if (result.isLuck) {
-                                    val troopView = getTroopViewFor(currentTroop)
-                                    troopView?.let { showLuckRainbow(it) }
-                                }
-
-                                // Обновляем состояние после атаки
-
-                                refreshTroopViews()
-                                // Обновляем UI: перемещение атакующего юнита
-                                val attackingTroopView = getTroopViewFor(currentTroop)
-                                val attackPosition = HexMath.oneStepTowards(action.targetPosition, action.direction!!)
-                                val attackTileGroup = daTileGroups.firstOrNull { it.tileInfo.position == attackPosition }
-
-                                if (attackTileGroup != null && attackingTroopView != null) {
-                                    attackingTroopView.updatePosition(attackTileGroup)
-                                    if (verboseTurn) println("Updated attacking troop view to position $attackPosition")
-                                }
-
-                                if (result.isMorale && manager.isBattleOn()) {
-                                    isMorale = result.isMorale
-                                    val troopView = getTroopViewFor(currentTroop)
-                                    troopView?.let { showMoraleBird(it) }
-                                }
-
-                                if (result.battleEnded) {
-                                    if (verboseTurn) println("Battle finished after action ${action.actionType}. Closing screen.")
-                                    Gdx.app.postRunnable {
-                                        shutdownScreen() // Закрываем экран в UI-потоке
-                                    }
-                                    return@coroutineScope // Немедленно выходим из корутины
-                                }
-
-                            }
-
-                            ///////////////////// SHOOT
-                            ActionType.SHOOT -> {
-                                if (result.isLuck) {
-                                    val troopView = getTroopViewFor(currentTroop)
-                                    troopView?.let { showLuckRainbow(it) }
-                                }
-
-                                refreshTroopViews()
-                                if (result.isMorale && manager.isBattleOn()) {
-                                    isMorale = result.isMorale
-                                    val troopView = getTroopViewFor(currentTroop)
-                                    troopView?.let { showMoraleBird(it) }
-                                }
-
-                                if (result.battleEnded) {
-                                    if (verboseTurn) println("Battle finished after action ${action.actionType}. Closing screen.")
-                                    Gdx.app.postRunnable {
-                                        shutdownScreen() // Закрываем экран в UI-потоке
-                                    }
-                                    return@coroutineScope // Немедленно выходим из корутины
-                                }
-
-
-
-                            }
-
-                            /////////////////////////////// MOVE
-                            ActionType.MOVE -> {
-                                // Обновляем UI для перемещения
-                                val currentTroopView = getTroopViewFor(currentTroop)
-                                currentTroopView?.updatePosition(targetTileGroup)
-                                if (verboseTurn) println("Moved troop view to ${targetTileGroup.tileInfo.position}")
-                                if (result.isMorale && manager.isBattleOn()) {
-                                    isMorale = result.isMorale
-                                    val troopView = getTroopViewFor(currentTroop)
-                                    troopView?.let { showMoraleBird(it) }
-                                }
-
-
-                            }
-
-
-                        }
-
-
-                        //if(result.battleEnded != null)
-                        //if(result.battleEnded)
-                        //    return@coroutineScope
-
-                        break
-                    } else {
-                        if (verboseTurn) println("Action ${action.actionType} failed with error: ${result.errorId}")
-                        //refreshTroopViews()
-                        handleActionError(result.errorId)
-                    }
-                    if (result.battleEnded) {
-                        if (verboseTurn) println("Battle finished after action ${action.actionType}. Closing screen.")
-                        Gdx.app.postRunnable {
-                            shutdownScreen() // Закрываем экран в UI-потоке
-                        }
-                        return@coroutineScope // Немедленно выходим из корутины
-                    }
-
-
-
+                    handleBattleResult(result, currentTroop)
+                    if (result.success) break
                 }
             } else {
-                if (verboseTurn) println("AI logic not implemented yet for troop: ${currentTroop.baseUnit.name}")
-                // Логика для AI
+                if (verboseTurn) println("AI is performing action for troop: ${currentTroop.baseUnit.name}")
+
+                val aiBattle = AIBattle(manager)
+                val result = aiBattle.performTurn(currentTroop)
+
+                handleBattleResult(result, currentTroop)
             }
 
-            if (!isMorale)  {
+            if (!isMorale) {
                 manager.advanceTurn()
                 if (verboseTurn) println("Turn advanced to next troop")
-            } else
-                if (verboseTurn) println("Current troop has morale")
-
+            } else if (verboseTurn) println("Current troop has morale")
 
             movePointerToNextTroop()
             updateTilesShadowing()
         }
 
-
         println("Battle has ended!")
-        //shutdownScreen()
+        // shutdownScreen()
+    }
+
+    private fun handleBattleResult(
+        result: BattleActionResult,
+        currentTroop: TroopInfo
+    ) {
+        if (result.success) {
+            if (verboseTurn) {
+                println("Action ${result.actionType} succeeded")
+                println("Moved from: ${result.movedFrom}, Moved to: ${result.movedTo}")
+            }
+
+            val targetTileGroup = daTileGroups.firstOrNull(){it.tileInfo.position == currentTroop.position}
+
+
+            when (result.actionType) {
+                ActionType.ATTACK -> {
+                    if (result.isLuck) {
+                        val troopView = getTroopViewFor(currentTroop)
+                        troopView?.let { showLuckRainbow(it) }
+                    }
+
+
+                    if (result.movedTo != null) {
+                        val attackingTroopView = getTroopViewFor(currentTroop)
+                        val attackPosition = result.movedTo
+                        val attackTileGroup = daTileGroups.firstOrNull { it.tileInfo.position == attackPosition }
+
+                        if (attackTileGroup != null && attackingTroopView != null) {
+                            attackingTroopView.updatePosition(attackTileGroup)
+                            if (verboseTurn) println("Updated attacking troop view to position $attackPosition")
+                        }
+                    }
+
+                    refreshTroopViews()
+
+
+                    if (result.isMorale && manager.isBattleOn()) {
+                        val troopView = getTroopViewFor(currentTroop)
+                        troopView?.let { showMoraleBird(it) }
+                    }
+                }
+
+                ActionType.SHOOT -> {
+                    if (result.isLuck) {
+                        val troopView = getTroopViewFor(currentTroop)
+                        troopView?.let { showLuckRainbow(it) }
+                    }
+                    refreshTroopViews()
+
+                    if (result.isMorale && manager.isBattleOn()) {
+                        val troopView = getTroopViewFor(currentTroop)
+                        troopView?.let { showMoraleBird(it) }
+                    }
+                }
+
+                ActionType.MOVE -> {
+                    val currentTroopView = getTroopViewFor(currentTroop)
+                    currentTroopView?.updatePosition(targetTileGroup)
+                    if (verboseTurn) println("Moved troop view to ${targetTileGroup?.tileInfo?.position}")
+
+                    refreshTroopViews()
+
+
+                    if (result.isMorale && manager.isBattleOn()) {
+                        val troopView = getTroopViewFor(currentTroop)
+                        troopView?.let { showMoraleBird(it) }
+                    }
+                }
+            }
+
+            if (result.battleEnded) {
+                if (verboseTurn) println("Battle finished after action ${result.actionType}. Closing screen.")
+                Gdx.app.postRunnable {
+                    shutdownScreen() // Закрываем экран в UI-потоке
+                }
+            }
+        } else {
+            if (verboseTurn) println("Action ${result.actionType} failed with error: ${result.errorId}")
+            handleActionError(result.errorId)
+        }
     }
 
 
@@ -391,6 +366,7 @@ class BattleScreen(
             }
         }
 
+        /*
         // Обновляем массивы для защищающейся армии
         manager.getDefenderArmy().getAllTroops().forEachIndexed { index, troop ->
             if (troop == null) {
@@ -411,6 +387,8 @@ class BattleScreen(
                 }
             }
         }
+
+         */
     }
 
     /**

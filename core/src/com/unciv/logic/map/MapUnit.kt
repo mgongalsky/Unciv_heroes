@@ -108,7 +108,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
    */
     var army: ArmyInfo = ArmyInfo(
         civInfo,
-        "Swordsman", 30
+        "Archer", 30
     )
 
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
