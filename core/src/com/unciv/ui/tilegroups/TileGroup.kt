@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.Null
 import com.unciv.UncivGame
+import com.unciv.logic.Direction
 import com.unciv.logic.HexMath
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.RoadStatus
@@ -18,7 +19,6 @@ import com.unciv.models.helpers.MapArrowType
 import com.unciv.models.helpers.MiscArrowTypes
 import com.unciv.models.helpers.TintedMapArrow
 import com.unciv.models.helpers.UnitMovementMemoryType
-import com.unciv.ui.battlescreen.Direction
 import com.unciv.ui.cityscreen.YieldGroup
 import com.unciv.ui.images.ImageGetter
 import kotlin.math.PI

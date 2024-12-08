@@ -4,7 +4,7 @@ import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
 import com.unciv.logic.map.MapParameters
 import com.unciv.logic.map.MapShape
-import com.unciv.ui.battlescreen.Direction
+import com.unciv.logic.Direction
 import kotlin.math.*
 
 // FIX: Vertical far hexes instead of sides

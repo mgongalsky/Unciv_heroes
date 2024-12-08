@@ -30,13 +30,6 @@ class TroopInfo (
     @Transient
     lateinit var baseUnit: BaseUnit // = ruleset.units[unitName]!!
 
-    // Group of actors for this troop. (Mostly pixmap of the unit and its amount)
-    @Transient
-    var troopGroup = Group()
-
-    @Transient
-    lateinit var troopImages: ArrayList<Image>
-
     /** Current amount of units and health, which can be changed during the battle. We need it for resurrection. */
     var currentHealth = 0
     //baseUnit.health
@@ -117,74 +110,9 @@ class TroopInfo (
         // Read other properties if needed
     }
 
-    fun showMoraleBird(){
-
-        val moraleImage = ImageGetter.getExternalImage("MoraleBird.png")
-        //val moraleImage = ImageGetter.getExternalImage("LuckRainbow.png")
-
-        moraleImage.setScale(0.075f, 0.075f)
-        //moraleImage.setScale(0.130f, 0.130f)
-        moraleImage.moveBy(troopGroup.parent.width*(-0.035f), troopGroup.parent.height*1.85f)
-        //moraleImage.moveBy(troopGroup.parent.width*(-0.3f), troopGroup.parent.height*0.65f)
-        moraleImage.touchable = Touchable.disabled
-        moraleImage.name = "moraleImage"
-        moraleImage.color = Color.WHITE.cpy().apply { a = 0f }
-
-        val fadeIn = Actions.alpha(1f, 0.5f)  // Make image appear over 2 seconds
-        val delay = Actions.delay(0.3f)  // Wait for 0.5 seconds
-        val fadeOut = Actions.alpha(0f, 0.5f)  // Make image vanish over 2 seconds
-
-        val endAnimation = Actions.run {
-            // Code to execute after the animation ends
-            // This is where you could resume your game's logic
-        }
-
-        moraleImage.addAction(Actions.sequence(fadeIn, delay, fadeOut, endAnimation))
-        //  moraleImage.addAction(Actions.alpha(1f, 0.5f))
-        //moraleImage.addAction(Actions.alpha(0f, 1f))
-        troopGroup.addActor(moraleImage)
-        //troopGroup.stage.act(2f)
-        //troopGroup.stage.draw()
-
-        //stage.addActor(logoImage)
-
-    }
-
-    fun showLuckRainbow(){
-
-        //val moraleImage = ImageGetter.getExternalImage("MoraleBird.png")
-        val moraleImage = ImageGetter.getExternalImage("LuckRainbow.png")
-
-        //moraleImage.setScale(0.075f, 0.075f)
-        moraleImage.setScale(0.130f, 0.130f)
-        //moraleImage.moveBy(troopGroup.parent.width*(-0.035f), troopGroup.parent.height*1.85f)
-        moraleImage.moveBy(troopGroup.parent.width*(-0.3f), troopGroup.parent.height*0.65f)
-        moraleImage.touchable = Touchable.disabled
-        moraleImage.name = "moraleImage"
-        moraleImage.color = Color.WHITE.cpy().apply { a = 0f }
-
-        val fadeIn = Actions.alpha(1f, 0.5f)  // Make image appear over 2 seconds
-        val delay = Actions.delay(0.3f)  // Wait for 0.5 seconds
-        val fadeOut = Actions.alpha(0f, 0.5f)  // Make image vanish over 2 seconds
-
-        val endAnimation = Actions.run {
-            // Code to execute after the animation ends
-            // This is where you could resume your game's logic
-        }
-
-        moraleImage.addAction(Actions.sequence(fadeIn, delay, fadeOut, endAnimation))
-        //  moraleImage.addAction(Actions.alpha(1f, 0.5f))
-        //moraleImage.addAction(Actions.alpha(0f, 1f))
-        troopGroup.addActor(moraleImage)
-        //troopGroup.stage.act(2f)
-        //troopGroup.stage.draw()
-
-        //stage.addActor(logoImage)
-
-    }
 
     /** Called when battle is started (or the troop is summoned). [number] corresponds to location in the hero's army and determines initial location */
-    fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean, oldVersion: Boolean = true)
+    fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean)
     {
         civInfo = civInfo0
         baseUnit = ruleset.units[unitName]!!
@@ -198,113 +126,5 @@ class TroopInfo (
         currentHealth = baseUnit.health
         currentAmount = amount
 
-        if (oldVersion)
-            enterBattleView(civInfo0, number, attacker)
-
-    }
-
-    fun enterBattleView(civInfo0: CivilizationInfo, number: Int, attacker: Boolean)
-    {
-        val unitTroopString = "TileSets/AbsoluteUnits/Units/" + baseUnit.name
-        // Load images for all troops
-        troopImages = ImageGetter.getLayeredImageColored(unitTroopString, null, civInfo.nation.getInnerColor(), civInfo.nation.getOuterColor())
-    }
-
-    fun initializeImages(civInfo0: CivilizationInfo)
-    {
-        civInfo = civInfo0
-        baseUnit = ruleset.units[unitName]!!
-        val unitTroopString = "TileSets/AbsoluteUnits/Units/" + baseUnit.name
-
-        troopImages = ImageGetter.getLayeredImageColored(unitTroopString, null, civInfo.nation.getInnerColor(), civInfo.nation.getOuterColor())
-
-
-    }
-
-    /** Draw the troop in a city within specifed [Group]*/
-    fun DeleteDrawInCity(group: Group, isGarrison: Boolean)
-    {
-        // Draw amount of units
-        // TODO: Here we need to make text smaller, but looks like we need to introduce new font for this.
-        val amountText = Label(currentAmount.toString(), BaseScreen.skin)
-        amountText.scaleBy(0.5f)
-        //amountText.style.font.data.scale(0.5f)
-
-        amountText.moveBy(group.width*0.6f, 0.5f)
-        //amountText.style.font.data.scale(0.5f)
-
-        // Draw pixmap of a troop
-        for (troopImage in troopImages) {
-            troopImage.setScale(-0.125f, 0.125f)
-            troopImage.moveBy(group.width*0.8f, 0f)
-
-            troopImage.setOrigin(group.originX, group.originY)
-            /// TODO: Seems like latitude and longitude work incorrectly in main map
-            troopImage.touchable = Touchable.disabled
-            troopImage.name = "troopImage"
-            troopGroup.name = "troopGroup"
-            troopGroup.findActor<Image>("troopImage")?.remove()
-
-            troopGroup.addActor(troopImage)
-        }
-
-        amountText.name = "amountLabel"
-        amountText.touchable = Touchable.disabled
-        troopGroup.findActor<Label>("amountLabel")?.remove()
-        troopGroup.addActor(amountText)
-        group.addActor(troopGroup)
-    }
-
-
-
-    /** Draw the troop on a battle within specifed [tileGroup]*/
-    fun drawOnBattle(tileGroup: TileGroup, attacker: Boolean)
-    {
-        // Draw amount of units
-        val amountText = Label(currentAmount.toString(), BaseScreen.skin)
-        amountText.moveBy(tileGroup.width*0.5f, 0f)
-
-        // Draw pixmap of a troop
-        for (troopImage in troopImages) {
-            if(attacker) {
-                troopImage.setScale(-0.25f, 0.25f)
-                troopImage.moveBy(tileGroup.width*1.3f, tileGroup.height*0.15f)
-            }
-            else {
-                troopImage.setScale(0.25f, 0.25f)
-                troopImage.moveBy(tileGroup.width*(-0.3f), tileGroup.height*0.15f)
-            }
-            troopImage.setOrigin(tileGroup.originX, tileGroup.originY)
-            /// TODO: Seems like latitude and longitude work incorrectly in main map
-            troopImage.touchable = Touchable.disabled
-            troopImage.name = "troopImage"
-            troopGroup.name = "troopGroup"
-            troopGroup.findActor<Image>("troopImage")?.remove()
-
-            troopGroup.addActor(troopImage)
-        }
-
-        // hexCoordsLabel is used for debug only. Shows various coordinates for the troop
-        val hexCoords = tileGroup.tileInfo.position
-        var hexLabel = Label(hexCoords.x.toString() + ", " + hexCoords.y.toString() + "\r\n" +
-                position.x.toString() + ", " + position.y.toString() + "\r\n" +
-                tileGroup.tileInfo.position.x.toString() + ", " + tileGroup.tileInfo.position.y.toString(),
-            BaseScreen.skin)
-        hexLabel.name = "hexCoordsLabel"
-        hexLabel.touchable = Touchable.disabled
-        amountText.name = "amountLabel"
-        amountText.touchable = Touchable.disabled
-        troopGroup.findActor<Label>("amountLabel")?.remove()
-      //  troopGroup.findActor<>()
-        troopGroup.addActor(amountText)
-        // Uncomment this for debug with rendering of coordinates. Comment amountText label.
-        //troopGroup.addActor(hexLabel)
-        tileGroup.addActor(troopGroup)
-
-        //showMoraleBird()
-    }
-
-    fun perish(){
-        troopGroup.remove()
     }
 }

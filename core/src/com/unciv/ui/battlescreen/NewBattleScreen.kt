@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.Cursor
 import com.badlogic.gdx.graphics.Cursor.SystemCursor
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.unciv.logic.Direction
 import com.badlogic.gdx.math.Vector
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
@@ -104,7 +105,7 @@ class NewBattleScreen(
         // Iterate through slots and create/update views
         attackerHero.army.getAllTroops()?.forEachIndexed { index, troop ->
             if(troop != null) {
-                troop.enterBattle(attackerHero.civInfo, index, attacker = true, oldVersion = false)
+                troop.enterBattle(attackerHero.civInfo, index, attacker = true)
                 val troopView = TroopBattleView(troop, this) // Pass ArmyView for interaction
                 attackerTroopViewsArray[index] = troopView // Save to array
                 //add(troopView).size(64f).pad(5f)
@@ -114,7 +115,7 @@ class NewBattleScreen(
         // Iterate through slots and create/update views
         defenderHero.army.getAllTroops()?.forEachIndexed { index, troop ->
             if(troop != null) {
-                troop.enterBattle(defenderHero.civInfo, index, attacker = false, oldVersion = false)
+                troop.enterBattle(defenderHero.civInfo, index, attacker = false)
                 val troopView = TroopBattleView(troop, this) // Pass ArmyView for interaction
                 defenderTroopViewsArray[index] = troopView // Save to array
                 //add(troopView).size(64f).pad(5f)

@@ -147,7 +147,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
 
         cityScreen.city.garrison.forEach { currTroop ->
-            currTroop.initializeImages(cityScreen.city.civInfo)
+            //currTroop.initializeImages(cityScreen.city.civInfo)
 
             var troopGroup = Group()
             troopGroup.height = garrisonWidget.height

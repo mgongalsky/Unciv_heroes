@@ -69,7 +69,7 @@ class VisitingHeroTable(val cityScreen: CityScreen) : Table() {
         cityScreen.city.run {visitingHero = tileMap[location].militaryUnit}
         if(visitingHero != null) {
             visitingHero?.troops?.forEach { currTroop ->
-                currTroop.initializeImages(cityScreen.city.civInfo)
+                //currTroop.initializeImages(cityScreen.city.civInfo)
 
                 var troopGroup = Group()
                 troopGroup.height = heroArmyTable.height
