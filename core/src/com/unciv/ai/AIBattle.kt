@@ -12,7 +12,7 @@ import com.unciv.ui.battlescreen.BattleActionRequest
 class AIBattle(private val battleManager: BattleManager) {
 
     companion object {
-        var AI_verbose = true // Флаг для включения/выключения вербозинга
+        var AI_verbose = false // Флаг для включения/выключения вербозинга
     }
 
     /** Выполняет ход для указанного отряда AI */

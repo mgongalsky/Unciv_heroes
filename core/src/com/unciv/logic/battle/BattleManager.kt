@@ -71,6 +71,17 @@ class BattleManager(
     }
 
 
+    fun getBattleResult(): BattleTotalResult? {
+        val remainingAttackers = attackerArmy.getAllTroops().filterNotNull().filter { it.currentAmount > 0 }
+        val remainingDefenders = defenderArmy.getAllTroops().filterNotNull().filter { it.currentAmount > 0 }
+
+        return when {
+            remainingAttackers.isNotEmpty() && remainingDefenders.isEmpty() -> BattleTotalResult(attackerArmy) // Победили атакующие
+            remainingDefenders.isNotEmpty() && remainingAttackers.isEmpty() -> BattleTotalResult(defenderArmy) // Победили защитники
+            else -> null // Битва ещё идёт
+        }
+    }
+
     /**
      * Возвращает юнит, находящийся на заданной позиции, или null, если клетка пуста.
      *

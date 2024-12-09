@@ -58,6 +58,8 @@ class BattleScreen(
     private val defenderTroopViewsArray: Array<TroopBattleView?> =
             Array(defenderHero.army.getAllTroops().size ?: 0) { null }
 
+    private val verboseTurn = false // Флаг для включения/выключения вербозинга хода
+
 
     // 50 normal button height + 2*10 topTable padding + 2 Separator + 2*5 centerTable padding
     // Since a resize recreates this screen this should be fine as a val
@@ -197,7 +199,6 @@ class BattleScreen(
 
     }
 
-    private val verboseTurn = true // Флаг для включения/выключения вербозинга хода
 
     suspend fun runBattleLoop() = coroutineScope {
         while (manager.isBattleOn()) {
@@ -327,6 +328,25 @@ class BattleScreen(
                 if (verboseTurn) println("Battle finished after action ${result.actionType}. Closing screen.")
                 Gdx.app.postRunnable {
                     shutdownScreen() // Закрываем экран в UI-потоке
+                }
+                val battleResult = manager.getBattleResult()
+                if (battleResult == null){
+                    println("Bug with battle result.")
+                } else {
+                    if (verboseTurn) println("Army of ${battleResult.winningArmy.civInfo.nation.name} won.")
+
+                    // Remove defeated unit from map
+                    if (attackerHero.army == battleResult.winningArmy) {
+                        defenderHero.removeFromTile()
+                        defenderHero.civInfo.removeUnit(defenderHero)
+                        defenderHero.civInfo.updateViewableTiles()
+                    }
+                    if (defenderHero.army == battleResult.winningArmy) {
+                        attackerHero.removeFromTile()
+                        attackerHero.civInfo.removeUnit(attackerHero)
+                        attackerHero.civInfo.updateViewableTiles()
+                    }
+
                 }
             }
         } else {
@@ -864,7 +884,7 @@ class BattleScreen(
 
         // Анимация: появление -> задержка -> исчезновение
         val fadeIn = Actions.alpha(1f, 0.5f)  // Плавное появление (0.5 секунды)
-        val delay = Actions.delay(5.3f)       // Задержка (0.3 секунды)
+        val delay = Actions.delay(0.3f)       // Задержка (0.3 секунды)
         val fadeOut = Actions.alpha(0f, 0.5f) // Плавное исчезновение (0.5 секунды)
         val removeActor = Actions.run {
             luckRainbowImage.remove() // Удаляем изображение после завершения анимации
