@@ -1,16 +1,18 @@
 package com.unciv.logic.army
 
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.CivilizationInfo
+import com.unciv.logic.map.MapUnit
 
 /**
  * Represents an army consisting of a fixed number of slots,
  * where each slot can hold a [TroopInfo] or be empty (null).
  */
 class ArmyInfo(
-    var civInfo: CivilizationInfo,
+    var civInfo: CivilizationInfo = CivilizationInfo(),
     val maxSlots: Int = DEFAULT_ARMY_SIZE
 ) : IsPartOfGameInfoSerialization, Json.Serializable {
 
@@ -27,6 +29,9 @@ class ArmyInfo(
     constructor(civInfo: CivilizationInfo, vararg troops: Pair<String, Int>) : this(civInfo, maxSlots = maxOf(DEFAULT_ARMY_SIZE, troops.size)) {
         initializeTroops(troops)
     }
+
+    // Конструктор без аргументов
+    constructor() : this(CivilizationInfo(), DEFAULT_ARMY_SIZE)
 
     /** Initializes troops in slots from a list of pairs (name, count) */
     private fun initializeTroops(troops: Array<out Pair<String, Int>>) {
@@ -153,6 +158,7 @@ class ArmyInfo(
     // ===== Serialization Methods =====
 
     override fun write(json: Json) {
+        //json.writeValue("civInfo", civInfo)
         json.writeArrayStart("slots")
         for (troop in slots) {
             json.writeValue(troop) // null values are handled automatically
@@ -161,10 +167,31 @@ class ArmyInfo(
     }
 
     override fun read(json: Json, jsonData: JsonValue) {
+        //civInfo = json.readValue(CivilizationInfo::class.java, jsonData.get("civInfo"))
         val slotArray = jsonData.get("slots")
         for (i in 0 until maxSlots) {
             val troopData = slotArray.get(i)
             slots[i] = if (troopData != null) json.readValue(TroopInfo::class.java, troopData) else null
         }
     }
+
+    /**
+     * Creates a deep copy of the current slots array.
+     * Each [TroopInfo] object is also deeply copied.
+     *
+     * @return A new array with the copied troop slots.
+     */
+    fun copySlots(): Array<TroopInfo?> {
+        return slots.map { troop ->
+            troop?.copy() // Используем метод copy() для глубокого копирования TroopInfo
+        }.toTypedArray() // Преобразуем список обратно в массив
+    }
+
+
+    fun clone(): ArmyInfo {
+        val toReturn = ArmyInfo(civInfo)
+        toReturn.copySlots()
+        return toReturn
+    }
+
 }

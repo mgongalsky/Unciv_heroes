@@ -97,7 +97,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     var exampleTroop: TroopInfo = TroopInfo(10, "Spearman")
 
     // TODO: troops must be changed from list to a finite array with possible empty slots. And army manager must be written.
-    var troops = mutableListOf<TroopInfo>()
+    //var troops = mutableListOf<TroopInfo>()
 
   /*  var army: ArmyInfo = ArmyInfo(
         civInfo,
@@ -243,23 +243,12 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         this.amount = amount
         this.name = name
 
-        troops.clear()
+        // Очищаем текущие отряды
+
         baseUnit = ImageGetter.ruleset.units[name]!!
         baseUnit.ruleset = ImageGetter.ruleset
 
-        // TODO: It is also in setTransient, we need to exclude it in one of the places
-        //heroAttackSkill = 2
-        //heroDefenseSkill = 2
-        //army.fillArmy(name, amount)
-
-        //   amount = amount0
-        val amountOfTroops = 4
-        for (i in 1..amountOfTroops) {
-            troops.add(TroopInfo(amount / amountOfTroops, name))
-
-
-        }
-
+        army.fillArmy(name, amount)
     }
 
     constructor() : this(isMonster = true) {
@@ -364,7 +353,6 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         toReturn.currentMovement = currentMovement
         toReturn.heroAttackSkill = heroAttackSkill
         toReturn.heroDefenseSkill = heroDefenseSkill
-        toReturn.troops = troops
         toReturn.army = army
         toReturn.id = id
         toReturn.health = health
@@ -806,18 +794,6 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         promotions.setTransients(this)
         baseUnit = ruleset.units[name]
             ?: throw java.lang.Exception("Unit $name is not found!")
-
-        if (name == "Warrior") {
-            troops.clear()
-            troops.add(TroopInfo(10, "Horseman"))
-            troops.add(TroopInfo(20, "Archer"))
-            troops.add(TroopInfo(15, "Spearman"))
-            troops.add(TroopInfo(5, "Swordsman"))
-            //heroAttackSkill = 2
-            //heroDefenseSkill = 2
-
-        }
-
 
         updateUniques(ruleset)
     }
