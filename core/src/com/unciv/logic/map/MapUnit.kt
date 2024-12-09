@@ -231,10 +231,9 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     var amount: Int = 0
     //var mapUnitName: String = ""
 
-    constructor(amount: Int, name: String, tileGroup: TileGroup) : this(amount, name) {
+    constructor(amount: Int, name: String, tileInfo: TileInfo) : this(amount, name) {
 
-        currentTile = tileGroup.tileInfo
-        //drawOnBattle(tileGroup)
+        currentTile = tileInfo
 
     }
 

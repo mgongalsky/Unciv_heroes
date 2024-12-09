@@ -154,7 +154,7 @@ class MapEditorEditTab(
             monsterCivilization.nation = monsterNation
 
             // Create the Monster unit
-            var monsterToSet = MapUnit(amount, monsterStr, monsterTile)
+            var monsterToSet = MapUnit(amount, monsterStr, monsterTile.tileInfo)
             monsterToSet.owner = Constants.barbarians
             monsterToSet.name = monsterStr
             monsterToSet.civInfo = monsterCivilization  // Set the monster's civInfo to the dummy civilization
