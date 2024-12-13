@@ -1,0 +1,9 @@
+army
+automation
+battle
+city
+civilization
+event
+map
+multiplayer
+trade
