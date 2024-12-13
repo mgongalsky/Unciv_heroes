@@ -1,9 +1,9 @@
-package com.unciv.ui.heroscreen.trade
+package com.unciv.logic.trade
 
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.IsPartOfGameInfoSerialization
-import com.unciv.ui.heroscreen.trade.TradeType.TradeTypeNumberType
+import com.unciv.logic.trade.TradeType.TradeTypeNumberType
 import com.unciv.models.ruleset.Speed
 import com.unciv.models.translations.tr
 import com.unciv.ui.utils.Fonts

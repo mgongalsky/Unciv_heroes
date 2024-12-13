@@ -1,4 +1,4 @@
-package com.unciv.ui.heroscreen.trade
+package com.unciv.logic.trade
 
 /** Enum that classifies Trade Types
  * @param numberType How the value number is formatted - None, Simple number or with a Gold symbol
@@ -18,6 +18,6 @@ enum class TradeType(val numberType: TradeTypeNumberType, val isImmediate: Boole
     Introduction        (TradeTypeNumberType.None, true),
     WarDeclaration      (TradeTypeNumberType.None, true),
     City                (TradeTypeNumberType.None, true);
-
+    
     enum class TradeTypeNumberType { None, Simple, Gold }
 }

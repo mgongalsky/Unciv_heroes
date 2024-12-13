@@ -1,4 +1,4 @@
-package com.unciv.ui.heroscreen.trade
+package com.unciv.logic.trade
 
 import com.unciv.Constants
 import com.unciv.logic.civilization.AlertType
@@ -98,7 +98,7 @@ class TradeLogic(val ourCivilization:CivilizationInfo, val otherCivilization: Ci
                     city.getCenterTile().getUnits().toList().forEach { it.movement.teleportToClosestMoveableTile() }
                     for (tile in city.getTiles()) {
                         for (unit in tile.getUnits().toList()) {
-                            if (!unit.civInfo.canPassThroughTiles(to) && !unit.canEnterForeignTerrain)
+                            if (!unit.civInfo.canPassThroughTiles(to) && !unit.canEnterForeignTerrain) 
                                 unit.movement.teleportToClosestMoveableTile()
                         }
                     }

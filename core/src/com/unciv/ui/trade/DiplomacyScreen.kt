@@ -17,10 +17,10 @@ import com.unciv.logic.civilization.diplomacy.DiplomaticModifiers
 import com.unciv.logic.civilization.diplomacy.DiplomaticModifiers.*
 import com.unciv.logic.civilization.diplomacy.DiplomaticStatus
 import com.unciv.logic.civilization.diplomacy.RelationshipLevel
-import com.unciv.ui.heroscreen.trade.Trade
-import com.unciv.ui.heroscreen.trade.TradeLogic
-import com.unciv.ui.heroscreen.trade.TradeOffer
-import com.unciv.ui.heroscreen.trade.TradeType
+import com.unciv.logic.trade.Trade
+import com.unciv.logic.trade.TradeLogic
+import com.unciv.logic.trade.TradeOffer
+import com.unciv.logic.trade.TradeType
 import com.unciv.models.ruleset.ModOptionsConstants
 import com.unciv.models.ruleset.Quest
 import com.unciv.models.ruleset.tile.ResourceType

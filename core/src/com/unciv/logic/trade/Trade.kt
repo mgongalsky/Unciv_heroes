@@ -1,4 +1,4 @@
-package com.unciv.ui.heroscreen.trade
+package com.unciv.logic.trade
 
 import com.unciv.Constants
 import com.unciv.logic.IsPartOfGameInfoSerialization
@@ -31,7 +31,7 @@ class Trade : IsPartOfGameInfoSerialization {
         return true
     }
 
-    fun clone(): Trade {
+    fun clone():Trade{
         val toReturn = Trade()
         toReturn.theirOffers.addAll(theirOffers)
         toReturn.ourOffers.addAll(ourOffers)
@@ -55,7 +55,7 @@ class TradeRequest : IsPartOfGameInfoSerialization {
         val diplomacyManager = requestingCivInfo.getDiplomacyManager(decliningCiv)
         // the numbers of the flags (20,5) are the amount of turns to wait until offering again
         if (trade.ourOffers.all { it.type == TradeType.Luxury_Resource }
-            && trade.theirOffers.all { it.type== TradeType.Luxury_Resource })
+            && trade.theirOffers.all { it.type==TradeType.Luxury_Resource })
             diplomacyManager.setFlag(DiplomacyFlags.DeclinedLuxExchange,20)
         if (trade.ourOffers.any { it.name == Constants.researchAgreement })
             diplomacyManager.setFlag(DiplomacyFlags.DeclinedResearchAgreement,20)

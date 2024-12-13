@@ -2,10 +2,10 @@ package com.unciv.ui.trade
 
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.Constants
-import com.unciv.ui.heroscreen.trade.TradeLogic
-import com.unciv.ui.heroscreen.trade.TradeOffer
-import com.unciv.ui.heroscreen.trade.TradeOffersList
-import com.unciv.ui.heroscreen.trade.TradeType
+import com.unciv.logic.trade.TradeLogic
+import com.unciv.logic.trade.TradeOffer
+import com.unciv.logic.trade.TradeOffersList
+import com.unciv.logic.trade.TradeType
 import com.unciv.models.translations.tr
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popup.AskNumberPopup

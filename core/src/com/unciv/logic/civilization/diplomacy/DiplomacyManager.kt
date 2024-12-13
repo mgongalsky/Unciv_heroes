@@ -9,9 +9,9 @@ import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.logic.civilization.PlayerType
 import com.unciv.logic.civilization.PopupAlert
-import com.unciv.ui.heroscreen.trade.Trade
-import com.unciv.ui.heroscreen.trade.TradeOffer
-import com.unciv.ui.heroscreen.trade.TradeType
+import com.unciv.logic.trade.Trade
+import com.unciv.logic.trade.TradeOffer
+import com.unciv.logic.trade.TradeType
 import com.unciv.models.ruleset.tile.ResourceSupplyList
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.ui.utils.extensions.toPercent

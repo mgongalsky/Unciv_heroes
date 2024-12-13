@@ -1,4 +1,4 @@
-package com.unciv.ui.heroscreen.trade
+package com.unciv.logic.trade
 
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import java.util.*

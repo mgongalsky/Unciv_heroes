@@ -2,8 +2,8 @@ package com.unciv.ui.trade
 
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.logic.civilization.CivilizationInfo
-import com.unciv.ui.heroscreen.trade.TradeLogic
-import com.unciv.ui.heroscreen.trade.TradeRequest
+import com.unciv.logic.trade.TradeLogic
+import com.unciv.logic.trade.TradeRequest
 import com.unciv.models.translations.tr
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.isEnabled
