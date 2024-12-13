@@ -3,9 +3,9 @@ package com.unciv.ui.worldscreen
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.logic.civilization.NotificationIcon
-import com.unciv.logic.trade.TradeLogic
-import com.unciv.logic.trade.TradeOffer
-import com.unciv.logic.trade.TradeType
+import com.unciv.ui.heroscreen.trade.TradeLogic
+import com.unciv.ui.heroscreen.trade.TradeOffer
+import com.unciv.ui.heroscreen.trade.TradeType
 import com.unciv.models.translations.tr
 import com.unciv.ui.popup.Popup
 import com.unciv.ui.trade.DiplomacyScreen
@@ -54,7 +54,7 @@ class TradePopup(worldScreen: WorldScreen): Popup(worldScreen){
         tradeOffersTable.add("Our trade offer".toLabel())
         tradeOffersTable.row()
 
-        fun getOfferText(offer:TradeOffer): String {
+        fun getOfferText(offer: TradeOffer): String {
             var tradeText = offer.getOfferText()
             if (offer.type == TradeType.Luxury_Resource || offer.type == TradeType.Strategic_Resource)
                 tradeText += "\n" + "Owned by you: [${ourResources[offer.name]}]".tr()

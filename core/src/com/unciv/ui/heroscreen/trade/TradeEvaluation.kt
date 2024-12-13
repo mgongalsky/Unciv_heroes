@@ -1,4 +1,4 @@
-package com.unciv.logic.trade
+package com.unciv.ui.heroscreen.trade
 
 import com.unciv.Constants
 import com.unciv.logic.automation.Automation

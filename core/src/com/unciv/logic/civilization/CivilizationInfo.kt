@@ -17,8 +17,8 @@ import com.unciv.logic.civilization.diplomacy.DiplomaticStatus
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.UnitMovementAlgorithms
-import com.unciv.logic.trade.TradeEvaluation
-import com.unciv.logic.trade.TradeRequest
+import com.unciv.ui.heroscreen.trade.TradeEvaluation
+import com.unciv.ui.heroscreen.trade.TradeRequest
 import com.unciv.models.Counter
 import com.unciv.models.ruleset.Building
 import com.unciv.models.ruleset.CityStateType

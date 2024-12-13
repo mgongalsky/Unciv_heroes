@@ -24,7 +24,7 @@ import com.unciv.logic.event.EventBus
 import com.unciv.logic.map.MapVisualization
 import com.unciv.logic.multiplayer.MultiplayerGameUpdated
 import com.unciv.logic.multiplayer.storage.FileStorageRateLimitReached
-import com.unciv.logic.trade.TradeEvaluation
+import com.unciv.ui.heroscreen.trade.TradeEvaluation
 import com.unciv.models.TutorialTrigger
 import com.unciv.models.ruleset.BeliefType
 import com.unciv.models.ruleset.tile.ResourceType
