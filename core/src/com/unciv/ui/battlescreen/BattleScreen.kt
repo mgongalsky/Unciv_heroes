@@ -43,49 +43,64 @@ import kotlin.coroutines.resume
 // Now it's just copied from HeroOverviewScreen
 // All coordinates are hex, not offset
 
-/** Screen for a battle. Visual routines are here, logic of the battle is in [BattleManager] class. Must not be used for AI duels. */
+/**
+ * Screen for a battle.
+ * This class handles the visual representation of the battle and user interactions.
+ * The battle logic itself is managed by the [BattleManager] class.
+ * Should not be used for AI duels as it includes player interaction logic.
+ */
 class BattleScreen(
     private var attackerHero: MapUnit,
     private var defenderHero: MapUnit,
     defaultPage: String = "",
     selection: String = ""
 ) : BaseScreen(), RecreateOnResize{
+    // BattleManager handles the battle logic for both armies
     private var manager = BattleManager(attackerHero.army, defenderHero.army)
 
-    // Array to store TroopArmyView or null for empty slots
+    // Arrays to store visual representations of troops for attackers and defenders
     private val attackerTroopViewsArray: Array<TroopBattleView?> =
             Array(attackerHero.army.getAllTroops().size ?: 0) { null }
     private val defenderTroopViewsArray: Array<TroopBattleView?> =
             Array(defenderHero.army.getAllTroops().size ?: 0) { null }
 
-    private val verboseTurn = false // Флаг для включения/выключения вербозинга хода
+    private val verboseTurn = false // Toggle for detailed logging of turns
 
-
-    // 50 normal button height + 2*10 topTable padding + 2 Separator + 2*5 centerTable padding
-    // Since a resize recreates this screen this should be fine as a val
+    // Constants for the center area and battlefield dimensions
     internal val centerAreaHeight = stage.height - 82f
-    internal val BFwidth : Int = 14
-    internal val BFheight : Int = 8
-    private val battleField : TileMap = TileMap(BFwidth, BFheight,  game.gameInfo!!.ruleSet, attackerHero.currentTile.baseTerrain)
+    internal val BFwidth: Int = 14
+    internal val BFheight: Int = 8
+
+    // TileMap represents the battlefield layout
+    private val battleField: TileMap = TileMap(
+        BFwidth, BFheight,
+        game.gameInfo!!.ruleSet, attackerHero.currentTile.baseTerrain
+    )
+
+    // Holds the mapping of tiles to their groups for visual representation
     val tileGroups = HashMap<TileInfo, List<TileGroup>>()
+
     private lateinit var tileGroupMap: TileGroupMap<TileGroup>
     private val allTileGroups = ArrayList<TileGroup>()
-    /** Position of a pointer to a currently active troop. */
-    lateinit var pointerPosition : Vector2
-    var pointerImages : ArrayList<Image>
-    var daTileGroups : List<TileGroup>
-    val cursorMove : Cursor
-    val cursorCancel : Cursor
-    val cursorShoot : Cursor
-    // val cursorQuestion : Cursor
-    var cursorAttack : ArrayList<Cursor> = ArrayList()
 
-    // Создаем изображение радуги
+    /** Position of a pointer to the currently active troop */
+    lateinit var pointerPosition: Vector2
+
+    // List of images for the pointer representation
+    var pointerImages: ArrayList<Image>
+    var daTileGroups: List<TileGroup>
+
+    // Different cursors for various actions
+    val cursorMove: Cursor
+    val cursorCancel: Cursor
+    val cursorShoot: Cursor
+    var cursorAttack: ArrayList<Cursor> = ArrayList()
+
+    // External images for visual effects (e.g., morale and luck indicators)
     val luckRainbowImage = ImageGetter.getExternalImage("LuckRainbow.png")
     val moraleImage = ImageGetter.getExternalImage("MoraleBird.png")
 
-
-    /** Handle for a table with a battlefield. Could be obsolete in future */
+    /** Container for the battlefield UI elements. Could be reworked in the future */
     private val tabbedPager: TabbedPager
 
     /** What to do if battlefield window is closing */
@@ -95,101 +110,90 @@ class BattleScreen(
     }
 
     init {
-
+        // Initialize the turn queue for the battle
         manager.initializeTurnQueue()
 
-        // Iterate through slots and create/update views
+        // Create visual representations for the attacker's troops
         attackerHero.army.getAllTroops()?.forEachIndexed { index, troop ->
-            if(troop != null) {
+            if (troop != null) {
                 troop.enterBattle(attackerHero.civInfo, index, attacker = true)
-                val troopView = TroopBattleView(troop, this) // Pass ArmyView for interaction
+                val troopView = TroopBattleView(troop, this) // Pass BattleScreen for interaction
                 attackerTroopViewsArray[index] = troopView // Save to array
-                //add(troopView).size(64f).pad(5f)
             }
         }
 
-        // Iterate through slots and create/update views
+        // Create visual representations for the defender's troops
         defenderHero.army.getAllTroops()?.forEachIndexed { index, troop ->
-            if(troop != null) {
+            if (troop != null) {
                 troop.enterBattle(defenderHero.civInfo, index, attacker = false)
-                val troopView = TroopBattleView(troop, this) // Pass ArmyView for interaction
+                val troopView = TroopBattleView(troop, this) // Pass BattleScreen for interaction
                 defenderTroopViewsArray[index] = troopView // Save to array
-                //add(troopView).size(64f).pad(5f)
             }
         }
 
+        // Load custom cursors for the battle actions
+        cursorMove = loadCursor("BattleMoveCursor128.png", 32, 64)
+        cursorShoot = loadCursor("BattleArrowCursor128.png", 64, 64)
+        cursorCancel = loadCursor("BattleCancelCursor64.png", 32, 32)
+        cursorAttack.add(loadCursor("BattleAttackCursor0.png", 64, 64))
+        cursorAttack.add(loadCursor("BattleAttackCursor1.png", 64, 16))
+        cursorAttack.add(loadCursor("BattleAttackCursor2.png", 64, 64))
+        cursorAttack.add(loadCursor("BattleAttackCursor3.png", 64, 64))
+        cursorAttack.add(loadCursor("BattleAttackCursor4.png", 64, 16))
+        cursorAttack.add(loadCursor("BattleAttackCursor5.png", 64, 64))
 
-        // Load cursor pixmaps
-        cursorMove = loadCursor("BattleMoveCursor128.png", 32,64)
-        cursorShoot = loadCursor("BattleArrowCursor128.png", 64,64)
-        cursorCancel = loadCursor("BattleCancelCursor64.png", 32,32)
-        //  cursorQuestion = loadCursor("BattleQuestionCursor128.png", 32,64)
-        cursorAttack.add(loadCursor("BattleAttackCursor0.png", 64,64))
-        cursorAttack.add(loadCursor("BattleAttackCursor1.png", 64,16))
-        cursorAttack.add(loadCursor("BattleAttackCursor2.png", 64,64))
-        cursorAttack.add(loadCursor("BattleAttackCursor3.png", 64,64))
-        cursorAttack.add(loadCursor("BattleAttackCursor4.png", 64,16))
-        cursorAttack.add(loadCursor("BattleAttackCursor5.png", 64,64))
-
-        // TODO: Cursors are fixed-sized, what is not really good
-
-        /*
-        val page =
-            if (defaultPage != "") {
-                game.settings.lastOverviewPage = defaultPage
-                defaultPage
-            }
-            else game.settings.lastOverviewPage
-        val iconSize = Constants.defaultFontSize.toFloat()
-        //battleField[1,1].
-        val terraLayer = ArrayList<Group>()
-        */
-
-        // shotcut for exiting the battle
+        // Shortcut for exiting the battle screen
         globalShortcuts.add(KeyCharAndCode.BACK) { shutdownScreen() }
 
-        // Loading all the assets into daTileGroups
+        // Initialize tile groups for the battlefield
         val tileSetStrings = TileSetStrings()
         daTileGroups = battleField.values.map { TileGroup(it, tileSetStrings) }
 
-        // Loading pixmap for the current troop pointer
+        // Load images for troop pointers
         val pointerString = "TileSets/FantasyHex/Highlight"
-        pointerImages =
-                ImageGetter.getLayeredImageColored(pointerString, Color.valueOf("#00AAFF77"))
+        pointerImages = ImageGetter.getLayeredImageColored(pointerString, Color.valueOf("#00AAFF77"))
 
-        // Routines with table containing battlefield. Copied.
+        // Set up the UI tabbed pager for the battlefield
         tabbedPager = TabbedPager(
             stage.width, stage.width,
             centerAreaHeight, centerAreaHeight,
-            separatorColor = Color.WHITE)
+            separatorColor = Color.WHITE
+        )
 
-        // Button for exiting the battle
-        tabbedPager.addClosePage {shutdownScreen()}
+        // Add a button for exiting the battle
+        tabbedPager.addClosePage { shutdownScreen() }
 
-        // Add net of tiles of battlefield
+        // Add the battlefield tiles
         addTiles()
 
+        // Add the tabbed pager to the stage
         stage.addActor(tabbedPager)
 
+        // Select the "Battle" tab as the default
         val index = tabbedPager.addPage(
             caption = "Battle",
             content = tileGroupMap
         )
         tabbedPager.selectPage(index)
 
+        // Update the tile shadows for the battlefield
         tabbedPager.setFillParent(true)
         updateTilesShadowing()
 
-        //coroutineScope{launch {
+        // Start the battle loop in a coroutine
         GlobalScope.launch {
             runBattleLoop()
         }
-        //shutdownScreen()
-    //}
-        //}
-
     }
 
+    /**
+     * Loads a custom cursor from a file.
+     *
+     * @param filename Name of the cursor image file.
+     * @param xHotspot X-coordinate of the cursor's hotspot.
+     * @param yHotspot Y-coordinate of the cursor's hotspot.
+     * @return A [Cursor] object for the specified image.
+     */
     fun loadCursor(filename: String, xHotspot: Int, yHotspot: Int) : Cursor{
 
         val texture = Texture("ExtraImages/" + filename)
@@ -199,23 +203,27 @@ class BattleScreen(
 
     }
 
-
+    /**
+     * The main battle loop. Runs until the battle ends.
+     */
     suspend fun runBattleLoop() = coroutineScope {
         while (manager.isBattleOn()) {
             val currentTroop = manager.getCurrentTroop()
             var isMorale = false
 
+            // Check if there are no more troops to process
             if (currentTroop == null) {
                 Gdx.app.postRunnable {
-                    shutdownScreen() // Закрываем экран в UI-потоке
+                    shutdownScreen() // Close the battle screen in the UI thread
                 }
-                return@coroutineScope // Немедленно выходим из корутины
+                return@coroutineScope // Exit coroutine
             }
 
             if (verboseTurn) {
                 println("Current troop: ${currentTroop.baseUnit.name} at position ${currentTroop.position}")
             }
 
+            // Handle player-controlled troops
             if (currentTroop.isPlayerControlled()) {
                 while (true) {
                     if (verboseTurn) println("Waiting for player action...")
@@ -234,6 +242,7 @@ class BattleScreen(
                     if (result.success) break
                 }
             } else {
+                // Handle AI-controlled troops
                 if (verboseTurn) println("AI is performing action for troop: ${currentTroop.baseUnit.name}")
 
                 val aiBattle = AIBattle(manager)
@@ -242,6 +251,7 @@ class BattleScreen(
                 handleBattleResult(result, currentTroop)
             }
 
+            // Advance the turn queue if morale doesn't grant an extra turn
             if (!isMorale) {
                 manager.advanceTurn()
                 if (verboseTurn) println("Turn advanced to next troop")
@@ -251,10 +261,17 @@ class BattleScreen(
             updateTilesShadowing()
         }
 
+        // Handle battle end
         println("Battle has ended!")
         // shutdownScreen()
     }
 
+    /**
+     * Processes the result of a battle action.
+     *
+     * @param result The result of the action.
+     * @param currentTroop The troop that performed the action.
+     */
     private fun handleBattleResult(
         result: BattleActionResult,
         currentTroop: TroopInfo
@@ -267,7 +284,7 @@ class BattleScreen(
 
             val targetTileGroup = daTileGroups.firstOrNull(){it.tileInfo.position == currentTroop.position}
 
-
+            // Handle specific action types
             when (result.actionType) {
                 ActionType.ATTACK -> {
                     if (result.isLuck) {
@@ -324,6 +341,7 @@ class BattleScreen(
                 }
             }
 
+            // Handle end of the battle
             if (result.battleEnded) {
                 if (verboseTurn) println("Battle finished after action ${result.actionType}. Closing screen.")
                 Gdx.app.postRunnable {
@@ -357,8 +375,8 @@ class BattleScreen(
 
 
     /**
-     * Обновляет массивы attackerTroopViewsArray и defenderTroopViewsArray
-     * на основе текущего состояния армии в менеджере.
+     * Refreshes the arrays of troop views for both attackers and defenders
+     * based on the current state of the armies in the manager.
      */
     fun refreshTroopViews() {
         Gdx.app.postRunnable {
@@ -386,29 +404,6 @@ class BattleScreen(
             }
         }
 
-        /*
-        // Обновляем массивы для защищающейся армии
-        manager.getDefenderArmy().getAllTroops().forEachIndexed { index, troop ->
-            if (troop == null) {
-                // Удаляем вью для уничтоженного отряда
-                defenderTroopViewsArray[index]?.perish()
-                defenderTroopViewsArray[index] = null
-            } else {
-                // Если вью уже существует, обновляем его параметры
-                val existingView = defenderTroopViewsArray[index]
-                if (existingView != null) {
-                    existingView.updateStats()
-                } else {
-                    println("View for defender troop does not exist")
-                    // Если вью отсутствует, создаем новое
-                    //defenderTroopViewsArray[index] = TroopBattleView(troop, this)
-                    //val troopTileGroup = daTileGroups.firstOrNull { it.tileInfo.position == troop.position }
-                    //troopTileGroup?.let { defenderTroopViewsArray[index]?.draw(it, attacker = false) }
-                }
-            }
-        }
-
-         */
     }
 
     /**
@@ -435,7 +430,11 @@ class BattleScreen(
         return null // Not found
     }
 
-
+    /**
+     * Waits for the player's action input.
+     *
+     * @return A pair of BattleActionRequest and TileGroup representing the action and its target.
+     */
     suspend fun waitForPlayerAction(): Pair<BattleActionRequest, TileGroup> {
         return suspendCancellableCoroutine { continuation ->
             onPlayerActionReceived = { actionAndTileGroup ->
@@ -448,39 +447,13 @@ class BattleScreen(
         }
     }
 
-
-    fun handlePlayerMove(tileGroup: TileGroup) {
-        // Получаем текущий TroopBattleView
-        val currentTroopView = getCurrentTroopView()
-
-        if (currentTroopView == null) {
-            println("Error: Current troop's view not found!")
-            return
-        }
-
-        // Определяем целевую позицию
-        val targetPosition = tileGroup.tileInfo.position
-
-        // Создаем запрос на действие
-        val actionRequest = BattleActionRequest(
-            troop = currentTroopView.getTroopInfo(),
-            targetPosition = targetPosition,
-            actionType = ActionType.MOVE
-        )
-
-        // Передаем действие в callback (корутину, которая ждёт действия)
-        onPlayerActionReceived?.invoke(Pair(actionRequest, tileGroup))
-    }
-
-
     private var onPlayerActionReceived: ((Pair<BattleActionRequest, TileGroup>) -> Unit)? = null
 
-
-    fun moveTroopView(troopView: TroopBattleView, targetTileGroup: TileGroup) {
-        troopView.updatePosition(targetTileGroup = targetTileGroup) // Обновить внутреннюю позицию и представление
-    }
-
-
+    /**
+     * Handles player move action to a specified tile group.
+     *
+     * @param tileGroup The target tile group.
+     */
     private fun handleActionError(errorId: ErrorId?) {
         when (errorId) {
             ErrorId.TOO_FAR -> showError("Target is too far away!")
@@ -491,6 +464,11 @@ class BattleScreen(
         }
     }
 
+    /**
+     * Displays an error message to the user.
+     *
+     * @param message The error message to display.
+     */
     private fun showError(message: String) {
         // Простое сообщение в консоль для отладки
         println("Error: $message")
@@ -519,7 +497,9 @@ class BattleScreen(
 
 
 
-    /** Draw a pointer to a currently active troop. */
+    /**
+     * Draws a pointer to the currently active troop.
+     */
     fun draw_pointer() {
         // Find a tileGroup with specified pointer position
         val pointerTile = daTileGroups.firstOrNull { it.tileInfo.position == pointerPosition }
@@ -563,7 +543,10 @@ class BattleScreen(
         //       achievableHex.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
         //  }
     }
-    /** creating a rectangular array of battlefield tiles */
+
+    /**
+     * Adds tiles to create a rectangular array of battlefield tiles.
+     */
     fun addTiles(){
 
         tileGroupMap = TileGroupMap(daTileGroups)
@@ -587,30 +570,6 @@ class BattleScreen(
         }
 
 
-        //  manager.attackingTroops.forEach { troop ->
-      //      var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
-     //       troop.drawOnBattle(troopTile, attacker = true)
-     //   }
-
-
-        /*
-        // Draw defending troops
-        manager.defendingTroops.forEach { troop ->
-            var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
-            troop.drawOnBattle(troopTile, attacker = false)
-        }
-
-        // Draw attacking troops
-        manager.attackingTroops.forEach { troop ->
-            var troopTile = daTileGroups.first { it.tileInfo.position == troop.position }
-            troop.drawOnBattle(troopTile, attacker = true)
-        }
-
-        // Draw a pointer to currently active troop
-        pointerPosition = manager.sequence.first().position
-        draw_pointer
-
-         */
 
         // Set pointer to first troop
         val currentTroop = manager.getCurrentTroop()
@@ -715,6 +674,13 @@ class BattleScreen(
 
     }
 
+    /**
+     * Handles tile click events.
+     *
+     * @param tileGroup The clicked tile group.
+     * @param x The x-coordinate of the click within the tile group.
+     * @param y The y-coordinate of the click within the tile group.
+     */
     private fun handleTileClick(tileGroup: TileGroup, x: Float, y: Float) {
         if (onPlayerActionReceived == null) {
             println("Player action is not expected at the moment.")
@@ -771,14 +737,20 @@ class BattleScreen(
         }
     }
 
-
+    /**
+     * Returns the current troop view based on the troop in the manager's queue.
+     *
+     * @return The view for the current troop, or null if not found.
+     */
     fun getCurrentTroopView(): TroopBattleView? {
         val currentTroop = manager.getCurrentTroop()
         return attackerTroopViewsArray.find { it?.getTroopInfo() == currentTroop }
             ?: defenderTroopViewsArray.find { it?.getTroopInfo() == currentTroop }
     }
 
-
+    /**
+     * Updates tile shadowing based on the achievable positions for the current troop.
+     */
     private fun updateTilesShadowing(){
         val currentTroop = getCurrentTroopView() ?: return
         // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
@@ -792,6 +764,9 @@ class BattleScreen(
         }
     }
 
+    /**
+     * Moves the pointer to the next troop in the turn queue.
+     */
     fun movePointerToNextTroop() {
         val currentTroop = manager.getCurrentTroop()
         if (currentTroop != null){
@@ -801,6 +776,11 @@ class BattleScreen(
             println("Queue is empty, nowhere to put pointer")
     }
 
+    /**
+     * Displays a morale bird animation above the specified troop view.
+     *
+     * @param troopView The view of the troop to display the morale bird for.
+     */
     fun showMoraleBird(troopView: TroopBattleView) {
         val troopGroup = troopView.getCurrentGroup()
 
@@ -844,7 +824,11 @@ class BattleScreen(
         troopGroup.addActor(moraleImage)
     }
 
-
+    /**
+     * Displays a luck rainbow animation above the specified troop view.
+     *
+     * @param troopView The view of the troop to display the luck rainbow for.
+     */
     fun showLuckRainbow(troopView: TroopBattleView) {
         val troopGroup = troopView.getCurrentGroup()
 
@@ -897,127 +881,18 @@ class BattleScreen(
         troopGroup.addActor(luckRainbowImage)
     }
 
-    /** Routing for mouse clicking a certian tile. */
-    private fun tileGroupOnClick(tileGroup: TileGroup, x: Float, y: Float)
-    {
-        val targetHex = tileGroup.tileInfo.position
-        /*
-        // If current troop can shoot:
-        if(manager.currentTroop.baseUnit.rangedStrength != 0 &&
-                manager.isTroopOnHex(targetHex) &&
-                targetHex != manager.currentTroop.position &&
-                manager.getTroopOnHex(targetHex).civInfo != manager.currentTroop.civInfo
-        ){
-            manager.attack(manager.getTroopOnHex(targetHex))
-            // We need to check that we didn't kill the troop and it still exists
-            refreshTargetTroop(targetHex)
-
-            // After a shoot we turn to next troop and redraw the pointer
-            tileGroup.update()
-            manager.nextTurn()
-
-            //movePointerToNextTroop()
-            return
-        }
-
-        // for non-shooting troops:
-        var hexToMove = Vector2(0f,0f)
-        if(manager.isTroopOnHex(targetHex)) {
-            if (manager.getTroopOnHex(targetHex).civInfo != manager.currentTroop.civInfo) {
-
-                if (manager.isHexAchievable(targetHex)) {
-                    // Determine the direction depending in which part of target hex mouse cursor is located
-                    val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
-                    // TODO: remove code dubbing
-                    // Specify the hex, where we have intention to go
-                    hexToMove = HexMath.oneStepTowards(targetHex, direction)
-                    if(!manager.isHexOnBattleField(hexToMove))
-                        return
-
-                    // We need to check several things:
-                    if ((!manager.isTroopOnHex(hexToMove) || // Hex to move is free
-                                    hexToMove == manager.currentTroop.position) && // that is not the same hex where we are
-                            manager.isHexAchievable(hexToMove))  // hex is achievable
-                    {
-                        // Attack target
-                        manager.attack(targetHex)
-                        // Redraw the label with amount of units in the targeted troop
-                        redrawMovedTroop(targetHex, hexToMove)
-
-                        // Move current troop and redraw the pointer
-                        manager.moveCurrentTroop(hexToMove)
-
-                        //movePointerToNextTroop()
-                    }
-                }
-            }
-            return
-
-        }
-
-        if(!manager.isHexAchievable(targetHex))
-            return
-        // hexCoordsLabel is used for debug only and shows various coordinates and parameters
-        manager.currentTroop.apply {
-            this.troopGroup.findActor<Label>("hexCoordsLabel")?.setText(
-                targetHex.x.toString() + ", " + targetHex.y.toString() + "\r\n" +
-                        targetHex.x.toString() + ", " + targetHex.y.toString() + "\r\n" +
-                        HexMath.getDistance(targetHex, Vector2(0f,0f)).toString()
-            )
-
-        }
-
-        tileGroup.addActor(manager.currentTroop.troopGroup)
-        tileGroup.update()
-
-        // Move to next troop and redraw the pointer
-        manager.moveCurrentTroop(targetHex)
-        //movePointerToNextTroop()
-
-         */
-    }
-
     fun refreshTargetTroop(targetHex: Vector2) {
 
-/*
-        if (manager.isTroopOnHex(targetHex))
-            manager.getTroopOnHex(targetHex).apply {
-                this.troopGroup.findActor<Label>("amountLabel")
-                    ?.setText(currentAmount.toString())
-            }
-
-        tileGroups[battleField[targetHex]]?.first { it.isTouchable }?.apply {
-            this.update()
-        }
-
- */
     }
 
-    //fun
-    fun redrawMovedTroop(targetHex: Vector2, hexToMove: Vector2) {
-
-        /*
-        val tileGroup = tileGroups[battleField[targetHex]]?.first { it.isTouchable }!!
-        manager.currentTroop.apply {
-            this.troopGroup.findActor<Label>("amountLabel")
-                ?.setText(currentAmount.toString())
-        }
-        if (manager.isTroopOnHex(targetHex))
-            manager.getTroopOnHex(targetHex).apply {
-                this.troopGroup.findActor<Label>("amountLabel")
-                    ?.setText(currentAmount.toString())
-            }
-
-        tileGroups[battleField[hexToMove]]?.first { it.isTouchable }?.apply {
-            this.addActor(manager.currentTroop.troopGroup)
-            this.update()
-        }
-        tileGroup.update()
-
-         */
-    }
-
-    /** Routing for choose appropriate mouse cursor: for movement, attack, shooting and info. In other cases "cancel" cursor is shown */
+    /**
+     * Selects the appropriate crosshair cursor based on the tile state.
+     *
+     * @param tileGroup The tile group the pointer is hovering over.
+     * @param x The x-coordinate of the pointer relative to the tile.
+     * @param y The y-coordinate of the pointer relative to the tile.
+     * @param width The width of the hexagon tile.
+     */
     fun chooseCrosshair(tileGroup:TileGroup, x: Float, y: Float, width: Float)
     {
 
@@ -1061,7 +936,14 @@ class BattleScreen(
 
     }
 
-    /** Determine direction of the supposed attack by position of the mouse pointer */
+    /**
+     * Determines the direction of the attack based on the mouse pointer position.
+     *
+     * @param x The x-coordinate of the pointer relative to the tile.
+     * @param y The y-coordinate of the pointer relative to the tile.
+     * @param width The width of the hexagon tile.
+     * @return The direction of the attack.
+     */
     fun pixelToDirection(x: Float, y: Float, width: Float): Direction{
         // width of the hex
 
@@ -1100,10 +982,19 @@ class BattleScreen(
         return Direction.DirError
 
     }
+
+     /**
+     * Resumes the screen. Used to replace the current screen after recreation.
+     */
     override fun resume() {
         game.replaceCurrentScreen(recreate())
     }
 
+    /**
+     * Recreates the screen instance.
+     *
+     * @return A new instance of [BattleScreen].
+     */
     override fun recreate(): BaseScreen {
         return BattleScreen(attackerHero, defenderHero)
     }
@@ -1111,18 +1002,14 @@ class BattleScreen(
     fun resizePage(tab: EmpireOverviewTab) {
     }
 
+    /**
+     * Shuts down the battle screen and performs cleanup.
+     * Ensures the default system cursor is restored and the game screen stack is updated.
+     */
     private fun shutdownScreen()
     {
         // Change cursor to arrow, default for map view.
         Gdx.graphics.setSystemCursor(SystemCursor.Arrow)
-        // Take into account that this function can be called from BattleManager. In that case we need just to close screen.
-        /*
-        if(!calledFromManager)
-            manager.finishBattle()
-        else
-            game.popScreen()
-
-         */
         game.popScreen()
 
     }
