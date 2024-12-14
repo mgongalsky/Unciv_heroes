@@ -30,8 +30,8 @@ class SplitTroopPopup(
         if (sourceTroopView.troopInfo == null) {
             remove() // Close the popup if there is no troop info
         } else {
-            val sourceCount = sourceTroopView.troopInfo.currentAmount
-            val targetCount = if (targetTroopView.isEmptySlot()) 0 else targetTroopView.troopInfo?.currentAmount ?: 0
+            val sourceCount = sourceTroopView.troopInfo.amount
+            val targetCount = if (targetTroopView.isEmptySlot()) 0 else targetTroopView.troopInfo?.amount ?: 0
             val totalCount = sourceCount + targetCount
 
             // Set the minimum size of the popup

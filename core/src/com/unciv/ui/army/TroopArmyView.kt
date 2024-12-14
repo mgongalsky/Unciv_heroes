@@ -142,7 +142,7 @@ class TroopArmyView(
         if(!avatarOnly) {
             if (troopInfo != null) {
                 // Create and add a label showing the troop's current amount
-                val amountText = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
+                val amountText = Label(troopInfo.amount.toString(), BaseScreen.skin).apply {
                     setAlignment(Align.right) // Align text to the right
                     scaleBy(0.5f)
                     moveBy(backgroundImage.width * 0.95f, 0.5f)

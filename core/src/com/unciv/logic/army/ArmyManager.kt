@@ -71,7 +71,7 @@ class ArmyManager(
 
         if (combine && firstTroop != null && secondTroop != null && firstTroop.unitName == secondTroop.unitName) {
             // Combine troops if they are of the same type and combining is enabled
-            secondTroop.currentAmount += firstTroop.currentAmount
+            secondTroop.amount += firstTroop.amount
             firstArmy.removeTroopAt(firstIndex)
             return true
         } else {
@@ -111,15 +111,15 @@ class ArmyManager(
         val sourceTroop = sourceArmy.getTroopAt(sourceIndex) ?: return false
 
         // Validate the final count for the first troop
-        if (finalFirstTroopCount < 0 || finalFirstTroopCount >= sourceTroop.currentAmount) return false
+        if (finalFirstTroopCount < 0 || finalFirstTroopCount >= sourceTroop.amount) return false
 
         val targetTroop = targetArmy.getTroopAt(targetIndex)
-        val splitAmount = sourceTroop.currentAmount - finalFirstTroopCount
+        val splitAmount = sourceTroop.amount - finalFirstTroopCount
 
         // Check if the target slot is empty or contains the same type of troop
         if (targetTroop == null) {
             // Update the source troop count
-            sourceTroop.currentAmount = finalFirstTroopCount
+            sourceTroop.amount = finalFirstTroopCount
             sourceArmy.setTroopAt(sourceIndex, sourceTroop)
 
             // Create a new troop in the target slot
@@ -127,9 +127,9 @@ class ArmyManager(
 
         } else if (targetTroop.unitName == sourceTroop.unitName) {
             // Combine with an existing troop in the target slot
-            targetTroop.currentAmount += splitAmount
-            sourceTroop.currentAmount = finalFirstTroopCount
-            if (sourceTroop.currentAmount == 0) {
+            targetTroop.amount += splitAmount
+            sourceTroop.amount = finalFirstTroopCount
+            if (sourceTroop.amount == 0) {
                 sourceArmy.removeTroopAt(sourceIndex)
             }
         } else {

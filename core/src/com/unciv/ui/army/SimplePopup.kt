@@ -30,7 +30,7 @@ class SimplePopup(
             closePopup()
         } else {
 
-            val totalValue = troopView.troopInfo.currentAmount // Общее количество юнитов в отряде
+            val totalValue = troopView.troopInfo.amount // Общее количество юнитов в отряде
             var leftValue = totalValue // Изначально все юниты слева
             var rightValue = 0 // Изначально справа ничего
 
