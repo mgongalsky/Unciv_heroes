@@ -12,6 +12,7 @@ import com.unciv.logic.map.MapUnit
  * where each slot can hold a [TroopInfo] or be empty (null).
  */
 class ArmyInfo(
+    @Transient
     var civInfo: CivilizationInfo = CivilizationInfo(),
     val maxSlots: Int = DEFAULT_ARMY_SIZE
 ) : IsPartOfGameInfoSerialization, Json.Serializable {
@@ -32,6 +33,13 @@ class ArmyInfo(
 
     // Конструктор без аргументов
     constructor() : this(CivilizationInfo(), DEFAULT_ARMY_SIZE)
+
+
+    fun setTransients(civInfo0: CivilizationInfo){
+
+        civInfo = civInfo0
+        slots.forEach { if(it != null) it.setTransients(civInfo) }
+    }
 
     /** Initializes troops in slots from a list of pairs (name, count) */
     private fun initializeTroops(troops: Array<out Pair<String, Int>>) {
@@ -167,11 +175,14 @@ class ArmyInfo(
     }
 
     override fun read(json: Json, jsonData: JsonValue) {
-        //civInfo = json.readValue(CivilizationInfo::class.java, jsonData.get("civInfo"))
         val slotArray = jsonData.get("slots")
         for (i in 0 until maxSlots) {
             val troopData = slotArray.get(i)
-            slots[i] = if (troopData != null) json.readValue(TroopInfo::class.java, troopData) else null
+            slots[i] = if (troopData != null && troopData.has("amount")) {
+                json.readValue(TroopInfo::class.java, troopData)
+            } else {
+                null // Оставляем слот пустым, если данные некорректны
+            }
         }
     }
 

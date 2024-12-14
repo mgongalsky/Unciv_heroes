@@ -66,15 +66,15 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     companion object {
         /** The current compatibility version of [GameInfo]. This number is incremented whenever changes are made to the save file structure that guarantee that
          * previous versions of the game will not be able to load or play a game normally. */
-        const val CURRENT_COMPATIBILITY_NUMBER = 3
+        const val CURRENT_COMPATIBILITY_NUMBER = 4
 
         val CURRENT_COMPATIBILITY_VERSION = CompatibilityVersion(CURRENT_COMPATIBILITY_NUMBER, UncivGame.VERSION)
 
         /** This is the version just before this field was introduced, i.e. all saves without any version will be from this version */
-        val FIRST_WITHOUT = CompatibilityVersion(1, Version("4.1.14", 731))
-     //   val FIRST_WITHOUT = CompatibilityVersion(1, Version("4.3.12", 782))
+       // val FIRST_WITHOUT = CompatibilityVersion(1, Version("4.1.14", 731))
+        val FIRST_WITHOUT = CompatibilityVersion(1, Version("4.3.12", 782))
 
-      //  val VERSION = Version("4.3.12", 782)
+        val VERSION = Version("4.3.12", 782)
 
         var monsterRuleset = Ruleset()
     }

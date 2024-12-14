@@ -31,9 +31,11 @@ class TroopInfo (
     lateinit var baseUnit: BaseUnit // = ruleset.units[unitName]!!
 
     /** Current amount of units and health, which can be changed during the battle. We need it for resurrection. */
+    @Transient
     var currentHealth = 0
     //baseUnit.health
 
+    @Transient
     var currentAmount = amount
     // This is in offset coordinates:
     /** Position of a troop in hex coordinates */
@@ -53,6 +55,13 @@ class TroopInfo (
         //    throw IllegalArgumentException("Amount and unitName must not be null")
 
        // }
+    }
+
+    fun setTransients(civInfo0: CivilizationInfo){
+        civInfo = civInfo0
+        baseUnit = ruleset.units[unitName]!!
+        currentAmount = amount
+        currentHealth = baseUnit.health
     }
 
     /**
