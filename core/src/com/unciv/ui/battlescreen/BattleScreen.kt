@@ -262,6 +262,7 @@ class BattleScreen(
         }
 
         // Handle battle end
+        manager.finishBattle()
         println("Battle has ended!")
         // shutdownScreen()
     }
@@ -347,6 +348,7 @@ class BattleScreen(
                 Gdx.app.postRunnable {
                     shutdownScreen() // Закрываем экран в UI-потоке
                 }
+                manager.finishBattle()
                 val battleResult = manager.getBattleResult()
                 if (battleResult == null){
                     println("Bug with battle result.")

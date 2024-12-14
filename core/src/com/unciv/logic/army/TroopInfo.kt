@@ -136,4 +136,9 @@ class TroopInfo (
         currentAmount = amount
 
     }
+
+    fun finishBattle(){
+        amount = currentAmount
+        currentHealth = baseUnit.health
+    }
 }

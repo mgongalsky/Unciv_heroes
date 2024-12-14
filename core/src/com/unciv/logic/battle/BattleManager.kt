@@ -76,8 +76,10 @@ class BattleManager(
      * Finishes the battle and cleans up resources or state.
      * Placeholder for additional logic.
      */
-    private fun finishBattle() {
+    fun finishBattle() {
         // Add logic to clean up battle state or notify the screen to close.
+        attackerArmy.finishBattle()
+        defenderArmy.finishBattle()
     }
 
     /**

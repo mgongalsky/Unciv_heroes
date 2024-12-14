@@ -186,6 +186,11 @@ class ArmyInfo(
         }
     }
 
+
+    fun finishBattle(){
+
+        slots.forEach { if(it != null) it.finishBattle() }
+    }
     /**
      * Creates a deep copy of the current slots array.
      * Each [TroopInfo] object is also deeply copied.
