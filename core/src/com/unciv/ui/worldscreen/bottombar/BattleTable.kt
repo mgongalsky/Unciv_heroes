@@ -68,6 +68,8 @@ class BattleTable(val worldScreen: WorldScreen): Table() {
                 ?: return hide() // no selected tile
             simulateAirsweep(attacker, selectedTile)
         } else {
+
+            // Here is handling of normal battle (not nukes or air strike)
             val defender = tryGetDefender() ?: return hide()
             if (attacker is CityCombatant && defender is CityCombatant) return hide()
             simulateBattle(attacker, defender)
@@ -95,23 +97,79 @@ class BattleTable(val worldScreen: WorldScreen): Table() {
     }
 
     private fun tryGetDefenderAtTile(selectedTile: TileInfo, includeFriendly: Boolean): ICombatant? {
+        val verbose_protectedTiles = true // Enable verbose logging for debugging
+
         val attackerCiv = worldScreen.viewingCiv
-        val defender: ICombatant? = Battle.getMapCombatantOfTile(selectedTile)
+        var defender: ICombatant? = Battle.getMapCombatantOfTile(selectedTile)
 
-        if (defender == null || (!includeFriendly && defender.getCivInfo() == attackerCiv))
-            return null  // no enemy combatant in tile
+        // Log the current state of the selected tile
+        if (verbose_protectedTiles) {
+            println(
+                "Checking defender at tile: ${selectedTile.position}. " +
+                        "IsProtected=${selectedTile.isProtected}, Protecters=${selectedTile.protecters.map { it.name }}"
+            )
+        }
 
-        val canSeeDefender =
-            if (UncivGame.Current.viewEntireMapForDebug) true
-            else {
-                when {
-                    defender.isInvisible(attackerCiv) -> attackerCiv.viewableInvisibleUnitsTiles.contains(selectedTile)
-                    defender.isCity() -> attackerCiv.hasExplored(selectedTile)
-                    else -> attackerCiv.viewableTiles.contains(selectedTile)
-                }
+        // If there is no direct defender, check if the tile is protected
+        if (defender == null && selectedTile.isProtected) {
+            if (verbose_protectedTiles) {
+                println("Tile is protected. Checking protectors...")
             }
 
-        if (!canSeeDefender) return null
+            // Find the first enemy protector of the tile
+            val firstEnemyProtector = selectedTile.protecters.firstOrNull { protector ->
+                if (verbose_protectedTiles) {
+                    println(
+                        "Checking protector: ${protector.name}, " +
+                                "CurrentTile=${protector.currentTile.position}, " +
+                                "IsAtWar=${protector.civInfo.isAtWarWith(attackerCiv)}"
+                    )
+                }
+                protector.civInfo.isAtWarWith(attackerCiv)
+            }
+
+            if (firstEnemyProtector != null) {
+                if (verbose_protectedTiles) {
+                    println(
+                        "Found enemy protector: ${firstEnemyProtector.name} at ${firstEnemyProtector.currentTile.position}"
+                    )
+                }
+                defender = MapUnitCombatant(firstEnemyProtector)
+            } else if (verbose_protectedTiles) {
+                println("No enemy protectors found for this tile.")
+            }
+        }
+
+        // If no defender or the defender is friendly and `includeFriendly` is false, return null
+        if (defender == null || (!includeFriendly && defender.getCivInfo() == attackerCiv)) {
+            if (verbose_protectedTiles) {
+                println("No valid defender found for tile: ${selectedTile.position}")
+            }
+            return null
+        }
+
+        // Check if the defender is visible to the attacker
+        val canSeeDefender =
+                if (UncivGame.Current.viewEntireMapForDebug) {
+                    true
+                } else {
+                    when {
+                        defender.isInvisible(attackerCiv) -> attackerCiv.viewableInvisibleUnitsTiles.contains(selectedTile)
+                        defender.isCity() -> attackerCiv.hasExplored(selectedTile)
+                        else -> attackerCiv.viewableTiles.contains(selectedTile)
+                    }
+                }
+
+        if (!canSeeDefender) {
+            if (verbose_protectedTiles) {
+                println("Defender at tile ${selectedTile.position} is not visible.")
+            }
+            return null
+        }
+
+        if (verbose_protectedTiles) {
+            println("Defender found and visible: ${defender.getName()} at tile: ${selectedTile.position}")
+        }
 
         return defender
     }

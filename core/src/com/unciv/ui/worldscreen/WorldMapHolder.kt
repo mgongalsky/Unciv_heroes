@@ -180,6 +180,31 @@ class WorldMapHolder(
         selectedTile = tileInfo
         unitMovementPaths.clear()
 
+        /*
+        // Проверка защищенности тайла
+        if (tileInfo.isProtected) {
+            val firstEnemyProtecter = tileInfo.protecters.firstOrNull {
+                it.civInfo.isAtWarWith(worldScreen.viewingCiv)
+            }
+            if (firstEnemyProtecter != null) {
+                val unit = worldScreen.bottomUnitTable.selectedUnit
+                if (unit != null) {
+                    // Предложение атаки
+                    worldScreen.showDialog(
+                        "This tile is protected by [${firstEnemyProtecter.displayName()}]. Attack?",
+                        listOf("Yes", "No")
+                    ) { choice ->
+                        if (choice == "Yes") {
+                            tryAttackNearbyEnemy(unit, stayOnTile = true)
+                        }
+                    }
+                }
+                return
+            }
+        }
+
+         */
+
         val unitTable = worldScreen.bottomUnitTable
         val previousSelectedUnits = unitTable.selectedUnits.toList() // create copy
         val previousSelectedCity = unitTable.selectedCity

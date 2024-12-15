@@ -3,6 +3,7 @@ package com.unciv.logic.map
 import com.badlogic.gdx.math.Vector2
 import com.unciv.Constants
 import com.unciv.UncivGame
+import com.unciv.logic.HexMath
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.automation.unit.UnitAutomation
@@ -231,6 +232,9 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     var amount: Int = 0
     //var mapUnitName: String = ""
 
+    @Transient
+    var protectedTiles = mutableListOf<TileInfo>()
+
     constructor(amount: Int, name: String, tileInfo: TileInfo) : this(amount, name) {
 
         currentTile = tileInfo
@@ -316,6 +320,36 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         override fun toString() = "${this::class.simpleName}($position, $type)"
     }
 
+    fun refreshProtectedTiles() {
+        // Проверяем, проинициализирован ли currentTile
+        if (!::currentTile.isInitialized) return
+
+        // Очистка списка защищаемых тайлов
+        for (tile in protectedTiles) {
+            tile.isProtected = false
+            tile.protecters.remove(this)
+        }
+        protectedTiles.clear()
+
+        // Получаем текущий тайл и соседние
+        val newProtectedTiles = listOf(currentTile) + currentTile.neighbors
+
+        for (tile in newProtectedTiles) {
+            tile.isProtected = true
+            tile.protecters.add(this)
+            protectedTiles.add(tile)
+        }
+    }
+
+    fun removeProtectedTiles() {
+        for (tile in protectedTiles) {
+            tile.isProtected = false
+            tile.protecters.remove(this)
+        }
+        protectedTiles.clear()
+    }
+
+
     /** Deep clone an ArrayList of [UnitMovementMemory]s. */
     private fun ArrayList<UnitMovementMemory>.copy() = ArrayList(this.map { it.clone() })
 
@@ -352,6 +386,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         toReturn.currentMovement = currentMovement
         toReturn.heroAttackSkill = heroAttackSkill
         toReturn.heroDefenseSkill = heroDefenseSkill
+        toReturn.protectedTiles = protectedTiles
         toReturn.army = army
         toReturn.id = id
         toReturn.health = health
@@ -796,6 +831,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
         updateUniques(ruleset)
         army.setTransients(civInfo)
+        refreshProtectedTiles()
     }
 
     fun addExtraMovementPoints (amount: Float){
@@ -1076,6 +1112,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     }
 
     fun destroy(destroyTransportedUnit: Boolean = true) {
+        removeProtectedTiles()
         val currentPosition = Vector2(getTile().position)
         civInfo.attacksSinceTurnStart.addAll(
             attacksSinceTurnStart.asSequence()
@@ -1137,7 +1174,10 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         )
     }
 
-    fun removeFromTile() = currentTile.removeUnit(this)
+    fun removeFromTile() {
+        removeProtectedTiles()
+        currentTile.removeUnit(this)
+    }
 
     /** Triggers visit function of specific [tile], if it has [Visitable]*/
     fun visitPlace(tile: TileInfo) {
@@ -1179,6 +1219,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
             promotions.addPromotion(promotion, true)
         }
 
+        refreshProtectedTiles()
         updateVisibleTiles()
     }
 
