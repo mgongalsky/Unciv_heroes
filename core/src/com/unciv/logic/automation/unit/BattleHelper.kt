@@ -15,13 +15,15 @@ object BattleHelper {
 
     fun tryAttackNearbyEnemy(unit: MapUnit, stayOnTile: Boolean = false): Boolean {
         if (unit.hasUnique(UniqueType.CannotAttack)) return false
-        val attackableEnemies = getAttackableEnemies(unit, unit.movement.getDistanceToTiles(), stayOnTile=stayOnTile)
+        val attackableEnemies = getAttackableEnemies(unit, unit.movement.getDistanceToTiles(), stayOnTile = stayOnTile)
             // Only take enemies we can fight without dying
             .filter {
-                BattleDamage.calculateDamageToAttacker(
-                    MapUnitCombatant(unit),
-                    Battle.getMapCombatantOfTile(it.tileToAttack)!!
-                ) + unit.getDamageFromTerrain(it.tileToAttackFrom) < unit.health
+                val combatant = Battle.getMapCombatantOfTile(it.tileToAttack)
+                combatant != null && // Exclude null combatants
+                        BattleDamage.calculateDamageToAttacker(
+                            MapUnitCombatant(unit),
+                            combatant
+                        ) + unit.getDamageFromTerrain(it.tileToAttackFrom) < unit.health
             }
 
         val enemyTileToAttack = chooseAttackTarget(unit, attackableEnemies)
@@ -32,8 +34,6 @@ object BattleHelper {
         return unit.currentMovement == 0f
     }
 
-    // TODO: rewrite BattleHelper.kt getAttackableEnemies, include those who are not currently visible.
-    //  Otherwise it's not possible to fight with them if you could not see them before.
     fun getAttackableEnemies(
         unit: MapUnit,
         unitDistanceToTiles: PathsToTilesWithinTurn,
@@ -83,7 +83,7 @@ object BattleHelper {
                     movementLeft
                 )
                 else if (tile in tilesWithoutEnemies) continue // avoid checking the same empty tile multiple times
-                else if (checkTile(unit, tile, tilesToCheck)) {
+                else if (checkTile(unit, tile, tilesToCheck) || tile.hasEnemyProtector(unit.civInfo)) {
                     tilesWithEnemies += tile
                     attackableTiles += AttackableTile(reachableTile, tile, movementLeft)
                 } else if (unit.isPreparingAirSweep()){
