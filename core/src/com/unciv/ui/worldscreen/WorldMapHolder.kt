@@ -170,102 +170,105 @@ class WorldMapHolder(
         layout() // Fit the scroll pane to the contents - otherwise, setScroll won't work!
     }
 
+    /**
+     * Handles the logic when a tile on the map is clicked.
+     * This function manages unit selection, tile overlays, movement, and interactions based on the tile clicked.
+     *
+     * @param tileInfo The tile that was clicked.
+     */
     fun onTileClicked(tileInfo: TileInfo) {
 
+        // If the tile is not explored and all its neighbors are unexplored, ignore the click.
         if (!worldScreen.viewingCiv.hasExplored(tileInfo)
                 && tileInfo.neighbors.all { worldScreen.viewingCiv.hasExplored(it) })
-            return // This tile doesn't exist for you
+            return // This tile doesn't exist for the player's perspective.
 
+        // Clear any existing unit action overlays and reset the selected tile.
         removeUnitActionOverlay()
         selectedTile = tileInfo
         unitMovementPaths.clear()
 
-        /*
-        // Проверка защищенности тайла
-        if (tileInfo.isProtected) {
-            val firstEnemyProtecter = tileInfo.protecters.firstOrNull {
-                it.civInfo.isAtWarWith(worldScreen.viewingCiv)
-            }
-            if (firstEnemyProtecter != null) {
-                val unit = worldScreen.bottomUnitTable.selectedUnit
-                if (unit != null) {
-                    // Предложение атаки
-                    worldScreen.showDialog(
-                        "This tile is protected by [${firstEnemyProtecter.displayName()}]. Attack?",
-                        listOf("Yes", "No")
-                    ) { choice ->
-                        if (choice == "Yes") {
-                            tryAttackNearbyEnemy(unit, stayOnTile = true)
-                        }
-                    }
-                }
-                return
-            }
-        }
-
-         */
-
         val unitTable = worldScreen.bottomUnitTable
-        val previousSelectedUnits = unitTable.selectedUnits.toList() // create copy
+        val previousSelectedUnits = unitTable.selectedUnits.toList() // Create a copy of selected units
         val previousSelectedCity = unitTable.selectedCity
         val previousSelectedUnitIsSwapping = unitTable.selectedUnitIsSwapping
+
+        // Update the selected tile in the bottom unit table
         unitTable.tileSelected(tileInfo)
         val newSelectedUnit = unitTable.selectedUnit
 
+        // Check if any of the previously selected units can move to or interact with the clicked tile.
         if (previousSelectedUnits.isNotEmpty() && previousSelectedUnits.any { it.getTile() != tileInfo }
                 && worldScreen.isPlayersTurn
                 && (
-                    if (previousSelectedUnitIsSwapping)
-                        previousSelectedUnits.first().movement.canUnitSwapTo(tileInfo)
-                    else
-                        previousSelectedUnits.any {
-                            it.movement.canMoveTo(tileInfo) ||
-                                    it.movement.isUnknownTileWeShouldAssumeToBePassable(tileInfo) && !it.baseUnit.movesLikeAirUnits()
-                        }
-                ) && previousSelectedUnits.any { !it.isPreparingAirSweep()}) {
+                        if (previousSelectedUnitIsSwapping)
+                            previousSelectedUnits.first().movement.canUnitSwapTo(tileInfo)
+                        else
+                            previousSelectedUnits.any {
+                                (it.movement.canMoveTo(tileInfo) || // Can the unit directly move to the tile?
+                                        it.movement.isUnknownTileWeShouldAssumeToBePassable(tileInfo) && !it.baseUnit.movesLikeAirUnits()) && // Is the tile assumed passable for non-air units?
+                                        !tileInfo.hasEnemyProtector(it.civInfo) // Ensure the tile is not protected by an enemy.
+                            }
+                        ) && previousSelectedUnits.any { !it.isPreparingAirSweep() }) { // Check if no unit is preparing an air sweep.
             if (previousSelectedUnitIsSwapping) {
+                // Add overlays for unit swapping if the selected unit is in swapping mode.
                 addTileOverlaysWithUnitSwapping(previousSelectedUnits.first(), tileInfo)
-            }
-            else {
-                // this can take a long time, because of the unit-to-tile calculation needed, so we put it in a different thread
+            } else {
+                // Add overlays for unit movement. This can be resource-intensive due to calculations.
                 addTileOverlaysWithUnitMovement(previousSelectedUnits, tileInfo)
-
             }
-        } else addTileOverlays(tileInfo) // no unit movement but display the units in the tile etc.
+        } else {
+            // Add generic overlays for the tile (e.g., highlight units on the tile).
+            addTileOverlays(tileInfo)
+        }
 
-
+        // Handle cases where a new unit or civilian is selected after clicking the tile.
         if (newSelectedUnit == null || newSelectedUnit.isCivilian()) {
             val unitsInTile = selectedTile!!.getUnits()
-            if (previousSelectedCity != null && previousSelectedCity.canBombard()
-                    && selectedTile!!.getTilesInDistance(2).contains(previousSelectedCity.getCenterTile())
-                    && unitsInTile.any()
-                    && unitsInTile.first().civInfo.isAtWarWith(worldScreen.viewingCiv)) {
-                // try to select the closest city to bombard this guy
+            if (previousSelectedCity != null && previousSelectedCity.canBombard() // Can the previous city bombard?
+                    && selectedTile!!.getTilesInDistance(2).contains(previousSelectedCity.getCenterTile()) // Is the city within range?
+                    && unitsInTile.any() // Are there units on the tile?
+                    && unitsInTile.first().civInfo.isAtWarWith(worldScreen.viewingCiv)) { // Are the units at war with the player?
+                // Automatically select the closest city to bombard the enemy.
                 unitTable.citySelected(previousSelectedCity)
             }
         }
 
+        // Indicate that the world screen should be updated.
         worldScreen.shouldUpdate = true
     }
 
+    /**
+     * Handles the logic for a right-click action on a tile.
+     * This function manages unit movement, swapping, and interaction based on the right-clicked tile.
+     *
+     * @param unit The unit that is performing the right-click action.
+     * @param tile The tile that was right-clicked.
+     */
     private fun onTileRightClicked(unit: MapUnit, tile: TileInfo) {
+        // If the current player is a spectator, ignore the action.
         if (UncivGame.Current.gameInfo!!.getCurrentPlayerCivilization().isSpectator()) {
             return
         }
+
+        // Clear any existing unit action overlays and reset the selected tile.
         removeUnitActionOverlay()
         selectedTile = tile
         unitMovementPaths.clear()
         worldScreen.shouldUpdate = true
 
+        // Check if the selected unit is in swapping mode.
         if (worldScreen.bottomUnitTable.selectedUnitIsSwapping) {
+            // If the unit can swap to the target tile, perform the swap.
             if (unit.movement.canUnitSwapTo(tile)) {
                 swapMoveUnitToTargetTile(unit, tile)
             }
-            // If we are in unit-swapping mode, we don't want to move or attack
+            // Do not allow further actions like movement or attack if swapping mode is active.
             return
         }
 
-        // Here is part for the attacking by right click. It does not work, so switched off. Need to be fixed, if we want to use it.
+        // Attack logic via right-click (currently disabled).
+        // The commented-out block checks if the unit can attack the tile and performs an attack if possible.
         /*
         val attackableTile = BattleHelper.getAttackableEnemies(unit, unit.movement.getDistanceToTiles())
             .firstOrNull { it.tileToAttack == tile }
@@ -277,11 +280,12 @@ class WorldMapHolder(
             Battle.attackOrNuke(attacker, attackableTile)
             return
         }
+        */
 
-         */
-
+        // Check if the unit can reach the target tile and the tile is not protected by an enemy.
         val canUnitReachTile = unit.movement.canReach(tile)
         if (canUnitReachTile && !tile.hasEnemyProtector(unit.civInfo)) {
+            // Move the unit to the target tile.
             moveUnitToTargetTile(listOf(unit), tile)
             return
         }
