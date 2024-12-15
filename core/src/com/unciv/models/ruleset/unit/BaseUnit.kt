@@ -6,6 +6,7 @@ import com.unciv.logic.city.INonPerpetualConstruction
 import com.unciv.logic.city.RejectionReason
 import com.unciv.logic.city.RejectionReasons
 import com.unciv.logic.civilization.CivilizationInfo
+import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.logic.map.MapUnit
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.RulesetObject
@@ -456,6 +457,28 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
 
     override fun postBuildEvent(cityConstructions: CityConstructions, boughtWith: Stat?): Boolean {
         val civInfo = cityConstructions.cityInfo.civInfo
+
+        // Проверяем, является ли построенный юнит одним из заранее определенных типов
+        if (name in listOf("Archer", "Swordsman", "Horseman", "Spearman")) {
+            val cityArmy = cityConstructions.cityInfo.garrisonInfo
+
+            // Попытка добавить юнита в гарнизон
+            val addedToArmy = cityArmy.addUnits(name, 10)
+
+            if (addedToArmy) {
+                return true // Юнит успешно добавлен в гарнизон
+            } else {
+                // Если нет места в гарнизоне, уведомляем игрока
+                civInfo.addNotification(
+                    "No room in the garrison for [$name]! Consider freeing up space.".tr(),
+                    cityConstructions.cityInfo.location,
+                    NotificationIcon.Construction
+                )
+                return false
+            }
+        }
+
+        // Если юнит не входит в список гарнизонных, продолжаем стандартную логику
         val unit = civInfo.placeUnitNearTile(cityConstructions.cityInfo.location, name)
             ?: return false  // couldn't place the unit, so there's actually no unit =(
 

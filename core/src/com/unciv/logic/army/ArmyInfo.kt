@@ -90,6 +90,37 @@ class ArmyInfo(
     }
 
 
+    /**
+     * Adds units to the army. If a unit of the same type exists, it increases its count.
+     * If no such unit exists, it attempts to place the units in an empty slot.
+     *
+     * @param unitName The name of the unit to add.
+     * @param amount The number of units to add.
+     * @return True if the units were added successfully, false if no slot was available.
+     */
+    fun addUnits(unitName: String, amount: Int): Boolean {
+        if (amount <= 0) return false // Нельзя добавлять 0 или отрицательное количество
+
+        // Проверяем, есть ли уже юнит такого типа
+        for (slot in slots) {
+            if (slot?.unitName == unitName) {
+                slot.amount += amount // Увеличиваем количество
+                return true
+            }
+        }
+
+        // Если такого юнита нет, ищем пустой слот
+        val emptySlotIndex = slots.indexOfFirst { it == null }
+        if (emptySlotIndex != -1) {
+            slots[emptySlotIndex] = TroopInfo(unitName, amount, civInfo)
+            return true
+        }
+
+        // Если нет свободных слотов, возвращаем false
+        return false
+    }
+
+
     /** Returns the troop at the given index or null if the slot is empty. */
     fun getTroopAt(index: Int): TroopInfo? {
         return slots.getOrNull(index)
