@@ -383,13 +383,21 @@ object UnitAutomation {
             unit,
             unitDistanceToTiles,
             tilesToCheck = unit.getTile().getTilesInDistance(CLOSE_ENEMY_TILES_AWAY_LIMIT).toList()
-        ).filter {
-            // Ignore units that would 1-shot you if you attacked. Account for taking terrain damage after the fact.
-            BattleDamage.calculateDamageToAttacker(
+        ).filter { attackableTile ->
+            val defender = Battle.getMapCombatantOfTile(attackableTile.tileToAttack)
+            if (defender == null) {
+                println("No valid defender found for tile: ${attackableTile.tileToAttack.position}")
+                return@filter false
+            }
+
+            // Calculate if attacking would be safe (unit won't be 1-shot)
+            val damageToAttacker = BattleDamage.calculateDamageToAttacker(
                 MapUnitCombatant(unit),
-                Battle.getMapCombatantOfTile(it.tileToAttack)!!
-            )
-                    + unit.getDamageFromTerrain(it.tileToAttackFrom) < unit.health
+                defender
+            ) + unit.getDamageFromTerrain(attackableTile.tileToAttackFrom)
+
+            // Only keep enemies that don't 1-shot the attacker
+            damageToAttacker < unit.health
         }
 
         if (unit.baseUnit.isRanged())

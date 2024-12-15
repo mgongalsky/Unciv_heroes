@@ -439,14 +439,19 @@ object Battle {
         if (!attacker.isMelee()) return
         if (!defender.isDefeated() && defender.getCivInfo() != attacker.getCivInfo()) return
 
-        // This is so that if we attack e.g. a barbarian in enemy territory that we can't enter, we won't enter it
-        if ((attacker as MapUnitCombatant).unit.movement.canMoveTo(attackedTile)) {
-            // Units that can move after attacking are not affected by zone of control if the
-            // movement is caused by killing a unit. Effectively, this means that attack movements
-            // are exempt from zone of control, since units that cannot move after attacking already
-            // lose all remaining movement points anyway.
-            attacker.unit.movement.moveToTile(attackedTile, considerZoneOfControl = false)
-            attacker.unit.mostRecentMoveType = UnitMovementMemoryType.UnitAttacked
+        try {
+            // Ensure the attacker can move to the attacked tile
+            if ((attacker as MapUnitCombatant).unit.movement.canMoveTo(attackedTile)) {
+                // Move the unit to the attacked tile, ignoring zone of control
+                attacker.unit.movement.moveToTile(attackedTile, considerZoneOfControl = false)
+                attacker.unit.mostRecentMoveType = UnitMovementMemoryType.UnitAttacked
+            } else {
+                // Log information when the unit cannot move to the attacked tile
+                println("Attacker cannot move to the attacked tile: ${attackedTile.position}")
+            }
+        } catch (e: Exception) {
+            // Log any unexpected exceptions during the move
+            println("Error while moving attacker to attacked tile: ${e.message}")
         }
     }
 
