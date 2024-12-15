@@ -78,9 +78,9 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     var airUnits = ArrayList<MapUnit>()
 
     @Transient
-    var isProtected = false
+    private var isProtected = false
     @Transient
-    var protecters = mutableListOf<MapUnit>()
+    private var protecters = mutableListOf<MapUnit>()
 
     /** Position of a tile in hex coordinates */
     var position: Vector2 = Vector2.Zero
@@ -330,6 +330,52 @@ open class TileInfo : IsPartOfGameInfoSerialization {
             improvement
         else
             viewingCiv.lastSeenImprovement[position]
+    }
+
+    /** returns isProtected (is this tile protected by a nearby monster or hero (including friendly).
+     *  Use hasEnemyProtector if you are interested in protection by enemy.
+     *  */
+    fun hasProtector() = isProtected
+
+    /**
+     * Checks if this tile is protected by any enemy units of the given civilization.
+     * @param civInfo The civilization to check against.
+     * @return True if the tile is protected by at least one enemy unit, false otherwise.
+     */
+    fun hasEnemyProtector(civInfo: CivilizationInfo): Boolean {
+        // Return true if any protector is at war with the provided civilization
+        return protecters.any { it.civInfo.isAtWarWith(civInfo) }
+    }
+
+    /**
+     * Gets all enemy protectors of this tile for the given civilization.
+     * @param civInfo The civilization to check against.
+     * @return A list of enemy units protecting this tile.
+     */
+    fun getEnemyProtectors(civInfo: CivilizationInfo): List<MapUnit> {
+        // Filter protecters to include only those at war with the given civilization
+        return protecters.filter { it.civInfo.isAtWarWith(civInfo) }
+    }
+
+
+
+    /**
+     * Removes the specified protector from this tile. Updates isProtected status based on remaining protecters.
+     */
+    fun removeProtector(protector: MapUnit) {
+        protecters.remove(protector) // Remove the protector
+        isProtected = protecters.isNotEmpty() // Update isProtected only if there are remaining protecters
+    }
+
+
+    /**
+     * Adds the specified protector to this tile. Updates isProtected status.
+     */
+    fun addProtector(protector: MapUnit) {
+        if (!protecters.contains(protector)) {
+            protecters.add(protector) // Add the protector if it's not already in the list
+        }
+        isProtected = true // Mark the tile as protected
     }
 
 

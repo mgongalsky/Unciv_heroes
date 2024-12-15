@@ -281,7 +281,7 @@ class WorldMapHolder(
          */
 
         val canUnitReachTile = unit.movement.canReach(tile)
-        if (canUnitReachTile) {
+        if (canUnitReachTile && !tile.hasEnemyProtector(unit.civInfo)) {
             moveUnitToTargetTile(listOf(unit), tile)
             return
         }

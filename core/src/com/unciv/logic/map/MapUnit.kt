@@ -321,30 +321,29 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     }
 
     fun refreshProtectedTiles() {
-        // Проверяем, проинициализирован ли currentTile
-        if (!::currentTile.isInitialized) return
+        // Ensure currentTile is initialized before proceeding
+        if (!::currentTile.isInitialized) {
+            println("Warning: currentTile is not initialized for unit $name")
+            return
+        }
 
-        // Очистка списка защищаемых тайлов
+        // Clear the current protection for all tiles this unit was protecting
         for (tile in protectedTiles) {
-            tile.isProtected = false
-            tile.protecters.remove(this)
+            tile.removeProtector(this) // Remove this unit as a protector
         }
         protectedTiles.clear()
 
-        // Получаем текущий тайл и соседние
+        // Update protection for the current and neighboring tiles
         val newProtectedTiles = listOf(currentTile) + currentTile.neighbors
-
         for (tile in newProtectedTiles) {
-            tile.isProtected = true
-            tile.protecters.add(this)
-            protectedTiles.add(tile)
+            tile.addProtector(this) // Add this unit as a protector
+            protectedTiles.add(tile) // Add the tile to the unit's protectedTiles list
         }
     }
 
     fun removeProtectedTiles() {
         for (tile in protectedTiles) {
-            tile.isProtected = false
-            tile.protecters.remove(this)
+            tile.removeProtector(this) // Remove this unit as a protector
         }
         protectedTiles.clear()
     }

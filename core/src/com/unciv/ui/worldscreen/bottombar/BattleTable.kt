@@ -106,39 +106,28 @@ class BattleTable(val worldScreen: WorldScreen): Table() {
         if (verbose_protectedTiles) {
             println(
                 "Checking defender at tile: ${selectedTile.position}. " +
-                        "IsProtected=${selectedTile.isProtected}, Protecters=${selectedTile.protecters.map { it.name }}"
+                        "IsProtected=${selectedTile.hasProtector()}"
             )
         }
 
         // If there is no direct defender, check if the tile is protected
-        if (defender == null && selectedTile.isProtected) {
+        if (defender == null && selectedTile.hasEnemyProtector(attackerCiv)) {
             if (verbose_protectedTiles) {
                 println("Tile is protected. Checking protectors...")
             }
 
             // Find the first enemy protector of the tile
-            val firstEnemyProtector = selectedTile.protecters.firstOrNull { protector ->
-                if (verbose_protectedTiles) {
-                    println(
-                        "Checking protector: ${protector.name}, " +
-                                "CurrentTile=${protector.currentTile.position}, " +
-                                "IsAtWar=${protector.civInfo.isAtWarWith(attackerCiv)}"
-                    )
-                }
-                protector.civInfo.isAtWarWith(attackerCiv)
+            val firstEnemyProtector = selectedTile.getEnemyProtectors(attackerCiv).first()
+            if (verbose_protectedTiles) {
+                println(
+                    "Found enemy protector: ${firstEnemyProtector.name} at ${firstEnemyProtector.currentTile.position}"
+                )
             }
-
-            if (firstEnemyProtector != null) {
-                if (verbose_protectedTiles) {
-                    println(
-                        "Found enemy protector: ${firstEnemyProtector.name} at ${firstEnemyProtector.currentTile.position}"
-                    )
-                }
-                defender = MapUnitCombatant(firstEnemyProtector)
-            } else if (verbose_protectedTiles) {
-                println("No enemy protectors found for this tile.")
-            }
+            defender = MapUnitCombatant(firstEnemyProtector)
+        } else if (verbose_protectedTiles) {
+            println("No enemy protectors found for this tile.")
         }
+
 
         // If no defender or the defender is friendly and `includeFriendly` is false, return null
         if (defender == null || (!includeFriendly && defender.getCivInfo() == attackerCiv)) {
