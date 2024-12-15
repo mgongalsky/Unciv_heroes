@@ -32,13 +32,17 @@ object BattleHelper {
         return unit.currentMovement == 0f
     }
 
+    // TODO: rewrite BattleHelper.kt getAttackableEnemies, include those who are not currently visible.
+    //  Otherwise it's not possible to fight with them if you could not see them before.
     fun getAttackableEnemies(
         unit: MapUnit,
         unitDistanceToTiles: PathsToTilesWithinTurn,
         tilesToCheck: List<TileInfo>? = null,
         stayOnTile: Boolean = false
     ): ArrayList<AttackableTile> {
-        val rangeOfAttack = unit.getRange()
+        // TODO: that's needed to modify when actual scouting is introduced
+        val scouting_range = 1
+        val rangeOfAttack = unit.getRange() + scouting_range
         val attackableTiles = ArrayList<AttackableTile>()
 
         val unitMustBeSetUp = unit.hasUnique(UniqueType.MustSetUp)
@@ -59,16 +63,17 @@ object BattleHelper {
                 // still got leftover movement points after all that, to attack
                 .filter { it.second > Constants.minimumMovementEpsilon }
                 .filter {
-                    it.first == unit.getTile() || unit.movement.canMoveTo(it.first)
+                    // We added check of tile protection by enemies
+                    it.first == unit.getTile() || unit.movement.canMoveTo(it.first) || it.first.hasEnemyProtector(unit.civInfo)
                 }
 
         val tilesWithEnemies: HashSet<TileInfo> = HashSet()
         val tilesWithoutEnemies: HashSet<TileInfo> = HashSet()
         for ((reachableTile, movementLeft) in tilesToAttackFrom) {  // tiles we'll still have energy after we reach there
             val tilesInAttackRange =
-                if (unit.hasUnique(UniqueType.IndirectFire) || unit.baseUnit.movesLikeAirUnits())
+                //if (unit.hasUnique(UniqueType.IndirectFire) || unit.baseUnit.movesLikeAirUnits())
                     reachableTile.getTilesInDistance(rangeOfAttack)
-                else reachableTile.getViewableTilesList(rangeOfAttack)
+                //else reachableTile.getViewableTilesList(rangeOfAttack)
                     .asSequence()
 
             for (tile in tilesInAttackRange) {

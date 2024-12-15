@@ -74,7 +74,8 @@ object Battle {
             attacker.unit.action = UnitActionType.SetUp.value
             attacker.unit.useMovementPoints(1f)
         }
-        return (attacker.unit.currentMovement > 0f)
+        // We added check if there is a tile protector which can attack even if there are no more moves here
+        return (attacker.unit.currentMovement > 0f) || attackableTile.tileToAttack.hasEnemyProtector(attacker.unit.civInfo)
     }
 
     /**
