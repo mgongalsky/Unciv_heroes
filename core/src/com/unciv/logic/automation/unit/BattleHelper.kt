@@ -34,62 +34,76 @@ object BattleHelper {
         return unit.currentMovement == 0f
     }
 
+    /**
+     * Identifies all tiles that a unit can attack based on its range, movement, and other attributes.
+     * This function calculates potential attackable tiles and considers unit-specific conditions,
+     * such as setup requirements or protection by enemy units.
+     *
+     * @param unit The unit attempting to attack.
+     * @param unitDistanceToTiles A map of tiles reachable within the unit's current movement points.
+     * @param tilesToCheck Optional list of tiles to limit the scope of the check.
+     * @param stayOnTile If true, the unit does not move and attacks from its current position.
+     * @return A list of `AttackableTile` objects representing tiles the unit can attack.
+     */
     fun getAttackableEnemies(
         unit: MapUnit,
         unitDistanceToTiles: PathsToTilesWithinTurn,
         tilesToCheck: List<TileInfo>? = null,
         stayOnTile: Boolean = false
     ): ArrayList<AttackableTile> {
-        // TODO: that's needed to modify when actual scouting is introduced
-        val scouting_range = 1
-        val rangeOfAttack = unit.getRange() + scouting_range
+        // TODO: This logic may need adjustment when scouting mechanics are implemented.
+        val scoutingRange = 1
+        val rangeOfAttack = unit.getRange() + scoutingRange
         val attackableTiles = ArrayList<AttackableTile>()
 
+        // Determine if the unit must be set up before attacking.
         val unitMustBeSetUp = unit.hasUnique(UniqueType.MustSetUp)
         val tilesToAttackFrom = if (stayOnTile || unit.baseUnit.movesLikeAirUnits())
-            sequenceOf(Pair(unit.currentTile, unit.currentMovement))
+            sequenceOf(Pair(unit.currentTile, unit.currentMovement)) // Attack from the current position if staying in place or if it's an air unit.
         else
             unitDistanceToTiles.asSequence()
                 .map { (tile, distance) ->
+                    // Calculate remaining movement points after moving to the tile.
                     val movementPointsToExpendAfterMovement = if (unitMustBeSetUp) 1 else 0
                     val movementPointsToExpendHere =
-                        if (unitMustBeSetUp && !unit.isSetUpForSiege()) 1 else 0
+                            if (unitMustBeSetUp && !unit.isSetUpForSiege()) 1 else 0
                     val movementPointsToExpendBeforeAttack =
-                        if (tile == unit.currentTile) movementPointsToExpendHere else movementPointsToExpendAfterMovement
+                            if (tile == unit.currentTile) movementPointsToExpendHere else movementPointsToExpendAfterMovement
                     val movementLeft =
-                        unit.currentMovement - distance.totalDistance - movementPointsToExpendBeforeAttack
+                            unit.currentMovement - distance.totalDistance - movementPointsToExpendBeforeAttack
                     Pair(tile, movementLeft)
                 }
-                // still got leftover movement points after all that, to attack
+                // Filter tiles where the unit has enough movement points left to attack.
                 .filter { it.second > Constants.minimumMovementEpsilon }
                 .filter {
-                    // We added check of tile protection by enemies
+                    // Check if the unit can move to the tile or if it is protected by an enemy unit.
                     it.first == unit.getTile() || unit.movement.canMoveTo(it.first) || it.first.hasEnemyProtector(unit.civInfo)
                 }
 
         val tilesWithEnemies: HashSet<TileInfo> = HashSet()
         val tilesWithoutEnemies: HashSet<TileInfo> = HashSet()
-        for ((reachableTile, movementLeft) in tilesToAttackFrom) {  // tiles we'll still have energy after we reach there
+        for ((reachableTile, movementLeft) in tilesToAttackFrom) { // Iterate through reachable tiles with enough movement points.
             val tilesInAttackRange =
-                //if (unit.hasUnique(UniqueType.IndirectFire) || unit.baseUnit.movesLikeAirUnits())
-                    reachableTile.getTilesInDistance(rangeOfAttack)
-                //else reachableTile.getViewableTilesList(rangeOfAttack)
-                    .asSequence()
+                    reachableTile.getTilesInDistance(rangeOfAttack) // Calculate tiles within attack range.
+                        .asSequence()
 
             for (tile in tilesInAttackRange) {
-                if (tile in tilesWithEnemies) attackableTiles += AttackableTile(
-                    reachableTile,
-                    tile,
-                    movementLeft
-                )
-                else if (tile in tilesWithoutEnemies) continue // avoid checking the same empty tile multiple times
-                else if (checkTile(unit, tile, tilesToCheck) || tile.hasEnemyProtector(unit.civInfo)) {
+                if (tile in tilesWithEnemies) {
+                    // Add previously identified attackable tiles to the list.
+                    attackableTiles += AttackableTile(reachableTile, tile, movementLeft)
+                } else if (tile in tilesWithoutEnemies) {
+                    // Skip tiles that have already been confirmed as empty.
+                    continue
+                } else if (checkTile(unit, tile, tilesToCheck) || tile.hasEnemyProtector(unit.civInfo)) {
+                    // Check if the tile is valid for attacking or is protected by an enemy unit.
                     tilesWithEnemies += tile
                     attackableTiles += AttackableTile(reachableTile, tile, movementLeft)
-                } else if (unit.isPreparingAirSweep()){
+                } else if (unit.isPreparingAirSweep()) {
+                    // Add tiles if the unit is preparing an air sweep.
                     tilesWithEnemies += tile
                     attackableTiles += AttackableTile(reachableTile, tile, movementLeft)
                 } else {
+                    // Mark tile as empty.
                     tilesWithoutEnemies += tile
                 }
             }
