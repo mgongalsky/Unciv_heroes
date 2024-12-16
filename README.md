@@ -9,7 +9,7 @@
 Экран битвы
 ![](/extraImages/ScreenshotMapView.png)
 
-![Telegram Chat](https://github.com/yairm210/Unciv/workflows/Build%20and%20deploy/badge.svg)
+[Telegram Chat](https://t.me/+NWXt8maGBMowZGU6)
 [![Discord Chat](https://img.shields.io/discord/586194543280390151.svg)](https://discord.gg/bjrB4Xw)
 
 
