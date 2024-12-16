@@ -4,10 +4,10 @@
 ![](/extraImages/ScreenshotMapView.png)
 
 Экран города
-![](/extraImages/ScreenshotMapView.png)
+![](/extraImages/ScreenshotCityView.png)
 
 Экран битвы
-![](/extraImages/ScreenshotMapView.png)
+![](/extraImages/ScreenshotBattleView.png)
 
 [Telegram Chat](https://t.me/+NWXt8maGBMowZGU6)
 
