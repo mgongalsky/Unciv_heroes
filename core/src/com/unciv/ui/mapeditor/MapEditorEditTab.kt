@@ -124,11 +124,11 @@ class MapEditorEditTab(
         keyShortcuts.add('v') { selectPage(5) }
         keyShortcuts.add('s') { selectPage(6) }
         keyShortcuts.add('u') { selectPage(7) }
-        keyShortcuts.add('1') { brushSize = 1 }
-        keyShortcuts.add('2') { brushSize = 2 }
-        keyShortcuts.add('3') { brushSize = 3 }
-        keyShortcuts.add('4') { brushSize = 4 }
-        keyShortcuts.add('5') { brushSize = 5 }
+        //keyShortcuts.add('1') { brushSize = 1 }
+        //keyShortcuts.add('2') { brushSize = 2 }
+        //keyShortcuts.add('3') { brushSize = 3 }
+        //keyShortcuts.add('4') { brushSize = 4 }
+        //keyShortcuts.add('5') { brushSize = 5 }
         keyShortcuts.add(KeyCharAndCode.ctrl('f')) { brushSize = -1 }
     }
 
