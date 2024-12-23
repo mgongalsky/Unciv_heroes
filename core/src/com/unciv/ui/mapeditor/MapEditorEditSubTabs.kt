@@ -285,6 +285,12 @@ class MapEditorEditMonstersTab(
 
         add(eraser.render(0f).apply { onClick {
             editTab.setBrush("Remove monster", eraserIcon, true) {
+                if (it.militaryUnit != null) {
+                    it.removeUnit(it.militaryUnit!!)
+                    //it.militaryUnit!!.civInfo.removeUnit(it.militaryUnit!!)
+                }
+
+                //it.militaryUnit = null
                 //    tile ->
                // tile.changeImprovement(null)
                // tile.removeRoad()
