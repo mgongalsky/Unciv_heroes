@@ -51,7 +51,7 @@
  {
    "name": "Warrior",
    "unitType": "Sword",
-   "movement": "10",
+   "movement": "2",
    "speed": "5",
    "health": "20",
    "damage": "5",
@@ -139,7 +139,7 @@
    "upgradesTo": "Composite Bowman",
    "civilopediaText": [],
    "rangedStrength": "7",
-   "requiredTech": "Archery"
+   "requiredTech": "The Wheel"
 },
  {
    "name": "Bowman",
@@ -709,8 +709,7 @@
    "attackSound": "metalhit",
    "upgradesTo": "Longswordsman",
    "civilopediaText": [],
-   "requiredTech": "Iron Working",
-   "requiredResource": "Iron"
+   "requiredTech": "Calendar",
 },
  {
    "name": "Legion",

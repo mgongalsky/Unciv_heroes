@@ -100,16 +100,9 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     // TODO: troops must be changed from list to a finite array with possible empty slots. And army manager must be written.
     //var troops = mutableListOf<TroopInfo>()
 
-  /*  var army: ArmyInfo = ArmyInfo(
-        civInfo,
-        "Archer" to 30,
-        "Horseman" to 20
-    )
-
-   */
     var army: ArmyInfo = ArmyInfo(
         civInfo,
-        "Archer", 30
+        "Archer", 12
     )
 
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
