@@ -398,6 +398,11 @@ class BattleScreen(
                             defenderHero.civInfo.removeUnit(defenderHero)
                             defenderHero.civInfo.updateViewableTiles()
                         }
+                        if (d is CityCombatant) {
+                            val defenderCity = d.city
+                            defenderCity.moveToCiv(attackerCiv)
+                        }
+
                     }
                     if (defenderArmy == battleResult.winningArmy) {
                         val a = attacker
