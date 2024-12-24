@@ -22,6 +22,9 @@ import com.badlogic.gdx.utils.Align
 import com.unciv.ai.AIBattle
 import com.unciv.logic.HexMath
 import com.unciv.logic.army.TroopInfo
+import com.unciv.logic.battle.CityCombatant
+import com.unciv.logic.battle.ICombatant
+import com.unciv.logic.battle.MapUnitCombatant
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
@@ -50,19 +53,44 @@ import kotlin.coroutines.resume
  * Should not be used for AI duels as it includes player interaction logic.
  */
 class BattleScreen(
-    private var attackerHero: MapUnit,
-    private var defenderHero: MapUnit,
+    private var attacker: ICombatant,
+    private var defender: ICombatant,
     defaultPage: String = "",
     selection: String = ""
 ) : BaseScreen(), RecreateOnResize{
-    // BattleManager handles the battle logic for both armies
-    private var manager = BattleManager(attackerHero.army, defenderHero.army)
+
+    private var attackerArmy = when (val a = attacker) {
+        is MapUnitCombatant -> a.unit.army // Явно создаем локальную переменную `a` для проверки типа
+        is CityCombatant -> a.city.garrisonInfo
+        else -> throw IllegalArgumentException("Unsupported attacker type")
+    }
+
+    private var defenderArmy = when (val d = defender) {
+        is MapUnitCombatant -> d.unit.army // Если защитник - MapUnitCombatant, берем армию юнита
+        is CityCombatant -> d.city.garrisonInfo // Если защитник - CityCombatant, берем информацию о гарнизоне
+        else -> throw IllegalArgumentException("Unsupported defender type")
+    }
+
+    private var attackerCiv = when (val a = attacker) {
+        is MapUnitCombatant -> a.unit.civInfo // Явно создаем локальную переменную `a` для проверки типа
+        is CityCombatant -> a.city.civInfo
+        else -> throw IllegalArgumentException("Unsupported attacker type")
+    }
+
+    private var defenderCiv = when (val d = defender) {
+        is MapUnitCombatant -> d.unit.civInfo // Если защитник - MapUnitCombatant, берем армию юнита
+        is CityCombatant -> d.city.civInfo // Если защитник - CityCombatant, берем информацию о гарнизоне
+        else -> throw IllegalArgumentException("Unsupported defender type")
+    }
+
+
+    private var manager = BattleManager(attackerArmy, defenderArmy)
 
     // Arrays to store visual representations of troops for attackers and defenders
     private val attackerTroopViewsArray: Array<TroopBattleView?> =
-            Array(attackerHero.army.getAllTroops().size ?: 0) { null }
+            Array(attackerArmy.getAllTroops().size ?: 0) { null }
     private val defenderTroopViewsArray: Array<TroopBattleView?> =
-            Array(defenderHero.army.getAllTroops().size ?: 0) { null }
+            Array(defenderArmy.getAllTroops().size ?: 0) { null }
 
     private val verboseTurn = false // Toggle for detailed logging of turns
 
@@ -71,10 +99,16 @@ class BattleScreen(
     internal val BFwidth: Int = 14
     internal val BFheight: Int = 8
 
+    private val defenderTile = when (val d = defender) {
+        is MapUnitCombatant -> d.unit.currentTile // Если защитник - MapUnitCombatant, берем армию юнита
+        is CityCombatant -> d.city.getCenterTile() // Если защитник - CityCombatant, берем информацию о гарнизоне
+        else -> throw IllegalArgumentException("Unsupported defender type")
+    }
+
     // TileMap represents the battlefield layout
     private val battleField: TileMap = TileMap(
         BFwidth, BFheight,
-        game.gameInfo!!.ruleSet, attackerHero.currentTile.baseTerrain
+        game.gameInfo!!.ruleSet, defenderTile.baseTerrain
     )
 
     // Holds the mapping of tiles to their groups for visual representation
@@ -114,18 +148,18 @@ class BattleScreen(
         manager.initializeTurnQueue()
 
         // Create visual representations for the attacker's troops
-        attackerHero.army.getAllTroops()?.forEachIndexed { index, troop ->
+        attackerArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
-                troop.enterBattle(attackerHero.civInfo, index, attacker = true)
+                troop.enterBattle(attackerCiv, index, attacker = true)
                 val troopView = TroopBattleView(troop, this) // Pass BattleScreen for interaction
                 attackerTroopViewsArray[index] = troopView // Save to array
             }
         }
 
         // Create visual representations for the defender's troops
-        defenderHero.army.getAllTroops()?.forEachIndexed { index, troop ->
+        defenderArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
-                troop.enterBattle(defenderHero.civInfo, index, attacker = false)
+                troop.enterBattle(defenderCiv, index, attacker = false)
                 val troopView = TroopBattleView(troop, this) // Pass BattleScreen for interaction
                 defenderTroopViewsArray[index] = troopView // Save to array
             }
@@ -356,15 +390,23 @@ class BattleScreen(
                     if (verboseTurn) println("Army of ${battleResult.winningArmy.civInfo.nation.name} won.")
 
                     // Remove defeated unit from map
-                    if (attackerHero.army == battleResult.winningArmy) {
-                        defenderHero.removeFromTile()
-                        defenderHero.civInfo.removeUnit(defenderHero)
-                        defenderHero.civInfo.updateViewableTiles()
+                    if (attackerArmy == battleResult.winningArmy) {
+                        val d = defender
+                        if (d is MapUnitCombatant) {
+                            val defenderHero = d.unit
+                            defenderHero.removeFromTile()
+                            defenderHero.civInfo.removeUnit(defenderHero)
+                            defenderHero.civInfo.updateViewableTiles()
+                        }
                     }
-                    if (defenderHero.army == battleResult.winningArmy) {
-                        attackerHero.removeFromTile()
-                        attackerHero.civInfo.removeUnit(attackerHero)
-                        attackerHero.civInfo.updateViewableTiles()
+                    if (defenderArmy == battleResult.winningArmy) {
+                        val a = attacker
+                        if (a is MapUnitCombatant) {
+                            val attackerHero = a.unit
+                            attackerHero.removeFromTile()
+                            attackerHero.civInfo.removeUnit(attackerHero)
+                            attackerHero.civInfo.updateViewableTiles()
+                        }
                     }
 
                 }
@@ -394,7 +436,7 @@ class BattleScreen(
             }
 
             for (i in defenderTroopViewsArray.indices) {
-                if (i < defenderHero.army.maxSlots) {
+                if (i < defenderArmy.maxSlots) {
                     val troop = manager.getDefenderArmy().getTroopAt(i)
                     if (troop == null) {
                         defenderTroopViewsArray[i]?.perish()
@@ -998,7 +1040,7 @@ class BattleScreen(
      * @return A new instance of [BattleScreen].
      */
     override fun recreate(): BaseScreen {
-        return BattleScreen(attackerHero, defenderHero)
+        return BattleScreen(attacker, defender)
     }
 
     fun resizePage(tab: EmpireOverviewTab) {
