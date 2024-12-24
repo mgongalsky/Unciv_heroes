@@ -233,7 +233,7 @@ class MapEditorViewTab(
         if (tile.militaryUnit != null) {
             // Добавляем Label
             val amountLabel = Label("Change amount:", skin).apply { name = "amountLabel" }
-            subTableMonsterEdit.add(amountLabel).padBottom(5f).row()
+            subTableMonsterEdit.add(amountLabel).padRight(10f) // Добавляем отступ справа для красоты
 
             // Вычисляем количество
             var amount = tile.militaryUnit!!.army.getAllTroops().sumOf { it?.amount ?: 0 }
@@ -243,7 +243,7 @@ class MapEditorViewTab(
                 name = "amountField"
                 textFieldFilter = TextField.TextFieldFilter.DigitsOnlyFilter() // Только цифры
             }
-            subTableMonsterEdit.add(amountField).padBottom(10f).row()
+            subTableMonsterEdit.add(amountField).width(100f).padRight(10f) // Фиксируем ширину и добавляем отступ справа
 
             // Добавляем кнопку Update
             val updateButton = "Update".toTextButton().apply {
@@ -254,7 +254,7 @@ class MapEditorViewTab(
                         tile.militaryUnit!!.army.fillArmy(tile.militaryUnit!!.name, amountToUpdate)
                 }
             }
-            subTableMonsterEdit.add(updateButton).padBottom(5f).row()
+            subTableMonsterEdit.add(updateButton).padRight(10f) // Добавляем отступ справа для разделения кнопок
 
             // Добавляем кнопку Remove
             val removeButton = "Remove".toTextButton().apply {
@@ -265,7 +265,7 @@ class MapEditorViewTab(
                     tileGroup?.update()
                 }
             }
-            subTableMonsterEdit.add(removeButton).padBottom(10f).row()
+            subTableMonsterEdit.add(removeButton) // Последний элемент строки, без отступов
         }
     }
 
