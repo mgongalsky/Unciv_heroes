@@ -1180,9 +1180,11 @@ open class TileInfo : IsPartOfGameInfoSerialization {
             lineList += FormattedLine(civilianUnit!!.name.tr() + " - " + civilianUnit!!.civInfo.civName.tr(),
                 link="Unit/${civilianUnit!!.name}")
         if (militaryUnit != null && isViewableToPlayer && (viewingCiv == null || !militaryUnit!!.isInvisible(viewingCiv))) {
+            var amount = 0
+            militaryUnit!!.army.getAllTroops().forEach { troop -> if (troop != null) amount += troop.amount }
             val milUnitString = militaryUnit!!.name.tr() +
                 (if (militaryUnit!!.health < 100) "(" + militaryUnit!!.health + ")" else "") +
-                " - " + militaryUnit!!.civInfo.civName.tr()
+                " - " + amount.toString() + " - " + militaryUnit!!.civInfo.civName.tr()
             lineList += FormattedLine(milUnitString, link="Unit/${militaryUnit!!.name}")
         }
 

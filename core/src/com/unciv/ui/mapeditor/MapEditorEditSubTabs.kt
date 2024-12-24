@@ -275,7 +275,7 @@ class MapEditorEditMonstersTab(
         val eraser = FormattedLine("Remove monster", icon = eraserIcon, size = 32, iconCrossed = true)
 
         val amountLabel = Label("Amount:", skin)
-        val amountField = UncivTextField.create("Amount", "100")//TextField("100", skin) // Default value is 100
+        val amountField = UncivTextField.create("Amount", "10")//TextField("100", skin) // Default value is 100
         amountField.textFieldFilter =
                 TextField.TextFieldFilter.DigitsOnlyFilter() // Restrict input to numeric characters
 
