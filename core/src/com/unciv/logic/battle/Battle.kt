@@ -91,7 +91,7 @@ object Battle {
     fun attack(attacker: ICombatant, defender: ICombatant) {
         debug("%s %s attacked %s %s", attacker.getCivInfo().civName, attacker.getName(), defender.getCivInfo().civName, defender.getName())
         val attackedTile = defender.getTile()
-        if (attacker is MapUnitCombatant && defender is MapUnitCombatant && attacker.getCivInfo().isPlayerCivilization()) {
+        if (attacker is MapUnitCombatant && (defender is MapUnitCombatant || defender is CityCombatant) && attacker.getCivInfo().isPlayerCivilization()) {
             //attacker.unit.runBattle()
             if(!attacker.isDefeated() && !defender.isDefeated()) {
                 //attacker.unit.civInfo.battle.startBattle(attacker.unit, defender.unit)
