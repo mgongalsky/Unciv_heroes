@@ -2,7 +2,10 @@ package com.unciv.ui.mapeditor
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton
+import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
 import com.unciv.logic.civilization.CivilizationInfo
@@ -21,6 +24,7 @@ import com.unciv.ui.popup.ToastPopup
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.ExpanderTab
 import com.unciv.ui.utils.TabbedPager
+import com.unciv.ui.utils.UncivTextField
 import com.unciv.ui.utils.WrappableLabel
 import com.unciv.ui.utils.extensions.addSeparator
 import com.unciv.ui.utils.extensions.darken
@@ -194,6 +198,16 @@ class MapEditorViewTab(
             lines += FormattedLine("Continent: [$continent] ([${tile.tileMap.continentSizes[continent]}] tiles)", link = "continent")
         }
 
+        // Проверяем, существует ли уже добавленная подтаблица
+        var subTableMonsterEdit = findActor<Table>("subTableMonsterEdit")
+        if (subTableMonsterEdit == null) {
+            subTableMonsterEdit = Table().apply { name = "subTableMonsterEdit" }
+            add(subTableMonsterEdit).pad(10f).row()
+        }
+
+        // Обновляем подтаблицу
+        updateSubTableMonsterEdit(tile, subTableMonsterEdit)
+
         tileDataCell?.setActor(MarkupRenderer.render(lines, labelWidth) {
             if (it == "continent") {
                 // Visualize the continent this tile is on
@@ -212,6 +226,49 @@ class MapEditorViewTab(
         editorScreen.hideSelection()
         editorScreen.highlightTile(tile, Color.CORAL)
     }
+
+    private fun updateSubTableMonsterEdit(tile: TileInfo, subTableMonsterEdit: Table) {
+        subTableMonsterEdit.clear() // Очищаем подтаблицу перед добавлением новых элементов
+
+        if (tile.militaryUnit != null) {
+            // Добавляем Label
+            val amountLabel = Label("Change amount:", skin).apply { name = "amountLabel" }
+            subTableMonsterEdit.add(amountLabel).padBottom(5f).row()
+
+            // Вычисляем количество
+            var amount = tile.militaryUnit!!.army.getAllTroops().sumOf { it?.amount ?: 0 }
+
+            // Добавляем TextField
+            val amountField = UncivTextField.create("Amount", amount.toString()).apply {
+                name = "amountField"
+                textFieldFilter = TextField.TextFieldFilter.DigitsOnlyFilter() // Только цифры
+            }
+            subTableMonsterEdit.add(amountField).padBottom(10f).row()
+
+            // Добавляем кнопку Update
+            val updateButton = "Update".toTextButton().apply {
+                name = "updateButton"
+                onClick {
+                    val amountToUpdate = subTableMonsterEdit.findActor<TextField>("amountField")?.text?.toIntOrNull() ?: 0
+                    if (amountToUpdate > 0)
+                        tile.militaryUnit!!.army.fillArmy(tile.militaryUnit!!.name, amountToUpdate)
+                }
+            }
+            subTableMonsterEdit.add(updateButton).padBottom(5f).row()
+
+            // Добавляем кнопку Remove
+            val removeButton = "Remove".toTextButton().apply {
+                name = "removeButton"
+                onClick {
+                    tile.removeUnit(tile.militaryUnit!!)
+                    val tileGroup = editorScreen.mapHolder.tileGroups[tile]?.firstOrNull()
+                    tileGroup?.update()
+                }
+            }
+            subTableMonsterEdit.add(removeButton).padBottom(10f).row()
+        }
+    }
+
 
     private fun scrollToWonder(name: String) {
         scrollToNextTileOf(editorScreen.tileMap.values.filter { it.naturalWonder == name })
