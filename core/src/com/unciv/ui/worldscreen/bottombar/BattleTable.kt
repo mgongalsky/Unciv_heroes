@@ -216,7 +216,12 @@ class BattleTable(val worldScreen: WorldScreen): Table() {
                     Fonts.rangedStrength
                 else Fonts.strength // Use appropriate icons based on attacker and defender types.
         add(attacker.getAttackingStrength().toString() + attackIcon)
-        add(defender.getDefendingStrength(attacker.isRanged()).toString() + defenceIcon).row()
+        if (defender is MapUnitCombatant) {
+            var amount = 0
+            defender.unit.army.getAllTroops().forEach { troop -> if (troop != null) amount += troop.amount }
+            add(amount.toString() + defenceIcon).row()
+        } else
+            add(defender.getDefendingStrength(attacker.isRanged()).toString() + defenceIcon).row()
 
         // Retrieve and display attack and defense modifiers.
         val attackerModifiers =
