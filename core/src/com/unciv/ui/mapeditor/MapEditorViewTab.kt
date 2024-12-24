@@ -36,6 +36,7 @@ class MapEditorViewTab(
     private val editorScreen: MapEditorScreen
 ): Table(BaseScreen.skin), TabbedPager.IPageExtensions {
     private var tileDataCell: Cell<Table>? = null
+    private var subTableMonsterEdit = Table().apply { name = "subTableMonsterEdit" }
     private val mockCiv = createMockCiv(editorScreen.ruleset)
     private val naturalWonders = Counter<String>()
     /** Click-locating items with several instances: round robin, for simplicity only a global one */
@@ -144,8 +145,14 @@ class MapEditorViewTab(
         tileDataCell = add(Table()).fillX()
         row()
 
-        addSeparator()
-        add("Exit map editor".toTextButton().apply { onClick(editorScreen::closeEditor) }).row()
+
+        add(subTableMonsterEdit).pad(10f).row()
+
+        addSeparator().apply { name = "separatorActor" } // Разделитель
+        add("Exit map editor".toTextButton().apply {
+            name = "exitButton"
+            onClick(editorScreen::closeEditor)
+        }).row()
 
         invalidateHierarchy()  //todo - unsure this helps
         validate()
@@ -198,15 +205,8 @@ class MapEditorViewTab(
             lines += FormattedLine("Continent: [$continent] ([${tile.tileMap.continentSizes[continent]}] tiles)", link = "continent")
         }
 
-        // Проверяем, существует ли уже добавленная подтаблица
-        var subTableMonsterEdit = findActor<Table>("subTableMonsterEdit")
-        if (subTableMonsterEdit == null) {
-            subTableMonsterEdit = Table().apply { name = "subTableMonsterEdit" }
-            add(subTableMonsterEdit).pad(10f).row()
-        }
-
-        // Обновляем подтаблицу
-        updateSubTableMonsterEdit(tile, subTableMonsterEdit)
+        // Refreshing subTable for editing monsters in view Tab
+        updateSubTableMonsterEdit(tile)
 
         tileDataCell?.setActor(MarkupRenderer.render(lines, labelWidth) {
             if (it == "continent") {
@@ -227,25 +227,38 @@ class MapEditorViewTab(
         editorScreen.highlightTile(tile, Color.CORAL)
     }
 
-    private fun updateSubTableMonsterEdit(tile: TileInfo, subTableMonsterEdit: Table) {
+    /**
+     * Updates the `subTableMonsterEdit` to display controls for editing the military unit on the given tile.
+     *
+     * If the tile has a military unit, this method populates the table with the following elements in a single row:
+     * - A label "Change amount:" to indicate the purpose of the controls.
+     * - A text field pre-filled with the total amount of troops in the unit, allowing the user to edit it.
+     * - A "Update" button to apply the changes to the unit's army based on the entered amount.
+     * - A "Remove" button to remove the military unit from the tile.
+     *
+     * If the tile does not have a military unit, the table is cleared.
+     *
+     * @param tile The `TileInfo` object representing the tile being interacted with.
+     */
+    private fun updateSubTableMonsterEdit(tile: TileInfo) {
         subTableMonsterEdit.clear() // Очищаем подтаблицу перед добавлением новых элементов
 
         if (tile.militaryUnit != null) {
-            // Добавляем Label
+            // Adding Label
             val amountLabel = Label("Change amount:", skin).apply { name = "amountLabel" }
             subTableMonsterEdit.add(amountLabel).padRight(10f) // Добавляем отступ справа для красоты
 
-            // Вычисляем количество
+            // Calculating amount
             var amount = tile.militaryUnit!!.army.getAllTroops().sumOf { it?.amount ?: 0 }
 
-            // Добавляем TextField
+            // Adding TextField
             val amountField = UncivTextField.create("Amount", amount.toString()).apply {
                 name = "amountField"
                 textFieldFilter = TextField.TextFieldFilter.DigitsOnlyFilter() // Только цифры
             }
             subTableMonsterEdit.add(amountField).width(100f).padRight(10f) // Фиксируем ширину и добавляем отступ справа
 
-            // Добавляем кнопку Update
+            // Adding Update Button
             val updateButton = "Update".toTextButton().apply {
                 name = "updateButton"
                 onClick {
@@ -256,7 +269,7 @@ class MapEditorViewTab(
             }
             subTableMonsterEdit.add(updateButton).padRight(10f) // Добавляем отступ справа для разделения кнопок
 
-            // Добавляем кнопку Remove
+            // Adding Remove Button
             val removeButton = "Remove".toTextButton().apply {
                 name = "removeButton"
                 onClick {
@@ -265,7 +278,7 @@ class MapEditorViewTab(
                     tileGroup?.update()
                 }
             }
-            subTableMonsterEdit.add(removeButton) // Последний элемент строки, без отступов
+            subTableMonsterEdit.add(removeButton)
         }
     }
 
