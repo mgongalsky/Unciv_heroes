@@ -8,8 +8,8 @@ object DesktopLauncher {
     fun main(args: Array<String>) {
         val config = Lwjgl3ApplicationConfiguration().apply {
             setTitle("JSON Editor")
-            setWindowedMode(800, 600)
-            setResizable(false)
+            setWindowedMode(1600, 1200)
+            setResizable(true)
         }
         Lwjgl3Application(JsonEditorApp(), config)
     }

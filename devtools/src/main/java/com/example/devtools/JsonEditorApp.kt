@@ -4,11 +4,12 @@ import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.badlogic.gdx.scenes.scene2d.InputEvent
-import com.badlogic.gdx.scenes.scene2d.InputListener
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -27,8 +28,7 @@ data class UnitData(
     val cost: String? = null,
     val strength: String? = null,
     val requiredTech: String? = null,
-    val upgradesTo: String? = null,
-   // val civilopediaText: List<String> = emptyList()
+    val upgradesTo: String? = null
 )
 
 class JsonEditorApp : ApplicationAdapter() {
@@ -38,7 +38,7 @@ class JsonEditorApp : ApplicationAdapter() {
 
     private val mapper = ObjectMapper().registerModule(KotlinModule())
     private val unitList = mutableListOf<UnitData>()
-    private val jsonFile = "devtools/src/main/resources/Units.json" // Замените на путь к вашему JSON-файлу
+    private val jsonFile = "devtools/src/main/resources/Units.json"
 
     override fun create() {
         stage = Stage(ScreenViewport())
@@ -58,28 +58,29 @@ class JsonEditorApp : ApplicationAdapter() {
     private fun initializeSkin(): Skin {
         val skin = Skin()
 
-        // Добавляем стандартный шрифт
-        val font = BitmapFont() // Используем стандартный BitmapFont
+        // Создаем увеличенный шрифт
+        val font = BitmapFont().apply { data.setScale(2f) }
         skin.add("default-font", font)
 
         // Регистрируем стили для UI-элементов
-        val textButtonStyle = TextButton.TextButtonStyle()
-        textButtonStyle.font = font
+        val textButtonStyle = TextButton.TextButtonStyle().apply {
+            this.font = font
+        }
         skin.add("default", textButtonStyle)
 
-        val labelStyle = Label.LabelStyle()
-        labelStyle.font = font
+        val labelStyle = Label.LabelStyle().apply {
+            this.font = font
+        }
         skin.add("default", labelStyle)
 
-        val textFieldStyle = TextField.TextFieldStyle()
-        textFieldStyle.font = font
-        textFieldStyle.fontColor = com.badlogic.gdx.graphics.Color.WHITE
+        val textFieldStyle = TextField.TextFieldStyle().apply {
+            this.font = font
+            this.fontColor = Color.WHITE
+            this.background = null
+        }
         skin.add("default", textFieldStyle)
 
-        // Добавляем стиль для ScrollPane
         val scrollPaneStyle = ScrollPane.ScrollPaneStyle()
-        scrollPaneStyle.vScrollKnob = null // Указываем стандартные графические элементы
-        scrollPaneStyle.hScrollKnob = null
         skin.add("default", scrollPaneStyle)
 
         return skin
@@ -87,10 +88,10 @@ class JsonEditorApp : ApplicationAdapter() {
 
     private fun loadJson() {
         val file = File(jsonFile)
-        println("Looking for JSON file at: ${file.absolutePath}") // Вывод полного пути
+        println("Looking for JSON file at: ${file.absolutePath}")
         if (file.exists()) {
             println("JSON file found!")
-            unitList.addAll(mapper.readValue<List<UnitData>>(file))
+            unitList.addAll(mapper.readValue(file))
         } else {
             println("JSON file not found at: ${file.absolutePath}")
         }
@@ -104,10 +105,9 @@ class JsonEditorApp : ApplicationAdapter() {
 
         table.row()
         val saveButton = TextButton("Save", skin)
-        saveButton.addListener(object : InputListener() {
-            override fun touchDown(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int): Boolean {
+        saveButton.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent?, x: Float, y: Float) {
                 saveJson()
-                return true
             }
         })
         table.add(saveButton).center().pad(10f)
@@ -126,55 +126,74 @@ class JsonEditorApp : ApplicationAdapter() {
         dataTable.row()
 
         for (unit in unitList) {
-            val nameField = TextField(unit.name, skin)
-            val typeField = TextField(unit.unitType, skin)
-            val movementField = TextField(unit.movement, skin)
-            val speedField = TextField(unit.speed, skin)
-            val healthField = TextField(unit.health, skin)
-            val damageField = TextField(unit.damage, skin)
+            val nameField = TextField(unit.name, skin).apply {
+                text = unit.name // Устанавливаем начальный текст
+                addListener(object : ClickListener() { // Добавляем слушатель на взаимодействие
+                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                        addListener { // Слушаем изменения текста
+                            unit.name = this@apply.text // Сохраняем изменения в объект
+                            true
+                        }
+                    }
+                })
+            }
+            val typeField = TextField(unit.unitType, skin).apply {
+                text = unit.unitType
+                addListener(object : ClickListener() {
+                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                        addListener {
+                            unit.unitType = this@apply.text
+                            true
+                        }
+                    }
+                })
+            }
 
-            // Добавляем InputListener для TextField'ов
-            nameField.addListener(object : InputListener() {
-                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
-                    unit.name = nameField.text
-                    return true
-                }
-            })
 
-            typeField.addListener(object : InputListener() {
-                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
-                    unit.unitType = typeField.text
-                    return true
-                }
-            })
-
-            movementField.addListener(object : InputListener() {
-                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
-                    unit.movement = movementField.text
-                    return true
-                }
-            })
-
-            speedField.addListener(object : InputListener() {
-                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
-                    unit.speed = speedField.text
-                    return true
-                }
-            })
-
-            healthField.addListener(object : InputListener() {
-                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
-                    unit.health = healthField.text
-                    return true
-                }
-            })
-
-            damageField.addListener(object : InputListener() {
-                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
-                    unit.damage = damageField.text
-                    return true
-                }
-            })
+            val movementField = TextField(unit.movement, skin).apply {
+                text = unit.movement
+                addListener(object : ClickListener() {
+                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                        addListener {
+                            unit.movement = this@apply.text
+                            true
+                        }
+                    }
+                })
+            }
+            val speedField = TextField(unit.speed, skin).apply {
+                text = unit.speed
+                addListener(object : ClickListener() {
+                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                        addListener {
+                            unit.speed = this@apply.text
+                            true
+                        }
+                    }
+                })
+            }
+            val healthField = TextField(unit.health, skin).apply {
+                text = unit.health
+                addListener(object : ClickListener() {
+                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                        addListener {
+                            unit.health = this@apply.text
+                            true
+                        }
+                    }
+                })
+            }
+            val damageField = TextField(unit.damage, skin).apply {
+                text = unit.damage
+                addListener(object : ClickListener() {
+                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                        addListener {
+                            unit.damage = this@apply.text
+                            true
+                        }
+                    }
+                })
+            }
 
             dataTable.add(nameField).fillX()
             dataTable.add(typeField).fillX()
@@ -205,3 +224,5 @@ class JsonEditorApp : ApplicationAdapter() {
         skin.dispose()
     }
 }
+
+
