@@ -1,0 +1,9 @@
+{
+    com.badlogic.gdx.scenes.scene2d.ui.Window$WindowStyle: {
+        default: {
+            titleFont: "default-font",
+            background: "default-background",
+            stageBackground: "default-stage-background"
+        }
+    }
+}
