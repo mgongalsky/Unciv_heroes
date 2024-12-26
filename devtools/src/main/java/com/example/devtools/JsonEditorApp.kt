@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
@@ -148,75 +149,69 @@ class JsonEditorApp : ApplicationAdapter() {
         dataTable.row()
 
         for (unit in unitList) {
-            val nameField = TextField(unit.name, skin).apply {
-                text = unit.name // Устанавливаем начальный текст
-                addListener(object : ClickListener() { // Добавляем слушатель на взаимодействие
-                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                        addListener { // Слушаем изменения текста
-                            unit.name = this@apply.text // Сохраняем изменения в объект
-                            true
-                        }
-                    }
-                })
-            }
-            val typeField = TextField(unit.unitType, skin).apply {
-                text = unit.unitType
-                addListener(object : ClickListener() {
-                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                        addListener {
-                            unit.unitType = this@apply.text
-                            true
-                        }
-                    }
-                })
+            val nameField = TextField(unit.name, skin)
+            val typeField = TextField(unit.unitType, skin)
+
+            // Поля, требующие только числовой ввод
+            val movementField = TextField(unit.movement, skin)
+            val speedField = TextField(unit.speed, skin)
+            val healthField = TextField(unit.health, skin)
+            val damageField = TextField(unit.damage, skin)
+
+            // Установка фильтров на числовые поля
+            val numericFilter = TextField.TextFieldFilter { _, c ->
+                c.isDigit() || c == '\b' // Разрешить только цифры и backspace
             }
 
+            movementField.setTextFieldFilter(numericFilter)
+            speedField.setTextFieldFilter(numericFilter)
+            healthField.setTextFieldFilter(numericFilter)
+            damageField.setTextFieldFilter(numericFilter)
 
-            val movementField = TextField(unit.movement, skin).apply {
-                text = unit.movement
-                addListener(object : ClickListener() {
-                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                        addListener {
-                            unit.movement = this@apply.text
-                            true
-                        }
-                    }
-                })
-            }
-            val speedField = TextField(unit.speed, skin).apply {
-                text = unit.speed
-                addListener(object : ClickListener() {
-                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                        addListener {
-                            unit.speed = this@apply.text
-                            true
-                        }
-                    }
-                })
-            }
-            val healthField = TextField(unit.health, skin).apply {
-                text = unit.health
-                addListener(object : ClickListener() {
-                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                        addListener {
-                            unit.health = this@apply.text
-                            true
-                        }
-                    }
-                })
-            }
-            val damageField = TextField(unit.damage, skin).apply {
-                text = unit.damage
-                addListener(object : ClickListener() {
-                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                        addListener {
-                            unit.damage = this@apply.text
-                            true
-                        }
-                    }
-                })
-            }
+            // Обновляем значения объекта UnitData при вводе
+            nameField.addListener(object : InputListener() {
+                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
+                    unit.name = nameField.text
+                    return true
+                }
+            })
 
+            typeField.addListener(object : InputListener() {
+                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
+                    unit.unitType = typeField.text
+                    return true
+                }
+            })
+
+            movementField.addListener(object : InputListener() {
+                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
+                    unit.movement = movementField.text
+                    return true
+                }
+            })
+
+            speedField.addListener(object : InputListener() {
+                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
+                    unit.speed = speedField.text
+                    return true
+                }
+            })
+
+            healthField.addListener(object : InputListener() {
+                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
+                    unit.health = healthField.text
+                    return true
+                }
+            })
+
+            damageField.addListener(object : InputListener() {
+                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
+                    unit.damage = damageField.text
+                    return true
+                }
+            })
+
+            // Добавляем текстовые поля в таблицу
             dataTable.add(nameField).fillX()
             dataTable.add(typeField).fillX()
             dataTable.add(movementField).fillX()
