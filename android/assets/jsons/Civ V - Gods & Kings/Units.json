@@ -709,7 +709,7 @@
    "attackSound": "metalhit",
    "upgradesTo": "Longswordsman",
    "civilopediaText": [],
-   "requiredTech": "Calendar",
+   "requiredTech": "Calendar"
 },
  {
    "name": "Legion",
