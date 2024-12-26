@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -38,7 +39,7 @@ class JsonEditorApp : ApplicationAdapter() {
 
     private val mapper = ObjectMapper().registerModule(KotlinModule())
     private val unitList = mutableListOf<UnitData>()
-    private val jsonFile = "devtools/src/main/resources/Units.json"
+    private val jsonFile = "devtools/src/main/resources/jsons/Units.json"
 
     override fun create() {
         stage = Stage(ScreenViewport())
@@ -58,32 +59,53 @@ class JsonEditorApp : ApplicationAdapter() {
     private fun initializeSkin(): Skin {
         val skin = Skin()
 
-        // Создаем увеличенный шрифт
-        val font = BitmapFont().apply { data.setScale(2f) }
+        // Создаём шрифт
+        val font = BitmapFont()
+        font.data.setScale(2f) // Увеличиваем шрифт в 2 раза
         skin.add("default-font", font)
 
-        // Регистрируем стили для UI-элементов
-        val textButtonStyle = TextButton.TextButtonStyle().apply {
-            this.font = font
-        }
-        skin.add("default", textButtonStyle)
+        // Создаём стандартный стиль для TextField
+        val textFieldStyle = TextField.TextFieldStyle()
+        textFieldStyle.font = font
+        textFieldStyle.fontColor = com.badlogic.gdx.graphics.Color.BLACK
 
-        val labelStyle = Label.LabelStyle().apply {
-            this.font = font
-        }
-        skin.add("default", labelStyle)
+        // Устанавливаем фоновые цвета для TextField
+        textFieldStyle.background = createBackground(com.badlogic.gdx.graphics.Color.GRAY) // Стандартный фон
+        textFieldStyle.focusedBackground = createBackground(com.badlogic.gdx.graphics.Color.LIGHT_GRAY) // Фон при фокусе
+        textFieldStyle.cursor = createBackground(com.badlogic.gdx.graphics.Color.BLACK) // Цвет курсора
 
-        val textFieldStyle = TextField.TextFieldStyle().apply {
-            this.font = font
-            this.fontColor = Color.WHITE
-            this.background = null
-        }
         skin.add("default", textFieldStyle)
 
+        // Создаём стандартный стиль для Label
+        val labelStyle = Label.LabelStyle()
+        labelStyle.font = font
+        labelStyle.fontColor = com.badlogic.gdx.graphics.Color.BLACK // Чёрный текст
+        skin.add("default", labelStyle)
+
+        // Добавляем стиль для ScrollPane
         val scrollPaneStyle = ScrollPane.ScrollPaneStyle()
         skin.add("default", scrollPaneStyle)
 
+        // Создаём стиль для TextButton
+        val textButtonStyle = TextButton.TextButtonStyle()
+        textButtonStyle.font = font
+        textButtonStyle.fontColor = com.badlogic.gdx.graphics.Color.BLACK // Чёрный текст
+        textButtonStyle.up = createBackground(com.badlogic.gdx.graphics.Color.DARK_GRAY) // Стандартное состояние
+        textButtonStyle.down = createBackground(com.badlogic.gdx.graphics.Color.LIGHT_GRAY) // Состояние нажатия
+        textButtonStyle.checked = createBackground(com.badlogic.gdx.graphics.Color.GRAY) // Состояние выбора
+
+        skin.add("default", textButtonStyle)
+
         return skin
+    }
+
+    private fun createBackground(color: com.badlogic.gdx.graphics.Color): Drawable {
+        val pixmap = com.badlogic.gdx.graphics.Pixmap(1, 1, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888)
+        pixmap.setColor(color)
+        pixmap.fill()
+        val texture = com.badlogic.gdx.graphics.Texture(pixmap)
+        pixmap.dispose()
+        return com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(com.badlogic.gdx.graphics.g2d.TextureRegion(texture))
     }
 
     private fun loadJson() {
@@ -214,6 +236,8 @@ class JsonEditorApp : ApplicationAdapter() {
     }
 
     override fun render() {
+        // Устанавливаем белый цвет для очистки экрана
+        Gdx.gl.glClearColor(1f, 1f, 1f, 1f) // Белый цвет (RGBA)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
         stage.act(Gdx.graphics.deltaTime)
         stage.draw()
