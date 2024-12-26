@@ -19,22 +19,41 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
+import com.fasterxml.jackson.annotation.JsonAnySetter
 
 import java.io.File
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+data class CivilopediaEntry(
+    var text: String?
+)
+
+
+//@JsonIgnoreProperties(ignoreUnknown = true)
 data class UnitData(
     var name: String,
     var unitType: String,
-    var movement: String,
-    var speed: String,
-    var health: String,
-    var damage: String,
-    val uniques: List<String> = emptyList(),
-    val cost: String? = null,
-    val strength: String? = null,
-    val requiredTech: String? = null,
-    val upgradesTo: String? = null
+    var movement: String?,
+    var speed: String?,
+    var health: String?,
+    var damage: String?,
+    var uniques: List<String>?,
+    var cost: String?,
+    var strength: String?,
+    var requiredTech: String?,
+    var upgradesTo: String?,
+    var rangedStrength: String?,
+    var replaces: String?,
+    var uniqueTo: String?,
+    var attackSound: String?,
+    var attackSkill: String?,
+    var promotions: List<String>?,
+    var obsoleteTech: String?,
+    var requiredResource: String?,
+    var hurryCostModifier: String?,
+    var range: String?,
+    var religiousStrength: String?,
+    var interceptRange: String?,
+    var civilopediaText: List<CivilopediaEntry>? // Здесь используется список объектов
 )
 
 class JsonEditorApp : ApplicationAdapter() {
@@ -162,12 +181,15 @@ class JsonEditorApp : ApplicationAdapter() {
         val dataTable = Table(skin)
         dataTable.defaults().pad(5f)
 
+        // Добавляем заголовки таблицы
         dataTable.add("Name").center()
         dataTable.add("Unit Type").center()
         dataTable.add("Movement").center()
         dataTable.add("Speed").center()
         dataTable.add("Health").center()
         dataTable.add("Damage").center()
+        dataTable.add("Cost").center()
+        dataTable.add("Required Tech").center()
         dataTable.row()
 
         // Загружаем уникальные unitType
@@ -190,6 +212,25 @@ class JsonEditorApp : ApplicationAdapter() {
             val speedField = TextField(unit.speed, skin)
             val healthField = TextField(unit.health, skin)
             val damageField = TextField(unit.damage, skin)
+
+            // Поле для Cost
+            val costField = TextField(unit.cost ?: "", skin)
+            costField.setTextFieldFilter(TextField.TextFieldFilter { _, c -> c.isDigit() || c == '\b' }) // Только числа
+            costField.addListener(object : InputListener() {
+                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
+                    unit.cost = if (costField.text.isBlank()) null else costField.text
+                    return true
+                }
+            })
+
+            // Поле для Required Tech
+            val requiredTechField = TextField(unit.requiredTech ?: "", skin)
+            requiredTechField.addListener(object : InputListener() {
+                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
+                    unit.requiredTech = if (requiredTechField.text.isBlank()) null else requiredTechField.text
+                    return true
+                }
+            })
 
             // Установка фильтра для числовых полей
             val numericFilter = TextField.TextFieldFilter { _, c ->
@@ -229,12 +270,15 @@ class JsonEditorApp : ApplicationAdapter() {
                 }
             })
 
+            // Добавляем строки в таблицу
             dataTable.add(nameField).fillX()
-            dataTable.add(unitTypeSelectBox).fillX() // Добавляем SelectBox вместо TextField
+            dataTable.add(unitTypeSelectBox).fillX()
             dataTable.add(movementField).fillX()
             dataTable.add(speedField).fillX()
             dataTable.add(healthField).fillX()
             dataTable.add(damageField).fillX()
+            dataTable.add(costField).fillX()
+            dataTable.add(requiredTechField).fillX()
             dataTable.row()
         }
 
