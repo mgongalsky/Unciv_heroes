@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.badlogic.gdx.utils.viewport.ScreenViewport
@@ -16,6 +17,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
+
 import java.io.File
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -62,25 +66,22 @@ class JsonEditorApp : ApplicationAdapter() {
 
         // Создаём шрифт
         val font = BitmapFont()
-        font.data.setScale(2f) // Увеличиваем шрифт в 2 раза
+        font.data.setScale(2f) // Увеличиваем размер шрифта для лучшей читаемости
         skin.add("default-font", font)
 
         // Создаём стандартный стиль для TextField
         val textFieldStyle = TextField.TextFieldStyle()
         textFieldStyle.font = font
         textFieldStyle.fontColor = com.badlogic.gdx.graphics.Color.BLACK
-
-        // Устанавливаем фоновые цвета для TextField
-        textFieldStyle.background = createBackground(com.badlogic.gdx.graphics.Color.GRAY) // Стандартный фон
-        textFieldStyle.focusedBackground = createBackground(com.badlogic.gdx.graphics.Color.LIGHT_GRAY) // Фон при фокусе
-        textFieldStyle.cursor = createBackground(com.badlogic.gdx.graphics.Color.BLACK) // Цвет курсора
-
+        textFieldStyle.background = createBackground(com.badlogic.gdx.graphics.Color.GRAY)
+        textFieldStyle.focusedBackground = createBackground(com.badlogic.gdx.graphics.Color.LIGHT_GRAY)
+        textFieldStyle.cursor = createBackground(com.badlogic.gdx.graphics.Color.WHITE)
         skin.add("default", textFieldStyle)
 
         // Создаём стандартный стиль для Label
         val labelStyle = Label.LabelStyle()
         labelStyle.font = font
-        labelStyle.fontColor = com.badlogic.gdx.graphics.Color.BLACK // Чёрный текст
+        labelStyle.fontColor = com.badlogic.gdx.graphics.Color.BLACK
         skin.add("default", labelStyle)
 
         // Добавляем стиль для ScrollPane
@@ -90,12 +91,27 @@ class JsonEditorApp : ApplicationAdapter() {
         // Создаём стиль для TextButton
         val textButtonStyle = TextButton.TextButtonStyle()
         textButtonStyle.font = font
-        textButtonStyle.fontColor = com.badlogic.gdx.graphics.Color.BLACK // Чёрный текст
-        textButtonStyle.up = createBackground(com.badlogic.gdx.graphics.Color.DARK_GRAY) // Стандартное состояние
-        textButtonStyle.down = createBackground(com.badlogic.gdx.graphics.Color.LIGHT_GRAY) // Состояние нажатия
-        textButtonStyle.checked = createBackground(com.badlogic.gdx.graphics.Color.GRAY) // Состояние выбора
-
+        textButtonStyle.fontColor = com.badlogic.gdx.graphics.Color.BLACK
+        textButtonStyle.up = createBackground(com.badlogic.gdx.graphics.Color.DARK_GRAY)
+        textButtonStyle.down = createBackground(com.badlogic.gdx.graphics.Color.LIGHT_GRAY)
+        textButtonStyle.checked = createBackground(com.badlogic.gdx.graphics.Color.GRAY)
         skin.add("default", textButtonStyle)
+
+        // Создаём стиль для SelectBox
+        val selectBoxStyle = SelectBox.SelectBoxStyle().apply {
+            this.font = font
+            fontColor = com.badlogic.gdx.graphics.Color.BLACK
+            background = createBackground(com.badlogic.gdx.graphics.Color.WHITE) // Фон SelectBox
+            scrollStyle = ScrollPane.ScrollPaneStyle() // Стиль для скролл-бара
+            listStyle = ListStyle().apply {
+                this.font = font
+                this.fontColorSelected = com.badlogic.gdx.graphics.Color.WHITE // Цвет текста для выделенного элемента
+                this.fontColorUnselected = com.badlogic.gdx.graphics.Color.BLACK // Цвет текста для невыбранных элементов
+                this.selection = createBackground(com.badlogic.gdx.graphics.Color.BLUE) // Цвет выделения
+                this.background = createBackground(com.badlogic.gdx.graphics.Color.YELLOW) // Непрозрачный фон для списка
+            }
+        }
+        skin.add("default", selectBoxStyle)
 
         return skin
     }
@@ -105,7 +121,7 @@ class JsonEditorApp : ApplicationAdapter() {
         pixmap.setColor(color)
         pixmap.fill()
         val texture = com.badlogic.gdx.graphics.Texture(pixmap)
-        pixmap.dispose()
+        pixmap.dispose() // Освобождаем ресурсы Pixmap после создания Texture
         return com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(com.badlogic.gdx.graphics.g2d.TextureRegion(texture))
     }
 
@@ -119,6 +135,12 @@ class JsonEditorApp : ApplicationAdapter() {
             println("JSON file not found at: ${file.absolutePath}")
         }
     }
+
+    private fun loadUnitTypes(): com.badlogic.gdx.utils.Array<String> {
+        val uniqueTypes = unitList.map { it.unitType }.distinct()
+        return com.badlogic.gdx.utils.Array(uniqueTypes.toTypedArray())
+    }
+
 
     private fun buildUI() {
         table.clear()
@@ -148,40 +170,36 @@ class JsonEditorApp : ApplicationAdapter() {
         dataTable.add("Damage").center()
         dataTable.row()
 
+        // Загружаем уникальные unitType
+        val unitTypes = loadUnitTypes()
+
         for (unit in unitList) {
             val nameField = TextField(unit.name, skin)
-            val typeField = TextField(unit.unitType, skin)
 
-            // Поля, требующие только числовой ввод
+            // Создаем выпадающий список для unitType
+            val unitTypeSelectBox = SelectBox<String>(skin)
+            unitTypeSelectBox.setItems(unitTypes)
+            unitTypeSelectBox.selected = unit.unitType // Устанавливаем текущее значение
+            unitTypeSelectBox.addListener(object : ChangeListener() {
+                override fun changed(event: ChangeEvent?, actor: Actor?) {
+                    unit.unitType = unitTypeSelectBox.selected // Обновляем значение unitType
+                }
+            })
+
             val movementField = TextField(unit.movement, skin)
             val speedField = TextField(unit.speed, skin)
             val healthField = TextField(unit.health, skin)
             val damageField = TextField(unit.damage, skin)
 
-            // Установка фильтров на числовые поля
+            // Установка фильтра для числовых полей
             val numericFilter = TextField.TextFieldFilter { _, c ->
-                c.isDigit() || c == '\b' // Разрешить только цифры и backspace
+                c.isDigit() || c == '\b'
             }
 
             movementField.setTextFieldFilter(numericFilter)
             speedField.setTextFieldFilter(numericFilter)
             healthField.setTextFieldFilter(numericFilter)
             damageField.setTextFieldFilter(numericFilter)
-
-            // Обновляем значения объекта UnitData при вводе
-            nameField.addListener(object : InputListener() {
-                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
-                    unit.name = nameField.text
-                    return true
-                }
-            })
-
-            typeField.addListener(object : InputListener() {
-                override fun keyTyped(event: InputEvent?, character: Char): Boolean {
-                    unit.unitType = typeField.text
-                    return true
-                }
-            })
 
             movementField.addListener(object : InputListener() {
                 override fun keyTyped(event: InputEvent?, character: Char): Boolean {
@@ -211,9 +229,8 @@ class JsonEditorApp : ApplicationAdapter() {
                 }
             })
 
-            // Добавляем текстовые поля в таблицу
             dataTable.add(nameField).fillX()
-            dataTable.add(typeField).fillX()
+            dataTable.add(unitTypeSelectBox).fillX() // Добавляем SelectBox вместо TextField
             dataTable.add(movementField).fillX()
             dataTable.add(speedField).fillX()
             dataTable.add(healthField).fillX()
