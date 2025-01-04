@@ -4,6 +4,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.army.ArmyManager
 import com.unciv.logic.army.TroopInfo
+import com.unciv.logic.city.CityInfo
+import com.unciv.ui.cityscreen.CityScreen
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popup.SimplePopup
 import com.unciv.ui.popup.SplitTroopPopup
@@ -35,13 +37,13 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
 
         //bottom().left()
         //pad(10f)
-        updateView()
+        updateView(initialized = false)
     }
 
     /**
      * Updates the view to match the current state of the [ArmyInfo].
      */
-    fun updateView() {
+    fun updateView(initialized: Boolean = true) {
         clear() // Remove existing actors from the table
 
 
@@ -53,6 +55,12 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
         }
 
         pack() // Ensure layout is updated
+
+
+        if (initialized && screen is CityScreen) {
+            screen.city.cityStats.updateTileStats()
+            screen.update(triggeredByArmyView = true)
+        }
     }
 
     /**

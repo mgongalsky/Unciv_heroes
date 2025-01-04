@@ -178,7 +178,7 @@ class CityScreen(
         globalShortcuts.add(Input.Keys.RIGHT) { page(1) }
     }
 
-    internal fun update() {
+    internal fun update(triggeredByArmyView: Boolean = false) {
         // Recalculate Stats
         city.cityStats.update()
 
@@ -193,14 +193,18 @@ class CityScreen(
         //visitingHeroTable.update()
         //visitingHeroTable.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
 
-        if(visitingArmyView.isHero())
-        {
-            visitingArmyView.isVisible = true
-            visitingArmyView.updateView()
-            visitingArmyView.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
+        if(!triggeredByArmyView) {
+            if (visitingArmyView.isHero()) {
+                visitingArmyView.isVisible = true
+                visitingArmyView.updateView()
+                visitingArmyView.setPosition(
+                    stage.width - posFromEdge,
+                    posFromEdge,
+                    Align.bottomRight
+                )
+            } else
+                visitingArmyView.isVisible = false
         }
-        else
-            visitingArmyView.isVisible = false
 
 
         // In portrait mode only: calculate already occupied horizontal space
@@ -221,14 +225,7 @@ class CityScreen(
         cityPickerTable.update()
         cityPickerTable.setPosition(centeredX, exitCityButton.top + 10f, Align.bottom)
 
-        // Top right of screen: Stats / Specialists
-        var statsHeight = stage.height - posFromEdge * 2
-        if (selectedTile != null)
-            statsHeight -= tileTable.height + 10f
-        if (selectedConstruction != null)
-            statsHeight -= selectedConstructionTable.height + 10f
-        cityStatsTable.update(statsHeight)
-        cityStatsTable.setPosition(stage.width - posFromEdge, stage.height - posFromEdge, Align.topRight)
+        updateCityStatsTable()
 
         // Top center: Annex/Raze button
         updateAnnexAndRazeCityButton()
@@ -241,6 +238,19 @@ class CityScreen(
             scrollY = (maxY - cityStatsTable.packIfNeeded().height - posFromEdge + cityPickerTable.top) / 2
             updateVisualScroll()
         }
+    }
+
+    fun updateCityStatsTable(){
+        // Top right of screen: Stats / Specialists
+        var statsHeight = stage.height - posFromEdge * 2
+        if (selectedTile != null)
+            statsHeight -= tileTable.height + 10f
+        if (selectedConstruction != null)
+            statsHeight -= selectedConstructionTable.height + 10f
+        cityStatsTable.update(statsHeight)
+        cityStatsTable.setPosition(stage.width - posFromEdge, stage.height - posFromEdge, Align.topRight)
+
+
     }
 
     fun canCityBeChanged(): Boolean {
