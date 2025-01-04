@@ -5,9 +5,9 @@
     {
         "name": "Ancient era",
         "researchAgreementCost": 150,
-        "startingSettlerCount": 1, // These values should not include the values given in Difficulties.json
+        "startingSettlerCount": 0, // These values should not include the values given in Difficulties.json
         "startingWorkerCount": 0,
-        "startingMilitaryUnitCount": 1,
+        "startingMilitaryUnitCount": 2,
         "startingMilitaryUnit": "Warrior",
         "settlerPopulation": 1,
         "baseUnitBuyCost": 200,
@@ -19,7 +19,7 @@
     {
         "name": "Classical era",
         "researchAgreementCost": 150,
-        "startingSettlerCount": 1,
+        "startingSettlerCount": 0,
         "startingWorkerCount": 0,
         "startingMilitaryUnitCount": 2,
         "startingMilitaryUnit": "Spearman",
@@ -35,7 +35,7 @@
     {
         "name": "Medieval era",
         "researchAgreementCost": 250,
-        "startingSettlerCount": 2,
+        "startingSettlerCount": 0,
         "startingWorkerCount": 1,
         "startingMilitaryUnitCount": 3,
         "startingMilitaryUnit": "Spearman",

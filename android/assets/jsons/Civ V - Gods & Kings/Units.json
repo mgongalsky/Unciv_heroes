@@ -7,7 +7,6 @@
    "health": "20",
    "damage": "5",
    "uniques": [
-      "Can build [Land] improvements on tiles"
    ],
    "cost": "70",
    "civilopediaText": []
@@ -20,7 +19,6 @@
    "health": "20",
    "damage": "5",
    "uniques": [
-      "Founds a new city",
       "Excess Food converted to Production when under construction",
       "Requires at least [2] population"
    ],
@@ -56,7 +54,9 @@
    "health": "20",
    "damage": "5",
    "uniques": [
-      "May upgrade to [Spearman] through ruins-like effects"
+       "Founds a new city",
+       "Can build [Land] improvements on tiles",
+       "May upgrade to [Spearman] through ruins-like effects"
    ],
    "cost": "40",
    "strength": "8",
