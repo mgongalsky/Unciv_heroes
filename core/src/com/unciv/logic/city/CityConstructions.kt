@@ -288,6 +288,20 @@ class CityConstructions : IsPartOfGameInfoSerialization {
         updateUniques()
     }
 
+    /**
+     * Adds production points to the current construction project in the city.
+     *
+     * This function allocates the provided production points to the current construction
+     * (e.g., building, unit, or wonder) being worked on in the city. If the current
+     * construction is perpetual (e.g., a construction that never completes, such as
+     * "wealth" or "research"), the production points are added to the overflow storage.
+     *
+     * If the construction is not perpetual and has not been initialized in the progress
+     * map (`inProgressConstructions`), it initializes the entry with 0 and then adds
+     * the provided production points.
+     *
+     * @param productionToAdd The number of production points to add to the current construction.
+     */
     fun addProductionPoints(productionToAdd: Int) {
         val construction = getConstruction(currentConstructionFromQueue)
         if (construction is PerpetualConstruction) {
