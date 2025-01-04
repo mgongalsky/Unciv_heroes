@@ -1304,8 +1304,8 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
         return gameInfo.tileMap.placeUnitNearTile(location, unitName, this)
     }
 
-    fun addCity(location: Vector2) {
-        val newCity = CityInfo(this, location)
+    fun addCity(location: Vector2, foundingUnit: MapUnit) {
+        val newCity = CityInfo(this, location, foundingUnit)
         newCity.cityConstructions.chooseNextConstruction()
     }
 

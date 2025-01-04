@@ -10,6 +10,7 @@ import com.unciv.logic.civilization.Proximity
 import com.unciv.logic.civilization.ReligionState
 import com.unciv.logic.civilization.diplomacy.DiplomacyFlags
 import com.unciv.logic.army.TroopInfo
+import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.RoadStatus
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
@@ -156,7 +157,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
     fun hasDiplomaticMarriage(): Boolean = foundingCiv == ""
 
     constructor()   // for json parsing, we need to have a default constructor
-    constructor(civInfo: CivilizationInfo, cityLocation: Vector2) {  // new city!
+    constructor(civInfo: CivilizationInfo, cityLocation: Vector2, foundingUnit: MapUnit) {  // new city!
         this.civInfo = civInfo
         foundingCiv = civInfo.civName
         turnAcquired = civInfo.gameInfo.turns
@@ -168,7 +169,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
             "Archer" to 10,
              "Spearman" to 10 // Uncomment if needed
             //"Horseman" to 8,
-            //"Swordsman" to 12
+            //"Swordsman" to 20
         )
 
         garrison.add(TroopInfo(30, "Archer"))
@@ -219,7 +220,8 @@ class CityInfo : IsPartOfGameInfoSerialization {
         workedTiles = hashSetOf() //reassign 1st working tile
 
         // TODO: Change there for new settling mechanics
-        population.setPopulation(ruleset.eras[startingEra]!!.settlerPopulation)
+        //calculateArmyPopulation()
+        population.setPopulation(ruleset.eras[startingEra]!!.settlerPopulation + foundingUnit.calculateArmyPopulation())
 
         if (civInfo.religionManager.religionState == ReligionState.Pantheon) {
             religion.addPressure(
@@ -244,6 +246,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
 
         triggerCitiesSettledNearOtherCiv()
     }
+
 
     private fun addStartingBuildings(civInfo: CivilizationInfo, startingEra: String) {
         val ruleset = civInfo.gameInfo.ruleSet

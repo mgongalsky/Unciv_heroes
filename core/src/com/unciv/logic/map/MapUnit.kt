@@ -45,6 +45,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     companion object {
         var monsterCivInfo = CivilizationInfo() // Dummy CivInfo for loading and saving maps
 
+        val armyToPopulationFactor = 30
         // We need to assign unique ID for each MapUnit
         var currID: Int = 1
     }
@@ -311,6 +312,21 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
         fun clone() = UnitMovementMemory(position, type)
         override fun toString() = "${this::class.simpleName}($position, $type)"
+    }
+
+    /**
+     * Calculates the population to be added to a newly founded city based on the hero's army size.
+     *
+     * This function determines the population contribution from the army by summing the amounts of all troops
+     * and dividing each troop count by a predefined factor (`armyToPopulationFactor`). The result is then
+     * converted to an integer by truncating any fractional part.
+     *
+     * @return The total population (as an integer) derived from the hero's army.
+     */
+    fun calculateArmyPopulation() : Int {
+        var populationArmy = 0f
+        army.getAllTroops().forEach { if(it != null) populationArmy += it.amount.toFloat() / armyToPopulationFactor}
+        return populationArmy.toInt()
     }
 
     fun refreshProtectedTiles() {

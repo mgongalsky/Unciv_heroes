@@ -189,7 +189,7 @@ object UnitActions {
 
         val foundAction = {
             UncivGame.Current.settings.addCompletedTutorialTask("Found city")
-            unit.civInfo.addCity(tile.position)
+            unit.civInfo.addCity(tile.position, unit)
             if (tile.ruleset.tileImprovements.containsKey("City center")) {
                 if(unit.civInfo.isMajorCiv())
                     tile.changeImprovement("City center")
