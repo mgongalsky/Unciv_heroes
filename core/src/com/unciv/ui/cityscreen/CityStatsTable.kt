@@ -7,6 +7,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Slider
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.UncivGame
@@ -35,6 +36,7 @@ import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toTextButton
 import kotlin.math.ceil
 import kotlin.math.round
+import kotlin.math.roundToInt
 import com.unciv.ui.utils.AutoScrollPane as ScrollPane
 
 class CityStatsTable(val cityScreen: CityScreen): Table() {
@@ -188,6 +190,29 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
         upperTable.add(turnsToPopString.toLabel()).row()
         if (foodToVisitingHero != "")
             upperTable.add(foodToVisitingHero.toLabel()).row()
+
+        if(cityScreen.visitingHero != null){
+
+
+            val leftCountLabel = Label(0.toString(), BaseScreen.skin)
+            val rightCountLabel = Label(cityInfo.population.foodStored.toString(), BaseScreen.skin)
+
+
+            val foodSlider = Slider(0f, cityInfo.population.foodStored.toFloat(), 1f, false, BaseScreen.skin)
+            val foodExchangeTable = Table()
+            foodExchangeTable.defaults().pad(5f)
+            foodExchangeTable.add(leftCountLabel).padRight(10f)
+            foodExchangeTable.add(foodSlider).growX().pad(5f)
+            foodExchangeTable.add(rightCountLabel).padLeft(10f)
+            upperTable.add(foodExchangeTable).growX().colspan(2).row()
+
+            //upperTable.add(foodSlider).row()
+
+            upperTable.add("Load".toTextButton())
+
+
+
+        }
 
 
         val tableWithIcons = Table()
