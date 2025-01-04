@@ -17,6 +17,7 @@ class PopulationManager : IsPartOfGameInfoSerialization {
     @Transient
     lateinit var cityInfo: CityInfo
 
+    // TODO: public population value might be a problem. Better make it private and implement getPopulation() method
     var population = 1
         private set
     var foodStored = 0

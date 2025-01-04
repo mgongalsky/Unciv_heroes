@@ -478,7 +478,15 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
             }
         }
 
-        // Если юнит не входит в список гарнизонных, продолжаем стандартную логику
+        // TODO: Remove this hardcode "Warrior" to something from json, Uniques or so
+        if (name == "Warrior") {
+            if (cityConstructions.cityInfo.population.population > 1)
+                cityConstructions.cityInfo.population.addPopulation(-1)
+
+        }
+
+
+            // Если юнит не входит в список гарнизонных, продолжаем стандартную логику
         val unit = civInfo.placeUnitNearTile(cityConstructions.cityInfo.location, name)
             ?: return false  // couldn't place the unit, so there's actually no unit =(
 

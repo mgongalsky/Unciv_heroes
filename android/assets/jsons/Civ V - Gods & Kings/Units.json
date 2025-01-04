@@ -56,7 +56,7 @@
    "uniques": [
        "Founds a new city",
        "Can build [Land] improvements on tiles",
-       "May upgrade to [Spearman] through ruins-like effects"
+       "Requires at least [2] population"
    ],
    "cost": "40",
    "strength": "8",

@@ -11,11 +11,11 @@ import com.unciv.ui.utils.extensions.colorFromRGB
 class Era : RulesetObject() {
     var eraNumber: Int = -1
     var researchAgreementCost = 300
-    var startingSettlerCount = 1
+    var startingSettlerCount = 0
     var startingSettlerUnit = "Settler" // For mods which have differently named settlers
     var startingWorkerCount = 0
     var startingWorkerUnit = "Worker"
-    var startingMilitaryUnitCount = 1
+    var startingMilitaryUnitCount = 2
     var startingMilitaryUnit = "Warrior"
     var startingGold = 0
     var startingCulture = 0

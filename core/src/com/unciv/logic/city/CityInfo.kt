@@ -218,6 +218,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
         val ruleset = civInfo.gameInfo.ruleSet
         workedTiles = hashSetOf() //reassign 1st working tile
 
+        // TODO: Change there for new settling mechanics
         population.setPopulation(ruleset.eras[startingEra]!!.settlerPopulation)
 
         if (civInfo.religionManager.religionState == ReligionState.Pantheon) {
