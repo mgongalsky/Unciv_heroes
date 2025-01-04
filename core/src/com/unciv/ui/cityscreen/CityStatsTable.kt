@@ -180,9 +180,15 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
                 }.tr()
         turnsToPopString += " (${cityInfo.population.foodStored}${Fonts.food}/${cityInfo.population.getFoodToNextPopulation()}${Fonts.food})"
 
+        var foodToVisitingHero = ""
+        if(cityScreen.visitingHero != null)
+            foodToVisitingHero += "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${cityScreen.visitingHero.calculateArmyPopulation()}${Fonts.food}."
         upperTable.add(unassignedPopLabel).row()
         upperTable.add(turnsToExpansionString.toLabel()).row()
         upperTable.add(turnsToPopString.toLabel()).row()
+        if (foodToVisitingHero != "")
+            upperTable.add(foodToVisitingHero.toLabel()).row()
+
 
         val tableWithIcons = Table()
         tableWithIcons.defaults().pad(2f)
