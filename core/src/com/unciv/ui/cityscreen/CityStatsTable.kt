@@ -182,18 +182,25 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
                 }.tr()
         turnsToPopString += " (${cityInfo.population.foodStored}${Fonts.food}/${cityInfo.population.getFoodToNextPopulation()}${Fonts.food})"
 
+        var garrisonFoodConsumption = "Garrison consumes ${ceil(cityScreen.city.garrisonInfo.calculateFoodMaintenance()).toInt()}${Fonts.food} each turn."
+
         var foodToVisitingHero = ""
         if(cityScreen.visitingHero != null)
-            foodToVisitingHero += "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${cityScreen.visitingHero.calculateArmyPopulation()}${Fonts.food}."
+            foodToVisitingHero += "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
         upperTable.add(unassignedPopLabel).row()
         upperTable.add(turnsToExpansionString.toLabel()).row()
         upperTable.add(turnsToPopString.toLabel()).row()
+        upperTable.add(garrisonFoodConsumption.toLabel()).row()
         if (foodToVisitingHero != "")
             upperTable.add(foodToVisitingHero.toLabel()).row()
 
         if(cityScreen.visitingHero != null){
 
-
+            // TODO: here we need to put actual values of food for both garrison and hero armies
+            // TODO: add another string, describing how much food has a hero and what's current daily consumption
+            // and how many days it can supply the army
+            // Take example from SplitTroopPopup.kt. Consider making a function or a class for such slider with values.
+            // TODO: add current garrison consumption.
             val leftCountLabel = Label(0.toString(), BaseScreen.skin)
             val rightCountLabel = Label(cityInfo.population.foodStored.toString(), BaseScreen.skin)
 
