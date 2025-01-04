@@ -18,6 +18,7 @@ import com.unciv.models.stats.Stat
 import com.unciv.models.stats.StatMap
 import com.unciv.models.stats.Stats
 import com.unciv.ui.utils.extensions.toPercent
+import kotlin.math.ceil
 import kotlin.math.min
 
 
@@ -390,6 +391,10 @@ class CityStats(val cityInfo: CityInfo) {
         }
             .forEach { if (it.getTileImprovementInProgress() != null) improvementCost += 3f } // TODO: now add 3 for each improvement, afterwards need to adjust value for specific improvement
         stats.add(Stat.Production, -improvementCost)
+
+        // Calculate garrison maintenance. Rounding to higher value
+        stats.add(Stat.Food, -ceil(cityInfo.garrisonInfo.calculateFoodMaintenance()))
+
         statsFromTiles = stats
     }
 

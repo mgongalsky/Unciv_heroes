@@ -121,6 +121,14 @@ class ArmyInfo(
     }
 
 
+    fun calculateFoodMaintenance() : Float {
+        var foodMaintenance = 0f
+        slots.filterNotNull().forEach { foodMaintenance += it.amount.toFloat() / 30f } // 1 food per 30 soldiers
+        return foodMaintenance
+
+
+    }
+
     /** Returns the troop at the given index or null if the slot is empty. */
     fun getTroopAt(index: Int): TroopInfo? {
         return slots.getOrNull(index)
