@@ -185,17 +185,27 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
         var garrisonFoodConsumption = "Garrison consumes ${ceil(cityScreen.city.garrisonInfo.calculateFoodMaintenance()).toInt()}${Fonts.food} each turn."
 
-        var foodToVisitingHero = ""
-        if(cityScreen.visitingHero != null)
-            foodToVisitingHero += "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
+        //var foodToVisitingHero = ""
+        //if(cityScreen.visitingHero != null)
+        //    foodToVisitingHero += "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
         upperTable.add(unassignedPopLabel).row()
         upperTable.add(turnsToExpansionString.toLabel()).row()
         upperTable.add(turnsToPopString.toLabel()).row()
         upperTable.add(garrisonFoodConsumption.toLabel()).row()
-        if (foodToVisitingHero != "")
-            upperTable.add(foodToVisitingHero.toLabel()).row()
+/*
+        if (foodToVisitingHero != "") {
+            upperTable.add(foodToVisitingHero.toLabel())
+            row()
+        }
+
+ */
 
         if(cityScreen.visitingHero != null){
+            var foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
+
+            val foodToVisitingHeroLabel = upperTable.add(foodToVisitingHero.toLabel()).actor as Label
+            upperTable.row()
+
 
             // TODO: here we need to put actual values of food for both garrison and hero armies
             // TODO: add another string, describing how much food has a hero and what's current daily consumption
@@ -217,6 +227,14 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
                 leftCountLabel.setText(leftCount.toString())
                 rightCountLabel.setText(rightCount.toString())
+
+                cityScreen.visitingHero.currentFood = maxFoodToHero - foodSlider.value.toFloat()
+                cityInfo.population.foodStored = foodSlider.value.toInt()
+
+                foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
+                foodToVisitingHeroLabel.setText(foodToVisitingHero)
+
+
                 false
             }
 
@@ -229,8 +247,20 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             upperTable.add(foodExchangeTable).growX().colspan(2).row()
 
             //upperTable.add(foodSlider).row()
+            /*
+            upperTable.add("Load".toTextButton()).apply {
+                onActivation {
+                    cityScreen.visitingHero.currentFood = maxFoodToHero - foodSlider.value.toFloat()
+                    cityInfo.population.foodStored = foodSlider.value.toInt()
+                    foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
+                    foodToVisitingHeroLabel.setText(foodToVisitingHero)
+                    //cityScreen.update()
+                }
+            }
 
-            upperTable.add("Load".toTextButton())
+             */
+           // totalTable.add("Max".toTextButton().apply { onActivation { amount2Buy.value = 100f } }).pad(5f)
+
 
 
 
