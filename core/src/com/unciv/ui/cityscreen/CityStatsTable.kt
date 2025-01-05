@@ -35,6 +35,7 @@ import com.unciv.ui.utils.extensions.toGroup
 import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toTextButton
 import kotlin.math.ceil
+import kotlin.math.min
 import kotlin.math.round
 import kotlin.math.roundToInt
 import com.unciv.ui.utils.AutoScrollPane as ScrollPane
@@ -201,11 +202,25 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             // and how many days it can supply the army
             // Take example from SplitTroopPopup.kt. Consider making a function or a class for such slider with values.
             // TODO: add current garrison consumption.
-            val leftCountLabel = Label(0.toString(), BaseScreen.skin)
-            val rightCountLabel = Label(cityInfo.population.foodStored.toString(), BaseScreen.skin)
+
+            val maxFoodToHero = min(cityInfo.population.foodStored.toFloat() + cityScreen.visitingHero.currentFood, cityScreen.visitingHero.foodCapacity)
+
+            val leftCountLabel = Label(cityInfo.population.foodStored.toString(), BaseScreen.skin)
+            val rightCountLabel = Label(cityScreen.visitingHero.currentFood.toInt().toString(), BaseScreen.skin)
 
 
-            val foodSlider = Slider(0f, cityInfo.population.foodStored.toFloat(), 1f, false, BaseScreen.skin)
+            val foodSlider = Slider(0f, maxFoodToHero, 1f, false, BaseScreen.skin)
+            foodSlider.value = cityInfo.population.foodStored.toFloat() // Initial position is the current targetCount
+            foodSlider.addListener { _ ->
+                val rightCount = foodSlider.value.roundToInt()
+                val leftCount = maxFoodToHero.toInt() - rightCount
+
+                leftCountLabel.setText(leftCount.toString())
+                rightCountLabel.setText(rightCount.toString())
+                false
+            }
+
+
             val foodExchangeTable = Table()
             foodExchangeTable.defaults().pad(5f)
             foodExchangeTable.add(leftCountLabel).padRight(10f)

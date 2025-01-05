@@ -106,6 +106,9 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         "Archer", 12
     )
 
+    var foodCapacity = 10f
+    var currentFood = 3f
+
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
      *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */
     @Transient
@@ -395,6 +398,8 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         toReturn.heroAttackSkill = heroAttackSkill
         toReturn.heroDefenseSkill = heroDefenseSkill
         toReturn.protectedTiles = protectedTiles
+        toReturn.foodCapacity = foodCapacity
+        toReturn.currentFood = currentFood
         toReturn.army = army
         toReturn.id = id
         toReturn.health = health
