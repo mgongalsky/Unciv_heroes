@@ -154,6 +154,21 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
         )
     }
 
+    private fun updateTurnsToPopString(): String {
+        var turnsToPopString =
+                when {
+                    cityInfo.isStarving() -> "[${cityInfo.getNumTurnsToStarvation()}] turns to lose population"
+                    cityInfo.getRuleset().units[cityInfo.cityConstructions.currentConstructionFromQueue]
+                        .let { it != null && it.hasUnique(UniqueType.ConvertFoodToProductionWhenConstructed) }
+                    -> "Food converts to production"
+                    cityInfo.isGrowing() -> "[${cityInfo.getNumTurnsToNewPopulation()}] turns to new population"
+                    else -> "Stopped population growth"
+                }.tr()
+        turnsToPopString += " (${cityInfo.population.foodStored}${Fonts.food}/${cityInfo.population.getFoodToNextPopulation()}${Fonts.food})"
+        return turnsToPopString
+
+    }
+
     private fun addText() {
         val unassignedPopString = "{Unassigned population}: ".tr() +
                 cityInfo.population.getFreePopulation().toString() + "/" + cityInfo.population.population
@@ -172,17 +187,6 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             turnsToExpansionString +=
                     " (${cityInfo.expansion.cultureStored}${Fonts.culture}/${cityInfo.expansion.getCultureToNextTile()}${Fonts.culture})"
 
-        var turnsToPopString =
-                when {
-                    cityInfo.isStarving() -> "[${cityInfo.getNumTurnsToStarvation()}] turns to lose population"
-                    cityInfo.getRuleset().units[cityInfo.cityConstructions.currentConstructionFromQueue]
-                        .let { it != null && it.hasUnique(UniqueType.ConvertFoodToProductionWhenConstructed) }
-                    -> "Food converts to production"
-                    cityInfo.isGrowing() -> "[${cityInfo.getNumTurnsToNewPopulation()}] turns to new population"
-                    else -> "Stopped population growth"
-                }.tr()
-        turnsToPopString += " (${cityInfo.population.foodStored}${Fonts.food}/${cityInfo.population.getFoodToNextPopulation()}${Fonts.food})"
-
         var garrisonFoodConsumption = "Garrison consumes ${ceil(cityScreen.city.garrisonInfo.calculateFoodMaintenance()).toInt()}${Fonts.food} each turn."
 
         //var foodToVisitingHero = ""
@@ -190,7 +194,8 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
         //    foodToVisitingHero += "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
         upperTable.add(unassignedPopLabel).row()
         upperTable.add(turnsToExpansionString.toLabel()).row()
-        upperTable.add(turnsToPopString.toLabel()).row()
+        val turnsToPopLabel = upperTable.add(updateTurnsToPopString().toLabel()).actor as Label
+        upperTable.row()
         upperTable.add(garrisonFoodConsumption.toLabel()).row()
 /*
         if (foodToVisitingHero != "") {
@@ -215,25 +220,26 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
             val maxFoodToHero = min(cityInfo.population.foodStored.toFloat() + cityScreen.visitingHero.currentFood, cityScreen.visitingHero.foodCapacity)
 
-            val leftCountLabel = Label(cityInfo.population.foodStored.toString(), BaseScreen.skin)
-            val rightCountLabel = Label(cityScreen.visitingHero.currentFood.toInt().toString(), BaseScreen.skin)
+            val leftCountLabel = Label("City: " + cityInfo.population.foodStored.toString(), BaseScreen.skin)
+            val rightCountLabel = Label(cityScreen.visitingHero.currentFood.toInt().toString() + " :Hero", BaseScreen.skin)
 
 
             val foodSlider = Slider(0f, maxFoodToHero, 1f, false, BaseScreen.skin)
-            foodSlider.value = cityInfo.population.foodStored.toFloat() // Initial position is the current targetCount
+            foodSlider.value = maxFoodToHero - cityInfo.population.foodStored.toFloat() // Initial position is the current targetCount
             foodSlider.addListener { _ ->
                 val rightCount = foodSlider.value.roundToInt()
                 val leftCount = maxFoodToHero.toInt() - rightCount
 
-                leftCountLabel.setText(leftCount.toString())
-                rightCountLabel.setText(rightCount.toString())
+                leftCountLabel.setText("City: " + leftCount.toString())
+                rightCountLabel.setText(rightCount.toString() + " :Hero")
 
-                cityScreen.visitingHero.currentFood = maxFoodToHero - foodSlider.value.toFloat()
-                cityInfo.population.foodStored = foodSlider.value.toInt()
+                cityScreen.visitingHero.currentFood = foodSlider.value.toFloat()
+                cityInfo.population.foodStored = maxFoodToHero.toInt() - foodSlider.value.toInt()
 
                 foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
                 foodToVisitingHeroLabel.setText(foodToVisitingHero)
 
+                turnsToPopLabel.setText(updateTurnsToPopString())
 
                 false
             }
