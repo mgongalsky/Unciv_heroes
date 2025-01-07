@@ -37,13 +37,19 @@
 	{
 		"name": "Granary",
 		"food": 2,
-		"maintenance": 1,
 		"hurryCostModifier": 25,
 		"uniques": ["[+1 Food] from [Deer] tiles [in this city]",
 			"[+1 Food] from [Bananas] tiles [in this city]",
 			"[+1 Food] from [Wheat] tiles [in this city]"],
 		"requiredTech": "Pottery"
 	},
+    {
+        "name": "Smithy",
+        "production": 2,
+        "hurryCostModifier": 25,
+        "uniques": [],
+        "requiredTech": "Mining"
+    },
 	{
 		"name": "Shrine",
 		"faith": 1,
@@ -70,7 +76,7 @@
 		"greatPersonPoints": {"Great Engineer": 1},
         "uniques": ["[+10]% [Food] [in all cities]", "[+15]% Production when constructing [Archery] units [in this city]",
             "[+15]% Production when constructing [Ranged Gunpowder] units [in this city]"],
-		"requiredTech": "Archery",
+		"requiredTech": "Woodcraft",
 		"quote": "'It is not so much for its beauty that the forest makes a claim upon men's hearts, as for that subtle something, that quality of air, that emanation from old trees, that so wonderfully changes and renews a weary spirit.' - Robert Louis Stevenson"
 	},
 	// Column 2

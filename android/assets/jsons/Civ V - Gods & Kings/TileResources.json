@@ -106,6 +106,7 @@
         "terrainsCanBeFoundOn": ["Forest"],
         "production": 1,
         "improvement": "Lumber mill",
+        "revealedBy": "Woodcraft",
         "improvementStats": {"production": 1},
         "uniques": ["Generated on every [5] tiles <in [Grassland] tiles> <in [Forest] tiles>",
             "Generated on every [5] tiles <in [Plains] tiles> <in [Forest] tiles>"

@@ -32,7 +32,14 @@
 			"[+1 Food] from [Wheat] tiles [in this city]"],
 		"requiredTech": "Pottery"
 	},
-	{
+    {
+        "name": "Smithy",
+        "production": 2,
+        "maintenance": 1,
+        "hurryCostModifier": 25,
+        "uniques": [],
+    },
+    {
 		"name": "Temple of Artemis",
 		"culture": 1,
 		"isWonder": true,
