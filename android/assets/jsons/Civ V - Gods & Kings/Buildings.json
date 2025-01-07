@@ -44,6 +44,14 @@
 		"requiredTech": "Pottery"
 	},
     {
+        "name": "Well",
+        "hurryCostModifier": 25,
+        "cost": 5,
+        "uniques": ["[+20]% Production when constructing [Military] units [in this city]"],
+        "requiredTech": "Pottery"
+    },
+
+    {
         "name": "Smithy",
         "production": 2,
         "hurryCostModifier": 25,

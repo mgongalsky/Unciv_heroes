@@ -81,6 +81,7 @@
         "resourceType": "Strategic",
         "terrainsCanBeFoundOn": ["Grassland","Desert","Tundra"],
         "production": 1,
+        "revealedBy": "Mining",
         "improvement": "Quarry",
         "improvementStats": {"production": 1},
         "uniques": ["Generated on every [10] tiles <in [Grassland] tiles> <in tiles without [Fresh Water]>",
