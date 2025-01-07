@@ -112,6 +112,13 @@ enum class UniqueType(val text: String, vararg targets: UniqueTarget, val flags:
 
     //endregion Stat providing uniques
 
+    // region For visiting heroes
+
+    FoodCapacityBonus("[relativeAmount]% increase food capacity for visiting hero", UniqueTarget.Building),
+
+
+
+    // endregion For visiting heroes
 
     // region City-State related uniques
 

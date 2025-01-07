@@ -72,7 +72,13 @@
         "requiredTech": "Animal Husbandry",
         "uniques": ["[-20]% tile improvement construction time"]
     },
-	{
+    {
+        "name": "Smokehouse",
+        "cost": 5,
+        //"requiredTech": "Woodcraft",
+        "uniques": ["[100]% increase food capacity for visiting hero"]
+    },
+    {
 		"name": "Pyramid",
 		"replaces": "Shrine",
 		"uniqueTo": "The Maya",

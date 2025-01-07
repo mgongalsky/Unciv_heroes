@@ -106,7 +106,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         "Archer", 12
     )
 
-    var foodCapacity = 10f
+    var foodCapacity = 4f
     var currentFood = 3f
 
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles

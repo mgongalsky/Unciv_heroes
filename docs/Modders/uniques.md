@@ -858,6 +858,11 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 	Applicable to: FollowerBelief
 
 ## Building uniques
+??? example  "[relativeAmount]% increase food capacity for visiting hero"
+	Example: "[+20]% increase food capacity for visiting hero"
+
+	Applicable to: Building
+
 ??? example  "Consumes [amount] [resource]"
 	Example: "Consumes [3] [Iron]"
 

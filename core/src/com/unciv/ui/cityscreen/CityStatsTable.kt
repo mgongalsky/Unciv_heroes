@@ -33,6 +33,7 @@ import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.surroundWithCircle
 import com.unciv.ui.utils.extensions.toGroup
 import com.unciv.ui.utils.extensions.toLabel
+import com.unciv.ui.utils.extensions.toPercent
 import com.unciv.ui.utils.extensions.toTextButton
 import kotlin.math.ceil
 import kotlin.math.min
@@ -218,10 +219,26 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             // Take example from SplitTroopPopup.kt. Consider making a function or a class for such slider with values.
             // TODO: add current garrison consumption.
 
-            val maxFoodToHero = min(cityInfo.population.foodStored.toFloat() + cityScreen.visitingHero.currentFood, cityScreen.visitingHero.foodCapacity)
+            // Calculating bonuses to hero food capacity
+
+            var finalHeroFoodCapacity = cityScreen.visitingHero.foodCapacity
+
+            val foodBonuses = cityInfo.getMatchingUniques(UniqueType.FoodCapacityBonus)
+
+            var totalBonusPercent = 0f
+            for (unique in foodBonuses) {
+                totalBonusPercent += unique.params[0].toInt()
+                // Применяем бонус к гостевому герою
+            }
+
+            finalHeroFoodCapacity *= totalBonusPercent.toPercent()
+
+
+            // TODO: Code to be corrected. Problems if food limited by hero's capacity
+            val maxFoodToHero = min(cityInfo.population.foodStored.toFloat() + cityScreen.visitingHero.currentFood, finalHeroFoodCapacity)
 
             val leftCountLabel = Label("City: " + cityInfo.population.foodStored.toString(), BaseScreen.skin)
-            val rightCountLabel = Label(cityScreen.visitingHero.currentFood.toInt().toString() + " :Hero", BaseScreen.skin)
+            val rightCountLabel = Label((maxFoodToHero.toInt() - cityInfo.population.foodStored).toString() + " :Hero", BaseScreen.skin)
 
 
             val foodSlider = Slider(0f, maxFoodToHero, 1f, false, BaseScreen.skin)
@@ -236,7 +253,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
                 cityScreen.visitingHero.currentFood = foodSlider.value.toFloat()
                 cityInfo.population.foodStored = maxFoodToHero.toInt() - foodSlider.value.toInt()
 
-                foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
+                foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}, hero max ${finalHeroFoodCapacity.toInt()}${Fonts.food}."
                 foodToVisitingHeroLabel.setText(foodToVisitingHero)
 
                 turnsToPopLabel.setText(updateTurnsToPopString())
