@@ -274,18 +274,28 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
     private fun updateAvailableConstructions() {
         val constructionsScrollY = availableConstructionsScrollPane.scrollY
 
-        if (!availableConstructionsTable.hasChildren()) { //
+        if (!availableConstructionsTable.hasChildren()) {
             availableConstructionsTable.add(Constants.loading.toLabel()).pad(10f)
         }
 
         Concurrency.run("Construction info gathering - ${cityScreen.city.name}") {
-            // Since this can be a heavy operation and leads to many ANRs on older phones we put the metadata-gathering in another thread.
+            // Сбор информации о доступных строительных объектах и событиях
             val constructionButtonDTOList = getConstructionButtonDTOs()
+            val city = cityScreen.city
+            val cityEvents = city.cityConstructions.getConstructableEvents()
+                .map { event ->
+                    ConstructionButtonDTO(
+                        event,
+                        "[${event.name}]".tr()
+                    )
+                }
+
             launchOnGLThread {
                 val units = ArrayList<Table>()
                 val buildableWonders = ArrayList<Table>()
                 val buildableNationalWonders = ArrayList<Table>()
                 val buildableBuildings = ArrayList<Table>()
+                val cityEventsTables = ArrayList<Table>()
                 val specialConstructions = ArrayList<Table>()
 
                 var maxButtonWidth = constructionsQueueTable.width
@@ -305,6 +315,12 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                     maxButtonWidth = max(maxButtonWidth, constructionButton.packIfNeeded().width)
                 }
 
+                for (eventDTO in cityEvents) {
+                    val eventButton = getConstructionButton(eventDTO)
+                    cityEventsTables.add(eventButton)
+                    maxButtonWidth = max(maxButtonWidth, eventButton.packIfNeeded().width)
+                }
+
                 availableConstructionsTable.apply {
                     clear()
                     defaults().left().bottom()
@@ -312,6 +328,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                     addCategory("Buildings", buildableBuildings, maxButtonWidth)
                     addCategory("Wonders", buildableWonders, maxButtonWidth)
                     addCategory("National Wonders", buildableNationalWonders, maxButtonWidth)
+                    addCategory("City Events", cityEventsTables, maxButtonWidth)
                     addCategory("Other", specialConstructions, maxButtonWidth)
                     pack()
                 }

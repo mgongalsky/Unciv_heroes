@@ -209,18 +209,21 @@ class CityConstructions : IsPartOfGameInfoSerialization {
 
     internal fun getConstruction(constructionName: String): IConstruction {
         val gameBasics = cityInfo.getRuleset()
+
         when {
-            constructionName == "" -> return getConstruction("Nothing")
+            constructionName.isEmpty() -> return getConstruction("Nothing")
             gameBasics.buildings.containsKey(constructionName) -> return gameBasics.buildings[constructionName]!!
             gameBasics.units.containsKey(constructionName) -> return gameBasics.units[constructionName]!!
+            gameBasics.cityEvents.containsKey(constructionName) -> return gameBasics.cityEvents[constructionName]!!
             else -> {
                 val special = PerpetualConstruction.perpetualConstructionsMap[constructionName]
                 if (special != null) return special
             }
         }
 
+        // Если объект не найден в доступных типах
         class NotBuildingOrUnitException(message: String) : Exception(message)
-        throw NotBuildingOrUnitException("$constructionName is not a building or a unit!")
+        throw NotBuildingOrUnitException("$constructionName is not a building, unit, or city event!")
     }
 
     internal fun getBuiltBuildings(): Sequence<Building> = builtBuildingObjects.asSequence()
