@@ -98,6 +98,8 @@ class Ruleset {
     val unitTypes = LinkedHashMap<String, UnitType>()
     var victories = LinkedHashMap<String, Victory>()
     var cityStateTypes = LinkedHashMap<String, CityStateType>()
+    val cityEvents = LinkedHashMap<String, CityEvent>()
+
 
     val mods = LinkedHashSet<String>()
     var modOptions = ModOptions()
@@ -370,6 +372,9 @@ class Ruleset {
             cityStateTypes += createHashmap(json().fromJsonFile(Array<CityStateType>::class.java, cityStateTypesFile))
         }
 
+
+        val eventsFile = folderHandle.child("CityEvents.json")
+        if (eventsFile.exists()) cityEvents += createHashmap(json().fromJsonFile(Array<CityEvent>::class.java, eventsFile))
 
 
         // Add objects that might not be present in base ruleset mods, but are required
