@@ -50,7 +50,8 @@ class CityEvent : RulesetStatsObject(), INonPerpetualConstruction {
         // Проверка, может ли событие быть построено
     override fun isBuildable(cityConstructions: CityConstructions): Boolean {
         // Простая реализация: проверяем наличие требуемого здания
-        return cityConstructions.containsBuildingOrEquivalent(requiredBuilding)
+        return true
+        //return cityConstructions.containsBuildingOrEquivalent(requiredBuilding)
     }
 
     // Получение стоимости производства для цивилизации
@@ -61,7 +62,8 @@ class CityEvent : RulesetStatsObject(), INonPerpetualConstruction {
     // Получение стоимости покупки за указанный ресурс
     override fun getStatBuyCost(cityInfo: CityInfo, stat: Stat): Int? {
         // Используем базовую реализацию из интерфейса
-        return getBaseBuyCost(cityInfo, stat)
+        return 5
+        //return getBaseBuyCost(cityInfo, stat)
     }
 
     // Получение причин, почему строительство может быть запрещено
