@@ -3,7 +3,9 @@
         "name": "Festival",
         "description": "A city-wide festival increases happiness and culture output.",
         "requiredBuilding": "Theater",
-    //    "effects": ["[+20]% Production when constructing [Military] units [in this city]"],
+        "uniques": ["Hidden when religion is disabled"],
+
+        //    "effects": ["[+20]% Production when constructing [Military] units [in this city]"],
 
         "duration": 5
     },
@@ -11,7 +13,7 @@
         "name": "Military Drills",
         "description": "Training for the army increases production and combat strength.",
         "requiredBuilding": "Barracks",
- //       "effects": ["[+20]% Production when constructing [Military] units [in this city]"],
+        "uniques": ["[+20]% Production when constructing [Military] units [in this city]"],
 
         "duration": 3
     }

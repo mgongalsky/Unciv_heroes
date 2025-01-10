@@ -146,6 +146,7 @@ class Ruleset {
         unitTypes.putAll(ruleset.unitTypes)
         victories.putAll(ruleset.victories)
         cityStateTypes.putAll(ruleset.cityStateTypes)
+        cityEvents.putAll(ruleset.cityEvents)
         for (unitToRemove in ruleset.modOptions.unitsToRemove) units.remove(unitToRemove)
         modOptions.uniques.addAll(ruleset.modOptions.uniques)
         modOptions.constants.merge(ruleset.modOptions.constants)
@@ -202,6 +203,7 @@ class Ruleset {
         unitTypes.clear()
         victories.clear()
         cityStateTypes.clear()
+        cityEvents.clear()
     }
 
     fun allRulesetObjects(): Sequence<IRulesetObject> =
@@ -446,6 +448,7 @@ class Ruleset {
         if (tileImprovements.isNotEmpty()) stringList += "[${tileImprovements.size}] Improvements"
         if (religions.isNotEmpty()) stringList += "[${religions.size}] Religions"
         if (beliefs.isNotEmpty()) stringList += "[${beliefs.size}] Beliefs"
+        if (cityEvents.isNotEmpty()) stringList += "[${cityEvents.size}] City Events"
         return stringList.joinToString { it.tr() }
     }
 

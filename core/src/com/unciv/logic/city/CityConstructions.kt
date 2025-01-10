@@ -90,8 +90,14 @@ class CityConstructions : IsPartOfGameInfoSerialization {
     internal fun getBuildableBuildings(): Sequence<Building> = cityInfo.getRuleset().buildings.values
         .asSequence().filter { it.isBuildable(this) }
 
+    fun getConstructableEvents() = cityInfo.getRuleset().cityEvents.values
+        .asSequence()
+        //.filter { it.isBuildable(this) }
+
     fun getConstructableUnits() = cityInfo.getRuleset().units.values
         .asSequence().filter { it.isBuildable(this) }
+
+
 
     private fun getBasicStatBuildings(stat: Stat) = cityInfo.getRuleset().buildings.values
         .asSequence()

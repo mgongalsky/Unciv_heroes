@@ -37,6 +37,7 @@ enum class UniqueTarget(val inheritsFrom: UniqueTarget? = null) {
     Unit,
     UnitType(Unit),
     Promotion(Unit),
+    CityEvent,
 
     // Tile-specific
     Terrain,
