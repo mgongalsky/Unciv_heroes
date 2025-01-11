@@ -97,7 +97,7 @@ class BattleTable(val worldScreen: WorldScreen): Table() {
     }
 
     private fun tryGetDefenderAtTile(selectedTile: TileInfo, includeFriendly: Boolean): ICombatant? {
-        val verbose_protectedTiles = true // Enable verbose logging for debugging
+        val verbose_protectedTiles = false // Enable verbose logging for debugging
 
         val attackerCiv = worldScreen.viewingCiv
         var defender: ICombatant? = Battle.getMapCombatantOfTile(selectedTile)

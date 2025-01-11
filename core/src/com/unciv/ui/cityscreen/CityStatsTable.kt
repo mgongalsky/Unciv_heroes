@@ -134,7 +134,9 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             addReligionInfo()
 
         addBuildingsInfo()
-        addRecruitmentInfo()
+        addPreparedCityEvents()
+
+        //addRecruitmentInfo()
 
         upperTable.pack()
         lowerTable.pack()
@@ -429,6 +431,34 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
         }
 
         destinationTable.add(button).pad(1f).padBottom(2f).padTop(2f).expandX().right().row()
+    }
+
+    private fun addPreparedCityEvents() {
+        val preparedEvents = cityInfo.cityConstructions.preparedCityEvents
+
+        if (preparedEvents.isEmpty()) {
+            return // Если нет подготовленных событий, блок не отображается
+        }
+
+        val eventsTable = Table()
+
+        for (eventName in preparedEvents) {
+            val event = cityInfo.getRuleset().cityEvents[eventName]!!
+
+            val eventRow = Table()
+            val eventIcon = ImageGetter.getPortraitImage(eventName, 50f)
+            val eventInfo = Table()
+
+            eventInfo.add(eventName.toLabel(fontSize = Constants.defaultFontSize)).row()
+            eventInfo.add(event.description.tr().toLabel(fontSize = Constants.defaultFontSize)).row()
+
+            eventRow.add(eventIcon).size(50f).padRight(10f)
+            eventRow.add(eventInfo).growX()
+
+            eventsTable.add(eventRow).growX().padBottom(5f).row()
+        }
+
+        lowerTable.addCategory("Prepared Events", eventsTable, startsOpened = true)
     }
 
 

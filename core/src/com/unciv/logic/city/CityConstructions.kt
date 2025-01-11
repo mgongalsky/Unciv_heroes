@@ -11,6 +11,7 @@ import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.multiplayer.isUsersTurn
 import com.unciv.models.ruleset.Building
+import com.unciv.models.ruleset.CityEvent
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.unique.LocalUniqueCache
 import com.unciv.models.ruleset.unique.StateForConditionals
@@ -52,20 +53,26 @@ class CityConstructions : IsPartOfGameInfoSerialization {
     // No backing field, not serialized
     var currentConstructionFromQueue: String
         get() {
+
             return if (constructionQueue.isEmpty()) ""
             else constructionQueue.first()
         }
         set(value) {
             if (constructionQueue.isEmpty()) constructionQueue.add(value) else constructionQueue[0] = value
+            //Thread.currentThread().stackTrace.forEach {
+            //    println(it)
+            //}
+
         }
 
     //endregion
     //region Serialized Fields
 
     var builtBuildings = HashSet<String>()
+    var preparedCityEvents = HashSet<String>()
     val inProgressConstructions = HashMap<String, Int>()
     var currentConstructionIsUserSet = false
-    var constructionQueue = mutableListOf<String>()
+    var constructionQueue: MutableList<String> = mutableListOf()
     var productionOverflow = 0
     private val queueMaxSize = 10
 
@@ -78,6 +85,7 @@ class CityConstructions : IsPartOfGameInfoSerialization {
     fun clone(): CityConstructions {
         val toReturn = CityConstructions()
         toReturn.builtBuildings.addAll(builtBuildings)
+        toReturn.preparedCityEvents.addAll(preparedCityEvents)
         toReturn.inProgressConstructions.putAll(inProgressConstructions)
         toReturn.currentConstructionIsUserSet = currentConstructionIsUserSet
         toReturn.constructionQueue.addAll(constructionQueue)
@@ -86,13 +94,18 @@ class CityConstructions : IsPartOfGameInfoSerialization {
         return toReturn
     }
 
+    fun logStackTrace(message: String) {
+        println("TRACE: $message")
+        Thread.currentThread().stackTrace.forEach { println(it) }
+    }
+
     // Why is one of these called 'buildable' and the other 'constructable'?
     internal fun getBuildableBuildings(): Sequence<Building> = cityInfo.getRuleset().buildings.values
         .asSequence().filter { it.isBuildable(this) }
 
     fun getConstructableEvents() = cityInfo.getRuleset().cityEvents.values
         .asSequence()
-        //.filter { it.isBuildable(this) }
+        .filter { it.isBuildable(this) }
 
     fun getConstructableUnits() = cityInfo.getRuleset().units.values
         .asSequence().filter { it.isBuildable(this) }
@@ -367,15 +380,18 @@ class CityConstructions : IsPartOfGameInfoSerialization {
             if (getConstruction(constructionName).isBuildable(this))
                 constructionQueue.add(constructionName)
         }
+
     }
 
     private fun validateInProgressConstructions() {
+
         // remove obsolete stuff from in progress constructions - happens often and leaves clutter in memory and save files
         // should have little visible consequences - any accumulated points that may be reused later should stay (nukes when manhattan project city lost, nat wonder when conquered an empty city...), all other points should be refunded
         // Should at least be called before each turn - if another civ completes a wonder after our previous turn, we should get the refund this turn
         val inProgressSnapshot = inProgressConstructions.keys.filter { it != currentConstructionFromQueue }
         for (constructionName in inProgressSnapshot) {
             val construction = getConstruction(constructionName)
+
             // Perpetual constructions should always still be valid (I hope)
             if (construction is PerpetualConstruction) continue
 
@@ -476,6 +492,21 @@ class CityConstructions : IsPartOfGameInfoSerialization {
         builtBuildings.remove(buildingName)
         updateUniques()
     }
+
+    fun addCityEvent(eventName: String) {
+        //val eventObject = cityInfo.getRuleset().cityEvents[eventName]!!
+        preparedCityEvents.add(eventName)
+        // Обновление уникальных свойств города
+        updateUniques()
+    }
+
+    fun removeCityEvent(eventName: String) {
+        //val eventObject = cityInfo.getRuleset().cityEvents[eventName]!!
+        preparedCityEvents.remove(eventName)
+        // Обновление уникальных свойств города
+        updateUniques()
+    }
+
 
     fun updateUniques() {
         builtBuildingUniqueMap.clear()
@@ -612,7 +643,7 @@ class CityConstructions : IsPartOfGameInfoSerialization {
                 || !cityInfo.civInfo.gameInfo.gameParameters.isOnlineMultiplayer
         if ((UncivGame.Current.settings.autoAssignCityProduction && isCurrentPlayersTurn) // only automate if the active human player has the setting to automate production
                 || !cityInfo.civInfo.isPlayerCivilization() || cityInfo.isPuppet) {
-            ConstructionAutomation(this).chooseNextConstruction()
+            //ConstructionAutomation(this).chooseNextConstruction()
         }
 
         /** Support for [UniqueType.CreatesOneImprovement] - if an Improvement-creating Building was auto-queued, auto-choose a tile: */

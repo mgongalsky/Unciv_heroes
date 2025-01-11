@@ -226,7 +226,8 @@ class Ruleset {
             tileResources.values.asSequence() +
             unitPromotions.values.asSequence() +
             units.values.asSequence() +
-            unitTypes.values.asSequence()
+            unitTypes.values.asSequence() +
+            cityEvents.values.asSequence()
             // Victories is only INamed
     fun allIHasUniques(): Sequence<IHasUniques> =
             allRulesetObjects() + sequenceOf(modOptions)
@@ -429,6 +430,8 @@ class Ruleset {
             }
         }
     }
+
+
 
     /** Used for displaying a RuleSet's name */
     override fun toString() = when {

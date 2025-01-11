@@ -23,10 +23,12 @@ import com.unciv.models.ruleset.Ruleset
 object BackwardCompatibility {
 
     /**
+     * Switched off!!
      * Mods can change, leading to things on the map that are no longer defined in the mod.
      * This function removes them so the game doesn't crash when it tries to access them.
      */
     fun GameInfo.removeMissingModReferences() {
+        return
         tileMap.removeMissingTerrainModReferences(ruleSet)
 
         for (tile in tileMap.values) {
@@ -85,7 +87,7 @@ object BackwardCompatibility {
         oldBuildingName: String,
         newBuildingName: String
     ) {
-        if (ruleSet.buildings.containsKey(oldBuildingName))
+        if (ruleSet.buildings.containsKey(oldBuildingName) || ruleSet.cityEvents.containsKey(oldBuildingName))
             return
         // Replace in built buildings
         if (cityConstructions.builtBuildings.contains(oldBuildingName)) {

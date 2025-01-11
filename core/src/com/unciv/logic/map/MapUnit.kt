@@ -335,7 +335,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     fun refreshProtectedTiles() {
         // Ensure currentTile is initialized before proceeding
         if (!::currentTile.isInitialized) {
-            println("Warning: currentTile is not initialized for unit $name")
+            //println("Warning: currentTile is not initialized for unit $name")
             return
         }
 

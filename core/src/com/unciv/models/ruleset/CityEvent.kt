@@ -77,8 +77,12 @@ class CityEvent : RulesetStatsObject(), INonPerpetualConstruction {
 
     // Событие, вызываемое после завершения строительства
     override fun postBuildEvent(cityConstructions: CityConstructions, boughtWith: Stat?): Boolean {
-        val city = cityConstructions.cityInfo
-        applyEffects(city)
+        //val civInfo = cityConstructions.cityInfo.civInfo
+
+        cityConstructions.addCityEvent(name)
+
+
+        //applyEffects(city)
         return true // Успешное завершение события
     }
 
