@@ -244,6 +244,7 @@ class CityConstructions : IsPartOfGameInfoSerialization {
     }
 
     internal fun getBuiltBuildings(): Sequence<Building> = builtBuildingObjects.asSequence()
+    internal fun getPreparedEvents(): Sequence<CityEvent> = preparedCityEventObjects.asSequence()
 
     fun containsBuildingOrEquivalent(buildingNameOrUnique: String): Boolean =
             buildingNameOrUnique == "" || isBuilt(buildingNameOrUnique) || getBuiltBuildings().any { it.replaces == buildingNameOrUnique || it.hasUnique(buildingNameOrUnique) }

@@ -24,6 +24,15 @@ class CityEvent : RulesetStatsObject(), INonPerpetualConstruction {
 
     var resourceRequirementsInternal = HashMap<String, Int>()
 
+    fun isUsable(): Boolean{
+
+        return true
+    }
+
+    fun use(){
+        //println("You have used ${name} event!")
+    }
+
     // Логика применения эффектов
     fun applyEffects(city: CityInfo) {
         // Реализация применения эффектов

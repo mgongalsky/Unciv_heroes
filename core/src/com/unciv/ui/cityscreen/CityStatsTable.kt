@@ -14,6 +14,7 @@ import com.unciv.UncivGame
 import com.unciv.logic.city.CityFlags
 import com.unciv.logic.city.CityFocus
 import com.unciv.logic.city.CityInfo
+import com.unciv.models.UncivSound
 import com.unciv.models.ruleset.Building
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
@@ -434,26 +435,38 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
     }
 
     private fun addPreparedCityEvents() {
-        val preparedEvents = cityInfo.cityConstructions.preparedCityEvents
+        val preparedEvents = cityInfo.cityConstructions.getPreparedEvents()
 
-        if (preparedEvents.isEmpty()) {
+        if (preparedEvents.none()) {
             return // Если нет подготовленных событий, блок не отображается
         }
 
         val eventsTable = Table()
 
-        for (eventName in preparedEvents) {
-            val event = cityInfo.getRuleset().cityEvents[eventName]!!
+        for (event in preparedEvents) {
+            //val event = cityInfo.getRuleset().cityEvents[eventName]!!
 
             val eventRow = Table()
-            val eventIcon = ImageGetter.getPortraitImage(eventName, 50f)
+            val eventIcon = ImageGetter.getPortraitImage(event.name, 50f)
             val eventInfo = Table()
 
-            eventInfo.add(eventName.toLabel(fontSize = Constants.defaultFontSize)).row()
+            eventInfo.add(event.name.toLabel(fontSize = Constants.defaultFontSize)).row()
             //eventInfo.add(event.description.tr().toLabel(fontSize = Constants.defaultFontSize)).row()
 
             eventRow.add(eventIcon).size(50f).padRight(10f)
             eventRow.add(eventInfo).growX()
+
+            if (event.isUsable()) {
+                val useCityEventButton = ImageGetter.getImage("OtherIcons/New").apply { color = Color.BLACK }.surroundWithCircle(40f)
+                useCityEventButton.onClick(UncivSound.Silent) {
+                    event.use()
+                    cityInfo.cityConstructions.removeCityEvent(event.name)
+                    cityScreen.update()
+                    //addConstructionToQueue(construction, cityScreen.city.cityConstructions)
+                }
+                eventRow.add(useCityEventButton)
+            }
+
 
             eventsTable.add(eventRow).growX().padBottom(5f).row()
         }
