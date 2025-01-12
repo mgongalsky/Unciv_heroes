@@ -450,7 +450,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             val eventInfo = Table()
 
             eventInfo.add(eventName.toLabel(fontSize = Constants.defaultFontSize)).row()
-            eventInfo.add(event.description.tr().toLabel(fontSize = Constants.defaultFontSize)).row()
+            //eventInfo.add(event.description.tr().toLabel(fontSize = Constants.defaultFontSize)).row()
 
             eventRow.add(eventIcon).size(50f).padRight(10f)
             eventRow.add(eventInfo).growX()

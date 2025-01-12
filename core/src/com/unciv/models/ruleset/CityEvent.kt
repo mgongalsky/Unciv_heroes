@@ -50,8 +50,8 @@ class CityEvent : RulesetStatsObject(), INonPerpetualConstruction {
         // Проверка, может ли событие быть построено
     override fun isBuildable(cityConstructions: CityConstructions): Boolean {
         // Простая реализация: проверяем наличие требуемого здания
-        return true
-        //return cityConstructions.containsBuildingOrEquivalent(requiredBuilding)
+        //return true
+        return cityConstructions.containsBuildingOrEquivalent(requiredBuilding)
     }
 
     // Получение стоимости производства для цивилизации

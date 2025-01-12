@@ -28,6 +28,7 @@ import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.TileInfo
 import com.unciv.models.UncivSound
 import com.unciv.models.ruleset.Building
+import com.unciv.models.ruleset.CityEvent
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.stats.Stat
@@ -238,11 +239,13 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         val cityConstructions = city.cityConstructions
 
         val constructionsSequence = city.getRuleset().units.values.asSequence() +
-                city.getRuleset().buildings.values.asSequence()
+                city.getRuleset().buildings.values.asSequence() +
+                city.getRuleset().cityEvents.values.asSequence()
+
 
         city.cityStats.updateTileStats() // only once
         for (entry in constructionsSequence.filter { it.shouldBeDisplayed(cityConstructions) }) {
-            val useStoredProduction = entry is Building || !cityConstructions.isBeingConstructedOrEnqueued(entry.name)
+            val useStoredProduction = entry is Building || entry is CityEvent || !cityConstructions.isBeingConstructedOrEnqueued(entry.name)
             var buttonText = entry.name.tr() + cityConstructions.getTurnsToConstructionString(entry.name, useStoredProduction)
             for ((resource, amount) in entry.getResourceRequirements()) {
                 buttonText += "\n" + resource.getConsumesAmountString(amount).tr()
@@ -310,15 +313,10 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                                 else -> buildableBuildings += constructionButton
                             }
                         }
+                        is CityEvent -> cityEventsTables.add(constructionButton)
                         is PerpetualConstruction -> specialConstructions.add(constructionButton)
                     }
                     maxButtonWidth = max(maxButtonWidth, constructionButton.packIfNeeded().width)
-                }
-
-                for (eventDTO in cityEvents) {
-                    val eventButton = getConstructionButton(eventDTO)
-                    cityEventsTables.add(eventButton)
-                    maxButtonWidth = max(maxButtonWidth, eventButton.packIfNeeded().width)
                 }
 
                 availableConstructionsTable.apply {
