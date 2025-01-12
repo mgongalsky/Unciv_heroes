@@ -108,11 +108,20 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     var basicFoodCapacity = 4f
     var foodCapacityBonus = 0f
 
-    var currentFood = 3f
+    private var currentFood = 3f
     var morale = 0
     var luck = 0
 
     var tempBoosts = mutableListOf<TempBoost>()
+
+    fun getCurrentFood() : Float = currentFood
+    fun setCurrentFood(newFood: Float){
+        // TODO: that must be checked by percent bonuses implemented first into this class
+        //if(newFood <= basicFoodCapacity + foodCapacityBonus)
+            currentFood = newFood
+    }
+
+    fun addFood(addAmount: Float) = setCurrentFood(currentFood + addAmount)
 
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
      *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */

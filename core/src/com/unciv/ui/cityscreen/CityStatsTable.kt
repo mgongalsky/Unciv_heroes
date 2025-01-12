@@ -213,7 +213,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             val foodToVisitingHeroLabel = upperTable.add(foodToVisitingHero.toLabel()).actor as Label
             upperTable.row()
 
-            var foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.currentFood.toInt()}${Fonts.food}, , hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
+            var foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.getCurrentFood().toInt()}${Fonts.food}, , hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
 
             val foodOfVisitingHeroLabel = upperTable.add(foodOfVisitingHero.toLabel()).actor as Label
             upperTable.row()
@@ -233,7 +233,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
             // Calculating bonuses to hero food capacity
 
-            var finalHeroFoodCapacity = cityScreen.visitingHero.basicFoodCapacity
+            var maxFoodHero = cityScreen.visitingHero.basicFoodCapacity
 
             val foodBonuses = cityInfo.getMatchingUniques(UniqueType.FoodCapacityBonus)
 
@@ -243,32 +243,69 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
                 // Применяем бонус к гостевому герою
             }
 
-            finalHeroFoodCapacity *= totalBonusPercent.toPercent()
+            maxFoodHero *= totalBonusPercent.toPercent()
+            val maxFoodCity = cityInfo.population.getFoodToNextPopulation().toFloat()
+            var currFoodHero = cityScreen.visitingHero.getCurrentFood()
+            var currFoodCity = cityInfo.population.foodStored.toFloat()
+
+            var freeFoodHero = maxFoodHero - currFoodHero
+            if(freeFoodHero < 0f){
+                println("Hero has current food more than maximum!")
+                freeFoodHero = 0f
+
+            }
+            var freeFoodCity = maxFoodCity - currFoodCity
+
+            var minHero = min(currFoodHero, freeFoodCity)
+            var minCity = min(currFoodCity, freeFoodHero)
+
+            var foodRange = minHero + minCity
+            if(foodRange < 0){
+                println("minHero $minHero, minCity $minCity")
+                println("currFoodHero $currFoodHero, maxFoodHero $maxFoodHero, freeFoodHero $freeFoodHero")
+                println("currFoodCity $currFoodCity, maxFoodCity $maxFoodCity, freeFoodCity $freeFoodCity")
+
+                foodRange = 0f
+            }
 
 
             // TODO: Code to be corrected. Problems if food limited by hero's capacity
-            val maxFoodToHero = min(cityInfo.population.foodStored.toFloat() + cityScreen.visitingHero.currentFood, finalHeroFoodCapacity)
+            //val maxFoodToHero = min(cityInfo.population.foodStored.toFloat() + cityScreen.visitingHero.currentFood, finalHeroFoodCapacity)
 
-            val leftCountLabel = Label("City: " + cityInfo.population.foodStored.toString(), BaseScreen.skin)
-            val rightCountLabel = Label((maxFoodToHero.toInt() - cityInfo.population.foodStored).toString() + " :Hero", BaseScreen.skin)
+            //val leftCountLabel = Label("City: " + cityInfo.population.foodStored.toString(), BaseScreen.skin)
+            //val rightCountLabel = Label((maxFoodToHero.toInt() - cityInfo.population.foodStored).toString() + " :Hero", BaseScreen.skin)
+
+            val leftCountLabel = Label("City: " + currFoodCity.toInt().toString(), BaseScreen.skin)
+            val rightCountLabel = Label(currFoodHero.toInt().toString() + " :Hero", BaseScreen.skin)
 
 
-            val foodSlider = Slider(0f, maxFoodToHero, 1f, false, BaseScreen.skin)
-            foodSlider.value = maxFoodToHero - cityInfo.population.foodStored.toFloat() // Initial position is the current targetCount
+            val foodSlider = Slider(0f, foodRange, 1f, false, BaseScreen.skin)
+            foodSlider.value = minHero // Initial position is the current targetCount
             foodSlider.addListener { _ ->
-                val rightCount = foodSlider.value.roundToInt()
-                val leftCount = maxFoodToHero.toInt() - rightCount
 
-                leftCountLabel.setText("City: " + leftCount.toString())
-                rightCountLabel.setText(rightCount.toString() + " :Hero")
 
-                cityScreen.visitingHero.currentFood = foodSlider.value.toFloat()
-                cityInfo.population.foodStored = maxFoodToHero.toInt() - foodSlider.value.toInt()
+                // Update all if changed:
+                cityScreen.visitingHero.setCurrentFood(foodSlider.value.toFloat() + currFoodHero - minHero)
+                cityInfo.population.foodStored = (foodRange - foodSlider.value + currFoodCity - minCity).toInt()
+
+                currFoodHero = foodSlider.value.toFloat() + currFoodHero - minHero
+                currFoodCity = foodRange - foodSlider.value + currFoodCity - minCity
+
+                freeFoodHero = maxFoodHero - currFoodHero
+                freeFoodCity = maxFoodCity - currFoodCity
+
+                minHero = min(currFoodHero, freeFoodCity)
+                minCity = min(currFoodCity, freeFoodHero)
+
+                leftCountLabel.setText("City: " + currFoodCity.toInt().toString())
+                rightCountLabel.setText(currFoodHero.toInt().toString() + " :Hero")
+
+
 
                 foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
                 foodToVisitingHeroLabel.setText(foodToVisitingHero)
 
-                foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.currentFood.toInt()}${Fonts.food}, , hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
+                foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.getCurrentFood().toInt()}${Fonts.food}, , hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
 
                 foodOfVisitingHeroLabel.setText(foodOfVisitingHero)
 

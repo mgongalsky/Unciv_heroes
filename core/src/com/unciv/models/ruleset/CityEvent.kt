@@ -36,7 +36,7 @@ class CityEvent : RulesetStatsObject(), INonPerpetualConstruction {
             when (uniqueObject.type){
                 UniqueType.FoodToHeroBonus -> {
                     if (city.hasVisitingHero()){
-                        city.getVisitingHero()!!.currentFood += uniqueObject.params[0].toFloat()
+                        city.getVisitingHero()!!.addFood(uniqueObject.params[0].toFloat())
                     }
 
                 }
