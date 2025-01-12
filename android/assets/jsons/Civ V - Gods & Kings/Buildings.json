@@ -75,7 +75,7 @@
     {
         "name": "Smokehouse",
         "cost": 25,
-        //"requiredTech": "Woodcraft",
+        "requiredTech": "Woodcraft",
         "uniques": ["[20]% increase food capacity for visiting hero"]
     },
     {

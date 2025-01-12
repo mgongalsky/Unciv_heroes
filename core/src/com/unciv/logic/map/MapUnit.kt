@@ -105,7 +105,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         "Archer", 12
     )
 
-    var basicFoodCapacity = 4f
+    var basicFoodCapacity = 15f
     var foodCapacityBonus = 0f
 
     private var currentFood = 3f
@@ -1075,11 +1075,13 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     }
 
     fun endTurn() {
-        val currentMaintenance = army.calculateFoodMaintenance()
-        if (currentFood >= currentMaintenance)
-            currentFood -= currentMaintenance
-        else {
-            army.dismissByMostMaintenance()
+        if(!isMonster) {
+            val currentMaintenance = army.calculateFoodMaintenance()
+            if (currentFood >= currentMaintenance)
+                currentFood -= currentMaintenance
+            else {
+                army.dismissByMostMaintenance()
+            }
         }
 
         movement.clearPathfindingCache()

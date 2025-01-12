@@ -14,7 +14,7 @@
     {
         "name": "Military Drills",
         "description": "Training for the army increases production and combat strength.",
-   //     "requiredBuilding": "Barracks",
+        "requiredBuilding": "Smokehouse",
         "uniques": ["Gives [5] food to [visiting hero]"],
         "cost": 15,
 
