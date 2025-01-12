@@ -74,9 +74,9 @@
     },
     {
         "name": "Smokehouse",
-        "cost": 5,
+        "cost": 25,
         //"requiredTech": "Woodcraft",
-        "uniques": ["[100]% increase food capacity for visiting hero"]
+        "uniques": ["[20]% increase food capacity for visiting hero"]
     },
     {
 		"name": "Pyramid",

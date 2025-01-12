@@ -1,5 +1,5 @@
 
-units1.png
+AbsoluteUnits.png
 size: 1024, 1024
 format: RGBA8888
 filter: Nearest, Nearest
@@ -719,7 +719,7 @@ TileSets/AbsoluteUnits/Units/Warrior
   offset: 0, 0
   index: -1
 
-units2.png
+AbsoluteUnits2.png
 size: 1024, 1024
 format: RGBA8888
 filter: Nearest, Nearest
@@ -1824,7 +1824,7 @@ TileSets/AbsoluteUnits/Units/Worker-Industrial era-2
   offset: 0, 0
   index: -1
 
-units3.png
+AbsoluteUnits3.png
 size: 1024, 1024
 format: RGBA8888
 filter: Nearest, Nearest
@@ -2103,7 +2103,20 @@ TileSets/AbsoluteUnits/Units/Work Boats-Industrial era-2
   offset: 0, 0
   index: -1
 
-units4.png
+AbsoluteUnits4.png
+size: 1024, 1024
+format: RGBA8888
+filter: Nearest, Nearest
+repeat: none
+TileSets/AbsoluteUnits/Units/Peasant
+  rotate: false
+  xy: 2, 2
+  size: 512, 512
+  orig: 512, 512
+  offset: 0, 0
+  index: -1
+
+AbsoluteUnits5.png
 size: 1024, 1024
 format: RGBA8888
 filter: Nearest, Nearest
@@ -2116,7 +2129,7 @@ TileSets/AbsoluteUnits/Units/Spearman
   offset: 0, 0
   index: -1
 
-units5.png
+AbsoluteUnits6.png
 size: 1024, 1024
 format: RGBA8888
 filter: Nearest, Nearest

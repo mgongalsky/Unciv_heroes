@@ -459,7 +459,7 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
         val civInfo = cityConstructions.cityInfo.civInfo
 
         // Проверяем, является ли построенный юнит одним из заранее определенных типов
-        if (name in listOf("Archer", "Swordsman", "Horseman", "Spearman")) {
+        if (name in listOf("Archer", "Swordsman", "Horseman", "Spearman","Peasant")) {
             val cityArmy = cityConstructions.cityInfo.garrisonInfo
 
             // Попытка добавить юнита в гарнизон

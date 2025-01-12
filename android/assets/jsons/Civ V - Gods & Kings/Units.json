@@ -141,6 +141,19 @@
    "rangedStrength": "7",
    "requiredTech": "The Wheel"
 },
+    {
+        "name": "Peasant",
+        "unitType": "Sword",
+        "movement": "1",
+        "speed": "1",
+        "health": "2",
+        "damage": "1",
+        "cost": "10",
+        "strength": "2",
+        "obsoleteTech": "Construction",
+        "attackSound": "nonmetalhit",
+        "civilopediaText": []
+    },
  {
    "name": "Bowman",
    "unitType": "Archery",

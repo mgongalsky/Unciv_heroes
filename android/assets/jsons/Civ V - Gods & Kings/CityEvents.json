@@ -3,7 +3,7 @@
         "name": "Festival",
         "description": "A city-wide festival increases happiness and culture output.",
  //       "requiredBuilding": "Smokehouse",
-        "cost": 12,
+        "cost": 15,
         "uniques": ["Gives bonus [1] to [morale] to [visiting hero] for [5] turns"]
 
 
@@ -16,7 +16,7 @@
         "description": "Training for the army increases production and combat strength.",
    //     "requiredBuilding": "Barracks",
         "uniques": ["Gives [5] food to [visiting hero]"],
-        "cost": 12,
+        "cost": 15,
 
 
         "duration": 3
