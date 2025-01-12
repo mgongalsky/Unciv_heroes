@@ -3,7 +3,7 @@
         "name": "Festival",
         "description": "A city-wide festival increases happiness and culture output.",
         "requiredBuilding": "Theater",
-        "cost": 25,
+        "cost": 9,
 
         //    "effects": ["[+20]% Production when constructing [Military] units [in this city]"],
 
@@ -14,7 +14,7 @@
         "description": "Training for the army increases production and combat strength.",
         "requiredBuilding": "Barracks",
         "uniques": ["[+20]% Production when constructing [Military] units [in this city]"],
-        "cost": 25,
+        "cost": 9,
 
 
         "duration": 3

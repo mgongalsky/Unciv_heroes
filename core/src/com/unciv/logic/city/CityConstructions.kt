@@ -47,6 +47,10 @@ class CityConstructions : IsPartOfGameInfoSerialization {
     @Transient
     private var builtBuildingObjects = ArrayList<Building>()
 
+    // Массив с объектами событий
+    @Transient
+    private var preparedCityEventObjects = ArrayList<CityEvent>()
+
     @Transient
     val builtBuildingUniqueMap = UniqueMap()
 
@@ -307,6 +311,13 @@ class CityConstructions : IsPartOfGameInfoSerialization {
             cityInfo.getRuleset().buildings[it]
                     ?: throw java.lang.Exception("Building $it is not found!")
         })
+
+        // Восстановление списка объектов событий
+        preparedCityEventObjects = ArrayList(preparedCityEvents.map {
+            cityInfo.getRuleset().cityEvents[it]
+                ?: throw java.lang.Exception("CityEvent $it is not found!")
+        })
+
         updateUniques()
     }
 
@@ -494,19 +505,22 @@ class CityConstructions : IsPartOfGameInfoSerialization {
     }
 
     fun addCityEvent(eventName: String) {
-        //val eventObject = cityInfo.getRuleset().cityEvents[eventName]!!
+        val eventObject = cityInfo.getRuleset().cityEvents[eventName]!!
+        preparedCityEventObjects = preparedCityEventObjects.withItem(eventObject)
         preparedCityEvents.add(eventName)
+
         // Обновление уникальных свойств города
         updateUniques()
     }
 
     fun removeCityEvent(eventName: String) {
-        //val eventObject = cityInfo.getRuleset().cityEvents[eventName]!!
+        val eventObject = cityInfo.getRuleset().cityEvents[eventName]!!
+        preparedCityEventObjects = preparedCityEventObjects.withoutItem(eventObject)
         preparedCityEvents.remove(eventName)
+
         // Обновление уникальных свойств города
         updateUniques()
     }
-
 
     fun updateUniques() {
         builtBuildingUniqueMap.clear()
@@ -643,7 +657,7 @@ class CityConstructions : IsPartOfGameInfoSerialization {
                 || !cityInfo.civInfo.gameInfo.gameParameters.isOnlineMultiplayer
         if ((UncivGame.Current.settings.autoAssignCityProduction && isCurrentPlayersTurn) // only automate if the active human player has the setting to automate production
                 || !cityInfo.civInfo.isPlayerCivilization() || cityInfo.isPuppet) {
-            //ConstructionAutomation(this).chooseNextConstruction()
+            ConstructionAutomation(this).chooseNextConstruction()
         }
 
         /** Support for [UniqueType.CreatesOneImprovement] - if an Improvement-creating Building was auto-queued, auto-choose a tile: */
