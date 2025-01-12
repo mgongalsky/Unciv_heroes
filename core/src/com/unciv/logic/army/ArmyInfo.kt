@@ -1,11 +1,9 @@
 package com.unciv.logic.army
 
-import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.CivilizationInfo
-import com.unciv.logic.map.MapUnit
 
 /**
  * Represents an army consisting of a fixed number of slots,
@@ -23,7 +21,7 @@ class ArmyInfo(
     }
 
     // Array to hold troop slots (null means the slot is empty)
-    private val slots: Array<TroopInfo?> = Array(maxSlots) { null }
+    private val troops: Array<TroopInfo?> = Array(maxSlots) { null }
 
 
     /** Convenience constructor to initialize army with a list of troops */
@@ -38,7 +36,7 @@ class ArmyInfo(
     fun setTransients(civInfo0: CivilizationInfo){
 
         civInfo = civInfo0
-        slots.forEach { if(it != null) it.setTransients(civInfo) }
+        troops.forEach { if(it != null) it.setTransients(civInfo) }
     }
 
     /** Initializes troops in slots from a list of pairs (name, count) */
@@ -46,11 +44,11 @@ class ArmyInfo(
         for ((index, troop) in troops.withIndex()) {
             if (index >= maxSlots) break
             val (name, count) = troop
-            slots[index] = TroopInfo(name, count, civInfo)
+            this.troops[index] = TroopInfo(name, count, civInfo)
         }
         // Fill remaining slots with null if the number of troops is less than maxSlots
         for (index in troops.size until maxSlots) {
-            slots[index] = null // Explicitly mark the slot as empty
+            this.troops[index] = null // Explicitly mark the slot as empty
         }
     }
 
@@ -72,8 +70,8 @@ class ArmyInfo(
         }
 
         // Clear current slots
-        for (i in slots.indices) {
-            slots[i] = null
+        for (i in troops.indices) {
+            troops[i] = null
         }
 
         // Calculate even distribution of troops across slots
@@ -81,10 +79,10 @@ class ArmyInfo(
         val remainder = totalCount % maxSlots
 
         // Distribute troops to each slot
-        for (i in slots.indices) {
+        for (i in troops.indices) {
             val countForThisSlot = troopsPerSlot + if (i < remainder) 1 else 0
             if (countForThisSlot > 0) {
-                slots[i] = TroopInfo(unitName, countForThisSlot, civInfo)
+                troops[i] = TroopInfo(unitName, countForThisSlot, civInfo)
             }
         }
     }
@@ -102,7 +100,7 @@ class ArmyInfo(
         if (amount <= 0) return false // Нельзя добавлять 0 или отрицательное количество
 
         // Проверяем, есть ли уже юнит такого типа
-        for (slot in slots) {
+        for (slot in troops) {
             if (slot?.unitName == unitName) {
                 slot.amount += amount // Увеличиваем количество
                 return true
@@ -110,9 +108,9 @@ class ArmyInfo(
         }
 
         // Если такого юнита нет, ищем пустой слот
-        val emptySlotIndex = slots.indexOfFirst { it == null }
+        val emptySlotIndex = troops.indexOfFirst { it == null }
         if (emptySlotIndex != -1) {
-            slots[emptySlotIndex] = TroopInfo(unitName, amount, civInfo)
+            troops[emptySlotIndex] = TroopInfo(unitName, amount, civInfo)
             return true
         }
 
@@ -123,15 +121,22 @@ class ArmyInfo(
 
     fun calculateFoodMaintenance() : Float {
         var foodMaintenance = 0f
-        slots.filterNotNull().forEach { foodMaintenance += it.amount.toFloat() / 30f } // 1 food per 30 soldiers
+        troops.filterNotNull().forEach { foodMaintenance += it.amount.toFloat() / 30f } // 1 food per 30 soldiers
         return foodMaintenance
 
 
     }
 
+    fun dismissByMostMaintenance(){
+        val troopToDismiss = troops.maxBy { it?.amount ?: 0 }
+            ?: // Probably no troops at all
+            return
+        removeTroop(troopToDismiss)
+    }
+
     /** Returns the troop at the given index or null if the slot is empty. */
     fun getTroopAt(index: Int): TroopInfo? {
-        return slots.getOrNull(index)
+        return troops.getOrNull(index)
     }
 
     /**
@@ -141,7 +146,7 @@ class ArmyInfo(
      * @return True if the troop belongs to this army, false otherwise.
      */
     fun contains(troop: TroopInfo): Boolean {
-        return slots.any { it == troop }
+        return troops.any { it == troop }
     }
 
     /**
@@ -152,9 +157,9 @@ class ArmyInfo(
      */
     fun removeTroop(troop: TroopInfo): Boolean {
         // Ищем индекс юнита в массиве слотов
-        val index = slots.indexOfFirst { it == troop }
+        val index = troops.indexOfFirst { it == troop }
         if (index != -1) {
-            slots[index] = null // Очищаем слот
+            troops[index] = null // Очищаем слот
             return true
         }
         return false // Юнит не найден
@@ -163,16 +168,16 @@ class ArmyInfo(
 
     /** Sets a troop at the given index. If the index is out of bounds, nothing happens. */
     internal fun setTroopAt(index: Int, troop: TroopInfo?) {
-        if (index in slots.indices) {
-            slots[index] = troop
+        if (index in troops.indices) {
+            troops[index] = troop
         }
     }
 
     /** Removes a troop from the given index (makes the slot empty) and returns it. */
     internal fun removeTroopAt(index: Int): TroopInfo? {
-        if (index in slots.indices) {
-            val removedTroop = slots[index]
-            slots[index] = null
+        if (index in troops.indices) {
+            val removedTroop = troops[index]
+            troops[index] = null
             return removedTroop
         }
         return null
@@ -180,9 +185,9 @@ class ArmyInfo(
 
     /** Adds a troop to the first available slot. Returns true if successful, false if full. */
     internal fun addTroop(troop: TroopInfo): Boolean {
-        val emptySlotIndex = slots.indexOfFirst { it == null }
+        val emptySlotIndex = troops.indexOfFirst { it == null }
         return if (emptySlotIndex != -1) {
-            slots[emptySlotIndex] = troop
+            troops[emptySlotIndex] = troop
             true
         } else {
             false
@@ -191,15 +196,15 @@ class ArmyInfo(
 
     /** Swaps two troops in the array by their indices. */
     internal fun swapTroops(index1: Int, index2: Int) {
-        if (index1 in slots.indices && index2 in slots.indices) {
-            val temp = slots[index1]
-            slots[index1] = slots[index2]
-            slots[index2] = temp
+        if (index1 in troops.indices && index2 in troops.indices) {
+            val temp = troops[index1]
+            troops[index1] = troops[index2]
+            troops[index2] = temp
         }
     }
 
     fun getAllTroops(): Array<TroopInfo?> {
-        return slots // Возвращаем внутренний массив слотов
+        return troops // Возвращаем внутренний массив слотов
     }
 
     // ===== Serialization Methods =====
@@ -207,7 +212,7 @@ class ArmyInfo(
     override fun write(json: Json) {
         //json.writeValue("civInfo", civInfo)
         json.writeArrayStart("slots")
-        for (troop in slots) {
+        for (troop in troops) {
             json.writeValue(troop) // null values are handled automatically
         }
         json.writeArrayEnd()
@@ -217,7 +222,7 @@ class ArmyInfo(
         val slotArray = jsonData.get("slots")
         for (i in 0 until maxSlots) {
             val troopData = slotArray.get(i)
-            slots[i] = if (troopData != null && troopData.has("amount")) {
+            troops[i] = if (troopData != null && troopData.has("amount")) {
                 json.readValue(TroopInfo::class.java, troopData)
             } else {
                 null // Оставляем слот пустым, если данные некорректны
@@ -228,7 +233,7 @@ class ArmyInfo(
 
     fun finishBattle(){
 
-        slots.forEach { if(it != null) it.finishBattle() }
+        troops.forEach { if(it != null) it.finishBattle() }
     }
     /**
      * Creates a deep copy of the current slots array.
@@ -237,7 +242,7 @@ class ArmyInfo(
      * @return A new array with the copied troop slots.
      */
     fun copySlots(): Array<TroopInfo?> {
-        return slots.map { troop ->
+        return troops.map { troop ->
             troop?.copy() // Используем метод copy() для глубокого копирования TroopInfo
         }.toTypedArray() // Преобразуем список обратно в массив
     }

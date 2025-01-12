@@ -123,6 +123,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     fun addFood(addAmount: Float) = setCurrentFood(currentFood + addAmount)
 
+
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
      *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */
     @Transient
@@ -1074,6 +1075,13 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     }
 
     fun endTurn() {
+        val currentMaintenance = army.calculateFoodMaintenance()
+        if (currentFood >= currentMaintenance)
+            currentFood -= currentMaintenance
+        else {
+            army.dismissByMostMaintenance()
+        }
+
         movement.clearPathfindingCache()
         if (currentMovement > 0
                 && getTile().improvementInProgress != null

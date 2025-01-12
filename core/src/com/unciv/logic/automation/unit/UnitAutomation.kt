@@ -386,7 +386,7 @@ object UnitAutomation {
         ).filter { attackableTile ->
             val defender = Battle.getMapCombatantOfTile(attackableTile.tileToAttack)
             if (defender == null) {
-                println("No valid defender found for tile: ${attackableTile.tileToAttack.position}")
+                //println("No valid defender found for tile: ${attackableTile.tileToAttack.position}")
                 return@filter false
             }
 
