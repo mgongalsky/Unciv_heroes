@@ -3,7 +3,6 @@ package com.unciv.logic.map
 import com.badlogic.gdx.math.Vector2
 import com.unciv.Constants
 import com.unciv.UncivGame
-import com.unciv.logic.HexMath
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.automation.unit.UnitAutomation
@@ -22,6 +21,7 @@ import com.unciv.models.helpers.UnitMovementMemoryType
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.tile.TerrainType
 import com.unciv.models.ruleset.tile.TileImprovement
+import com.unciv.models.ruleset.unique.IHasUniques
 import com.unciv.models.ruleset.unique.StateForConditionals
 import com.unciv.models.ruleset.unique.Unique
 import com.unciv.models.ruleset.unique.UniqueMap
@@ -30,7 +30,6 @@ import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.models.stats.Stats
 import com.unciv.ui.images.ImageGetter
-import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.extensions.filterAndLogic
 import com.unciv.ui.utils.extensions.toPercent
 import java.text.DecimalFormat
@@ -106,8 +105,14 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         "Archer", 12
     )
 
-    var foodCapacity = 4f
+    var basicFoodCapacity = 4f
+    var foodCapacityBonus = 0f
+
     var currentFood = 3f
+    var morale = 0
+    var luck = 0
+
+    var tempBoosts = mutableListOf<TempBoost>()
 
     /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
      *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */
@@ -161,6 +166,30 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     // Is this MapUnit a Monster?
     // val isMonster: Boolean// = false
+
+    fun addBoost(
+        source: String,                   // Источник эффекта (например, здание, событие и т.п.)
+        stackable: Boolean = false,        // Можно ли накладывать одинаковые эффекты
+        duration: Int = 0,                // Длительность эффекта (например, в ходах)
+        battleCount: Int = 0 ,             // Количество битв, на которые эффект распространяется
+        sourceObject: IHasUniques
+        ) {
+        tempBoosts.add(TempBoost(source,stackable,duration,battleCount,sourceObject))
+
+        }
+
+    fun updateSkills(){
+        morale = 0
+        for(boost in tempBoosts)
+            for(unique in boost.getMatchingUniques(UniqueType.SkillBonus)){
+                when(unique.params[1]){
+                    "morale" -> morale += unique.params[0].toInt()
+                    else -> {}
+
+                }
+            }
+
+    }
 
     /** civName owning the unit */
     lateinit var owner: String
@@ -398,7 +427,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         toReturn.heroAttackSkill = heroAttackSkill
         toReturn.heroDefenseSkill = heroDefenseSkill
         toReturn.protectedTiles = protectedTiles
-        toReturn.foodCapacity = foodCapacity
+        toReturn.basicFoodCapacity = basicFoodCapacity
         toReturn.currentFood = currentFood
         toReturn.army = army
         toReturn.id = id

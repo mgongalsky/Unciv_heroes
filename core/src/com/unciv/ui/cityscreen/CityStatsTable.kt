@@ -2,12 +2,10 @@ package com.unciv.ui.cityscreen
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
-import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Slider
 import com.badlogic.gdx.scenes.scene2d.ui.Table
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.UncivGame
@@ -215,6 +213,17 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             val foodToVisitingHeroLabel = upperTable.add(foodToVisitingHero.toLabel()).actor as Label
             upperTable.row()
 
+            var foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.currentFood.toInt()}${Fonts.food}, , hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
+
+            val foodOfVisitingHeroLabel = upperTable.add(foodOfVisitingHero.toLabel()).actor as Label
+            upperTable.row()
+
+            var moraleOfVisitingHero = "Hero has morale ${cityInfo.getVisitingHero()!!.morale}${Fonts.turn}."
+
+            val moraleOfVisitingHeroLabel = upperTable.add(moraleOfVisitingHero.toLabel()).actor as Label
+            upperTable.row()
+
+
 
             // TODO: here we need to put actual values of food for both garrison and hero armies
             // TODO: add another string, describing how much food has a hero and what's current daily consumption
@@ -224,7 +233,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
             // Calculating bonuses to hero food capacity
 
-            var finalHeroFoodCapacity = cityScreen.visitingHero.foodCapacity
+            var finalHeroFoodCapacity = cityScreen.visitingHero.basicFoodCapacity
 
             val foodBonuses = cityInfo.getMatchingUniques(UniqueType.FoodCapacityBonus)
 
@@ -256,8 +265,13 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
                 cityScreen.visitingHero.currentFood = foodSlider.value.toFloat()
                 cityInfo.population.foodStored = maxFoodToHero.toInt() - foodSlider.value.toInt()
 
-                foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}, hero max ${finalHeroFoodCapacity.toInt()}${Fonts.food}."
+                foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
                 foodToVisitingHeroLabel.setText(foodToVisitingHero)
+
+                foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.currentFood.toInt()}${Fonts.food}, , hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
+
+                foodOfVisitingHeroLabel.setText(foodOfVisitingHero)
+
 
                 turnsToPopLabel.setText(updateTurnsToPopString())
 
@@ -456,10 +470,10 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             eventRow.add(eventIcon).size(50f).padRight(10f)
             eventRow.add(eventInfo).growX()
 
-            if (event.isUsable()) {
+            if (event.isUsable(cityInfo)) {
                 val useCityEventButton = ImageGetter.getImage("OtherIcons/New").apply { color = Color.BLACK }.surroundWithCircle(40f)
                 useCityEventButton.onClick(UncivSound.Silent) {
-                    event.use()
+                    event.use(cityInfo)
                     cityInfo.cityConstructions.removeCityEvent(event.name)
                     cityScreen.update()
                     //addConstructionToQueue(construction, cityScreen.city.cityConstructions)

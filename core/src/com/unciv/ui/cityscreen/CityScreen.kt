@@ -77,7 +77,8 @@ class CityScreen(
 
     /** Displays visiting hero information, mainly his army - sits on BOTTOM RIGHT */
     internal var visitingHeroTable = VisitingHeroTable(this)
-    internal val visitingHero = city.tileMap[city.location].militaryUnit
+    // TODO: we need to move this to model level. probably recheck after each move of unit
+    internal val visitingHero = city.getVisitingHero()
 
 
     /** View class handler for city garrison */

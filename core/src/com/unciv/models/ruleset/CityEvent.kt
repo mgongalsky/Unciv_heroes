@@ -7,6 +7,7 @@ import com.unciv.logic.city.RejectionReasons
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.models.ruleset.unique.Unique
 import com.unciv.models.ruleset.unique.UniqueTarget
+import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.stats.INamed
 import com.unciv.models.stats.Stat
 import com.unciv.ui.utils.extensions.toPercent
@@ -24,13 +25,30 @@ class CityEvent : RulesetStatsObject(), INonPerpetualConstruction {
 
     var resourceRequirementsInternal = HashMap<String, Int>()
 
-    fun isUsable(): Boolean{
-
+    fun isUsable(city: CityInfo): Boolean {
+        if (uniqueObjects.any {it.params.contains("visiting hero")})
+            return city.hasVisitingHero()
         return true
     }
 
-    fun use(){
-        //println("You have used ${name} event!")
+    fun use(city: CityInfo) {
+        for (uniqueObject in uniqueObjects)
+            when (uniqueObject.type){
+                UniqueType.FoodToHeroBonus -> {
+                    if (city.hasVisitingHero()){
+                        city.getVisitingHero()!!.currentFood += uniqueObject.params[0].toFloat()
+                    }
+
+                }
+                UniqueType.SkillBonus -> {
+                    if (city.hasVisitingHero()) {
+                        //val amountBonus = uniqueObject.params.firstOrNull { it.contains( "amount" )}
+                        city.getVisitingHero()!!.addBoost(name,false, duration,0, this)
+                        city.getVisitingHero()!!.updateSkills()
+                    }
+                }
+                else -> {}
+            }
     }
 
     // Логика применения эффектов
@@ -49,14 +67,15 @@ class CityEvent : RulesetStatsObject(), INonPerpetualConstruction {
 
     override fun getUniqueTarget() = UniqueTarget.CityEvent
 
-    override fun shouldBeDisplayed(cityConstructions: CityConstructions): Boolean = true
+    override fun shouldBeDisplayed(cityConstructions: CityConstructions): Boolean = cityConstructions.containsBuildingOrEquivalent(requiredBuilding)
+
 
     override fun getResourceRequirements(): HashMap<String, Int> = resourceRequirementsInternal
 
     override fun requiresResource(resource: String): Boolean = false
 
 
-        // Проверка, может ли событие быть построено
+    // Проверка, может ли событие быть построено
     override fun isBuildable(cityConstructions: CityConstructions): Boolean {
         // Простая реализация: проверяем наличие требуемого здания
         //return true
@@ -122,7 +141,15 @@ class CityEvent : RulesetStatsObject(), INonPerpetualConstruction {
     }
 
     // Расчет стоимости с учетом увеличения стоимости за ранее купленные события
-    override fun getCostForConstructionsIncreasingInPrice(baseCost: Int, increaseCost: Int, previouslyBought: Int): Int {
-        return super.getCostForConstructionsIncreasingInPrice(baseCost, increaseCost, previouslyBought)
+    override fun getCostForConstructionsIncreasingInPrice(
+        baseCost: Int,
+        increaseCost: Int,
+        previouslyBought: Int
+    ): Int {
+        return super.getCostForConstructionsIncreasingInPrice(
+            baseCost,
+            increaseCost,
+            previouslyBought
+        )
     }
 }

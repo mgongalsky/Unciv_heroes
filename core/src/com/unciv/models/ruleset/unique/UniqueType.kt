@@ -29,6 +29,9 @@ enum class UniqueTarget(val inheritsFrom: UniqueTarget? = null) {
     Building(Global),
     Wonder(Building),
 
+    CityEvent(Global),
+
+
     // Unit-specific
     // These are a bit of a lie. There's no "Promotion only" or "UnitType only" uniques,
     //  they're all just Unit uniques in different places.
@@ -37,7 +40,6 @@ enum class UniqueTarget(val inheritsFrom: UniqueTarget? = null) {
     Unit,
     UnitType(Unit),
     Promotion(Unit),
-    CityEvent,
 
     // Tile-specific
     Terrain,
@@ -116,6 +118,11 @@ enum class UniqueType(val text: String, vararg targets: UniqueTarget, val flags:
     // region For visiting heroes
 
     FoodCapacityBonus("[relativeAmount]% increase food capacity for visiting hero", UniqueTarget.Building),
+
+    FoodToHeroBonus("Gives [amount] food to [visiting hero]", UniqueTarget.CityEvent),
+    // TODO: add here other sources of morale bonuses: secondary skills, artefacts, visitables
+    SkillBonus("Gives bonus [amount] to [skill] to [visiting hero] for [duration] turns", UniqueTarget.CityEvent),
+
 
 
 

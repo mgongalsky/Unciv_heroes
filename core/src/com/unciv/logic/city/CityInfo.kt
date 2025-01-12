@@ -248,6 +248,9 @@ class CityInfo : IsPartOfGameInfoSerialization {
     }
 
 
+    fun hasVisitingHero(): Boolean = tileMap[location].militaryUnit != null
+    fun getVisitingHero(): MapUnit? = tileMap[location].militaryUnit
+
     private fun addStartingBuildings(civInfo: CivilizationInfo, startingEra: String) {
         val ruleset = civInfo.gameInfo.ruleSet
         if (civInfo.cities.size == 1) cityConstructions.addBuilding(capitalCityIndicator())

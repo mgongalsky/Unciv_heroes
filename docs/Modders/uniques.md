@@ -70,7 +70,7 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 	Applicable to: Triggerable
 
 ??? example  "Will not be displayed in Civilopedia"
-	Applicable to: Triggerable, Global, Nation, Era, Tech, Policy, FounderBelief, FollowerBelief, Building, Wonder, Unit, UnitType, Promotion, CityEvent, Terrain, Improvement, Resource, Ruins, Speed, Tutorial, CityState, ModOptions, Conditional
+	Applicable to: Triggerable, Global, Nation, Era, Tech, Policy, FounderBelief, FollowerBelief, Building, Wonder, CityEvent, Unit, UnitType, Promotion, Terrain, Improvement, Resource, Ruins, Speed, Tutorial, CityState, ModOptions, Conditional
 
 ## Global uniques
 ??? example  "[stats]"
@@ -1000,6 +1000,17 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 	Example: "Hidden when [Domination] Victory is disabled"
 
 	Applicable to: Building, Unit
+
+## CityEvent uniques
+??? example  "Gives [amount] food to [visiting hero]"
+	Example: "Gives [3] food to [Unknown]"
+
+	Applicable to: CityEvent
+
+??? example  "Gives bonus [amount] to [skill] to [visiting hero] for [duration] turns"
+	Example: "Gives bonus [3] to [Unknown] to [Unknown] for [Unknown] turns"
+
+	Applicable to: CityEvent
 
 ## Unit uniques
 ??? example  "Founds a new city"
