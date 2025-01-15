@@ -460,21 +460,23 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
 
         // Проверяем, является ли построенный юнит одним из заранее определенных типов
         if (name in listOf("Archer", "Swordsman", "Horseman", "Spearman","Peasant")) {
-            val cityArmy = cityConstructions.cityInfo.garrisonInfo
+            val city = cityConstructions.cityInfo
 
             // Попытка добавить юнита в гарнизон
-            val addedToArmy = cityArmy.addUnits(name, 10)
+            val amountToAdd = 10
 
-            if (addedToArmy) {
-                return true // Юнит успешно добавлен в гарнизон
+            val addedToArmy = city.addBuiltUnits(name, amountToAdd)
+
+            return if (addedToArmy) {
+                true // Юнит успешно добавлен в гарнизон
             } else {
                 // Если нет места в гарнизоне, уведомляем игрока
                 civInfo.addNotification(
-                    "No room in the garrison for [$name]! Consider freeing up space.".tr(),
+                    "No room in the garrison for [$name] or population is too small! Consider freeing up space.".tr(),
                     cityConstructions.cityInfo.location,
                     NotificationIcon.Construction
                 )
-                return false
+                false
             }
         }
 

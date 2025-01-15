@@ -117,6 +117,11 @@ class CityInfo : IsPartOfGameInfoSerialization {
     var religion = CityReligionManager()
     var espionage = CityEspionageManager()
 
+    /** Amount of soldier per 1 population */
+    var conscriptionRate = 30
+    /** Current conscription */
+    var currConscription = 0
+
     @Transient  // CityStats has no serializable fields
     var cityStats = CityStats(this)
 
@@ -268,6 +273,28 @@ class CityInfo : IsPartOfGameInfoSerialization {
     }
 
     /**
+     * Adds a specified amount of units to the garrison if there is enough population to support conscription.
+     *
+     * @param name The name of the unit to add.
+     * @param amountToAdd The number of units to add.
+     * @return True if the units were successfully added and the population was reduced; otherwise, false.
+     */
+    fun addBuiltUnits(name: String, amountToAdd: Int): Boolean {
+        val oldCurrConscription = currConscription
+        currConscription += amountToAdd
+        val populationToReduce = currConscription / conscriptionRate
+        currConscription %= conscriptionRate
+        if (population.population - populationToReduce >= 1) {
+            population.addPopulation(-populationToReduce)
+            garrisonInfo.addUnits(name, amountToAdd)
+            return true
+        } else {
+            currConscription = oldCurrConscription
+            return false
+        }
+    }
+
+    /**
      * Generates and returns a new city name for the [foundingCiv].
      *
      * This method attempts to return the first unused city name of the [foundingCiv], taking used
@@ -394,6 +421,8 @@ class CityInfo : IsPartOfGameInfoSerialization {
         toReturn.cityAIFocus = cityAIFocus
         toReturn.avoidGrowth = avoidGrowth
         toReturn.manualSpecialists = manualSpecialists
+        toReturn.conscriptionRate = conscriptionRate
+        toReturn.currConscription = currConscription
         return toReturn
     }
 
