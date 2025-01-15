@@ -167,7 +167,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
         garrisonInfo = ArmyInfo(
             civInfo,
             "Archer" to 10,
-             "Spearman" to 10 // Uncomment if needed
+             "Peasant" to 20 // Uncomment if needed
             //"Horseman" to 8,
             //"Swordsman" to 20
         )

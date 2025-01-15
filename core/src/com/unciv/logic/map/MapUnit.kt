@@ -102,7 +102,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     var army: ArmyInfo = ArmyInfo(
         civInfo,
-        "Archer", 12
+        "Peasant", 25
     )
 
     var basicFoodCapacity = 15f
@@ -1076,7 +1076,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     fun endTurn() {
         if(!isMonster) {
-            val currentMaintenance = army.calculateFoodMaintenance()
+            val currentMaintenance = army.calculateFoodMaintenance(currentTile.isCityCenter())
             if (currentFood >= currentMaintenance)
                 currentFood -= currentMaintenance
             else {

@@ -1013,6 +1013,9 @@ Simple unique parameters are explained by mouseover. Complex parameters are expl
 	Applicable to: CityEvent
 
 ## Unit uniques
+??? example  "Feeds himself in a city"
+	Applicable to: Unit
+
 ??? example  "Founds a new city"
 	Applicable to: Unit
 

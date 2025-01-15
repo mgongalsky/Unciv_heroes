@@ -152,6 +152,10 @@
         "strength": "2",
         "obsoleteTech": "Construction",
         "attackSound": "nonmetalhit",
+        "uniques": [
+            "Feeds himself in a city"
+        ],
+
         "civilopediaText": []
     },
  {

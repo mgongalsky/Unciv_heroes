@@ -4,6 +4,7 @@ import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.CivilizationInfo
+import com.unciv.models.ruleset.unique.UniqueType
 
 /**
  * Represents an army consisting of a fixed number of slots,
@@ -119,9 +120,13 @@ class ArmyInfo(
     }
 
 
-    fun calculateFoodMaintenance() : Float {
+    fun calculateFoodMaintenance(isInCity: Boolean) : Float {
         var foodMaintenance = 0f
-        troops.filterNotNull().forEach { foodMaintenance += it.amount.toFloat() / 30f } // 1 food per 30 soldiers
+        troops.filterNotNull().forEach {
+            // Check if we not dealing with peasants in the city
+            if(!isInCity || !it.baseUnit.hasUnique(UniqueType.SelfFeeding))
+                foodMaintenance += it.amount.toFloat() / 30f
+        } // 1 food per 30 soldiers
         return foodMaintenance
 
 

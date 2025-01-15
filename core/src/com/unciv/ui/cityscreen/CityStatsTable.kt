@@ -189,7 +189,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             turnsToExpansionString +=
                     " (${cityInfo.expansion.cultureStored}${Fonts.culture}/${cityInfo.expansion.getCultureToNextTile()}${Fonts.culture})"
 
-        var garrisonFoodConsumption = "Garrison consumes ${ceil(cityScreen.city.garrisonInfo.calculateFoodMaintenance()).toInt()}${Fonts.food} each turn."
+        var garrisonFoodConsumption = "Garrison consumes ${ceil(cityScreen.city.garrisonInfo.calculateFoodMaintenance(isInCity = true)).toInt()}${Fonts.food} each turn."
 
         //var foodToVisitingHero = ""
         //if(cityScreen.visitingHero != null)
@@ -208,7 +208,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
  */
 
         if(cityScreen.visitingHero != null){
-            var foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
+            var foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance(isInCity = true)).toInt()}${Fonts.food}."
 
             val foodToVisitingHeroLabel = upperTable.add(foodToVisitingHero.toLabel()).actor as Label
             upperTable.row()
@@ -302,7 +302,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
 
 
-                foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
+                foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance(isInCity = true)).toInt()}${Fonts.food}."
                 foodToVisitingHeroLabel.setText(foodToVisitingHero)
 
                 foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.getCurrentFood().toInt()}${Fonts.food}, , hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."

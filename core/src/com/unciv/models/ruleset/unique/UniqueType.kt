@@ -122,7 +122,7 @@ enum class UniqueType(val text: String, vararg targets: UniqueTarget, val flags:
     FoodToHeroBonus("Gives [amount] food to [visiting hero]", UniqueTarget.CityEvent),
     // TODO: add here other sources of morale bonuses: secondary skills, artefacts, visitables
     SkillBonus("Gives bonus [amount] to [skill] to [visiting hero] for [duration] turns", UniqueTarget.CityEvent),
-
+    SelfFeeding("Feeds himself in a city", UniqueTarget.Unit),
 
 
 

@@ -393,7 +393,7 @@ class CityStats(val cityInfo: CityInfo) {
         stats.add(Stat.Production, -improvementCost)
 
         // Calculate garrison maintenance. Rounding to higher value
-        stats.add(Stat.Food, -ceil(cityInfo.garrisonInfo.calculateFoodMaintenance()))
+        stats.add(Stat.Food, -ceil(cityInfo.garrisonInfo.calculateFoodMaintenance(isInCity = true)))
 
         statsFromTiles = stats
     }
