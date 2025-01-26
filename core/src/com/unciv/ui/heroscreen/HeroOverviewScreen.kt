@@ -8,7 +8,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
+import com.unciv.logic.army.ArmyManager
 import com.unciv.logic.map.MapUnit
+import com.unciv.ui.army.ArmyView
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
 import com.unciv.ui.rendering.TilableFrame
 import com.unciv.ui.rendering.Tiled2DDrawable
@@ -25,6 +27,10 @@ class HeroOverviewScreen(
     // 50 normal button height + 2*10 topTable padding + 2 Separator + 2*5 centerTable padding
     // Since a resize recreates this screen this should be fine as a val
     internal val centerAreaHeight = stage.height - 82f
+
+    // Добавляем ArmyManager и ArmyView
+    private val heroArmyManager = ArmyManager(viewingHero.army)
+    private val heroArmyView = ArmyView(viewingHero.army, heroArmyManager, this)
 
     private val tabbedPager: TabbedPager
 
@@ -55,6 +61,10 @@ class HeroOverviewScreen(
         //pageObject.background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
         //pageObject.background = BaseScreen.skin.get("tiled_fantasy_background", Tiled2DDrawable::class.java)
 
+        // Настраиваем основной интерфейс
+        setupHeroArmyView()
+
+        /*
         fun createTroopSlot(style: String): Table {
             return Table().apply {
                 background = BaseScreen.skin.get(style, TilableFrame::class.java)
@@ -96,6 +106,8 @@ class HeroOverviewScreen(
         //pageObject.add("Strength").size(140f)//.padLeft(8f)
         //pageObject.add("Health").size(140f)//.padLeft(8f)
 
+
+         */
   //      pageObject.row()
   //      pageObject.add(Label(viewingHero.displayName(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
    //     pageObject.add(Label(viewingHero.heroAttackSkill.toString(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
@@ -108,7 +120,7 @@ class HeroOverviewScreen(
         //stage.addActor(pageObject)
         val index = tabbedPager.addPage(
             caption = "Heroes",
-            content = pageObject
+            content = heroArmyView
         )
         tabbedPager.selectPage(index)
 
@@ -116,6 +128,27 @@ class HeroOverviewScreen(
         tabbedPager.setFillParent(true)
         stage.addActor(tabbedPager)
    }
+
+    /**
+     * Настраиваем отображение армии героя
+     */
+    private fun setupHeroArmyView() {
+        // Позиционируем ArmyView в центре экрана или в нужном месте
+        heroArmyView.bottom().pad(10f).center() // Отступы и выравнивание
+        stage.addActor(heroArmyView) // Добавляем в сцену
+
+        // Обновляем данные вида
+        updateHeroArmyView()
+    }
+
+    /**
+     * Обновляет вид ArmyView, если данные изменились
+     */
+    private fun updateHeroArmyView() {
+        heroArmyView.updateView() // Обновляем вид
+        heroArmyView.isVisible = true // Отображаем
+    }
+
 
     override fun resume() {
         game.replaceCurrentScreen(recreate())
