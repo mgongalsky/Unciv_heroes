@@ -15,9 +15,11 @@ import com.unciv.ui.overviewscreen.EmpireOverviewTab
 import com.unciv.ui.rendering.TilableFrame
 import com.unciv.ui.rendering.Tiled2DDrawable
 import com.unciv.ui.utils.BaseScreen
+import com.unciv.ui.utils.Fonts
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
+import kotlin.math.ceil
 
 class HeroOverviewScreen(
     private var viewingHero: MapUnit,
@@ -173,6 +175,23 @@ class HeroOverviewScreen(
         heroStatsTable.add(Label("Luck:", skin)).align(Align.left).pad(5f)
         heroStatsTable.add(Label(viewingHero.luck.toString(), skin)).align(Align.right).pad(5f)
         heroStatsTable.row()
+
+        // Заголовок
+        heroStatsTable.add(Label("Food supply", skin))
+            .colspan(2).align(Align.center).padBottom(10f)
+        heroStatsTable.row()
+
+        // Here it shows always for out of city food consumption
+        val currentFood = viewingHero.getCurrentFood()
+        val maxFood = viewingHero.basicFoodCapacity
+        val foodMaintenance = viewingHero.army.calculateFoodMaintenance(isInCity = false)
+
+        val supplyString = "Now ${currentFood.toInt()}${Fonts.food} of max ${maxFood.toInt()}${Fonts.food}. Per turn: %.1f${Fonts.food}.".format(foodMaintenance)
+
+        heroStatsTable.add(Label(supplyString, skin)).align(Align.left).pad(5f)
+      //  heroStatsTable.add(Label(viewingHero.luck.toString(), skin)).align(Align.right).pad(5f)
+        heroStatsTable.row()
+
 
         // Позиционирование таблицы
         heroStatsTable.setPosition(20f, stage.height - 20f, Align.topLeft)
