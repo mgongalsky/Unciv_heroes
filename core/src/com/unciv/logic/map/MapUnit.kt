@@ -18,6 +18,7 @@ import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.logic.army.TroopInfo
 import com.unciv.models.UnitActionType
 import com.unciv.models.helpers.UnitMovementMemoryType
+import com.unciv.models.ruleset.Nation
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.tile.TerrainType
 import com.unciv.models.ruleset.tile.TileImprovement
@@ -426,7 +427,8 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     //region pure functions
     fun clone(): MapUnit {
-        val toReturn = MapUnit()
+        // That is not good, but the only hardcoding way I found
+        val toReturn = MapUnit(civInfo.civName == "Barbarians")
         toReturn.baseUnit = baseUnit
         toReturn.name = name
         toReturn.civInfo = civInfo
@@ -1075,7 +1077,8 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     }
 
     fun endTurn() {
-        if(!isMonster) {
+        println("${civInfo.civName}, ${baseUnit.name}, isMonster = ${isMonster}")
+        if(!civInfo.isMonsterNation()) {
             val currentMaintenance = army.calculateFoodMaintenance(currentTile.isCityCenter())
             if (currentFood >= currentMaintenance)
                 currentFood -= currentMaintenance

@@ -171,7 +171,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
         // Initialize the garrisonInfo with predefined troops
         garrisonInfo = ArmyInfo(
             civInfo,
-            "Archer" to 10,
+            "Archer" to 35,
              "Peasant" to 20 // Uncomment if needed
             //"Horseman" to 8,
             //"Swordsman" to 20

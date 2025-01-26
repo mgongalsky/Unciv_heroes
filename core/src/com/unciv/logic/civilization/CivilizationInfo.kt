@@ -191,6 +191,7 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
         var notifications = ArrayList<Notification>()
     }
 
+    fun isMonsterNation() = (nation == monsterNation)
     /** for trades here, ourOffers is the current civ's offers, and theirOffers is what the requesting civ offers  */
     val tradeRequests = ArrayList<TradeRequest>()
 

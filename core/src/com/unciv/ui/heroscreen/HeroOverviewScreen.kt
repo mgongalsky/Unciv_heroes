@@ -181,10 +181,10 @@ class HeroOverviewScreen(
             .colspan(2).align(Align.center).padBottom(10f)
         heroStatsTable.row()
 
-        // Here it shows always for out of city food consumption
+        // Show food consumption parameters
         val currentFood = viewingHero.getCurrentFood()
         val maxFood = viewingHero.basicFoodCapacity
-        val foodMaintenance = viewingHero.army.calculateFoodMaintenance(isInCity = false)
+        val foodMaintenance = viewingHero.army.calculateFoodMaintenance(viewingHero.currentTile.isCityCenter())
 
         val supplyString = "Now ${currentFood.toInt()}${Fonts.food} of max ${maxFood.toInt()}${Fonts.food}. Per turn: %.1f${Fonts.food}.".format(foodMaintenance)
 
