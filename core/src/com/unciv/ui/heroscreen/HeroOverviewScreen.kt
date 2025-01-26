@@ -32,6 +32,13 @@ class HeroOverviewScreen(
     private val heroArmyManager = ArmyManager(viewingHero.army)
     private val heroArmyView = ArmyView(viewingHero.army, heroArmyManager, this, slotSize = 128f)
 
+    // Таблица для отображения навыков героя
+    private val heroStatsTable = Table().apply {
+        // Добавляем стиль и отступы
+        pad(10f).align(Align.topLeft)
+    }
+
+
     private val tabbedPager: TabbedPager
 
     override fun dispose() {
@@ -40,6 +47,19 @@ class HeroOverviewScreen(
     }
 
     init {
+
+        // Настраиваем таблицу с навыками героя
+        setupHeroStatsTable()
+        // Настраиваем основной интерфейс
+        setupHeroArmyView()
+
+        // Создаём общий контейнер для вкладки
+        val heroOverviewContent = Table().apply {
+            add(heroStatsTable).growX().align(Align.top).padBottom(20f).row() // Таблица навыков
+            add(heroArmyView).grow().align(Align.center) // Армия героя
+        }
+
+
         val page =
             if (defaultPage != "") {
                 game.settings.lastOverviewPage = defaultPage
@@ -61,8 +81,6 @@ class HeroOverviewScreen(
         //pageObject.background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
         //pageObject.background = BaseScreen.skin.get("tiled_fantasy_background", Tiled2DDrawable::class.java)
 
-        // Настраиваем основной интерфейс
-        setupHeroArmyView()
 
         /*
         fun createTroopSlot(style: String): Table {
@@ -120,14 +138,52 @@ class HeroOverviewScreen(
         //stage.addActor(pageObject)
         val index = tabbedPager.addPage(
             caption = "Heroes",
-            content = heroArmyView
+            content = heroOverviewContent
         )
         tabbedPager.selectPage(index)
 
 
         tabbedPager.setFillParent(true)
         stage.addActor(tabbedPager)
+
+
    }
+
+    private fun setupHeroStatsTable() {
+        //val font = BaseScreen.skin.get("default", BitmapFont::class.java)
+
+        // Заголовок
+        heroStatsTable.add(Label("Hero Skills", skin))
+            .colspan(2).align(Align.center).padBottom(10f)
+        heroStatsTable.row()
+
+        // Навыки героя
+        heroStatsTable.add(Label("Attack Skill:", skin)).align(Align.left).pad(5f)
+        heroStatsTable.add(Label(viewingHero.heroAttackSkill.toString(), skin)).align(Align.right).pad(5f)
+        heroStatsTable.row()
+
+        heroStatsTable.add(Label("Defense Skill:", skin)).align(Align.left).pad(5f)
+        heroStatsTable.add(Label(viewingHero.heroDefenseSkill.toString(), skin)).align(Align.right).pad(5f)
+        heroStatsTable.row()
+
+        heroStatsTable.add(Label("Morale:", skin)).align(Align.left).pad(5f)
+        heroStatsTable.add(Label(viewingHero.morale.toString(), skin)).align(Align.right).pad(5f)
+        heroStatsTable.row()
+
+        heroStatsTable.add(Label("Luck:", skin)).align(Align.left).pad(5f)
+        heroStatsTable.add(Label(viewingHero.luck.toString(), skin)).align(Align.right).pad(5f)
+        heroStatsTable.row()
+
+        // Позиционирование таблицы
+        heroStatsTable.setPosition(20f, stage.height - 20f, Align.topLeft)
+    }
+
+    private fun updateHeroStatsTable() {
+        // Очищаем таблицу и создаём её заново
+        heroStatsTable.clear()
+        setupHeroStatsTable()
+    }
+
 
     /**
      * Настраиваем отображение армии героя
@@ -145,6 +201,7 @@ class HeroOverviewScreen(
      * Обновляет вид ArmyView, если данные изменились
      */
     private fun updateHeroArmyView() {
+        updateHeroStatsTable()
         heroArmyView.updateView() // Обновляем вид
         heroArmyView.isVisible = true // Отображаем
     }
