@@ -25,15 +25,16 @@ import com.unciv.ui.utils.TextureUtils
 class TroopArmyView(
     internal val troopInfo: TroopInfo?, // Null indicates an empty slot
     private val armyView: ArmyView,
-    private val avatarOnly: Boolean = false // avatar-only mode
+    private val avatarOnly: Boolean = false, // avatar-only mode
+    private val slotSize: Float = 64f // Размер слота, по умолчанию 64x64
 ) : Group() {
     private val troopGroup = Group() // A group to contain all troop-related visuals
     private lateinit var troopImages: ArrayList<Image> // Images representing the troop's layers
     private var selected: Boolean = false // Indicates whether the troop is selected
 
     // Preload textures for selection states to avoid creating them repeatedly
-    private val defaultTexture = TextureUtils.createMonochromaticTexture(64, 64, Color.BROWN)
-    private val selectedTexture = TextureUtils.createMonochromaticTexture(64, 64, Color.GOLD)
+    private val defaultTexture = TextureUtils.createMonochromaticTexture(slotSize.toInt(), slotSize.toInt(), Color.BROWN)
+    private val selectedTexture = TextureUtils.createMonochromaticTexture(slotSize.toInt(), slotSize.toInt(), Color.GOLD)
 
 
     companion object {
@@ -144,7 +145,7 @@ class TroopArmyView(
                 // Create and add a label showing the troop's current amount
                 val amountText = Label(troopInfo.amount.toString(), BaseScreen.skin).apply {
                     setAlignment(Align.right) // Align text to the right
-                    scaleBy(0.5f)
+                    scaleBy(0.5f*slotSize/64f)
                     moveBy(backgroundImage.width * 0.95f, 0.5f)
                     setPosition(x, y, Align.bottomRight)
 
@@ -168,7 +169,7 @@ class TroopArmyView(
         if (troopInfo != null) {
             // Add troop images to the group
             for (troopImage in troopImages) {
-                val scaleFactor = 1/8f
+                val scaleFactor = 1/8f*slotSize/64f
                 troopImage.setScale(-scaleFactor, scaleFactor) // Adjust scaling
                 troopImage.align = Align.center
 

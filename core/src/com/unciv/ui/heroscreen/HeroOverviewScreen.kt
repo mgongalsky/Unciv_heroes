@@ -30,7 +30,7 @@ class HeroOverviewScreen(
 
     // Добавляем ArmyManager и ArmyView
     private val heroArmyManager = ArmyManager(viewingHero.army)
-    private val heroArmyView = ArmyView(viewingHero.army, heroArmyManager, this)
+    private val heroArmyView = ArmyView(viewingHero.army, heroArmyManager, this, slotSize = 128f)
 
     private val tabbedPager: TabbedPager
 
@@ -134,7 +134,7 @@ class HeroOverviewScreen(
      */
     private fun setupHeroArmyView() {
         // Позиционируем ArmyView в центре экрана или в нужном месте
-        heroArmyView.bottom().pad(10f).center() // Отступы и выравнивание
+        heroArmyView.bottom().pad(10f) // Отступы и выравнивание
         stage.addActor(heroArmyView) // Добавляем в сцену
 
         // Обновляем данные вида

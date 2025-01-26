@@ -16,7 +16,12 @@ import com.unciv.ui.utils.extensions.onClick
  * A view for displaying an [ArmyInfo] in the UI.
  * Handles rendering of troops or empty slots and interactions.
  */
-class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyManager, private val screen: BaseScreen) : Table() {
+class ArmyView(
+    private val armyInfo: ArmyInfo?,
+    private val armyManager: ArmyManager,
+    private val screen: BaseScreen,
+    private val slotSize: Float = 64f // Размер слотов по умолчанию
+) : Table() {
     // !! Note here, ArmyInfo is nullable, which is weird, but unfortunately it's the easiest way to handle the bug
     // of libGDX, which goes crazy if you feed it nullable (but not null!) Table-derived class.
     // So visitingArmyView exists always, but there might be no visiting hero ) Crazy, but it works.
@@ -49,9 +54,9 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
 
         // Iterate through slots and create/update views
         armyInfo?.getAllTroops()?.forEachIndexed { index, troop ->
-                val troopView = TroopArmyView(troop, this) // Pass ArmyView for interaction
+                val troopView = TroopArmyView(troop, this, slotSize = slotSize) // Pass ArmyView for interaction
                 troopViewsArray[index] = troopView // Save to array
-                add(troopView).size(64f).pad(5f)
+                add(troopView).size(slotSize).pad(5f)
         }
 
         pack() // Ensure layout is updated
@@ -77,13 +82,13 @@ class ArmyView(private val armyInfo: ArmyInfo?, private val armyManager: ArmyMan
 
         if (troop != null) {
             // Create a new TroopArmyView for the troop
-            val troopView = TroopArmyView(troop, this)
+            val troopView = TroopArmyView(troop, this, slotSize = slotSize)
             troopViewsArray[index] = troopView
-            add(troopView).size(64f).pad(5f)
+            add(troopView).size(slotSize).pad(5f)
         } else {
             // Add a placeholder image for the empty slot
             val emptySlotImage = ImageGetter.getImage("OtherIcons/Wait")
-            add(emptySlotImage).size(64f).pad(5f)
+            add(emptySlotImage).size(slotSize).pad(5f)
         }
 
         pack() // Update layout
