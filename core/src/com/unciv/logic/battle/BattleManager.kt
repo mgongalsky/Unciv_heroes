@@ -7,6 +7,7 @@ import com.unciv.ui.battlescreen.ActionType
 import com.unciv.ui.battlescreen.BattleActionRequest
 import com.badlogic.gdx.math.Vector2
 import com.unciv.logic.HexMath
+import com.unciv.models.GameConstants
 import kotlin.random.Random
 
 /**
@@ -120,7 +121,7 @@ class BattleManager(
         val troop = actionRequest.troop
         val targetPosition = actionRequest.targetPosition
 
-        val isMorale = (Random.nextDouble() < MORALE_PROBABILITY)
+        val isMorale = (Random.nextDouble() < GameConstants.moraleProbability)
         if (verboseAttack && isMorale) println("Troop ${troop.baseUnit.name} has morale")
 
         when (actionRequest.actionType) {
