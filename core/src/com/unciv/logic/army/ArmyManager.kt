@@ -1,12 +1,14 @@
 package com.unciv.logic.army
 
+/**
+ * Manages operations on armies, including swapping, combining, and splitting troops.
+ * Ensures that hero references are updated accordingly when troops move between armies.
+ */
 class ArmyManager(
     private val army1: ArmyInfo, // The first army
     private val army2: ArmyInfo? = null // The second army for exchange operations (optional)
 ) {
 
-
-    // Not tested
     /**
      * Adds a troop to the specified army.
      * @param troop The troop to add.
@@ -15,10 +17,11 @@ class ArmyManager(
      */
     fun addTroop(troop: TroopInfo, toArmy1: Boolean = true): Boolean {
         val targetArmy = if (toArmy1) army1 else army2 ?: return false
+        // Update the troop's hero reference to match the target army
+        troop.hero = targetArmy.hero
         return targetArmy.addTroop(troop)
     }
 
-    // Not tested
     /**
      * Removes a troop from the specified army.
      * @param index The index of the troop to remove.
@@ -29,8 +32,6 @@ class ArmyManager(
         val targetArmy = if (fromArmy1) army1 else army2 ?: return null
         return targetArmy.removeTroopAt(index)
     }
-
-
 
     /**
      * Retrieves a troop by index from the specified army.
@@ -45,6 +46,8 @@ class ArmyManager(
 
     /**
      * Swaps or combines two troops between the same or different armies.
+     * When swapping, the hero reference is updated to the target army's hero.
+     *
      * @param firstArmy The first army involved in the operation.
      * @param firstIndex The index of the troop in the first army.
      * @param secondArmy The second army involved in the operation.
@@ -63,37 +66,44 @@ class ArmyManager(
         val firstTroop = firstArmy.getTroopAt(firstIndex)
         val secondTroop = secondArmy.getTroopAt(secondIndex)
 
-        // If both slots are empty
+        // If both slots are empty, nothing to do.
         if (firstTroop == null && secondTroop == null) {
             println("Error: two empty slots are selected")
             return false
         }
 
         if (combine && firstTroop != null && secondTroop != null && firstTroop.unitName == secondTroop.unitName) {
-            // Combine troops if they are of the same type and combining is enabled
+            // Combine troops if they are of the same type.
             secondTroop.amount += firstTroop.amount
             firstArmy.removeTroopAt(firstIndex)
+            // Update hero reference in the combined troop to match the target army (secondArmy)
+            secondTroop.hero = secondArmy.hero
             return true
         } else {
             // Perform the swap
             if (secondTroop != null) {
                 firstArmy.setTroopAt(firstIndex, secondTroop)
+                // Update hero reference: troop now belongs to firstArmy.
+                secondTroop.hero = firstArmy.hero
             } else {
                 firstArmy.removeTroopAt(firstIndex)
             }
 
             if (firstTroop != null) {
                 secondArmy.setTroopAt(secondIndex, firstTroop)
+                // Update hero reference: troop now belongs to secondArmy.
+                firstTroop.hero = secondArmy.hero
             } else {
                 secondArmy.removeTroopAt(secondIndex)
             }
-
             return true
         }
     }
 
     /**
      * Splits a troop into two separate slots within the same or different armies.
+     * The newly created troop will receive the hero reference from the target army.
+     *
      * @param sourceArmy The army containing the troop to split.
      * @param sourceIndex The index of the troop to split in the source army.
      * @param targetArmy The army where the split portion will be placed.
@@ -110,33 +120,33 @@ class ArmyManager(
     ): Boolean {
         val sourceTroop = sourceArmy.getTroopAt(sourceIndex) ?: return false
 
-        // Validate the final count for the first troop
+        // Validate the final count for the source troop
         if (finalFirstTroopCount < 0 || finalFirstTroopCount >= sourceTroop.amount) return false
 
         val targetTroop = targetArmy.getTroopAt(targetIndex)
         val splitAmount = sourceTroop.amount - finalFirstTroopCount
 
-        // Check if the target slot is empty or contains the same type of troop
         if (targetTroop == null) {
             // Update the source troop count
             sourceTroop.amount = finalFirstTroopCount
             sourceArmy.setTroopAt(sourceIndex, sourceTroop)
 
-            // Create a new troop in the target slot
-            targetArmy.setTroopAt(targetIndex, TroopInfo(splitAmount, sourceTroop.unitName))
-
+            // Create a new troop for the target slot with the split amount,
+            // passing along civInfo and setting hero from targetArmy.
+            val newTroop = TroopInfo(sourceTroop.unitName, splitAmount, sourceArmy.civInfo, targetArmy.hero)
+            targetArmy.setTroopAt(targetIndex, newTroop)
         } else if (targetTroop.unitName == sourceTroop.unitName) {
-            // Combine with an existing troop in the target slot
+            // Combine with the existing troop in the target slot.
             targetTroop.amount += splitAmount
             sourceTroop.amount = finalFirstTroopCount
             if (sourceTroop.amount == 0) {
                 sourceArmy.removeTroopAt(sourceIndex)
             }
+            // Update target troop's hero reference (if needed).
+            targetTroop.hero = targetArmy.hero
         } else {
-            return false // Invalid target: different troop types
+            return false // Invalid target: different troop types.
         }
-
         return true
     }
-
 }
