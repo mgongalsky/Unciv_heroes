@@ -11,6 +11,7 @@ import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
 import com.unciv.logic.HexMath
 import com.unciv.logic.IsPartOfGameInfoSerialization
+import com.unciv.logic.MovableUnit
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.ui.images.ImageGetter
@@ -30,13 +31,7 @@ import com.unciv.logic.map.MapUnit
 class TroopInfo(
     var amount: Int = 0,
     var unitName: String = "Spearman"
-) : IsPartOfGameInfoSerialization, Json.Serializable {
-
-    @Transient
-    lateinit var civInfo: CivilizationInfo
-
-    @Transient
-    lateinit var baseUnit: BaseUnit // = ruleset.units[unitName]!!
+) : IsPartOfGameInfoSerialization, Json.Serializable, MovableUnit() {
 
     /** Current total health and unit count, which may change during battle. */
     @Transient
@@ -102,11 +97,11 @@ class TroopInfo(
         copiedTroop.currentAmount = this.currentAmount
         copiedTroop.currentHealth = this.currentHealth
 
-        if (::civInfo.isInitialized) {
+        if (isCivilizationInfoInitialized()) {
             copiedTroop.civInfo = this.civInfo
         }
 
-        if (::baseUnit.isInitialized) {
+        if (isBaseUnitInitialized()) {
             copiedTroop.baseUnit = this.baseUnit
         }
 

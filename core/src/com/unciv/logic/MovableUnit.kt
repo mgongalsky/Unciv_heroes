@@ -12,10 +12,12 @@ open class MovableUnit {
     @Transient
     open lateinit var civInfo: CivilizationInfo
 
+    fun isCivilizationInfoInitialized(): Boolean = ::civInfo.isInitialized
+
     @Transient
     open lateinit var currentTile: TileInfo
 
-    fun inCurrentTileInitialized(): Boolean = ::currentTile.isInitialized
+    fun isCurrentTileInitialized(): Boolean = ::currentTile.isInitialized
 
     var currentMovement: Float = 0f
 
@@ -24,6 +26,9 @@ open class MovableUnit {
 
     @Transient
     lateinit var baseUnit: BaseUnit
+
+    fun isBaseUnitInitialized(): Boolean = ::baseUnit.isInitialized
+
 
     @Transient
     val doubleMovementInTerrain = HashMap<String, MapUnit.DoubleMovementTerrainTarget>()
