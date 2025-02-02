@@ -52,16 +52,9 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     }
 
     @Transient
-    var civInfo: CivilizationInfo = monsterCivInfo
+    override var civInfo: CivilizationInfo = monsterCivInfo
 
-    @Transient
-    lateinit var baseUnit: BaseUnit
 
-    @Transient
-    lateinit var currentTile: TileInfo
-
-    @Transient
-    val movement = UnitMovementAlgorithms(this)
 
     @Transient
     var isDestroyed = false
@@ -75,25 +68,11 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     // These are for performance improvements to getMovementCostBetweenAdjacentTiles,
     // a major component of getDistanceToTilesWithinTurn,
     // which in turn is a component of getShortestPath and canReach
-    @Transient
-    var ignoresTerrainCost = false
-        private set
-
-    @Transient
-    var ignoresZoneOfControl = false
-        private set
 
     @Transient
     var allTilesCosts1 = false
         private set
 
-    @Transient
-    var canPassThroughImpassableTiles = false
-        private set
-
-    @Transient
-    var roughTerrainPenalty = false
-        private set
 
     /// TODO: Change into list of troops
     @Transient
@@ -126,46 +105,14 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     fun addFood(addAmount: Float) = setCurrentFood(currentFood + addAmount)
 
 
-    /** If set causes an early exit in getMovementCostBetweenAdjacentTiles
-     *  - means no double movement uniques, roughTerrainPenalty or ignoreHillMovementCost */
-    @Transient
-    var noTerrainMovementUniques = false
-        private set
-
-    /** If set causes a second early exit in getMovementCostBetweenAdjacentTiles */
-    @Transient
-    var noBaseTerrainOrHillDoubleMovementUniques = false
-        private set
-
-    /** If set skips tile.matchesFilter tests for double movement in getMovementCostBetweenAdjacentTiles */
-    @Transient
-    var noFilteredDoubleMovementUniques = false
-        private set
 
     /** Used for getMovementCostBetweenAdjacentTiles only, based on order of testing */
     enum class DoubleMovementTerrainTarget { Feature, Base, Hill, Filter }
 
     /** Mod-friendly cache of double-movement terrains */
-    @Transient
-    val doubleMovementInTerrain = HashMap<String, DoubleMovementTerrainTarget>()
-
-    @Transient
-    var canEnterIceTiles = false
 
     @Transient
     var cannotEnterOceanTiles = false
-
-    @Transient
-    var canEnterForeignTerrain: Boolean = false
-
-    @Transient
-    var costToDisembark: Float? = null
-
-    @Transient
-    var costToEmbark: Float? = null
-
-    @Transient
-    var paradropRange = 0
 
     @Transient
     var hasUniqueToBuildImprovements = false    // not canBuildImprovements to avoid confusion
@@ -241,7 +188,6 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     var id: Int = 0
 
-    var currentMovement: Float = 0f
     var health: Int = 100
 //    open var amount: Int = 0
 
@@ -375,7 +321,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     fun refreshProtectedTiles() {
         // Ensure currentTile is initialized before proceeding
-        if (!::currentTile.isInitialized) {
+        if (!inCurrentTileInitialized()) {
             //println("Warning: currentTile is not initialized for unit $name")
             return
         }
@@ -466,8 +412,6 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     fun baseUnit(): BaseUnit = baseUnit
     fun getMovementString(): String =
             DecimalFormat("0.#").format(currentMovement.toDouble()) + "/" + getMaxMovement()
-
-    fun getTile(): TileInfo = currentTile
 
     @Transient
     private var tempUniquesMap = UniqueMap()
@@ -572,8 +516,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         newUnit.updateVisibleTiles()
     }
 
-
-    fun getMaxMovement(): Int {
+    override fun getMaxMovement(): Int {
         var movement =
                 if (isEmbarked()) 2
                 else baseUnit.movement
@@ -586,6 +529,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
         return movement
     }
+
 
     /**
      * Determines this (land or sea) unit's current maximum vision range from unit properties, civ uniques and terrain.
@@ -690,9 +634,8 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         return attacksThisTurn < maxAttacksPerTurn()
     }
 
-    fun getRange(): Int {
-        if (baseUnit.isMelee()) return 1
-        var range = baseUnit().range
+    override fun getRange(): Int {
+        var range = super.getRange()
         range += getMatchingUniques(UniqueType.Range, checkCivInfoUniques = true)
             .sumOf { it.params[0].toInt() }
         return range
@@ -894,11 +837,11 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     }
 
-    fun useMovementPoints(amount: Float) {
+    override fun useMovementPoints(amount: Float) {
         turnsFortified = 0
-        currentMovement -= amount
-        if (currentMovement < 0) currentMovement = 0f
+        super.useMovementPoints(amount) // Вызов оригинальной функции родителя
     }
+
 
     fun getMovementDestination(): TileInfo {
         val destination = action!!.replace("moveTo ", "").split(",").dropLastWhile { it.isEmpty() }
@@ -1239,7 +1182,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         )
     }
 
-    fun removeFromTile() {
+    override fun removeFromTile() {
         removeProtectedTiles()
         currentTile.removeUnit(this)
     }
@@ -1250,7 +1193,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
             tile.visitable!!.visit(this)
     }
 
-    fun moveThroughTile(tile: TileInfo) {
+    override fun moveThroughTile(tile: TileInfo) {
         // addPromotion requires currentTile to be valid because it accesses ruleset through it.
         // getAncientRuinBonus, if it places a new unit, does too
         currentTile = tile
@@ -1288,7 +1231,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         updateVisibleTiles()
     }
 
-    fun putInTile(tile: TileInfo) {
+    override fun putInTile(tile: TileInfo) {
         when {
             !movement.canMoveTo(tile) ->
                 throw Exception("Unit $name at $currentTile can't be put in tile ${tile.position}!")
@@ -1458,7 +1401,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         )
     }
 
-    fun getDamageFromTerrain(tile: TileInfo = currentTile): Int {
+    override fun getDamageFromTerrain(tile: TileInfo): Int {
         if (civInfo.nonStandardTerrainDamage) {
             for (unique in getMatchingUniques(UniqueType.DamagesContainingUnits)) {
                 if (unique.params[0] in tile.allTerrains.map { it.name }) {
