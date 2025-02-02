@@ -442,6 +442,8 @@ class BattleManager(
      * @return A list of reachable tiles as Vector2.
      */
     fun getReachableTiles(troop: TroopInfo): List<Vector2> {
+        return troop.movement.getReachableTilesInCurrentTurn().map { it.position }.toList()
+
         val reachableTiles = mutableListOf<Vector2>()
 
         // Iterate through all battlefield tiles
@@ -455,6 +457,8 @@ class BattleManager(
         }
 
         return reachableTiles
+
+
     }
 
     /**
@@ -466,6 +470,11 @@ class BattleManager(
      */
     fun isHexAchievable(troop: TroopInfo, targetPosition: Vector2): Boolean {
         // Check if the target position is within the troop's movement range
+        //if (troop.battleField == null)
+        //    return false
+        //return troop.movement.getReachableTilesInCurrentTurn().contains(troop.battleField!![targetPosition])
+
+
         val distance = HexMath.getDistance(troop.position, targetPosition)
         if (distance > troop.baseUnit.speed) {
             return false
@@ -479,6 +488,8 @@ class BattleManager(
 
         // If all checks pass, the hex is achievable
         return true
+
+
     }
 
     /**

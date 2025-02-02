@@ -989,7 +989,10 @@ class BattleScreen(
                     Gdx.graphics.setCursor(cursorCancel)
                     return
                 }
-                if (manager.isHexAchievable(currentTroop.getTroopInfo(), hexToMove))
+
+                if (currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn().contains(battleField[hexToMove])
+                        && (manager.isHexFree(hexToMove) || hexToMove == currentTroop.getTroopInfo().position))
+                        //if (manager.isHexAchievable(currentTroop.getTroopInfo(), hexToMove))
                     Gdx.graphics.setCursor(cursorAttack[direction.num])
                 else
                     Gdx.graphics.setCursor(cursorCancel)
