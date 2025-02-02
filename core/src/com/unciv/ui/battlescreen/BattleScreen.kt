@@ -148,7 +148,7 @@ class BattleScreen(
 
         attackerArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
-                troop.enterBattle(attackerCiv, index, attacker = true)
+                troop.enterBattle(attackerCiv, index, attacker = true, battleField)
                 val troopView = TroopBattleView(troop, this)
                 attackerTroopViewsArray[index] = troopView
             }
@@ -156,7 +156,7 @@ class BattleScreen(
 
         defenderArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
-                troop.enterBattle(defenderCiv, index, attacker = false)
+                troop.enterBattle(defenderCiv, index, attacker = false, battleField)
                 val troopView = TroopBattleView(troop, this)
                 defenderTroopViewsArray[index] = troopView
             }
@@ -956,7 +956,13 @@ class BattleScreen(
             return
         }
 
+        if (!currentTroop.getTroopInfo().isCurrentTileInitialized()){
+            Gdx.graphics.setCursor(cursorCancel)
+            return
+        }
+
         // for non-shooting troops:
+        //if (currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn().contains(tileGroup.tileInfo))
         if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
             Gdx.graphics.setCursor(cursorCancel)
         else {

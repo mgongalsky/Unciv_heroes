@@ -220,7 +220,8 @@ class BattleManager(
 
                 // Successful movement
                 val oldPosition = troop.position
-                troop.position = targetPosition
+                troop.moveToPosition(targetPosition)
+
                 if (verboseAttack) println("Troop moved from $oldPosition to $targetPosition")
 
                 return BattleActionResult(
@@ -276,7 +277,8 @@ class BattleManager(
 
                 // Move attacker to attack position
                 val oldPosition = troop.position
-                troop.position = attackPosition
+                troop.moveToPosition(attackPosition)
+
                 if (verboseAttack) println("Troop moved to attack position $attackPosition")
 
                 // Perform attack

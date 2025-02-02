@@ -122,7 +122,7 @@ open class MovableUnit {
     }
 
     open fun putInTile(tile: TileInfo) {
-
+        currentTile = tile
 
     }
 

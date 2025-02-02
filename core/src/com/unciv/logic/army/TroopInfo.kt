@@ -1,6 +1,7 @@
 package com.unciv.logic.army
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Vector
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
@@ -21,6 +22,7 @@ import com.unciv.ui.utils.BaseScreen
 
 // Import MapUnit as the hero type
 import com.unciv.logic.map.MapUnit
+import com.unciv.logic.map.TileMap
 
 /**
  * Represents battle units with a specified [amount], [position] in hex coordinates,
@@ -65,6 +67,8 @@ class TroopInfo(
      */
     fun getHeroMorale(): Int = hero?.morale ?: 0
 
+    var battleField: TileMap? = null
+
     // New convenient constructor with hero parameter.
     constructor(unitName: String, amount: Int, civInfo: CivilizationInfo, hero: MapUnit?) : this(amount, unitName) {
         this.civInfo = civInfo
@@ -105,6 +109,11 @@ class TroopInfo(
             copiedTroop.baseUnit = this.baseUnit
         }
 
+        if (isCurrentTileInitialized()) {
+            copiedTroop.currentTile = this.currentTile
+        }
+
+
         // Copy hero reference (shallow copy; assume MapUnit is managed elsewhere)
         copiedTroop.hero = this.hero
 
@@ -144,22 +153,33 @@ class TroopInfo(
      * @param number The troop's index.
      * @param attacker Flag indicating if the troop is an attacker.
      */
-    fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean) {
+    fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean, battleField0: TileMap) {
         civInfo = civInfo0
         baseUnit = ruleset.units[unitName]!!
 
+        battleField = battleField0
         // Set initial position based on whether the troop is attacking or defending.
         if (attacker)
             position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f - number.toFloat() * 2))
         else
             position = HexMath.evenQ2HexCoords(Vector2(6f, 3f - number.toFloat() * 2))
 
+        currentTile = battleField!![position]
+
         currentHealth = baseUnit.health
         currentAmount = amount
+    }
+
+    fun moveToPosition(targetPosition: Vector2){
+        position = targetPosition
+        if(battleField != null)
+            currentTile = battleField!![position]
+
     }
 
     fun finishBattle() {
         amount = currentAmount
         currentHealth = baseUnit.health
+        battleField = null
     }
 }
