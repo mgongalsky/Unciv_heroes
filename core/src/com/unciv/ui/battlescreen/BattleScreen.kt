@@ -243,21 +243,16 @@ class BattleScreen(
     suspend fun runBattleLoop() = coroutineScope {
         while (manager.isBattleOn()) {
             val currentTroop = manager.getCurrentTroop()
-            var isMorale = false
-
-            // Check if there are no more troops to process
             if (currentTroop == null) {
                 Gdx.app.postRunnable {
-                    shutdownScreen() // Close the battle screen in the UI thread
+                    shutdownScreen()
                 }
-                return@coroutineScope // Exit coroutine
+                return@coroutineScope
             }
+            if (verboseTurn) println("Current troop: ${currentTroop.baseUnit.name} at position ${currentTroop.position}")
 
-            if (verboseTurn) {
-                println("Current troop: ${currentTroop.baseUnit.name} at position ${currentTroop.position}")
-            }
+            var result: BattleActionResult? = null
 
-            // Handle player-controlled troops
             if (currentTroop.isPlayerControlled()) {
                 while (true) {
                     if (verboseTurn) println("Waiting for player action...")
@@ -270,35 +265,31 @@ class BattleScreen(
                         }
                     }
 
-                    val result = manager.performTurn(action)
-
+                    result = manager.performTurn(action)
                     handleBattleResult(result, currentTroop)
                     if (result.success) break
                 }
             } else {
-                // Handle AI-controlled troops
                 if (verboseTurn) println("AI is performing action for troop: ${currentTroop.baseUnit.name}")
-
                 val aiBattle = AIBattle(manager)
-                val result = aiBattle.performTurn(currentTroop)
-
+                result = aiBattle.performTurn(currentTroop)
                 handleBattleResult(result, currentTroop)
             }
 
-            // Advance the turn queue if morale doesn't grant an extra turn
-            if (!isMorale) {
+            // Используем результат морали из BattleActionResult
+            if (result != null && !result.isMorale) {
                 manager.advanceTurn()
                 if (verboseTurn) println("Turn advanced to next troop")
-            } else if (verboseTurn) println("Current troop has morale")
+            } else if (verboseTurn) {
+                println("Current troop has morale and gets an extra turn")
+            }
 
             movePointerToNextTroop()
             updateTilesShadowing()
         }
 
-        // Handle battle end
         manager.finishBattle()
         println("Battle has ended!")
-        // shutdownScreen()
     }
 
     /**
