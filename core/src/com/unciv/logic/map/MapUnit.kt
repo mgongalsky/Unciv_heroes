@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Vector2
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.IsPartOfGameInfoSerialization
+import com.unciv.logic.MovableUnit
 import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.automation.unit.UnitAutomation
 import com.unciv.logic.automation.unit.WorkerAutomation
@@ -41,7 +42,7 @@ import kotlin.math.pow
  * The immutable properties and mutable game state of an individual unit present on the map
  */
 // That's gonna be a Hero instead of MapUnit
-open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSerialization {
+open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSerialization, MovableUnit() {
     companion object {
         var monsterCivInfo = CivilizationInfo() // Dummy CivInfo for loading and saving maps
 
