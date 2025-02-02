@@ -8,6 +8,7 @@ import com.unciv.logic.city.CityInfo
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.PlayerType
 import com.unciv.logic.HexMath
+import com.unciv.logic.army.TroopInfo
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.tile.ResourceType
 import com.unciv.models.ruleset.tile.Terrain
@@ -75,6 +76,9 @@ open class TileInfo : IsPartOfGameInfoSerialization {
 
     var militaryUnit: MapUnit? = null
     var civilianUnit: MapUnit? = null
+
+    @Transient
+    var troopUnit: TroopInfo? = null
     var airUnits = ArrayList<MapUnit>()
 
     @Transient

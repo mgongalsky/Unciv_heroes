@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Vector2
 import com.unciv.Constants
 import com.unciv.logic.HexMath.getDistance
 import com.unciv.logic.MovableUnit
+import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.models.helpers.UnitMovementMemoryType
 import com.unciv.models.ruleset.unique.UniqueType
@@ -158,6 +159,8 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             for (tileToCheck in tilesToCheck)
                 for (neighbor in tileToCheck.neighbors) {
                     if (tilesToIgnore?.contains(neighbor) == true) continue // ignore this tile
+                    if (unit is TroopInfo && neighbor.troopUnit != null && neighbor.troopUnit != unit)
+                        continue
                     var totalDistanceToTile: Float = when {
                         !unit.civInfo.hasExplored(neighbor) ->
                             distanceToTiles[tileToCheck]!!.totalDistance + 1f  // If we don't know then we just guess it to be 1.

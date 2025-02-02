@@ -166,6 +166,7 @@ class TroopInfo(
 
         currentTile = battleField!![position]
         currentMovement = baseUnit.speed.toFloat()
+        currentTile.troopUnit = this
 
         currentHealth = baseUnit.health
         currentAmount = amount
@@ -173,14 +174,18 @@ class TroopInfo(
 
     fun moveToPosition(targetPosition: Vector2){
         position = targetPosition
-        if(battleField != null)
+        if(battleField != null) {
+            currentTile.troopUnit = null
             currentTile = battleField!![position]
+            currentTile.troopUnit = this
+        }
 
     }
 
     fun finishBattle() {
         amount = currentAmount
         currentHealth = baseUnit.health
+        currentTile.troopUnit = null
         battleField = null
     }
 }
