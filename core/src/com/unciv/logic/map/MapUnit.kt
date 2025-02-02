@@ -884,7 +884,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
             ?: throw java.lang.Exception("Unit $name is not found!")
 
         updateUniques(ruleset)
-        army.setTransients(civInfo)
+        army.setTransients(civInfo, this)
         refreshProtectedTiles()
     }
 

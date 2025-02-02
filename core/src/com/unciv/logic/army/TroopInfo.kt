@@ -18,11 +18,19 @@ import com.unciv.ui.images.ImageGetter.ruleset
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.BaseScreen
 
-/** Battle units with specified [amount], [position] in hex coordinates and reference to a [baseUnit] */
-class TroopInfo (
-    var amount: Int = 0, // TODO: Maybe @transient is required
+// Import MapUnit as the hero type
+import com.unciv.logic.map.MapUnit
+
+/**
+ * Represents battle units with a specified [amount], [position] in hex coordinates,
+ * a reference to a [baseUnit], and optionally a reference to a hero (MapUnit).
+ *
+ * The hero reference allows accessing additional battle-related parameters (e.g., morale).
+ */
+class TroopInfo(
+    var amount: Int = 0,
     var unitName: String = "Spearman"
-    ) : IsPartOfGameInfoSerialization, Json.Serializable {
+) : IsPartOfGameInfoSerialization, Json.Serializable {
 
     @Transient
     lateinit var civInfo: CivilizationInfo
@@ -30,20 +38,42 @@ class TroopInfo (
     @Transient
     lateinit var baseUnit: BaseUnit // = ruleset.units[unitName]!!
 
-    /** Current amount of units and health, which can be changed during the battle. We need it for resurrection. */
+    /** Current total health and unit count, which may change during battle. */
     @Transient
     var currentHealth = 0
-    //baseUnit.health
 
     @Transient
     var currentAmount = amount
-    // This is in offset coordinates:
-    /** Position of a troop in hex coordinates */
-    lateinit var position: Vector2 //= Vector2(2f,2f)
 
-    // Новый удобный конструктор
-    constructor(unitName: String, amount: Int, civInfo: CivilizationInfo) : this(amount, unitName) {
+    /** Position of the troop in hex coordinates (offset coordinates). */
+    lateinit var position: Vector2
+
+    /**
+     * Optional reference to the hero (MapUnit) that leads this troop.
+     * May be null if the troop is in a garrison without a hero.
+     */
+    @Transient
+    var hero: MapUnit? = null
+
+    /**
+     * Checks if a hero (MapUnit) is assigned to this troop.
+     *
+     * @return True if a hero is present, false otherwise.
+     */
+    fun hasHero(): Boolean = hero != null
+
+    /**
+     * Retrieves the morale value from the assigned hero (MapUnit).
+     * If no hero is present, returns a default value (e.g., 0).
+     *
+     * @return The hero's morale or 0 if absent.
+     */
+    fun getHeroMorale(): Int = hero?.morale ?: 0
+
+    // New convenient constructor with hero parameter.
+    constructor(unitName: String, amount: Int, civInfo: CivilizationInfo, hero: MapUnit?) : this(amount, unitName) {
         this.civInfo = civInfo
+        this.hero = hero
         initializeVariables()
     }
 
@@ -51,17 +81,14 @@ class TroopInfo (
 
     init {
         initializeVariables()
-      //  if (amount == null || unitName == null) {
-        //    throw IllegalArgumentException("Amount and unitName must not be null")
-
-       // }
     }
 
-    fun setTransients(civInfo0: CivilizationInfo){
+    fun setTransients(civInfo0: CivilizationInfo, hero0: MapUnit?) {
         civInfo = civInfo0
         baseUnit = ruleset.units[unitName]!!
         currentAmount = amount
         currentHealth = baseUnit.health
+        hero = hero0
     }
 
     /**
@@ -74,7 +101,6 @@ class TroopInfo (
         )
         copiedTroop.currentAmount = this.currentAmount
         copiedTroop.currentHealth = this.currentHealth
-        //copiedTroop.position = this.position.cpy() // Ensures position is not shared by reference
 
         if (::civInfo.isInitialized) {
             copiedTroop.civInfo = this.civInfo
@@ -84,9 +110,11 @@ class TroopInfo (
             copiedTroop.baseUnit = this.baseUnit
         }
 
+        // Copy hero reference (shallow copy; assume MapUnit is managed elsewhere)
+        copiedTroop.hero = this.hero
+
         return copiedTroop
     }
-
 
     private fun initializeVariables() {
         baseUnit = ruleset.units[unitName]!!
@@ -99,45 +127,43 @@ class TroopInfo (
     }
 
     override fun write(json: Json) {
-        //json.writeObjectStart()
-
-        json.writeValue("name", "Troop") // Set the name for the object
+        // Write minimal data for serialization
+        json.writeValue("name", "Troop") // Object identifier
         json.writeValue("amount", amount)
         json.writeValue("unitName", unitName)
-      //  json.writeValue("position", position)
-        //json.writeObjectEnd()
+        // Position is omitted from serialization for brevity
     }
-//
+
     override fun read(json: Json, jsonData: JsonValue) {
-        // Implement the read method if you also want to support deserialization
-        // Read the values and assign them to the corresponding properties
+        // Read values and initialize properties
         amount = json.readValue("amount", Int::class.java, jsonData)
         unitName = json.readValue("unitName", String::class.java, jsonData)
-       // position = json.readValue("position", Vector2::class.java, jsonData)
-
         initializeVariables()
-        // Read other properties if needed
     }
 
-
-    /** Called when battle is started (or the troop is summoned). [number] corresponds to location in the hero's army and determines initial location */
-    fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean)
-    {
+    /**
+     * Called when the battle is started (or the troop is summoned).
+     * [number] corresponds to the troop's index in the army and determines the initial position.
+     *
+     * @param civInfo0 The civilization information.
+     * @param number The troop's index.
+     * @param attacker Flag indicating if the troop is an attacker.
+     */
+    fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean) {
         civInfo = civInfo0
         baseUnit = ruleset.units[unitName]!!
 
-        // TODO: There is a mess with float and int coordinates. It's better to make int everywhere
-        if(attacker)
-            position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f-number.toFloat()*2))
+        // Set initial position based on whether the troop is attacking or defending.
+        if (attacker)
+            position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f - number.toFloat() * 2))
         else
-            position = HexMath.evenQ2HexCoords(Vector2(6f, 3f-number.toFloat()*2))
+            position = HexMath.evenQ2HexCoords(Vector2(6f, 3f - number.toFloat() * 2))
 
         currentHealth = baseUnit.health
         currentAmount = amount
-
     }
 
-    fun finishBattle(){
+    fun finishBattle() {
         amount = currentAmount
         currentHealth = baseUnit.health
     }

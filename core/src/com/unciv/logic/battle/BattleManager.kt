@@ -24,11 +24,6 @@ class BattleManager(
     private val turnQueue: MutableList<TroopInfo> = mutableListOf() // Queue of troops for turn order
     private var currentTurnIndex: Int = 0 // Index of the current troop's turn
 
-    companion object {
-        const val LUCK_PROBABILITY = 0.15 // Probability of triggering luck during attack
-        const val MORALE_PROBABILITY = 0.15 // Probability of triggering morale during a troop's turn
-    }
-
     /**
      * Initializes the turn queue based on troop speed and priority rules.
      * Attacker troops have priority in case of equal speed.
@@ -71,6 +66,26 @@ class BattleManager(
         }
 
         return turnQueue[currentTurnIndex]
+    }
+
+    /**
+     * Determines whether the morale bonus is triggered for a troop.
+     *
+     * Rule:
+     * - If troopMorale is less than or equal to 3, the effective probability is calculated as:
+     *      (GameConstants.moraleProbability / 3) * troopMorale
+     * - If troopMorale is greater than 3, the effective probability is set to GameConstants.moraleProbability.
+     *
+     * @param troopMorale The morale value of the troop.
+     * @return True if the morale bonus is triggered, false otherwise.
+     */
+    private fun isMoraleTriggered(troopMorale: Int): Boolean {
+        val effectiveProbability = if (troopMorale <= 3) {
+            (GameConstants.moraleProbability / 3.0) * troopMorale
+        } else {
+            GameConstants.moraleProbability
+        }
+        return Random.nextDouble() < effectiveProbability
     }
 
     /**
@@ -121,7 +136,8 @@ class BattleManager(
         val troop = actionRequest.troop
         val targetPosition = actionRequest.targetPosition
 
-        val isMorale = (Random.nextDouble() < GameConstants.moraleProbability)
+        // TODO: remove +1 when actual morale bonus for the same castle is introduced
+        val isMorale = isMoraleTriggered(1) // Add here +1 to morale just because all troops are from the same castle now )
         if (verboseAttack && isMorale) println("Troop ${troop.baseUnit.name} has morale")
 
         when (actionRequest.actionType) {
@@ -461,7 +477,7 @@ class BattleManager(
         // Calculate maximum damage
         var damage = attacker.currentAmount * attacker.baseUnit.damage
 
-        if (Random.nextDouble() < LUCK_PROBABILITY) {
+        if (Random.nextDouble() < GameConstants.luckProbability) {
             damage *= 2
             isLuck = true
             if (verboseAttack) println("Troop ${attacker.baseUnit.name} has luck")

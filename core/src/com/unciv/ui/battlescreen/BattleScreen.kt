@@ -264,7 +264,6 @@ class BattleScreen(
                             println("Direction for attack: ${action.direction}")
                         }
                     }
-
                     result = manager.performTurn(action)
                     handleBattleResult(result, currentTroop)
                     if (result.success) break
