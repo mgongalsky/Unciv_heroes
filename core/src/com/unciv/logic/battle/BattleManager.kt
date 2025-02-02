@@ -567,13 +567,29 @@ class BattleManager(
     /**
      * Removes a troop from the battle.
      *
+     * This function removes the troop from the turn queue and updates the currentTurnIndex accordingly.
+     *
      * @param troop The troop to remove.
      */
     fun removeTroop(troop: TroopInfo) {
-        // Remove from turn queue
-        turnQueue.remove(troop)
+        // Find the index of the troop in the turn queue
+        val index = turnQueue.indexOf(troop)
+        if (index != -1) {
+            // Remove the troop from the turn queue
+            turnQueue.removeAt(index)
+            // Adjust currentTurnIndex:
+            // If the removed troop was located before the current turn,
+            // decrement currentTurnIndex to keep the turn order consistent.
+            if (index < currentTurnIndex) {
+                currentTurnIndex--
+            }
+            // If currentTurnIndex is now out of bounds, wrap it around to the start.
+            if (currentTurnIndex >= turnQueue.size) {
+                currentTurnIndex = 0
+            }
+        }
 
-        // Remove from the respective army
+        // Remove the troop from its respective army
         if (attackerArmy.contains(troop)) {
             attackerArmy.removeTroop(troop)
         } else if (defenderArmy.contains(troop)) {
