@@ -690,13 +690,18 @@ class BattleScreen(
                 ) {
                     // TODO: This must be rewritten to avoid code doubling
                     if(manager.isBattleOn()) {
+                        val currentTroopNew = manager.getCurrentTroop()
 
                         val currentTroopOnTile = getCurrentTroopView() ?: return
+                        if (currentTroopNew != null && currentTroopNew.movement.getReachableTilesInCurrentTurn().contains(tileGroup.tileInfo))
+                        /*
                         if (manager.isHexAchievable(
                                     currentTroopOnTile.getTroopInfo(),
                                     tileGroup.tileInfo.position
                                 )
                         )
+
+                         */
                             tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, 0.7f)
                         else
                             tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, 1f)
@@ -802,10 +807,15 @@ class BattleScreen(
      * Updates tile shadowing based on the achievable positions for the current troop.
      */
     private fun updateTilesShadowing(){
-        val currentTroop = getCurrentTroopView() ?: return
+        //val currentTroop = getCurrentTroopView() ?: return
+        val currentTroop = manager.getCurrentTroop()
+
+
         // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
         daTileGroups.forEach {
-            if (manager.isHexAchievable(currentTroop.getTroopInfo(), it.tileInfo.position))
+            if (currentTroop != null && currentTroop.movement.getReachableTilesInCurrentTurn().contains(it.tileInfo))
+
+            //if (manager.isHexAchievable(currentTroop.getTroopInfo(), it.tileInfo.position))
                 it.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
             else
                 it.baseLayerGroup.color = Color(1f,1f,1f,1f)
