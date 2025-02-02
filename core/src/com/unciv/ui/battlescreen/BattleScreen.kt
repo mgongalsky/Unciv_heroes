@@ -144,28 +144,24 @@ class BattleScreen(
     }
 
     init {
-        // Initialize the turn queue for the battle
         manager.initializeTurnQueue()
 
-        // Create visual representations for the attacker's troops
         attackerArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
                 troop.enterBattle(attackerCiv, index, attacker = true)
-                val troopView = TroopBattleView(troop, this) // Pass BattleScreen for interaction
-                attackerTroopViewsArray[index] = troopView // Save to array
+                val troopView = TroopBattleView(troop, this)
+                attackerTroopViewsArray[index] = troopView
             }
         }
 
-        // Create visual representations for the defender's troops
         defenderArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
                 troop.enterBattle(defenderCiv, index, attacker = false)
-                val troopView = TroopBattleView(troop, this) // Pass BattleScreen for interaction
-                defenderTroopViewsArray[index] = troopView // Save to array
+                val troopView = TroopBattleView(troop, this)
+                defenderTroopViewsArray[index] = troopView
             }
         }
 
-        // Load custom cursors for the battle actions
         cursorMove = loadCursor("BattleMoveCursor128.png", 32, 64)
         cursorShoot = loadCursor("BattleArrowCursor128.png", 64, 64)
         cursorCancel = loadCursor("BattleCancelCursor64.png", 32, 32)
@@ -178,46 +174,63 @@ class BattleScreen(
 
         // Shortcut for exiting the battle screen
         globalShortcuts.add(KeyCharAndCode.BACK) { shutdownScreen() }
+        // Instead of directly calling skipTurn(), send a SKIP action request to the manager
+        globalShortcuts.add(KeyCharAndCode.SPACE) { sendSkipTurnRequest() }
 
-        // Initialize tile groups for the battlefield
         val tileSetStrings = TileSetStrings()
         daTileGroups = battleField.values.map { TileGroup(it, tileSetStrings) }
 
-        // Load images for troop pointers
         val pointerString = "TileSets/FantasyHex/Highlight"
         pointerImages = ImageGetter.getLayeredImageColored(pointerString, Color.valueOf("#00AAFF77"))
 
-        // Set up the UI tabbed pager for the battlefield
         tabbedPager = TabbedPager(
             stage.width, stage.width,
             centerAreaHeight, centerAreaHeight,
             separatorColor = Color.WHITE
         )
 
-        // Add a button for exiting the battle
         tabbedPager.addClosePage { shutdownScreen() }
 
-        // Add the battlefield tiles
         addTiles()
 
-        // Add the tabbed pager to the stage
         stage.addActor(tabbedPager)
 
-        // Select the "Battle" tab as the default
         val index = tabbedPager.addPage(
             caption = "Battle",
             content = tileGroupMap
         )
         tabbedPager.selectPage(index)
 
-        // Update the tile shadows for the battlefield
         tabbedPager.setFillParent(true)
         updateTilesShadowing()
 
-        // Start the battle loop in a coroutine
         GlobalScope.launch {
             runBattleLoop()
         }
+    }
+
+    /**
+     * Sends a skip-turn request to the BattleManager.
+     *
+     * This function creates a BattleActionRequest with action type SKIP using the current troop
+     * and its current position as the target. It then invokes onPlayerActionReceived to send the request.
+     */
+    private fun sendSkipTurnRequest() {
+        val currentTroop = manager.getCurrentTroop() ?: return
+        // Create a SKIP action request using current troop and its current position
+        val skipRequest = BattleActionRequest(
+            troop = currentTroop,
+            targetPosition = currentTroop.position,
+            actionType = ActionType.SKIP
+        )
+        // Find the TileGroup corresponding to the current troop's position
+        val targetTileGroup = daTileGroups.firstOrNull { it.tileInfo.position == currentTroop.position }
+        if (targetTileGroup == null) {
+            println("Error: No tile group found for current troop's position.")
+            return
+        }
+        // Send the skip request via the player action callback
+        onPlayerActionReceived?.invoke(Pair(skipRequest, targetTileGroup))
     }
 
     /**
@@ -244,9 +257,7 @@ class BattleScreen(
         while (manager.isBattleOn()) {
             val currentTroop = manager.getCurrentTroop()
             if (currentTroop == null) {
-                Gdx.app.postRunnable {
-                    shutdownScreen()
-                }
+                Gdx.app.postRunnable { shutdownScreen() }
                 return@coroutineScope
             }
             if (verboseTurn) println("Current troop: ${currentTroop.baseUnit.name} at position ${currentTroop.position}")
@@ -257,7 +268,6 @@ class BattleScreen(
                 while (true) {
                     if (verboseTurn) println("Waiting for player action...")
                     val (action, targetTileGroup) = waitForPlayerAction()
-
                     if (verboseTurn) {
                         println("Received action: ${action.actionType} targeting ${action.targetPosition}")
                         if (action.actionType == ActionType.ATTACK) {
@@ -275,7 +285,6 @@ class BattleScreen(
                 handleBattleResult(result, currentTroop)
             }
 
-            // Используем результат морали из BattleActionResult
             if (result != null && !result.isMorale) {
                 manager.advanceTurn()
                 if (verboseTurn) println("Turn advanced to next troop")
@@ -286,7 +295,6 @@ class BattleScreen(
             movePointerToNextTroop()
             updateTilesShadowing()
         }
-
         manager.finishBattle()
         println("Battle has ended!")
     }
@@ -311,6 +319,9 @@ class BattleScreen(
 
             // Handle specific action types
             when (result.actionType) {
+                ActionType.SKIP -> {
+                    // Add action here if necessary
+                }
                 ActionType.ATTACK -> {
                     if (result.isLuck) {
                         val troopView = getTroopViewFor(currentTroop)

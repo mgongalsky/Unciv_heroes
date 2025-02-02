@@ -10,7 +10,8 @@ import com.unciv.logic.army.TroopInfo
 enum class ActionType {
     MOVE,
     ATTACK,
-    SHOOT // New action type for ranged attacks
+    SHOOT, // New action type for ranged attacks
+    SKIP   // New action type for skipping the turn
 }
 
 /**
@@ -18,7 +19,7 @@ enum class ActionType {
  *
  * @property troop The troop performing the action.
  * @property targetPosition The target position for the action.
- * @property actionType The type of action (MOVE, ATTACK, SHOOT).
+ * @property actionType The type of action (MOVE, ATTACK, SHOOT, SKIP).
  * @property direction The attack direction, if applicable.
  */
 data class BattleActionRequest(

@@ -182,6 +182,16 @@ class BattleManager(
         if (verboseAttack && isMorale) println("Troop ${troop.baseUnit.name} has morale")
 
         when (actionRequest.actionType) {
+            ActionType.SKIP -> {
+                return BattleActionResult(
+                    actionType = ActionType.SKIP,
+                    success = true,
+                    movedFrom = troop.position,
+                    movedTo = troop.position,
+                    isMorale = false,
+                    battleEnded = !isBattleOn()
+                )
+            }
             ActionType.MOVE -> {
                 if (!isHexAchievable(troop, targetPosition)) {
                     if (verboseAttack) println("Hex not achievable for troop at position $targetPosition")
