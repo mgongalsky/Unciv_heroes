@@ -1,4 +1,5 @@
 {
+    "armySize": 4,
     "luckProbability": 0.15,
     "moraleProbability": 0.15
 }

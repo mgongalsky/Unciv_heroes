@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.JsonValue
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.MapUnit
+import com.unciv.models.GameConstants
 import com.unciv.models.ruleset.unique.UniqueType
 
 /**
@@ -16,13 +17,8 @@ import com.unciv.models.ruleset.unique.UniqueType
 class ArmyInfo(
     @Transient
     var civInfo: CivilizationInfo = CivilizationInfo(),
-    val maxSlots: Int = DEFAULT_ARMY_SIZE
+    val maxSlots: Int = GameConstants.armySize
 ) : IsPartOfGameInfoSerialization, Json.Serializable {
-
-    companion object {
-        // Default army size, can be configured globally
-        const val DEFAULT_ARMY_SIZE = 4
-    }
 
     // Array to hold troop slots (null means the slot is empty)
     private val troops: Array<TroopInfo?> = Array(maxSlots) { null }
@@ -35,12 +31,12 @@ class ArmyInfo(
     var hero: com.unciv.logic.map.MapUnit? = null
 
     /** Convenience constructor to initialize army with a list of troops */
-    constructor(civInfo: CivilizationInfo, vararg troops: Pair<String, Int>) : this(civInfo, maxSlots = maxOf(DEFAULT_ARMY_SIZE, troops.size)) {
+    constructor(civInfo: CivilizationInfo, vararg troops: Pair<String, Int>) : this(civInfo, maxSlots = maxOf(GameConstants.armySize, troops.size)) {
         initializeTroops(troops)
     }
 
     // Default constructor
-    constructor() : this(CivilizationInfo(), DEFAULT_ARMY_SIZE)
+    constructor() : this(CivilizationInfo(), GameConstants.armySize)
 
     /**
      * Sets transient properties for the army and passes the hero reference to all troops.
@@ -70,7 +66,7 @@ class ArmyInfo(
     }
 
     /** Convenience constructor to initialize army with a list of troops */
-    constructor(civInfo: CivilizationInfo, unitName: String, totalCount: Int) : this(civInfo, maxSlots = DEFAULT_ARMY_SIZE) {
+    constructor(civInfo: CivilizationInfo, unitName: String, totalCount: Int) : this(civInfo, maxSlots = GameConstants.armySize) {
         fillArmy(unitName, totalCount)
     }
 

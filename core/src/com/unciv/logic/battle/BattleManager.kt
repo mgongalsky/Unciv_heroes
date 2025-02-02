@@ -79,12 +79,23 @@ class BattleManager(
      * @param troopMorale The morale value of the troop.
      * @return True if the morale bonus is triggered, false otherwise.
      */
-    private fun isMoraleTriggered(troopMorale: Int): Boolean {
+    private fun isMoraleTriggered(troop: TroopInfo): Boolean {
+        val troopMorale = troop.getHeroMorale()
         val effectiveProbability = if (troopMorale <= 3) {
             (GameConstants.moraleProbability / 3.0) * troopMorale
         } else {
             GameConstants.moraleProbability
         }
+
+        // Verbose logging: output unit name, amount, hero presence, hero morale, and effective probability
+        println(
+            "Unit: ${troop.unitName}, " +
+                    "Amount: ${troop.amount}, " +
+                    "Hero present: ${troop.hasHero()}, " +
+                    "Hero morale: $troopMorale, " +
+                    "Effective morale probability: $effectiveProbability"
+        )
+
         return Random.nextDouble() < effectiveProbability
     }
 
@@ -137,7 +148,7 @@ class BattleManager(
         val targetPosition = actionRequest.targetPosition
 
         // TODO: remove +1 when actual morale bonus for the same castle is introduced
-        val isMorale = isMoraleTriggered(1) // Add here +1 to morale just because all troops are from the same castle now )
+        val isMorale = isMoraleTriggered(troop) // Add here +1 to morale just because all troops are from the same castle now )
         if (verboseAttack && isMorale) println("Troop ${troop.baseUnit.name} has morale")
 
         when (actionRequest.actionType) {

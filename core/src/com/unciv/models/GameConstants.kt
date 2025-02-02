@@ -15,4 +15,5 @@ object GameConstants {
     // Прямой доступ к константам без дополнительных проверок
     val luckProbability: Double get() = data.luckProbability
     val moraleProbability: Double get() = data.moraleProbability
+    val armySize: Int get() = data.armySize
 }
