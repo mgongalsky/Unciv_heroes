@@ -165,6 +165,7 @@ class TroopInfo(
             position = HexMath.evenQ2HexCoords(Vector2(6f, 3f - number.toFloat() * 2))
 
         currentTile = battleField!![position]
+        currentMovement = baseUnit.speed.toFloat()
 
         currentHealth = baseUnit.health
         currentAmount = amount

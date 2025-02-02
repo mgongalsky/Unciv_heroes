@@ -962,8 +962,8 @@ class BattleScreen(
         }
 
         // for non-shooting troops:
-        //if (currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn().contains(tileGroup.tileInfo))
-        if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
+        if (!currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn().contains(tileGroup.tileInfo))
+        //if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
             Gdx.graphics.setCursor(cursorCancel)
         else {
             if (manager.isHexOccupiedByAlly(currentTroop.getTroopInfo(), targetHex)) {
