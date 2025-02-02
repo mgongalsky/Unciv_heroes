@@ -111,7 +111,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     private var currentFood = 3f
     var morale = 3
-    var luck = 0
+    var luck = 3
 
     var tempBoosts = mutableListOf<TempBoost>()
 

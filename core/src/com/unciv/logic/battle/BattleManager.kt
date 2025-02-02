@@ -100,6 +100,36 @@ class BattleManager(
     }
 
     /**
+     * Determines whether the luck bonus is triggered for a troop.
+     * Luck bonus doubles the damage.
+     *
+     * Rule:
+     * - If hero's luck (troopLuck) is less than or equal to 3, effective probability = (GameConstants.luckProbability / 3) * troopLuck.
+     * - Otherwise, effective probability = GameConstants.luckProbability.
+     *
+     * Verbose logging outputs unit name, amount, hero presence, hero luck, and effective probability.
+     *
+     * @param troop The troop to check.
+     * @return True if the luck bonus is triggered, false otherwise.
+     */
+    private fun isLuckTriggered(troop: TroopInfo): Boolean {
+        // Assume hero's luck value is stored in hero.luck; if no hero, default to 1.
+        val troopLuck = troop.hero?.luck ?: 1
+        val effectiveProbability = if (troopLuck <= 3) {
+            (GameConstants.luckProbability / 3.0) * troopLuck
+        } else {
+            GameConstants.luckProbability
+        }
+        println(
+            "Unit: ${troop.unitName}, Amount: ${troop.amount}, " +
+                    "Hero present: ${troop.hasHero()}, Hero luck: $troopLuck, " +
+                    "Effective luck probability: $effectiveProbability"
+        )
+        return Random.nextDouble() < effectiveProbability
+    }
+
+
+    /**
      * Finishes the battle and cleans up resources or state.
      * Placeholder for additional logic.
      */
@@ -473,7 +503,7 @@ class BattleManager(
      *
      * @param defender The defending troop.
      * @param attacker The attacking troop. Defaults to the current troop.
-     * @return True if luck influenced the attack, false otherwise.
+     * @return True if luck influenced the attack (damage doubled), false otherwise.
      */
     fun attack(defender: TroopInfo, attacker: TroopInfo? = getCurrentTroop()): Boolean {
         var isLuck = false
@@ -488,10 +518,11 @@ class BattleManager(
         // Calculate maximum damage
         var damage = attacker.currentAmount * attacker.baseUnit.damage
 
-        if (Random.nextDouble() < GameConstants.luckProbability) {
-            damage *= 2
-            isLuck = true
-            if (verboseAttack) println("Troop ${attacker.baseUnit.name} has luck")
+        // Determine if luck is triggered for the attacker
+        isLuck = isLuckTriggered(attacker)
+        if (isLuck) {
+            damage *= 2  // Double the damage if luck triggers
+            if (verboseAttack) println("Troop ${attacker.baseUnit.name} has luck, doubling damage")
         }
 
         if (verboseAttack) println("Base damage calculated: $damage")
