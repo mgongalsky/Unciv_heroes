@@ -144,7 +144,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
      * Does not consider if tiles can actually be entered, use canMoveTo for that.
      * If a tile can be reached within the turn, but it cannot be passed through, the total distance to it is set to unitMovement
      */
-    fun getDistanceToTilesWithinTurn(origin: Vector2, unitMovement: Float, considerZoneOfControl: Boolean = true, tilesToIgnore: HashSet<TileInfo>? = null): PathsToTilesWithinTurn {
+    fun getDistanceToTilesWithinTurn(origin: Vector2, unitMovement: Float, considerZoneOfControl: Boolean = true, tilesToIgnore: HashSet<TileInfo>? = null, targetTile: TileInfo? = null): PathsToTilesWithinTurn {
         val distanceToTiles = PathsToTilesWithinTurn()
         if (unitMovement == 0f) return distanceToTiles
 
@@ -159,7 +159,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             for (tileToCheck in tilesToCheck)
                 for (neighbor in tileToCheck.neighbors) {
                     if (tilesToIgnore?.contains(neighbor) == true) continue // ignore this tile
-                    if (unit is TroopInfo && neighbor.troopUnit != null && neighbor.troopUnit != unit)
+                    if (unit is TroopInfo && neighbor.troopUnit != null && neighbor.troopUnit != unit && neighbor != targetTile)
                         continue
                     var totalDistanceToTile: Float = when {
                         !unit.civInfo.hasExplored(neighbor) ->
@@ -341,7 +341,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         return getDistanceToTiles().containsKey(destination)
     }
 
-    fun getReachableTilesInCurrentTurn(): Sequence<TileInfo> {
+    fun getReachableTilesInCurrentTurn(targetTile: TileInfo? = null): Sequence<TileInfo> {
         return when {
             unit is MapUnit && unit.baseUnit.movesLikeAirUnits() ->
                 unit.getTile().getTilesInDistanceRange(IntRange(1, unit.getMaxMovementForAirUnits()))
@@ -349,7 +349,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                 unit.getTile().getTilesInDistance(unit.paradropRange)
                     .filter { unit.movement.canParadropOn(it) }
             else ->
-                unit.movement.getDistanceToTiles().keys.asSequence()
+                unit.movement.getDistanceToTiles(targetTile = targetTile).keys.asSequence()
         }
     }
 
@@ -731,12 +731,12 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
     }
 
 
-    fun getDistanceToTiles(considerZoneOfControl: Boolean = true): PathsToTilesWithinTurn {
+    fun getDistanceToTiles(considerZoneOfControl: Boolean = true, targetTile: TileInfo? = null): PathsToTilesWithinTurn {
         val cacheResults = pathfindingCache.getDistanceToTiles(considerZoneOfControl)
         if (cacheResults != null) {
             return cacheResults
         }
-        val distanceToTiles = getDistanceToTilesWithinTurn(unit.currentTile.position, unit.currentMovement, considerZoneOfControl)
+        val distanceToTiles = getDistanceToTilesWithinTurn(unit.currentTile.position, unit.currentMovement, considerZoneOfControl, targetTile = targetTile)
         pathfindingCache.setDistanceToTiles(considerZoneOfControl, distanceToTiles)
         return distanceToTiles
     }

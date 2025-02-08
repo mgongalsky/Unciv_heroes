@@ -537,51 +537,23 @@ class BattleManager(
      *
      * @param troop Отряд, совершающий перемещение.
      * @param targetTile Целевая клетка.
-     * @return `true`, если клетка в пределах движения отряда и находится на поле битвы, иначе `false`.
+     * @return `true`, если клетка достижима юнитом в этот ход, иначе `false`.
      */
     fun isTileAchievable(troop: TroopInfo, targetTile: TileInfo): Boolean {
-        // Проверяем, входит ли клетка в диапазон движения отряда
-        val distance = HexMath.getDistance(troop.currentTile.position, targetTile.position)
-        if (distance > troop.baseUnit.speed) {
-            return false
-        }
-
         // Проверяем, находится ли клетка на поле битвы
-
         if (!battleField.contains(targetTile)) {
-            println("Target tile ${targetTile} is outside the battlefield.")
+            if (verboseAttack) println("Target tile ${targetTile.position} is outside the battlefield.")
             return false
         }
 
-        // Если все условия выполнены, клетка достижима
-        return true
-    }
-
-
-    /**
-     * Checks if the specified hex is inside the battlefield boundaries.
-     *
-     * @param positionHex The position in hexagonal coordinates to check.
-     * @return True if the position is within the predefined battlefield bounds, false otherwise.
-     */
-    fun isHexOnBattleField(positionHex: Vector2): Boolean {
-        // Convert hexagonal coordinates to offset coordinates (even-q)
-        val positionOffset = HexMath.hex2EvenQCoords(positionHex)
-
-        // Hardcoded battlefield dimensions
-        val minX = -7f
-        val maxX = 6f
-        val minY = -4f
-        val maxY = 3f
-
-        // Check if the position is within bounds
-        val isWithinBounds = positionOffset.x in minX..maxX && positionOffset.y in minY..maxY
-
-        if (!isWithinBounds) {
-            println("Position $positionOffset is outside the hardcoded battlefield bounds.")
+        // Проверяем, может ли юнит дойти до клетки в текущем ходу
+        val reachableTiles = troop.movement.getReachableTilesInCurrentTurn(targetTile = targetTile)
+        if (!reachableTiles.contains(targetTile)) {
+            if (verboseAttack) println("Target tile ${targetTile.position} is not reachable for ${troop.unitName} in this turn.")
+            return false
         }
 
-        return isWithinBounds
+        return true
     }
 
     fun getAttackerArmy() =  attackerArmy
