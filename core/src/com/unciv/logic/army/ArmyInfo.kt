@@ -156,6 +156,7 @@ class ArmyInfo(
     fun removeTroop(troop: TroopInfo): Boolean {
         val index = troops.indexOfFirst { it == troop }
         if (index != -1) {
+            troop.perish()
             troops[index] = null
             return true
         }

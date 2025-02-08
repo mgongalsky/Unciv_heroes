@@ -26,7 +26,7 @@ import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 
 /**
- * Represents battle units with a specified [amount], [position] in hex coordinates,
+ * Represents battle units with a specified [amount],
  * a reference to a [baseUnit], and optionally a reference to a hero (MapUnit).
  *
  * The hero reference allows accessing additional battle-related parameters (e.g., morale).
@@ -44,7 +44,7 @@ class TroopInfo(
     var currentAmount = amount
 
     /** Position of the troop in hex coordinates (offset coordinates). */
-    lateinit var position: Vector2
+    //lateinit var position: Vector2
 
     /**
      * Optional reference to the hero (MapUnit) that leads this troop.
@@ -159,13 +159,14 @@ class TroopInfo(
         baseUnit = ruleset.units[unitName]!!
 
         battleField = battleField0
+        lateinit var positionToSet: Vector2
         // Set initial position based on whether the troop is attacking or defending.
         if (attacker)
-            position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f - number.toFloat() * 2))
+            positionToSet = HexMath.evenQ2HexCoords(Vector2(-7f, 3f - number.toFloat() * 2))
         else
-            position = HexMath.evenQ2HexCoords(Vector2(6f, 3f - number.toFloat() * 2))
+            positionToSet = HexMath.evenQ2HexCoords(Vector2(6f, 3f - number.toFloat() * 2))
 
-        currentTile = battleField!![position]
+        currentTile = battleField!![positionToSet]
         currentMovement = baseUnit.speed.toFloat()
         currentTile.troopUnit = this
 
@@ -173,6 +174,7 @@ class TroopInfo(
         currentAmount = amount
     }
 
+    /*
     fun moveToPosition(targetPosition: Vector2){
         position = targetPosition
         if(battleField != null) {
@@ -182,6 +184,8 @@ class TroopInfo(
         }
 
     }
+
+     */
 
     /**
      * Перемещает отряд на указанную клетку.
@@ -194,7 +198,7 @@ class TroopInfo(
 
         // Обновляем текущую клетку и её позицию
         currentTile = targetTile
-        position = targetTile.position
+        //position = targetTile.position
 
         // Устанавливаем отряд на новую клетку
         currentTile?.troopUnit = this
@@ -206,5 +210,10 @@ class TroopInfo(
         currentHealth = baseUnit.health
         currentTile.troopUnit = null
         battleField = null
+    }
+
+    fun perish() {
+        if(isCurrentTileInitialized())
+            currentTile.troopUnit = null
     }
 }

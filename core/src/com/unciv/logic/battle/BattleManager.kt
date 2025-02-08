@@ -241,6 +241,7 @@ class BattleManager(
             }
 
             ActionType.ATTACK -> {
+                /*
                 val direction = actionRequest.direction
                     ?: return BattleActionResult(
                         actionType = ActionType.ATTACK,
@@ -248,7 +249,9 @@ class BattleManager(
                         errorId = ErrorId.INVALID_TARGET
                     )
 
-                if (verboseAttack) println("Attempting attack with direction $direction")
+                 */
+
+                //if (verboseAttack) println("Attempting attack with direction $direction")
 
                 val defender = getTroopOnTile(actionRequest.targetPosition)
                     ?: return BattleActionResult(
@@ -267,9 +270,9 @@ class BattleManager(
                 }
 
                 //val attackPosition = HexMath.oneStepTowards(targetPosition, direction)
-                val attackTile = battleField.getNeighborTile(actionRequest.targetPosition, direction)
+                //val attackTile = battleField.getNeighborTile(actionRequest.targetPosition, direction)
 
-                if (attackTile == null) {
+                if (actionRequest.attackTile == null) {
                     if (verboseAttack) println("Invalid attackTile")
                     return BattleActionResult(
                         actionType = ActionType.ATTACK,
@@ -283,11 +286,11 @@ class BattleManager(
                 // 2. That hex is occupied, but not by that troop
                 if (!isTileAchievable(
                             troop,
-                            attackTile
-                        ) || (!isTileFree(attackTile) && troop.currentTile != attackTile)
+                            actionRequest.attackTile
+                        ) || (!isTileFree(actionRequest.attackTile) && troop.currentTile != actionRequest.attackTile)
                 ) {
                     if (verboseAttack) {
-                        println("Attack position $attackTile not achievable or not free")
+                        println("Attack position $actionRequest.attackTile not achievable or not free")
                     }
                     return BattleActionResult(
                         actionType = ActionType.ATTACK,
@@ -298,9 +301,9 @@ class BattleManager(
 
                 // Move attacker to attack position
                 val oldTile = troop.currentTile
-                troop.moveToTile(attackTile)
+                troop.moveToTile(actionRequest.attackTile)
 
-                if (verboseAttack) println("Troop moved to attack position $attackTile")
+                if (verboseAttack) println("Troop moved to attack position $actionRequest.attackTile")
 
                 // Perform attack
                 val isLuck = attack(defender, troop)
@@ -311,7 +314,7 @@ class BattleManager(
                     actionType = ActionType.ATTACK,
                     success = true,
                     movedFrom = oldTile,
-                    movedTo = attackTile,
+                    movedTo = actionRequest.attackTile,
                     isLuck = isLuck,
                     isMorale = isMorale,
                     battleEnded = !isBattleOn()
@@ -319,7 +322,7 @@ class BattleManager(
             }
 
             ActionType.SHOOT -> {
-                if (verboseAttack) println("Starting ActionType.SHOOT for troop: ${troop.unitName} at position: ${troop.position}")
+                if (verboseAttack) println("Starting ActionType.SHOOT for troop: ${troop.unitName} at position: ${troop.currentTile.position}")
 
                 // Get defender
                 val defender = getTroopOnTile(actionRequest.targetPosition)
@@ -410,7 +413,7 @@ class BattleManager(
         return isAlly && targetTroop != troop  // Союзный, но не сам себе союзник
     }
 
-
+/*
     /**
      * Checks if the target position is occupied by an enemy troop.
      *
@@ -431,6 +434,8 @@ class BattleManager(
             enemyTroop != null && enemyTroop.position == targetPosition
         }
     }
+
+ */
 
     /**
      * Checks if the target tile is occupied by an enemy troop.
@@ -457,7 +462,7 @@ class BattleManager(
      * @param targetPosition The position to check.
      * @return True if the position is free, false otherwise.
      */
-    fun isHexFree(targetPosition: Vector2) = turnQueue.none { it.position == targetPosition }
+    //fun isHexFree(targetPosition: Vector2) = turnQueue.none { it.position == targetPosition }
 
     /**
      * Checks if a tile is free of any troop.
@@ -527,7 +532,6 @@ class BattleManager(
 
      */
 
-    fun isHexAchievable(){}
     /**
      * Проверяет, достижима ли целевая клетка для данного отряда.
      *
@@ -536,18 +540,16 @@ class BattleManager(
      * @return `true`, если клетка в пределах движения отряда и находится на поле битвы, иначе `false`.
      */
     fun isTileAchievable(troop: TroopInfo, targetTile: TileInfo): Boolean {
-        // Получаем текущую клетку отряда
-        val currentTile = battleField[troop.position] ?: return false
-
         // Проверяем, входит ли клетка в диапазон движения отряда
-        val distance = HexMath.getDistance(currentTile.position, targetTile.position)
+        val distance = HexMath.getDistance(troop.currentTile.position, targetTile.position)
         if (distance > troop.baseUnit.speed) {
             return false
         }
 
         // Проверяем, находится ли клетка на поле битвы
-        if (!battleField.contains(targetTile.position)) {
-            println("Target tile ${targetTile.position} is outside the battlefield.")
+
+        if (!battleField.contains(targetTile)) {
+            println("Target tile ${targetTile} is outside the battlefield.")
             return false
         }
 
@@ -598,7 +600,7 @@ class BattleManager(
             return isLuck
         }
         if (verboseAttack) {
-            println("Starting attack: ${attacker.unitName} (Position: ${attacker.position}) attacking ${defender.unitName} (Position: ${defender.position})")
+            println("Starting attack: ${attacker.unitName} (Position: ${attacker.currentTile.position}) attacking ${defender.unitName} (Position: ${defender.currentTile.position})")
             println("Initial attacker amount: ${attacker.currentAmount}, Initial defender amount: ${defender.currentAmount}")
         }
 
@@ -633,7 +635,7 @@ class BattleManager(
 
         if (defender.currentAmount <= 0) {
             defender.currentAmount = 0
-            if (verboseAttack) println("Defender ${defender.unitName} at position ${defender.position} has been defeated.")
+            if (verboseAttack) println("Defender ${defender.unitName} at position ${defender.currentTile.position} has been defeated.")
             perishTroop(defender)
         }
 

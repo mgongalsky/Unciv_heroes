@@ -27,5 +27,6 @@ data class BattleActionRequest(
     val troop: TroopInfo,
     val targetPosition: TileInfo,
     val actionType: ActionType,
-    val direction: Direction? = null // Attack direction (if applicable)
+    val attackTile: TileInfo? = null
+    //val direction: Direction? = null // Attack direction (if applicable)
 )

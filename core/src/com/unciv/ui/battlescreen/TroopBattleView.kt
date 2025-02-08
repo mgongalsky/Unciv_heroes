@@ -12,6 +12,7 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.logic.army.TroopInfo
+import com.unciv.logic.map.TileInfo
 
 /**
  * Represents the view of a troop in battles.
@@ -39,8 +40,13 @@ class TroopBattleView(
     }
 
     fun getBattlefieldPosition(): Vector2 {
-        return troopInfo.position
+        return troopInfo.currentTile.position
     }
+
+    fun getBattlefieldTile(): TileInfo {
+        return troopInfo.currentTile
+    }
+
 
     fun getTroopInfo(): TroopInfo{
         return troopInfo
@@ -157,6 +163,7 @@ class TroopBattleView(
 
     /** Remove the troop's group from the stage when it perishes. */
     fun perish() {
+        //getBattlefieldTile().troopUnit = null
         troopGroup.remove()
     }
 }

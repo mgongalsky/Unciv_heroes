@@ -182,7 +182,10 @@ class TileMap : IsPartOfGameInfoSerialization {
 
 
     operator fun contains(vector: Vector2) =
-        contains(vector.x.toInt(), vector.y.toInt())
+            contains(vector.x.toInt(), vector.y.toInt())
+
+    operator fun contains(tile: TileInfo) =
+            tileList.contains(tile)
 
     operator fun get(vector: Vector2) =
         get(vector.x.toInt(), vector.y.toInt())

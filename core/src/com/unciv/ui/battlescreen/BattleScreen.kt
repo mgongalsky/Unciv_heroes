@@ -225,7 +225,7 @@ class BattleScreen(
             actionType = ActionType.SKIP
         )
         // Find the TileGroup corresponding to the current troop's position
-        val targetTileGroup = daTileGroups.firstOrNull { it.tileInfo.position == currentTroop.position }
+        val targetTileGroup = daTileGroups.firstOrNull { it.tileInfo == currentTroop.currentTile }
         if (targetTileGroup == null) {
             println("Error: No tile group found for current troop's position.")
             return
@@ -261,7 +261,7 @@ class BattleScreen(
                 Gdx.app.postRunnable { shutdownScreen() }
                 return@coroutineScope
             }
-            if (verboseTurn) println("Current troop: ${currentTroop.baseUnit.name} at position ${currentTroop.position}")
+            if (verboseTurn) println("Current troop: ${currentTroop.baseUnit.name} at position ${currentTroop.currentTile.position}")
 
             var result: BattleActionResult? = null
 
@@ -272,7 +272,7 @@ class BattleScreen(
                     if (verboseTurn) {
                         println("Received action: ${action.actionType} targeting ${action.targetPosition}")
                         if (action.actionType == ActionType.ATTACK) {
-                            println("Direction for attack: ${action.direction}")
+                            println("Tile for attack: ${action.attackTile}")
                         }
                     }
                     result = manager.performTurn(action)
@@ -316,7 +316,7 @@ class BattleScreen(
                 println("Moved from: ${result.movedFrom}, Moved to: ${result.movedTo}")
             }
 
-            val targetTileGroup = daTileGroups.firstOrNull(){it.tileInfo.position == currentTroop.position}
+            val targetTileGroup = daTileGroups.firstOrNull(){it.tileInfo == currentTroop.currentTile}
 
             // Handle specific action types
             when (result.actionType) {
@@ -332,12 +332,12 @@ class BattleScreen(
 
                     if (result.movedTo != null) {
                         val attackingTroopView = getTroopViewFor(currentTroop)
-                        val attackPosition = result.movedTo
-                        val attackTileGroup = daTileGroups.firstOrNull { it.tileInfo.position == attackPosition }
+                        val attackTile = result.movedTo
+                        val attackTileGroup = daTileGroups.firstOrNull { it.tileInfo == attackTile }
 
                         if (attackTileGroup != null && attackingTroopView != null) {
                             attackingTroopView.updatePosition(attackTileGroup)
-                            if (verboseTurn) println("Updated attacking troop view to position $attackPosition")
+                            if (verboseTurn) println("Updated attacking troop view to position $attackTile")
                         }
                     }
 
@@ -553,6 +553,7 @@ class BattleScreen(
      */
     fun draw_pointer() {
         // Find a tileGroup with specified pointer position
+        // TODO: switch pointerPosition to TileGroup
         val pointerTile = daTileGroups.firstOrNull { it.tileInfo.position == pointerPosition }
         if (pointerTile == null) {
             println("Error: No tile found at position $pointerPosition during drawing a pointer")
@@ -629,7 +630,8 @@ class BattleScreen(
             shutdownScreen()
             return
         }
-        pointerPosition = currentTroop.position
+        // TODO: switch to tile
+        pointerPosition = currentTroop.currentTile.position
         draw_pointer()
 
         // Add various mouse listeners to each tile
@@ -770,13 +772,14 @@ class BattleScreen(
         if (manager.isTileOccupiedByEnemy(currentTroop, tileGroup.tileInfo)) {
             // Вычисляем направление атаки
             val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
+            val attackTile = battleField.getNeighborTile(tileGroup.tileInfo, direction)
 
             // Создаём запрос атаки
             val attackRequest = BattleActionRequest(
                 troop = currentTroop,
                 targetPosition = tileGroup.tileInfo,
                 actionType = ActionType.ATTACK,
-                direction = direction
+                attackTile = attackTile
             )
 
             // Передаём запрос
@@ -831,7 +834,7 @@ class BattleScreen(
     fun movePointerToNextTroop() {
         val currentTroop = manager.getCurrentTroop()
         if (currentTroop != null){
-            pointerPosition = currentTroop.position
+            pointerPosition = currentTroop.currentTile.position
             draw_pointer()
         } else
             println("Queue is empty, nowhere to put pointer")
@@ -958,11 +961,12 @@ class BattleScreen(
     {
 
         // The code is similar to onClick routines. See details comments there.
-        val targetHex = tileGroup.tileInfo.position
+        //val targetHex = tileGroup.tileInfo.position
+        val targetTile = tileGroup.tileInfo
         val currentTroop = getCurrentTroopView() ?: return
 
         if (    manager.canShoot(currentTroop.getTroopInfo()) &&
-                manager.isHexOccupiedByEnemy(currentTroop.getTroopInfo(), targetHex)){
+                manager.isTileOccupiedByEnemy(currentTroop.getTroopInfo(), targetTile)){
             Gdx.graphics.setCursor(cursorShoot)
             return
         }
@@ -974,7 +978,7 @@ class BattleScreen(
 
         // for non-shooting troops:
         if (!currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn().contains(tileGroup.tileInfo)
-                && manager.isHexFree(targetHex))
+                && manager.isTileFree(targetTile))
         //if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
             Gdx.graphics.setCursor(cursorCancel)
         else {
@@ -983,16 +987,20 @@ class BattleScreen(
                 return
             }
 
-            if (manager.isHexOccupiedByEnemy(currentTroop.getTroopInfo(), targetHex)) {
+            if (manager.isTileOccupiedByEnemy(currentTroop.getTroopInfo(), targetTile)) {
                 val direction = pixelToDirection(x, y, width)
-                val hexToMove = HexMath.oneStepTowards(targetHex, direction)
-                if(!manager.isHexOnBattleField(hexToMove)){
+                val tileToMove = battleField.getNeighborTile(targetTile, direction)
+                //val hexToMove = HexMath.oneStepTowards(targetHex, direction)
+                /*
+                if(!manager.isTileOnBattleField(hexToMove)){
                     Gdx.graphics.setCursor(cursorCancel)
                     return
                 }
 
-                if (currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn().contains(battleField[hexToMove])
-                        && (manager.isHexFree(hexToMove) || hexToMove == currentTroop.getTroopInfo().position))
+                 */
+
+                if (currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn().contains(tileToMove)
+                        && (tileToMove != null && manager.isTileFree(tileToMove) || tileToMove == currentTroop.getTroopInfo().currentTile))
                         //if (manager.isHexAchievable(currentTroop.getTroopInfo(), hexToMove))
                     Gdx.graphics.setCursor(cursorAttack[direction.num])
                 else
