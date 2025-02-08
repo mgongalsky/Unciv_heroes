@@ -84,8 +84,6 @@ class BattleScreen(
     }
 
 
-    private var manager = BattleManager(attackerArmy, defenderArmy)
-
     // Arrays to store visual representations of troops for attackers and defenders
     private val attackerTroopViewsArray: Array<TroopBattleView?> =
             Array(attackerArmy.getAllTroops().size ?: 0) { null }
@@ -110,6 +108,9 @@ class BattleScreen(
         BFwidth, BFheight,
         game.gameInfo!!.ruleSet, defenderTile.baseTerrain
     )
+
+    private var manager = BattleManager(attackerArmy, defenderArmy, battleField)
+
 
     // Holds the mapping of tiles to their groups for visual representation
     val tileGroups = HashMap<TileInfo, List<TileGroup>>()
@@ -220,7 +221,7 @@ class BattleScreen(
         // Create a SKIP action request using current troop and its current position
         val skipRequest = BattleActionRequest(
             troop = currentTroop,
-            targetPosition = currentTroop.position,
+            targetPosition = currentTroop.currentTile,
             actionType = ActionType.SKIP
         )
         // Find the TileGroup corresponding to the current troop's position
@@ -749,31 +750,31 @@ class BattleScreen(
         }
 
         val currentTroop = currentTroopView.getTroopInfo()
-        val targetPosition = tileGroup.tileInfo.position
+        //val targetPosition = tileGroup.tileInfo.position
 
         // Проверяем, можно ли стрелять
-        if (manager.canShoot(currentTroop) && manager.isHexOccupiedByEnemy(currentTroop, targetPosition)) {
+        if (manager.canShoot(currentTroop) && manager.isTileOccupiedByEnemy(currentTroop, tileGroup.tileInfo)) {
             val actionRequest = BattleActionRequest(
                 troop = currentTroop,
-                targetPosition = targetPosition,
+                targetPosition = tileGroup.tileInfo,
                 actionType = ActionType.SHOOT
             )
             onPlayerActionReceived?.invoke(Pair(actionRequest, tileGroup))
             return
         }
 
-        if (!manager.isHexAchievable(currentTroop, targetPosition))
+        if (!manager.isTileAchievable(currentTroop, tileGroup.tileInfo))
             return
 
         // Проверяем, можем ли атаковать
-        if (manager.isHexOccupiedByEnemy(currentTroop, targetPosition)) {
+        if (manager.isTileOccupiedByEnemy(currentTroop, tileGroup.tileInfo)) {
             // Вычисляем направление атаки
             val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
 
             // Создаём запрос атаки
             val attackRequest = BattleActionRequest(
                 troop = currentTroop,
-                targetPosition = targetPosition,
+                targetPosition = tileGroup.tileInfo,
                 actionType = ActionType.ATTACK,
                 direction = direction
             )
@@ -784,7 +785,7 @@ class BattleScreen(
             // Иначе создаём запрос перемещения
             val moveRequest = BattleActionRequest(
                 troop = currentTroop,
-                targetPosition = targetPosition,
+                targetPosition = tileGroup.tileInfo,
                 actionType = ActionType.MOVE
             )
 
@@ -977,7 +978,7 @@ class BattleScreen(
         //if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
             Gdx.graphics.setCursor(cursorCancel)
         else {
-            if (manager.isHexOccupiedByAlly(currentTroop.getTroopInfo(), targetHex)) {
+            if (manager.isTileOccupiedByAlly(currentTroop.getTroopInfo(), tileGroup.tileInfo)) {
                 Gdx.graphics.setCursor(cursorCancel) /// TODO: change to question
                 return
             }

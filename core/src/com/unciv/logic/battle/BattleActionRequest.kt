@@ -3,6 +3,7 @@ package com.unciv.ui.battlescreen
 import com.badlogic.gdx.math.Vector2
 import com.unciv.logic.Direction
 import com.unciv.logic.army.TroopInfo
+import com.unciv.logic.map.TileInfo
 
 /**
  * Enumeration of possible action types in battle.
@@ -24,7 +25,7 @@ enum class ActionType {
  */
 data class BattleActionRequest(
     val troop: TroopInfo,
-    val targetPosition: Vector2,
+    val targetPosition: TileInfo,
     val actionType: ActionType,
     val direction: Direction? = null // Attack direction (if applicable)
 )

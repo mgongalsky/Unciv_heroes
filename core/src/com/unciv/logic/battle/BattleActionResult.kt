@@ -1,5 +1,6 @@
 import com.badlogic.gdx.math.Vector2
 import com.unciv.logic.army.TroopInfo
+import com.unciv.logic.map.TileInfo
 import com.unciv.ui.battlescreen.ActionType
 
 enum class ErrorId {
@@ -18,8 +19,8 @@ enum class ErrorId {
 data class BattleActionResult(
     val actionType: ActionType,
     val success: Boolean,
-    val movedFrom: Vector2? = null,
-    val movedTo: Vector2? = null,
+    val movedFrom: TileInfo? = null,
+    val movedTo: TileInfo? = null,
     val errorId: ErrorId? = null,
     val isLuck: Boolean = false,
     val isMorale: Boolean = false,

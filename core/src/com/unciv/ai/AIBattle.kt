@@ -6,6 +6,7 @@ import com.unciv.logic.Direction
 import com.unciv.logic.HexMath
 import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.battle.BattleManager
+import com.unciv.logic.map.TileInfo
 import com.unciv.ui.battlescreen.ActionType
 import com.unciv.ui.battlescreen.BattleActionRequest
 
@@ -41,19 +42,19 @@ class AIBattle(private val battleManager: BattleManager) {
         val closestEnemy = enemies.minByOrNull { HexMath.getDistance(troop.position, it.position) }
         if (AI_verbose) println("Closest enemy for ${troop.unitName}: ${closestEnemy?.unitName} at ${closestEnemy?.position}")
 
-        val attackDirection = closestEnemy?.position?.let { findAttackDirection(troop, it) }
+        val attackDirection = closestEnemy?.currentTile?.let { findAttackDirection(troop, it) }
         if (attackDirection != null) {
             if (AI_verbose) println("Attacking direction for ${troop.unitName}: $attackDirection")
             return battleManager.performTurn(
                 BattleActionRequest(
                     troop = troop,
-                    targetPosition = closestEnemy.position,
+                    targetPosition = closestEnemy.currentTile,
                     actionType = ActionType.ATTACK,
                     direction = attackDirection
                 )
             )
         } else {
-            val moveTarget = closestEnemy?.position?.let { findBestMoveTarget(troop, it) }
+            val moveTarget = closestEnemy?.currentTile?.let { findBestMoveTarget(troop, it) }
             if (moveTarget != null) {
                 if (AI_verbose) println("${troop.unitName} moving to $moveTarget")
                 return battleManager.performTurn(
@@ -73,6 +74,35 @@ class AIBattle(private val battleManager: BattleManager) {
             }
         }
     }
+
+    /**
+     * Найти направление атаки для юнита
+     *
+     * @param troop Отряд, совершающий атаку.
+     * @param targetTile Целевая клетка атаки.
+     * @return Направление атаки (`Direction`) или `null`, если подходящего нет.
+     */
+    private fun findAttackDirection(troop: TroopInfo, targetTile: TileInfo): Direction? {
+        val defaultDirection = HexMath.getDirection(troop.currentTile.position, targetTile.position)
+        if (AI_verbose) println("Default direction for attack: $defaultDirection")
+
+        if (isDirectionValid(troop, targetTile, defaultDirection)) {
+            return defaultDirection
+        }
+
+        for (i in 1..5) {
+            val direction = HexMath.rotateClockwise(defaultDirection, i)
+            if (isDirectionValid(troop, targetTile, direction)) {
+                if (AI_verbose) println("Found valid attack direction: $direction")
+                return direction
+            }
+        }
+
+        if (AI_verbose) println("No valid attack direction found for ${troop.unitName}")
+        return null
+    }
+
+    /*
 
     /** Найти направление атаки для юнита */
     private fun findAttackDirection(troop: TroopInfo, targetPosition: Vector2): Direction? {
@@ -95,6 +125,8 @@ class AIBattle(private val battleManager: BattleManager) {
         return null
     }
 
+
+     */
     /** Логика для стреляющих юнитов */
     private fun performRangedAction(troop: TroopInfo): BattleActionResult {
         val enemies = battleManager.getEnemies(troop)
@@ -121,7 +153,7 @@ class AIBattle(private val battleManager: BattleManager) {
             battleManager.performTurn(
                 BattleActionRequest(
                     troop = troop,
-                    targetPosition = target.position,
+                    targetPosition = target.currentTile,
                     actionType = ActionType.SHOOT
                 )
             )
@@ -135,12 +167,46 @@ class AIBattle(private val battleManager: BattleManager) {
         }
     }
 
+    /*
     /** Проверить, валидна ли клетка для атаки */
     private fun isDirectionValid(troop: TroopInfo, targetPosition: Vector2, direction: Direction): Boolean {
+        //val attackTile =
         val attackPosition = HexMath.oneStepTowards(targetPosition, direction)
-        return battleManager.isHexAchievable(troop, attackPosition) && battleManager.isHexFree(attackPosition)
+        return battleManager.isHexAchievable(troop, attackPosition) && battleManager.isTileFree(attackPosition)
     }
 
+     */
+
+    /** Проверить, валидна ли клетка для атаки */
+    private fun isDirectionValid(troop: TroopInfo, targetTile: TileInfo, direction: Direction): Boolean {
+        // Получаем клетку, с которой можно атаковать
+        val attackTile = battleManager.battleField.getNeighborTile(targetTile, direction) ?: return false
+
+        return battleManager.isTileAchievable(troop, attackTile) && battleManager.isTileFree(attackTile)
+    }
+
+
+    /**
+     * Найти лучшую клетку для перемещения к цели.
+     *
+     * @param troop Отряд, который перемещается.
+     * @param targetTile Целевая клетка.
+     * @return Лучшая клетка для перемещения или `null`, если перемещение невозможно.
+     */
+    private fun findBestMoveTarget(troop: TroopInfo, targetTile: TileInfo): TileInfo? {
+        val reachableTiles = battleManager.getReachableTiles(troop)
+        if (reachableTiles.isEmpty()) {
+            if (AI_verbose) println("No reachable tiles for ${troop.unitName}")
+            return null
+        }
+
+        // Выбираем ближайшую клетку к цели
+        val bestTile = reachableTiles.minByOrNull { HexMath.getDistance(it.position, targetTile.position) }
+        if (AI_verbose) println("Best move target for ${troop.unitName}: ${bestTile?.position}")
+        return bestTile
+    }
+
+    /*
 
     /** Найти лучшую клетку для перемещения к цели */
     private fun findBestMoveTarget(troop: TroopInfo, targetPosition: Vector2): Vector2? {
@@ -154,6 +220,8 @@ class AIBattle(private val battleManager: BattleManager) {
         if (AI_verbose) println("Best move target for ${troop.unitName}: $bestTile")
         return bestTile
     }
+
+     */
 }
 
 

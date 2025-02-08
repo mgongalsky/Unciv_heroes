@@ -7,6 +7,8 @@ import com.unciv.ui.battlescreen.ActionType
 import com.unciv.ui.battlescreen.BattleActionRequest
 import com.badlogic.gdx.math.Vector2
 import com.unciv.logic.HexMath
+import com.unciv.logic.map.TileInfo
+import com.unciv.logic.map.TileMap
 import com.unciv.models.GameConstants
 import kotlin.random.Random
 
@@ -19,7 +21,8 @@ import kotlin.random.Random
  */
 class BattleManager(
     private var attackerArmy: ArmyInfo,
-    private var defenderArmy: ArmyInfo
+    private var defenderArmy: ArmyInfo,
+    val battleField: TileMap // BattleField on use
 ) {
     private val turnQueue: MutableList<TroopInfo> = mutableListOf() // Queue of troops for turn order
     private var currentTurnIndex: Int = 0 // Index of the current troop's turn
@@ -155,15 +158,17 @@ class BattleManager(
         }
     }
 
+    //fun getTroopOnHex() {}
     /**
-     * Finds the troop located at the specified hexagonal position.
+     * Finds the troop located at the specified tile.
      *
-     * @param positionHex The hexagonal position to check.
-     * @return The [TroopInfo] located at the position or `null` if the hex is empty.
+     * @param tile The tile to check.
+     * @return The [TroopInfo] located at the tile or `null` if the tile is empty.
      */
-    fun getTroopOnHex(positionHex: Vector2): TroopInfo? {
-        return turnQueue.find { it.position == positionHex }
+    private fun getTroopOnTile(tile: TileInfo): TroopInfo? {
+        return tile.troopUnit  // Теперь получаем юнита напрямую из клетки
     }
+
 
     private val verboseAttack = true // Флаг для включения/выключения вербозинга атак
 
@@ -175,7 +180,7 @@ class BattleManager(
      */
     fun performTurn(actionRequest: BattleActionRequest): BattleActionResult {
         val troop = actionRequest.troop
-        val targetPosition = actionRequest.targetPosition
+        //val targetPosition = actionRequest.targetPosition
 
         // TODO: remove +1 when actual morale bonus for the same castle is introduced
         val isMorale = isMoraleTriggered(troop) // Add here +1 to morale just because all troops are from the same castle now )
@@ -186,31 +191,31 @@ class BattleManager(
                 return BattleActionResult(
                     actionType = ActionType.SKIP,
                     success = true,
-                    movedFrom = troop.position,
-                    movedTo = troop.position,
+                    movedFrom = troop.currentTile,
+                    movedTo = troop.currentTile,
                     isMorale = false,
                     battleEnded = !isBattleOn()
                 )
             }
             ActionType.MOVE -> {
-                if (!isHexAchievable(troop, targetPosition)) {
-                    if (verboseAttack) println("Hex not achievable for troop at position $targetPosition")
+                if (!isTileAchievable(troop, actionRequest.targetPosition)) {
+                    if (verboseAttack) println("Hex not achievable for troop at position $actionRequest.targetPosition")
                     return BattleActionResult(
                         actionType = ActionType.MOVE,
                         success = false,
                         errorId = ErrorId.TOO_FAR
                     )
                 }
-                if (isHexOccupiedByAlly(troop, targetPosition)) {
-                    if (verboseAttack) println("Hex occupied by ally at position $targetPosition")
+                if (isTileOccupiedByAlly(troop, actionRequest.targetPosition)) {
+                    if (verboseAttack) println("Hex occupied by ally at position $actionRequest.targetPosition")
                     return BattleActionResult(
                         actionType = ActionType.MOVE,
                         success = false,
                         errorId = ErrorId.OCCUPIED_BY_ALLY
                     )
                 }
-                if (!isHexFree(targetPosition)) {
-                    if (verboseAttack) println("Hex occupied by another troop $targetPosition")
+                if (!isTileFree(actionRequest.targetPosition)) {
+                    if (verboseAttack) println("Hex occupied by another troop $actionRequest.targetPosition")
                     return BattleActionResult(
                         actionType = ActionType.MOVE,
                         success = false,
@@ -219,16 +224,17 @@ class BattleManager(
                 }
 
                 // Successful movement
-                val oldPosition = troop.position
-                troop.moveToPosition(targetPosition)
+                val oldTile = troop.currentTile
+                //troop.moveToPosition(targetPosition)
+                troop.moveToTile(actionRequest.targetPosition)
 
-                if (verboseAttack) println("Troop moved from $oldPosition to $targetPosition")
+                if (verboseAttack) println("Troop moved from $oldTile to $actionRequest.targetPosition")
 
                 return BattleActionResult(
                     actionType = ActionType.MOVE,
                     success = true,
-                    movedFrom = oldPosition,
-                    movedTo = targetPosition,
+                    movedFrom = oldTile,
+                    movedTo = actionRequest.targetPosition,
                     isMorale = isMorale,
                     battleEnded = !isBattleOn()
                 )
@@ -244,15 +250,15 @@ class BattleManager(
 
                 if (verboseAttack) println("Attempting attack with direction $direction")
 
-                val defender = getTroopOnHex(targetPosition)
+                val defender = getTroopOnTile(actionRequest.targetPosition)
                     ?: return BattleActionResult(
                         actionType = ActionType.ATTACK,
                         success = false,
                         errorId = ErrorId.INVALID_TARGET
                     )
 
-                if (!isHexOccupiedByEnemy(troop, targetPosition)) {
-                    if (verboseAttack) println("No enemy found at $targetPosition")
+                if (!isTileOccupiedByEnemy(troop, actionRequest.targetPosition)) {
+                    if (verboseAttack) println("No enemy found at $actionRequest.targetPosition")
                     return BattleActionResult(
                         actionType = ActionType.ATTACK,
                         success = false,
@@ -260,13 +266,28 @@ class BattleManager(
                     )
                 }
 
-                val attackPosition = HexMath.oneStepTowards(targetPosition, direction)
+                //val attackPosition = HexMath.oneStepTowards(targetPosition, direction)
+                val attackTile = battleField.getNeighborTile(actionRequest.targetPosition, direction)
+
+                if (attackTile == null) {
+                    if (verboseAttack) println("Invalid attackTile")
+                    return BattleActionResult(
+                        actionType = ActionType.ATTACK,
+                        success = false,
+                        errorId = ErrorId.INVALID_TARGET
+                    )
+                }
+
                 // If troop:
                 // 1. Cannot achieve hex for attack
                 // 2. That hex is occupied, but not by that troop
-                if (!isHexAchievable(troop, attackPosition) || (!isHexFree(attackPosition) && troop.position != attackPosition)) {
+                if (!isTileAchievable(
+                            troop,
+                            attackTile
+                        ) || (!isTileFree(attackTile) && troop.currentTile != attackTile)
+                ) {
                     if (verboseAttack) {
-                        println("Attack position $attackPosition not achievable or not free")
+                        println("Attack position $attackTile not achievable or not free")
                     }
                     return BattleActionResult(
                         actionType = ActionType.ATTACK,
@@ -276,21 +297,21 @@ class BattleManager(
                 }
 
                 // Move attacker to attack position
-                val oldPosition = troop.position
-                troop.moveToPosition(attackPosition)
+                val oldTile = troop.currentTile
+                troop.moveToTile(attackTile)
 
-                if (verboseAttack) println("Troop moved to attack position $attackPosition")
+                if (verboseAttack) println("Troop moved to attack position $attackTile")
 
                 // Perform attack
                 val isLuck = attack(defender, troop)
 
-                if (verboseAttack) println("Attack performed on defender at $targetPosition")
+                if (verboseAttack) println("Attack performed on defender at $actionRequest.targetPosition")
 
                 return BattleActionResult(
                     actionType = ActionType.ATTACK,
                     success = true,
-                    movedFrom = oldPosition,
-                    movedTo = attackPosition,
+                    movedFrom = oldTile,
+                    movedTo = attackTile,
                     isLuck = isLuck,
                     isMorale = isMorale,
                     battleEnded = !isBattleOn()
@@ -301,13 +322,13 @@ class BattleManager(
                 if (verboseAttack) println("Starting ActionType.SHOOT for troop: ${troop.unitName} at position: ${troop.position}")
 
                 // Get defender
-                val defender = getTroopOnHex(targetPosition)
+                val defender = getTroopOnTile(actionRequest.targetPosition)
                     ?: return BattleActionResult(
                         actionType = ActionType.SHOOT,
                         success = false,
                         errorId = ErrorId.INVALID_TARGET
                     ).also {
-                        if (verboseAttack) println("Error: No troop found on target position: $targetPosition")
+                        if (verboseAttack) println("Error: No troop found on target position: $actionRequest.targetPosition")
                     }
 
                 // Check shooting capability
@@ -320,8 +341,8 @@ class BattleManager(
                     )
                 }
 
-                if (!isHexOccupiedByEnemy(troop, targetPosition)) {
-                    if (verboseAttack) println("Error: Target position $targetPosition is not occupied by an enemy")
+                if (!isTileOccupiedByEnemy(troop, actionRequest.targetPosition)) {
+                    if (verboseAttack) println("Error: Target position $actionRequest.targetPosition is not occupied by an enemy")
                     return BattleActionResult(
                         actionType = ActionType.SHOOT,
                         success = false,
@@ -329,14 +350,14 @@ class BattleManager(
                     )
                 }
 
-                if (verboseAttack) println("Troop ${troop.unitName} is shooting at target: ${defender.unitName} on position: $targetPosition")
+                if (verboseAttack) println("Troop ${troop.unitName} is shooting at target: ${defender.unitName} on position: $actionRequest.targetPosition")
 
                 // Perform shooting
                 val isLuck = attack(defender, troop) // Use the same attack logic
 
                 // Check if defender is defeated
                 if (defender.currentAmount <= 0) {
-                    if (verboseAttack) println("Defender ${defender.unitName} at position $targetPosition defeated.")
+                    if (verboseAttack) println("Defender ${defender.unitName} at position $actionRequest.targetPosition defeated.")
                     removeTroop(defender)
                 } else {
                     if (verboseAttack) println("Defender ${defender.unitName} survived with ${defender.currentAmount} units.")
@@ -363,32 +384,32 @@ class BattleManager(
      * @return True if both armies have surviving troops, false otherwise.
      */
     fun isBattleOn(): Boolean {
-        val attackerHasTroops = attackerArmy.getAllTroops().any { it?.currentAmount ?: 0 > 0 }
-        val defenderHasTroops = defenderArmy.getAllTroops().any { it?.currentAmount ?: 0 > 0 }
+        val attackerHasTroops = attackerArmy.getAllTroops().any { (it?.currentAmount ?: 0) > 0 }
+        val defenderHasTroops = defenderArmy.getAllTroops().any { (it?.currentAmount ?: 0) > 0 }
 
         return attackerHasTroops && defenderHasTroops
     }
 
     /**
-     * Checks if the target position is occupied by an allied troop.
+     * Checks if the target tile is occupied by an allied troop.
      *
      * @param troop The troop attempting to move.
-     * @param targetPosition The position to check.
-     * @return True if the position is occupied by an allied troop, false otherwise.
+     * @param targetTile The tile to check.
+     * @return True if the tile is occupied by an allied troop, false otherwise.
      */
-    fun isHexOccupiedByAlly(troop: TroopInfo, targetPosition: Vector2): Boolean {
-        // Get all allied troops
-        val alliedTroops = if (attackerArmy.contains(troop)) {
-            attackerArmy.getAllTroops()
+    fun isTileOccupiedByAlly(troop: TroopInfo, targetTile: TileInfo): Boolean {
+        val targetTroop = targetTile.troopUnit ?: return false  // Если клетка пустая, значит не занята союзником
+
+        // Определяем, к какой армии относится юнит
+        val isAlly = if (attackerArmy.contains(troop)) {
+            attackerArmy.contains(targetTroop)
         } else {
-            defenderArmy.getAllTroops()
+            defenderArmy.contains(targetTroop)
         }
 
-        // Check if any allied troop occupies the target position
-        return alliedTroops.any { alliedTroop ->
-            alliedTroop != null && alliedTroop != troop && alliedTroop.position == targetPosition
-        }
+        return isAlly && targetTroop != troop  // Союзный, но не сам себе союзник
     }
+
 
     /**
      * Checks if the target position is occupied by an enemy troop.
@@ -412,12 +433,42 @@ class BattleManager(
     }
 
     /**
+     * Checks if the target tile is occupied by an enemy troop.
+     *
+     * @param troop The troop attempting to move.
+     * @param targetTile The tile to check.
+     * @return True if the tile is occupied by an enemy troop, false otherwise.
+     */
+    fun isTileOccupiedByEnemy(troop: TroopInfo, targetTile: TileInfo): Boolean {
+        val targetTroop = targetTile.troopUnit ?: return false  // Если клетка пустая, значит нет врага
+
+        // Определяем, к какой армии относится юнит и является ли цель врагом
+        return if (attackerArmy.contains(troop)) {
+            defenderArmy.contains(targetTroop)  // Если юнит из атакующей армии, то ищем врага в защитниках
+        } else {
+            attackerArmy.contains(targetTroop)  // И наоборот
+        }
+    }
+
+
+    /**
      * Checks if a hex is free of any troop.
      *
      * @param targetPosition The position to check.
      * @return True if the position is free, false otherwise.
      */
     fun isHexFree(targetPosition: Vector2) = turnQueue.none { it.position == targetPosition }
+
+    /**
+     * Checks if a tile is free of any troop.
+     *
+     * @param targetTile The tile to check.
+     * @return True if the tile is free, false otherwise.
+     */
+    fun isTileFree(targetTile: TileInfo): Boolean {
+        return targetTile.troopUnit == null  // Если юнита нет, клетка свободна
+    }
+
 
     /**
      * Returns a list of enemies for the given troop.
@@ -435,12 +486,25 @@ class BattleManager(
         }
     }
 
+
+
     /**
      * Returns a list of reachable tiles for the given troop.
      *
      * @param troop The troop for which to calculate reachable tiles.
      * @return A list of reachable tiles as Vector2.
      */
+    /**
+     * Получает список клеток, доступных для перемещения отряда в текущем ходу.
+     *
+     * @param troop Отряд, для которого определяется доступность клеток.
+     * @return Список доступных клеток (`TileInfo`).
+     */
+    fun getReachableTiles(troop: TroopInfo): List<TileInfo> {
+        return troop.movement.getReachableTilesInCurrentTurn().toList()
+    }
+
+    /*
     fun getReachableTiles(troop: TroopInfo): List<Vector2> {
         return troop.movement.getReachableTilesInCurrentTurn().map { it.position }.toList()
 
@@ -450,9 +514,9 @@ class BattleManager(
         for (x in -7..6) {  // X-coordinates of the battlefield
             for (y in -4..3) { // Y-coordinates of the battlefield
                 val tilePosition = HexMath.evenQ2HexCoords(Vector2(x.toFloat(), y.toFloat()))
-                if (isHexAchievable(troop, tilePosition) && isHexFree(tilePosition)) {
-                    reachableTiles.add(tilePosition)
-                }
+               // if (isTileAchievable(troop, tilePosition) && isHexFree(tilePosition)) {
+               //     reachableTiles.add(tilePosition)
+               // }
             }
         }
 
@@ -461,36 +525,36 @@ class BattleManager(
 
     }
 
-    /**
-     * Checks if the target position is achievable by the given troop.
-     *
-     * @param troop The troop attempting to move.
-     * @param targetPosition The target position to check.
-     * @return True if the target position is within movement range and on the battlefield, false otherwise.
      */
-    fun isHexAchievable(troop: TroopInfo, targetPosition: Vector2): Boolean {
-        // Check if the target position is within the troop's movement range
-        //if (troop.battleField == null)
-        //    return false
-        //return troop.movement.getReachableTilesInCurrentTurn().contains(troop.battleField!![targetPosition])
 
+    fun isHexAchievable(){}
+    /**
+     * Проверяет, достижима ли целевая клетка для данного отряда.
+     *
+     * @param troop Отряд, совершающий перемещение.
+     * @param targetTile Целевая клетка.
+     * @return `true`, если клетка в пределах движения отряда и находится на поле битвы, иначе `false`.
+     */
+    fun isTileAchievable(troop: TroopInfo, targetTile: TileInfo): Boolean {
+        // Получаем текущую клетку отряда
+        val currentTile = battleField[troop.position] ?: return false
 
-        val distance = HexMath.getDistance(troop.position, targetPosition)
+        // Проверяем, входит ли клетка в диапазон движения отряда
+        val distance = HexMath.getDistance(currentTile.position, targetTile.position)
         if (distance > troop.baseUnit.speed) {
             return false
         }
 
-        // Check if the target position is on the battlefield
-        if (!isHexOnBattleField(targetPosition)) {
-            println("Target position $targetPosition is outside the battlefield.")
+        // Проверяем, находится ли клетка на поле битвы
+        if (!battleField.contains(targetTile.position)) {
+            println("Target tile ${targetTile.position} is outside the battlefield.")
             return false
         }
 
-        // If all checks pass, the hex is achievable
+        // Если все условия выполнены, клетка достижима
         return true
-
-
     }
+
 
     /**
      * Checks if the specified hex is inside the battlefield boundaries.

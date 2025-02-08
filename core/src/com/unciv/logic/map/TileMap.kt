@@ -2,6 +2,7 @@ package com.unciv.logic.map
 
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
+import com.unciv.logic.Direction
 import com.unciv.logic.GameInfo
 import com.unciv.logic.HexMath
 import com.unciv.logic.IsPartOfGameInfoSerialization
@@ -155,6 +156,30 @@ class TileMap : IsPartOfGameInfoSerialization {
         toReturn.startingLocations.addAll(startingLocations)
         return toReturn
     }
+
+    /**
+     * Finds the neighboring tile of a given tile in the specified direction.
+     *
+     * @param tile The starting tile.
+     * @param direction The direction in which to find the neighbor.
+     * @return The neighboring [TileInfo] or `null` if the tile doesn't exist.
+     */
+    fun getNeighborTile(tile: TileInfo, direction: Direction): TileInfo? {
+        // Получаем новую позицию в координатах Hex
+        val newPosition = when (direction) {
+            Direction.TopRight -> Vector2(tile.position.x - 1, tile.position.y + 1)
+            Direction.CenterRight -> Vector2(tile.position.x - 1, tile.position.y)
+            Direction.BottomRight -> Vector2(tile.position.x, tile.position.y - 1)
+            Direction.BottomLeft -> Vector2(tile.position.x + 1, tile.position.y - 1)
+            Direction.CenterLeft -> Vector2(tile.position.x + 1, tile.position.y)
+            Direction.TopLeft -> Vector2(tile.position.x, tile.position.y + 1)
+            Direction.DirError -> return null // Ошибка направления
+        }
+
+        // Проверяем, существует ли эта клетка
+        return getIfTileExistsOrNull(newPosition.x.toInt(), newPosition.y.toInt())
+    }
+
 
     operator fun contains(vector: Vector2) =
         contains(vector.x.toInt(), vector.y.toInt())

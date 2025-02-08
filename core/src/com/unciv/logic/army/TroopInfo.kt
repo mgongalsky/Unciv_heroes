@@ -22,6 +22,7 @@ import com.unciv.ui.utils.BaseScreen
 
 // Import MapUnit as the hero type
 import com.unciv.logic.map.MapUnit
+import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 
 /**
@@ -181,6 +182,24 @@ class TroopInfo(
         }
 
     }
+
+    /**
+     * Перемещает отряд на указанную клетку.
+     *
+     * @param targetTile Целевая клетка.
+     */
+    fun moveToTile(targetTile: TileInfo) {
+        // Если у отряда есть текущая клетка, очищаем ссылку на него
+        currentTile?.troopUnit = null
+
+        // Обновляем текущую клетку и её позицию
+        currentTile = targetTile
+        position = targetTile.position
+
+        // Устанавливаем отряд на новую клетку
+        currentTile?.troopUnit = this
+    }
+
 
     fun finishBattle() {
         amount = currentAmount
