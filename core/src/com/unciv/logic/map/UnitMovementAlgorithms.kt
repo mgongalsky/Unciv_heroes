@@ -179,7 +179,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                     var totalDistanceToTile: Float = when {
                         unit is MapUnit && !unit.civInfo.hasExplored(neighbor) ->
                             distanceToTiles[tileToCheck]!!.totalDistance + 1f  // If we don't know then we just guess it to be 1.
-                        !canPassThrough(neighbor) -> unitMovement // Can't go here.
+                        unit is MapUnit && !canPassThrough(neighbor) -> unitMovement // Can't go here.
                         // The reason that we don't just "return" is so that when calculating how to reach an enemy,
                         // You need to assume his tile is reachable, otherwise all movement algorithms on reaching enemy
                         // cities and units goes kaput.
