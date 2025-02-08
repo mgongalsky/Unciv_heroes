@@ -26,8 +26,13 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             else unit.costToEmbark ?: 100f
 
         // If the movement is affected by a Zone of Control, all movement points are expended
-        if (considerZoneOfControl && isMovementAffectedByZoneOfControl(from, to, civInfo))
-            return 100f
+        if (considerZoneOfControl && isMovementAffectedByZoneOfControl(from, to, civInfo)) {
+            return if (unit is MapUnit)
+                100f
+            else{
+                println("Extra cost for movement in ZoC")
+                3f}
+        }
 
         // land units will still spend all movement points to embark even with this unique
         if (unit is MapUnit && unit.allTilesCosts1)
@@ -94,6 +99,8 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
     }
 
     private fun getTilesExertingZoneOfControl(tileInfo: TileInfo, civInfo: CivilizationInfo) = sequence {
+        //println("Checking ZoC for unit ${unit.baseUnit.name} at ${tileInfo.position}")
+
         for (tile in tileInfo.neighbors) {
             if (tile.isCityCenter() && civInfo.isAtWarWith(tile.getOwner()!!)) {
                 yield(tile)
@@ -101,6 +108,10 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             else if (tile.militaryUnit != null && civInfo.isAtWarWith(tile.militaryUnit!!.civInfo)) {
                 if (tile.militaryUnit!!.type.isWaterUnit() || (unit is MapUnit && unit.type.isLandUnit() && !tile.militaryUnit!!.isEmbarked()))
                     yield(tile)
+            } else if (unit is TroopInfo && tile.troopUnit != null && unit.civInfo != tile.troopUnit?.civInfo){
+               // println("Control zone at tile ${tileInfo.position} for unit ${unit.unitName} detected.")
+                yield(tile)
+
             }
         }
     }
@@ -124,8 +135,12 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         // function is surprisingly less efficient than the current neighbor-intersection approach.
         // See #4085 for more details.
         val tilesExertingZoneOfControl = getTilesExertingZoneOfControl(from, civInfo)
+       // println("Got exerting ZoC from ${from.position} to ${to.position}")
+
         if (tilesExertingZoneOfControl.none { to.neighbors.contains(it)})
             return false
+
+      //  println("Movement affected from ${from.position} to ${to.position}")
 
         // Even though this is a very fast check, we perform it last. This is because very few units
         // ignore zone of control, so the previous check has a much higher chance of yielding an
@@ -162,7 +177,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                     if (unit is TroopInfo && neighbor.troopUnit != null && neighbor.troopUnit != unit && neighbor != targetTile)
                         continue
                     var totalDistanceToTile: Float = when {
-                        !unit.civInfo.hasExplored(neighbor) ->
+                        unit is MapUnit && !unit.civInfo.hasExplored(neighbor) ->
                             distanceToTiles[tileToCheck]!!.totalDistance + 1f  // If we don't know then we just guess it to be 1.
                         !canPassThrough(neighbor) -> unitMovement // Can't go here.
                         // The reason that we don't just "return" is so that when calculating how to reach an enemy,
@@ -170,7 +185,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                         // cities and units goes kaput.
                         else -> {
                             val distanceBetweenTiles = getMovementCostBetweenAdjacentTiles(tileToCheck, neighbor, unit.civInfo, considerZoneOfControl)
-                            distanceToTiles[tileToCheck]!!.totalDistance + distanceBetweenTiles
+                            distanceToTiles[tileToCheck]!!.totalDistance + distanceBetweenTiles // added here
                         }
                     }
 
