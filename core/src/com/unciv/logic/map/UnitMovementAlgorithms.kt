@@ -30,8 +30,8 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             return if (unit is MapUnit)
                 100f
             else{
-                println("Extra cost for movement in ZoC")
-                3f}
+                //println("Extra cost for movement in ZoC")
+                20f}
         }
 
         // land units will still spend all movement points to embark even with this unique
@@ -192,8 +192,8 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                     if (!distanceToTiles.containsKey(neighbor) || distanceToTiles[neighbor]!!.totalDistance > totalDistanceToTile) { // this is the new best path
                         if (totalDistanceToTile < unitMovement)  // We can still keep moving from here!
                             updatedTiles += neighbor
-                        else
-                            totalDistanceToTile = unitMovement
+                        //else
+                        //    totalDistanceToTile = unitMovement
                         // In Civ V, you can always travel between adjacent tiles, even if you don't technically
                         // have enough movement points - it simply depletes what you have
 
