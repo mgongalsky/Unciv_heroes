@@ -31,6 +31,20 @@ import kotlin.math.min
 import kotlin.random.Random
 
 open class TileInfo : IsPartOfGameInfoSerialization {
+
+    /**
+     * Вспомогательный класс для хранения климатических параметров.
+     *
+     * averageElevation — усреднённая высота (например, от 0 до 1),
+     * averageTemperature — температура (от -1 до 1),
+     * averageHumidity — влажность (от 0 до 1).
+     */
+    data class ClimateParameters(
+        val averageElevation: Double,
+        val averageTemperature: Double,
+        val averageHumidity: Double
+    )
+
     @Transient
     lateinit var tileMap: TileMap
 
@@ -43,6 +57,56 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     @Transient
     var owningCity: CityInfo? = null
         private set
+
+    /**
+     * Возвращает климатические параметры для данной плитки,
+     * определяемые по эффективному типу ландшафта (то есть базовый тип с учётом terrain features или природного чуда).
+     *
+     * Если тип ландшафта не распознан, возвращается null.
+     */
+    fun getClimateParameters(): ClimateParameters? {
+        // Получаем эффективный тип ландшафта, который используется для расчётов
+        //baseTerrain
+        //val effectiveTerrain = getLastTerrain().name.toLowerCase()
+        return when (baseTerrain) {
+            "Snow" -> ClimateParameters(
+                averageElevation = 0.2,     // например, относительно низкая высота
+                averageTemperature = -0.7,  // очень холодно
+                averageHumidity = 0.25      // низкая влажность
+            )
+            "Tundra" -> ClimateParameters(
+                averageElevation = 0.2,
+                averageTemperature = -0.7,
+                averageHumidity = 0.75       // влажнее, чем снег
+            )
+            "Grassland" -> ClimateParameters(
+                averageElevation = 0.1,     // ровная местность
+                averageTemperature = 0.2,   // умеренно тёплый климат
+                averageHumidity = 0.75
+            )
+            "Desert" -> ClimateParameters(
+                averageElevation = 0.1,     // обычно равнинный
+                averageTemperature = 0.9,   // очень тёплый
+                averageHumidity = 0.35      // сухой климат
+            )
+            "Plains" -> ClimateParameters(
+                averageElevation = 0.05,    // низкая высота
+                averageTemperature = 0.55,  // умеренно тёплый
+                averageHumidity = 0.55
+            )
+            "Mountain" -> ClimateParameters(
+                averageElevation = 0.9,     // высокая местность
+                averageTemperature = -0.3,  // прохладнее из-за высоты
+                averageHumidity = 0.5
+            )
+            "Hill" -> ClimateParameters(
+                averageElevation = 0.4,     // промежуточная высота
+                averageTemperature = 0.3,   // немного тёплее, чем в горах
+                averageHumidity = 0.6
+            )
+            else -> null
+        }
+    }
 
     fun setOwningCity(city:CityInfo?){
         if (city != null) {

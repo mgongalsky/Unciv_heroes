@@ -168,6 +168,109 @@ class MapGenerator(val ruleset: Ruleset) {
         return map
     }
 
+    /**
+     * Generates a deterministic battlefield map with a horizontal gradient.
+     * The left side uses the attacker's climate parameters and the right side uses the defender's.
+     *
+     * For each tile:
+     *   - A normalized parameter t (0..1) is computed based on its x coordinate.
+     *   - Climate parameters (elevation, temperature, humidity) are linearly interpolated between the attacker and defender.
+     *   - Based on final elevation, temperature, and humidity, a terrain type is chosen.
+     *     If elevation is above a hill threshold, the "Hill" feature is added.
+     *
+     * @param width Number of tiles horizontally.
+     * @param height Number of tiles vertically.
+     * @param attackerTile Base tile for the attacker (left side).
+     * @param defenderTile Base tile for the defender (right side).
+     * @return The generated TileMap.
+     */
+    fun generateBattlefield(
+        width: Int,
+        height: Int,
+        attackerTile: TileInfo,
+        defenderTile: TileInfo
+    ): TileMap {
+        println("Generating deterministic battlefield: width=$width, height=$height")
+        val battlefield = TileMap(width, height, ruleset, worldWrap = false)
+
+        // Retrieve climate parameters from both base tiles.
+        val attackerParams = attackerTile.getClimateParameters()
+            ?: throw Exception("Attacker tile has no climate parameters")
+        val defenderParams = defenderTile.getClimateParameters()
+            ?: throw Exception("Defender tile has no climate parameters")
+        println("Attacker params: ${attackerTile.baseTerrain} $attackerParams")
+        println("Defender params: ${defenderTile.baseTerrain} $defenderParams")
+
+        val temperatureSeed = randomness.RNG.nextDouble()
+
+        // No noise – use pure gradient.
+        val loggedColumns = mutableSetOf<Int>()
+
+        // Process each tile.
+        for (tile in battlefield.values) {
+            // Compute normalized horizontal coordinate (t from 0 to 1).
+            val t = (HexMath.hex2EvenQCoords(tile.position).x + width/2) / (width - 1).toFloat()
+
+
+            // Get world coordinates for noise computation.
+            //val worldCoords = HexMath.hex2EvenQCoords(tile.position)
+            val worldCoords = tile.position
+
+            // Compute Perlin noise values.
+            val noiseTemperature = Perlin.noise3d(
+                worldCoords.x.toDouble(),
+                worldCoords.y.toDouble(),
+                temperatureSeed,
+                nOctaves = 3, persistence = 0.5, lacunarity = 2.0, scale = 2.0
+            )
+
+            println("x position ${HexMath.hex2EvenQCoords(tile.position).x + width/2}")
+            // Linear interpolation of climate parameters.
+            val finalElevation = attackerParams.averageElevation * (1 - t) + defenderParams.averageElevation * t
+            val finalTemperature = attackerParams.averageTemperature * (1 - t) + defenderParams.averageTemperature * t + noiseTemperature
+            val finalHumidity = attackerParams.averageHumidity * (1 - t) + defenderParams.averageHumidity * t
+
+
+
+            // Determine terrain type based on final parameters.
+            val mountainThreshold = 0.8
+            val hillThreshold = 0.5
+            var chosenTerrain: String
+            val extraFeatures = mutableListOf<String>()
+
+            if (finalElevation >= mountainThreshold) {
+                chosenTerrain = "Mountain"
+            } else {
+                chosenTerrain = when {
+                    finalTemperature < -0.4 -> if (finalHumidity < 0.5) "Snow" else "Tundra"
+                    finalTemperature < 0.8 -> if (finalHumidity < 0.5) "Plains" else "Grassland"
+                    finalTemperature <= 1.0 -> if (finalHumidity < 0.7) "Desert" else "Plains"
+                    else -> "Plains"
+                }
+                if (finalElevation >= hillThreshold) {
+                    extraFeatures.add("Hill")
+                }
+            }
+
+            // Update tile properties.
+            tile.baseTerrain = chosenTerrain
+            tile.temperature = finalTemperature
+            tile.humidity = finalHumidity
+            tile.setTerrainFeatures(extraFeatures)
+            tile.setTerrainTransients()
+
+            // Log one message per column.
+            val col = tile.position.x.toInt()
+            if (!loggedColumns.contains(col)) {
+                println("Column $col: t=$t, elevation=$finalElevation, temp=$finalTemperature, humidity=$finalHumidity, terrain=$chosenTerrain, features=$extraFeatures")
+                loggedColumns.add(col)
+            }
+        }
+
+        println("Battlefield generation complete.")
+        return battlefield
+    }
+
     fun generateSingleStep(map: TileMap, step: MapGeneratorSteps) {
         if (map.mapParameters.seed == 0L)
             map.mapParameters.seed = System.currentTimeMillis()

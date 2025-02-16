@@ -28,6 +28,7 @@ import com.unciv.logic.battle.MapUnitCombatant
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
+import com.unciv.logic.map.mapgenerator.MapGenerator
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.map.TileGroupMap
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
@@ -104,10 +105,20 @@ class BattleScreen(
     }
 
     // TileMap represents the battlefield layout
-    private val battleField: TileMap = TileMap(
+    //private val battleField: TileMap = TileMap(
+     //   BFwidth, BFheight,
+     //   game.gameInfo!!.ruleSet, defenderTile.baseTerrain
+    //)
+    // Предположим, что BFwidth, BFheight, attackerTile и defenderTile уже определены
+    val mapGenerator = MapGenerator(game.gameInfo!!.ruleSet)
+    val battleField: TileMap = mapGenerator.generateBattlefield(BFwidth, BFheight, attacker.getTile(), defender.getTile())
+
+    /*private val battleField: TileMap = TileMap(
         BFwidth, BFheight,
         game.gameInfo!!.ruleSet, defenderTile.baseTerrain
     )
+
+     */
 
     private var manager = BattleManager(attackerArmy, defenderArmy, battleField)
 
