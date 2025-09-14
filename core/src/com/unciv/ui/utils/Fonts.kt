@@ -124,6 +124,14 @@ class NativeBitmapFontData(
             Fonts.culture -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("EmojiIcons/Culture").region)
             Fonts.faith -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("EmojiIcons/Faith").region)
             Fonts.happiness -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("EmojiIcons/Happiness").region)
+            Fonts.population -> {
+                // Scale StatIcons/Population (100x100) to match EmojiIcons size (50x50)
+                val originalPixmap = Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("StatIcons/Population").region)
+                val scaledPixmap = Pixmap(50, 50, originalPixmap.format)
+                scaledPixmap.drawPixmap(originalPixmap, 0, 0, originalPixmap.width, originalPixmap.height, 0, 0, 50, 50)
+                originalPixmap.dispose()
+                scaledPixmap
+            }
             Fonts.greatArtist -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("EmojiIcons/Great Artist").region)
             Fonts.greatEngineer -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("EmojiIcons/Great Engineer").region)
             Fonts.greatGeneral -> Fonts.extractPixmapFromTextureRegion(ImageGetter.getDrawable("EmojiIcons/Great General").region)
@@ -236,6 +244,7 @@ object Fonts {
     const val culture = '♪'             // U+266A 'eighth note' (🎵 U+1F3B5 'musical note')
     const val happiness = '⌣'           // U+2323 'smile' (😀 U+1F600 'grinning face')
     const val faith = '☮'               // U+262E 'peace symbol' (🕊 U+1F54A 'dove of peace')
+    const val population = '◉'          // U+25C9 'fisheye' placeholder mapped to StatIcons/Population
     const val greatArtist = '♬'          // U+266C 'sixteenth note'
     const val greatEngineer = '⚒'       // U+2692 'hammer'
     const val greatGeneral = '⛤'       // U+26E4 'pentagram'

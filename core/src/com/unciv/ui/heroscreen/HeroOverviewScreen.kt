@@ -11,6 +11,7 @@ import com.unciv.Constants
 import com.unciv.logic.army.ArmyManager
 import com.unciv.logic.map.MapUnit
 import com.unciv.ui.army.ArmyView
+import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
 import com.unciv.ui.rendering.TilableFrame
 import com.unciv.ui.rendering.Tiled2DDrawable
@@ -19,6 +20,7 @@ import com.unciv.ui.utils.Fonts
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
+import com.unciv.ui.utils.extensions.toLabel
 import kotlin.math.ceil
 
 class HeroOverviewScreen(
@@ -155,29 +157,29 @@ class HeroOverviewScreen(
         //val font = BaseScreen.skin.get("default", BitmapFont::class.java)
 
         // Заголовок
-        heroStatsTable.add(Label("Hero Skills", skin))
+        heroStatsTable.add(Label("Hero Skills", BaseScreen.skin))
             .colspan(2).align(Align.center).padBottom(10f)
         heroStatsTable.row()
 
         // Навыки героя
-        heroStatsTable.add(Label("Attack Skill:", skin)).align(Align.left).pad(5f)
-        heroStatsTable.add(Label(viewingHero.heroAttackSkill.toString(), skin)).align(Align.right).pad(5f)
+        heroStatsTable.add(Label("Attack Skill:", BaseScreen.skin)).align(Align.left).pad(5f)
+        heroStatsTable.add(Label(viewingHero.heroAttackSkill.toString(), BaseScreen.skin)).align(Align.right).pad(5f)
         heroStatsTable.row()
 
-        heroStatsTable.add(Label("Defense Skill:", skin)).align(Align.left).pad(5f)
-        heroStatsTable.add(Label(viewingHero.heroDefenseSkill.toString(), skin)).align(Align.right).pad(5f)
+        heroStatsTable.add(Label("Defense Skill:", BaseScreen.skin)).align(Align.left).pad(5f)
+        heroStatsTable.add(Label(viewingHero.heroDefenseSkill.toString(), BaseScreen.skin)).align(Align.right).pad(5f)
         heroStatsTable.row()
 
-        heroStatsTable.add(Label("Morale:", skin)).align(Align.left).pad(5f)
-        heroStatsTable.add(Label(viewingHero.morale.toString(), skin)).align(Align.right).pad(5f)
+        heroStatsTable.add(Label("Morale:", BaseScreen.skin)).align(Align.left).pad(5f)
+        heroStatsTable.add(Label(viewingHero.morale.toString(), BaseScreen.skin)).align(Align.right).pad(5f)
         heroStatsTable.row()
 
-        heroStatsTable.add(Label("Luck:", skin)).align(Align.left).pad(5f)
-        heroStatsTable.add(Label(viewingHero.luck.toString(), skin)).align(Align.right).pad(5f)
+        heroStatsTable.add(Label("Luck:", BaseScreen.skin)).align(Align.left).pad(5f)
+        heroStatsTable.add(Label(viewingHero.luck.toString(), BaseScreen.skin)).align(Align.right).pad(5f)
         heroStatsTable.row()
 
         // Заголовок
-        heroStatsTable.add(Label("Food supply", skin))
+        heroStatsTable.add(Label("Food supply", BaseScreen.skin))
             .colspan(2).align(Align.center).padBottom(10f)
         heroStatsTable.row()
 
@@ -188,13 +190,28 @@ class HeroOverviewScreen(
 
         val supplyString = "Now ${currentFood.toInt()}${Fonts.food} of max ${maxFood.toInt()}${Fonts.food}. Per turn: %.1f${Fonts.food}.".format(foodMaintenance)
 
-        heroStatsTable.add(Label(supplyString, skin)).align(Align.left).pad(5f)
-      //  heroStatsTable.add(Label(viewingHero.luck.toString(), skin)).align(Align.right).pad(5f)
+        heroStatsTable.add(Label(supplyString, BaseScreen.skin)).align(Align.left).pad(5f)
+        heroStatsTable.row()
+
+        // Settlement information
+        heroStatsTable.add(Label("City Settlement", BaseScreen.skin))
+            .colspan(2).align(Align.center).padBottom(10f).padTop(10f)
+        heroStatsTable.row()
+
+        // Calculate city population from army
+        val cityPopulation = viewingHero.calculateArmyPopulation()
+        
+        // Create a table for the settlement size display using font icon for population
+        val settlementTable = Table().apply {
+            add(Label("Can settle city with $cityPopulation${Fonts.population}", BaseScreen.skin))
+        }
+        
+        heroStatsTable.add(settlementTable)
+            .colspan(2).align(Align.center).pad(5f)
         heroStatsTable.row()
 
 
-        // Позиционирование таблицы
-        heroStatsTable.setPosition(20f, stage.height - 20f, Align.topLeft)
+        // The table will be positioned by the parent container in heroOverviewContent
     }
 
     private fun updateHeroStatsTable() {
