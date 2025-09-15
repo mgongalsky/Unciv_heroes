@@ -4,6 +4,8 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.unciv.Constants
+import com.unciv.logic.civilization.HeroAction
+import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.models.translations.tr
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.ExpanderTab
@@ -224,6 +226,7 @@ class HeroFeedingTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
         if (foodToTransfer > 0) {
             // Transfer maximum possible food to hero
             val hero = cityScreen.visitingHero!!
+            val previousFood = currFoodHero
             hero.setCurrentFood(currFoodHero + foodToTransfer)
             city.population.foodStored = (currFoodCity - foodToTransfer).toInt()
             
@@ -233,6 +236,18 @@ class HeroFeedingTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
             
             // Trigger slider's update logic to refresh all labels
             foodSlider.fire(ChangeListener.ChangeEvent())
+            
+            // Check if hero reached maximum food capacity
+            val newHeroFood = hero.getCurrentFood()
+            if (newHeroFood >= maxFoodHero && previousFood < maxFoodHero) {
+                // Hero just reached maximum food - send notification
+                city.civInfo.addNotification(
+                    "Hero in [${city.name}] is fully fed and ready!",
+                    HeroAction(city.location),
+                    hero.displayName(),
+                    NotificationIcon.Food
+                )
+            }
         }
     }
     

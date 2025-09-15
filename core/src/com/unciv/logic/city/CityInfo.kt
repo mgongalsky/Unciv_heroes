@@ -5,6 +5,7 @@ import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.battle.CityCombatant
 import com.unciv.logic.civilization.CivilizationInfo
+import com.unciv.logic.civilization.HeroAction
 import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.logic.civilization.Proximity
 import com.unciv.logic.civilization.ReligionState
@@ -274,7 +275,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
         for (unique in foodBonuses) {
             totalBonusPercent += unique.params[0].toInt()
         }
-        maxFoodHero *= totalBonusPercent.toPercent()
+        maxFoodHero *= (1f + totalBonusPercent / 100f)
         
         val currentHeroFood = hero.getCurrentFood()
         val heroSpaceLeft = maxFoodHero - currentHeroFood
@@ -285,8 +286,21 @@ class CityInfo : IsPartOfGameInfoSerialization {
         val foodToTransfer = min(heroSpaceLeft, cityFoodAvailable)
         
         if (foodToTransfer > 0) {
+            val previousFood = currentHeroFood
             hero.setCurrentFood(currentHeroFood + foodToTransfer)
             population.foodStored = (cityFoodAvailable - foodToTransfer).toInt()
+            
+            // Check if hero reached maximum food capacity after transfer
+            val newHeroFood = hero.getCurrentFood()
+            if (newHeroFood >= maxFoodHero && previousFood < maxFoodHero) {
+                // Hero just reached maximum food - send notification
+                civInfo.addNotification(
+                    "Hero in [$name] is fully fed and ready!",
+                    HeroAction(location),
+                    hero.displayName(),
+                    NotificationIcon.Food
+                )
+            }
         }
     }
 

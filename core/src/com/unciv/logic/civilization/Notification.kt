@@ -130,3 +130,16 @@ class MayaLongCountAction : NotificationAction, IsPartOfGameInfoSerialization {
         MayaCalendar.openPopup(worldScreen, worldScreen.selectedCiv, worldScreen.gameInfo.getYear())
     }
 }
+
+/** focus on hero unit */
+data class HeroAction(val heroPosition: Vector2 = Vector2.Zero): NotificationAction, IsPartOfGameInfoSerialization {
+    override fun execute(worldScreen: WorldScreen) {
+        worldScreen.mapHolder.setCenterPosition(heroPosition, selectUnit = true)
+        val heroTile = worldScreen.gameInfo.tileMap[heroPosition]
+        val hero = heroTile.militaryUnit
+        if (hero != null && hero.civInfo == worldScreen.viewingCiv) {
+            worldScreen.bottomUnitTable.tileSelected(heroTile)
+            worldScreen.shouldUpdate = true
+        }
+    }
+}
