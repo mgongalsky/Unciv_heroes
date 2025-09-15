@@ -123,6 +123,9 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
         // begin lowerTable
         addCitizenManagement()
+        if (cityScreen.visitingHero != null) {
+            addHeroFeedingInfo()
+        }
         addGreatPersonPointInfo(cityInfo)
         if (!cityInfo.population.getMaxSpecialists().isEmpty()) {
             addSpecialistInfo()
@@ -205,214 +208,6 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
  */
 
-        if(cityScreen.visitingHero != null){
-            var foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance(isInCity = false)).toInt()}${Fonts.food}."
-
-            val foodToVisitingHeroLabel = upperTable.add(foodToVisitingHero.toLabel()).actor as Label
-            upperTable.row()
-
-            var foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.getCurrentFood().toInt()}${Fonts.food}, hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
-
-            val foodOfVisitingHeroLabel = upperTable.add(foodOfVisitingHero.toLabel()).actor as Label
-            upperTable.row()
-            
-            // Calculate and display food duration for hero
-            val heroFoodMaintenance = cityScreen.visitingHero.army.calculateFoodMaintenance(isInCity = false)
-            val heroCurrentFood = cityScreen.visitingHero.getCurrentFood()
-            val foodDuration = if (heroFoodMaintenance > 0) {
-                (heroCurrentFood / heroFoodMaintenance).toInt()
-            } else {
-                Int.MAX_VALUE // Infinite if no consumption
-            }
-            
-            val durationString = if (foodDuration == Int.MAX_VALUE) {
-                "Hero food will last indefinitely."
-            } else {
-                "Hero food will last for $foodDuration${Fonts.turn}."
-            }
-            
-            val foodDurationLabel = upperTable.add(durationString.toLabel()).actor as Label
-            upperTable.row()
-
-            var moraleOfVisitingHero = "Hero has morale ${cityInfo.getVisitingHero()!!.morale}."
-
-            val moraleOfVisitingHeroLabel = upperTable.add(moraleOfVisitingHero.toLabel()).actor as Label
-            upperTable.row()
-
-
-
-            // TODO: here we need to put actual values of food for both garrison and hero armies
-            // TODO: add another string, describing how much food has a hero and what's current daily consumption
-            // and how many days it can supply the army
-            // Take example from SplitTroopPopup.kt. Consider making a function or a class for such slider with values.
-            // TODO: add current garrison consumption.
-
-            // Calculating bonuses to hero food capacity
-
-            var maxFoodHero = cityScreen.visitingHero.basicFoodCapacity
-
-            val foodBonuses = cityInfo.getMatchingUniques(UniqueType.FoodCapacityBonus)
-
-            var totalBonusPercent = 0f
-            for (unique in foodBonuses) {
-                totalBonusPercent += unique.params[0].toInt()
-                // Применяем бонус к гостевому герою
-            }
-
-            maxFoodHero *= totalBonusPercent.toPercent()
-            val maxFoodCity = cityInfo.population.getFoodToNextPopulation().toFloat()
-            var currFoodHero = cityScreen.visitingHero.getCurrentFood()
-            var currFoodCity = cityInfo.population.foodStored.toFloat()
-
-            var freeFoodHero = maxFoodHero - currFoodHero
-            if(freeFoodHero < 0f){
-                println("Hero has current food more than maximum!")
-                freeFoodHero = 0f
-
-            }
-            var freeFoodCity = maxFoodCity - currFoodCity
-
-            var minHero = min(currFoodHero, freeFoodCity)
-            var minCity = min(currFoodCity, freeFoodHero)
-
-            var foodRange = minHero + minCity
-            if(foodRange < 0){
-                println("minHero $minHero, minCity $minCity")
-                println("currFoodHero $currFoodHero, maxFoodHero $maxFoodHero, freeFoodHero $freeFoodHero")
-                println("currFoodCity $currFoodCity, maxFoodCity $maxFoodCity, freeFoodCity $freeFoodCity")
-
-                foodRange = 0f
-            }
-
-
-            // TODO: Code to be corrected. Problems if food limited by hero's capacity
-            //val maxFoodToHero = min(cityInfo.population.foodStored.toFloat() + cityScreen.visitingHero.currentFood, finalHeroFoodCapacity)
-
-            //val leftCountLabel = Label("City: " + cityInfo.population.foodStored.toString(), BaseScreen.skin)
-            //val rightCountLabel = Label((maxFoodToHero.toInt() - cityInfo.population.foodStored).toString() + " :Hero", BaseScreen.skin)
-
-            val leftCountLabel = Label("City: " + currFoodCity.toInt().toString(), BaseScreen.skin)
-            val rightCountLabel = Label(currFoodHero.toInt().toString() + " :Hero", BaseScreen.skin)
-
-
-            val foodSlider = Slider(0f, foodRange, 1f, false, BaseScreen.skin)
-            foodSlider.value = minHero // Initial position is the current targetCount
-            foodSlider.addListener { _ ->
-
-
-                // Update all if changed:
-                cityScreen.visitingHero.setCurrentFood(foodSlider.value.toFloat() + currFoodHero - minHero)
-                cityInfo.population.foodStored = (foodRange - foodSlider.value + currFoodCity - minCity).toInt()
-
-                currFoodHero = foodSlider.value.toFloat() + currFoodHero - minHero
-                currFoodCity = foodRange - foodSlider.value + currFoodCity - minCity
-
-                freeFoodHero = maxFoodHero - currFoodHero
-                freeFoodCity = maxFoodCity - currFoodCity
-
-                minHero = min(currFoodHero, freeFoodCity)
-                minCity = min(currFoodCity, freeFoodHero)
-
-                leftCountLabel.setText("City: " + currFoodCity.toInt().toString())
-                rightCountLabel.setText(currFoodHero.toInt().toString() + " :Hero")
-
-
-
-                foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance(isInCity = false)).toInt()}${Fonts.food}."
-                foodToVisitingHeroLabel.setText(foodToVisitingHero)
-
-                foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.getCurrentFood().toInt()}${Fonts.food}, hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
-
-                foodOfVisitingHeroLabel.setText(foodOfVisitingHero)
-                
-                // Update food duration info
-                val updatedFoodDuration = if (heroFoodMaintenance > 0) {
-                    (cityScreen.visitingHero.getCurrentFood() / heroFoodMaintenance).toInt()
-                } else {
-                    Int.MAX_VALUE
-                }
-                
-                val updatedDurationString = if (updatedFoodDuration == Int.MAX_VALUE) {
-                    "Hero food will last indefinitely."
-                } else {
-                    "Hero food will last for $updatedFoodDuration${Fonts.turn}."
-                }
-                
-                foodDurationLabel.setText(updatedDurationString)
-
-                turnsToPopLabel.setText(updateTurnsToPopString())
-
-                false
-            }
-
-
-            // Manual Auto-Feed Hero button
-            val manualFeedButton = "Max".toTextButton()
-            manualFeedButton.onClick {
-                // Calculate how much food can be transferred
-                val heroSpaceLeft = maxFoodHero - currFoodHero
-                val cityFoodAvailable = currFoodCity
-                val foodToTransfer = min(heroSpaceLeft, cityFoodAvailable)
-                
-                if (foodToTransfer > 0) {
-                    // Transfer maximum possible food to hero
-                    cityScreen.visitingHero.setCurrentFood(currFoodHero + foodToTransfer)
-                    cityInfo.population.foodStored = (currFoodCity - foodToTransfer).toInt()
-                    
-                    // Update the slider position to reflect the transfer
-                    val newSliderValue = minHero + foodToTransfer
-                    foodSlider.value = newSliderValue
-                    
-                    // Trigger slider's update logic to refresh all labels
-                    foodSlider.fire(ChangeListener.ChangeEvent())
-                }
-            }
-            
-            val foodExchangeTable = Table()
-            foodExchangeTable.defaults().pad(5f)
-            foodExchangeTable.add(leftCountLabel).padRight(10f)
-            foodExchangeTable.add(foodSlider).growX().pad(5f)
-            foodExchangeTable.add(rightCountLabel).padLeft(10f)
-            foodExchangeTable.add(manualFeedButton).padLeft(10f)
-            upperTable.add(foodExchangeTable).growX().colspan(2).row()
-            
-            // Auto-Feed Hero toggle button on separate row
-            val autoFeedToggleText = if (cityInfo.autoFeedHero) "Auto-Feed: ON" else "Auto-Feed: OFF"
-            val autoFeedToggleColor = if (cityInfo.autoFeedHero) Color.GREEN else Color.GRAY
-            val autoFeedToggle = autoFeedToggleText.toTextButton()
-            autoFeedToggle.color = autoFeedToggleColor
-            autoFeedToggle.onClick {
-                cityInfo.autoFeedHero = !cityInfo.autoFeedHero
-                val newText = if (cityInfo.autoFeedHero) "Auto-Feed: ON" else "Auto-Feed: OFF"
-                val newColor = if (cityInfo.autoFeedHero) Color.GREEN else Color.GRAY
-                autoFeedToggle.setText(newText)
-                autoFeedToggle.color = newColor
-            }
-            
-            val autoFeedTable = Table()
-            autoFeedTable.defaults().pad(5f)
-            autoFeedTable.add(autoFeedToggle)
-            upperTable.add(autoFeedTable).growX().colspan(2).row()
-
-            //upperTable.add(foodSlider).row()
-            /*
-            upperTable.add("Load".toTextButton()).apply {
-                onActivation {
-                    cityScreen.visitingHero.currentFood = maxFoodToHero - foodSlider.value.toFloat()
-                    cityInfo.population.foodStored = foodSlider.value.toInt()
-                    foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance()).toInt()}${Fonts.food}."
-                    foodToVisitingHeroLabel.setText(foodToVisitingHero)
-                    //cityScreen.update()
-                }
-            }
-
-             */
-           // totalTable.add("Max".toTextButton().apply { onActivation { amount2Buy.value = 100f } }).pad(5f)
-
-
-
-
-        }
 
 
         val tableWithIcons = Table()
@@ -444,6 +239,11 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
     private fun addCitizenManagement() {
         val expanderTab = CitizenManagementTable(cityScreen).asExpander { onContentResize() }
+        lowerTable.add(expanderTab).growX().row()
+    }
+
+    private fun addHeroFeedingInfo() {
+        val expanderTab = HeroFeedingTable(cityScreen).asExpander { onContentResize() }
         lowerTable.add(expanderTab).growX().row()
     }
 
