@@ -186,11 +186,28 @@ class HeroOverviewScreen(
         // Show food consumption parameters
         val currentFood = viewingHero.getCurrentFood()
         val maxFood = viewingHero.basicFoodCapacity
-        val foodMaintenance = viewingHero.army.calculateFoodMaintenance(viewingHero.currentTile.isCityCenter())
+        // Always show food consumption as if outside city - more useful for planning
+        val foodMaintenance = viewingHero.army.calculateFoodMaintenance(false)
 
-        val supplyString = "Now ${currentFood.toInt()}${Fonts.food} of max ${maxFood.toInt()}${Fonts.food}. Per turn: %.1f${Fonts.food}.".format(foodMaintenance)
+        val supplyString = "Now ${currentFood.toInt()}${Fonts.food} of max ${maxFood.toInt()}${Fonts.food}. Per turn when outside city: %.1f${Fonts.food}.".format(foodMaintenance)
 
         heroStatsTable.add(Label(supplyString, BaseScreen.skin)).align(Align.left).pad(5f)
+        heroStatsTable.row()
+        
+        // Calculate and display food duration
+        val foodDuration = if (foodMaintenance > 0) {
+            (currentFood / foodMaintenance).toInt()
+        } else {
+            Int.MAX_VALUE // Infinite if no consumption
+        }
+        
+        val durationString = if (foodDuration == Int.MAX_VALUE) {
+            "Food will last indefinitely."
+        } else {
+            "Food will last for $foodDuration${Fonts.turn}."
+        }
+        
+        heroStatsTable.add(Label(durationString, BaseScreen.skin)).align(Align.left).pad(5f)
         heroStatsTable.row()
 
         // Settlement information

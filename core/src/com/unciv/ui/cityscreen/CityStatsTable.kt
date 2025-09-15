@@ -208,17 +208,35 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
  */
 
         if(cityScreen.visitingHero != null){
-            var foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance(isInCity = true)).toInt()}${Fonts.food}."
+            var foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance(isInCity = false)).toInt()}${Fonts.food}."
 
             val foodToVisitingHeroLabel = upperTable.add(foodToVisitingHero.toLabel()).actor as Label
             upperTable.row()
 
-            var foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.getCurrentFood().toInt()}${Fonts.food}, , hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
+            var foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.getCurrentFood().toInt()}${Fonts.food}, hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
 
             val foodOfVisitingHeroLabel = upperTable.add(foodOfVisitingHero.toLabel()).actor as Label
             upperTable.row()
+            
+            // Calculate and display food duration for hero
+            val heroFoodMaintenance = cityScreen.visitingHero.army.calculateFoodMaintenance(isInCity = false)
+            val heroCurrentFood = cityScreen.visitingHero.getCurrentFood()
+            val foodDuration = if (heroFoodMaintenance > 0) {
+                (heroCurrentFood / heroFoodMaintenance).toInt()
+            } else {
+                Int.MAX_VALUE // Infinite if no consumption
+            }
+            
+            val durationString = if (foodDuration == Int.MAX_VALUE) {
+                "Hero food will last indefinitely."
+            } else {
+                "Hero food will last for $foodDuration${Fonts.turn}."
+            }
+            
+            val foodDurationLabel = upperTable.add(durationString.toLabel()).actor as Label
+            upperTable.row()
 
-            var moraleOfVisitingHero = "Hero has morale ${cityInfo.getVisitingHero()!!.morale}${Fonts.turn}."
+            var moraleOfVisitingHero = "Hero has morale ${cityInfo.getVisitingHero()!!.morale}."
 
             val moraleOfVisitingHeroLabel = upperTable.add(moraleOfVisitingHero.toLabel()).actor as Label
             upperTable.row()
@@ -302,13 +320,27 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
 
 
 
-                foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance(isInCity = true)).toInt()}${Fonts.food}."
+                foodToVisitingHero = "City has ${cityInfo.population.foodStored}${Fonts.food}, hero consumes ${ceil(cityScreen.visitingHero.army.calculateFoodMaintenance(isInCity = false)).toInt()}${Fonts.food}."
                 foodToVisitingHeroLabel.setText(foodToVisitingHero)
 
-                foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.getCurrentFood().toInt()}${Fonts.food}, , hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
+                foodOfVisitingHero = "Hero has ${cityInfo.getVisitingHero()!!.getCurrentFood().toInt()}${Fonts.food}, hero max ${cityInfo.getVisitingHero()!!.basicFoodCapacity.toInt()}${Fonts.food}."
 
                 foodOfVisitingHeroLabel.setText(foodOfVisitingHero)
-
+                
+                // Update food duration info
+                val updatedFoodDuration = if (heroFoodMaintenance > 0) {
+                    (cityScreen.visitingHero.getCurrentFood() / heroFoodMaintenance).toInt()
+                } else {
+                    Int.MAX_VALUE
+                }
+                
+                val updatedDurationString = if (updatedFoodDuration == Int.MAX_VALUE) {
+                    "Hero food will last indefinitely."
+                } else {
+                    "Hero food will last for $updatedFoodDuration${Fonts.turn}."
+                }
+                
+                foodDurationLabel.setText(updatedDurationString)
 
                 turnsToPopLabel.setText(updateTurnsToPopString())
 

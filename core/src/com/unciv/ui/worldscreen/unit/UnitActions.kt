@@ -46,6 +46,9 @@ object UnitActions {
         val unitTable = worldScreen.bottomUnitTable
         val actionList = ArrayList<UnitAction>()
 
+        // Add View Hero action first so it's always visible
+        addHeroViewActions(actionList, unit, false)
+
         if (unit.isMoving())
             actionList += UnitAction(UnitActionType.StopMovement) { unit.action = null }
         if (unit.isExploring())
@@ -70,12 +73,7 @@ object UnitActions {
         addFoundReligionAction(unit, actionList)
         addEnhanceReligionAction(unit, actionList)
         actionList += getImprovementConstructionActions(unit, tile)
-        addActionsWithLimitedUses(unit, actionList, tile)
         addExplorationActions(unit, actionList)
-        addAutomateBuildingImprovementsAction(unit, actionList)
-        addTriggerUniqueActions(unit, actionList)
-        addAddInCapitalAction(unit, actionList, tile)
-        addRunBattleActions(unit, actionList)
 
         addWaitAction(unit, actionList, worldScreen)
 
@@ -91,12 +89,17 @@ object UnitActions {
 
         addSleepActions(actionList, unit, true)
         addFortifyActions(actionList, unit, true)
-        addHeroViewActions(actionList, unit, true)
 
         addSwapAction(unit, actionList, worldScreen)
         addDisbandAction(actionList, unit, worldScreen)
         addGiftAction(unit, actionList, tile)
-
+        
+        // Less frequently used actions moved here to save space in main menu
+        addActionsWithLimitedUses(unit, actionList, tile)
+        addAutomateBuildingImprovementsAction(unit, actionList)
+        addTriggerUniqueActions(unit, actionList)
+        addAddInCapitalAction(unit, actionList, tile)
+        addRunBattleActions(unit, actionList)
 
         addToggleActionsAction(unit, actionList, unitTable)
 
