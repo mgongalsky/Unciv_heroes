@@ -181,6 +181,7 @@ object UnitActions {
         // Spain should still be able to build Conquistadors in a one city challenge - but can't settle them
         if (unit.civInfo.isOneCityChallenger() && unit.civInfo.hasEverOwnedOriginalCapital == true) return null
 
+        // Player civilizations can only found cities on Small village tiles
         if (unit.civInfo.isPlayerCivilization() && tile.improvement != "Small village") return null
 
         if (unit.currentMovement <= 0 ||

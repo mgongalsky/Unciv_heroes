@@ -199,7 +199,7 @@ class HeroOverviewScreen(
         heroStatsTable.row()
 
         // Calculate city population from army
-        val cityPopulation = viewingHero.calculateArmyPopulation()
+        val cityPopulation = viewingHero.calculateArmyPopulation() + 1  // Add 1 to match actual founded city size
         
         // Create a table for the settlement size display using font icon for population
         val settlementTable = Table().apply {
