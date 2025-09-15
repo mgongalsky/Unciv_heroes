@@ -43,8 +43,8 @@ class UnitInfoPopup(
         val leftSide = Table()
         leftSide.defaults().pad(5f)
         
-        // Unit avatar (larger and more prominent)
-        val unitAvatarView = TroopArmyView(sourceTroopView, true, 140f)
+        // Unit avatar (larger and more prominent, non-interactive)
+        val unitAvatarView = TroopArmyView(sourceTroopView, true, 140f, false)
         unitAvatarView.deselect()
         leftSide.add(unitAvatarView).size(140f).padBottom(10f).row()
         

@@ -26,7 +26,8 @@ class TroopArmyView(
     internal val troopInfo: TroopInfo?, // Null indicates an empty slot
     private val armyView: ArmyView,
     private val avatarOnly: Boolean = false, // avatar-only mode
-    private val slotSize: Float = 64f // Размер слота, по умолчанию 64x64
+    private val slotSize: Float = 64f, // Размер слота, по умолчанию 64x64
+    private val isInteractive: Boolean = true // Controls whether the view responds to clicks
 ) : Group() {
     private val troopGroup = Group() // A group to contain all troop-related visuals
     private lateinit var troopImages: ArrayList<Image> // Images representing the troop's layers
@@ -45,11 +46,12 @@ class TroopArmyView(
      * Copy constructor to create a new TroopArmyView based on an existing one.
      * Copies `troopInfo` and initializes `armyView` for standalone usage.
      */
-    constructor(original: TroopArmyView, isAvatarOnly: Boolean, newSlotSize: Float = 140f) : this(
+    constructor(original: TroopArmyView, isAvatarOnly: Boolean, newSlotSize: Float = 140f, interactive: Boolean = false) : this(
         troopInfo = original.troopInfo?.copy(), // Copy troopInfo to ensure it's not the same reference
         armyView = original.armyView, // ArmyView reference remains the same, modify if needed for detached usage
         avatarOnly = isAvatarOnly,
-        slotSize = newSlotSize
+        slotSize = newSlotSize,
+        isInteractive = interactive
             ) {
 
 
@@ -63,7 +65,9 @@ class TroopArmyView(
         }
         // Initial drawing of the troop view
         draw()
-        setupClickListener()
+        if (isInteractive) {
+            setupClickListener()
+        }
     }
 
     fun isEmptySlot(): Boolean {
@@ -134,7 +138,7 @@ class TroopArmyView(
         // Create a background image and assign it a name for easy reference
         val backgroundImage = Image(defaultTexture).apply {
             name = "backgroundImage"
-            touchable = Touchable.enabled // Enable interactivity for the background
+            touchable = if (isInteractive) Touchable.enabled else Touchable.disabled
             align = Align.center
         }
         troopGroup.addActor(backgroundImage)
@@ -186,6 +190,7 @@ class TroopArmyView(
     }
     /**
      * Sets up a click listener to toggle the selection state when the troop is clicked.
+     * Only called when isInteractive is true.
      */
     private fun setupClickListener() {
         troopGroup.touchable = Touchable.enabled // Allow interactions with the group
