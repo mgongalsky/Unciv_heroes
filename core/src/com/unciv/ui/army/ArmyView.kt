@@ -134,6 +134,9 @@ class ArmyView(
         return armyInfo != null
     }
 
+    /** Expose screen for child views that need to open popups */
+    fun getScreen(): BaseScreen = screen
+
     /**
      * Handles selection of a troop by index.
      * Ensures only one troop is selected at a time.

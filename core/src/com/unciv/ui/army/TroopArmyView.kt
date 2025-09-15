@@ -45,10 +45,11 @@ class TroopArmyView(
      * Copy constructor to create a new TroopArmyView based on an existing one.
      * Copies `troopInfo` and initializes `armyView` for standalone usage.
      */
-    constructor(original: TroopArmyView, isAvatarOnly: Boolean) : this(
+    constructor(original: TroopArmyView, isAvatarOnly: Boolean, newSlotSize: Float = 140f) : this(
         troopInfo = original.troopInfo?.copy(), // Copy troopInfo to ensure it's not the same reference
         armyView = original.armyView, // ArmyView reference remains the same, modify if needed for detached usage
-        avatarOnly = isAvatarOnly
+        avatarOnly = isAvatarOnly,
+        slotSize = newSlotSize
             ) {
 
 
@@ -194,6 +195,16 @@ class TroopArmyView(
                     logVerbose("Troop clicked: ${troopInfo.unitName}")
                 else
                     logVerbose("Empty slot clicked")
+
+                // Double-click opens unit info popup
+                if (this.tapCount == 2 && troopInfo != null) {
+                    try {
+                        UnitInfoPopup(armyView.getScreen(), this@TroopArmyView).open()
+                        return
+                    } catch (e: Exception) {
+                        // Fallback to normal behavior if popup fails
+                    }
+                }
 
                 // Check if Shift key is pressed
                 val isShiftPressed = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)
