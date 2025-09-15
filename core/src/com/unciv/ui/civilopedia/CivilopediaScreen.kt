@@ -216,6 +216,7 @@ class CivilopediaScreen(
                         Belief.getCivilopediaReligionEntry(ruleset)).toList()
                 CivilopediaCategories.Era -> ruleset.eras.values
                 CivilopediaCategories.Speed -> ruleset.speeds.values
+                CivilopediaCategories.GameMechanics -> ruleset.gameMechanics.values
             }
 
         for (loopCategory in CivilopediaCategories.values()) {

@@ -1,0 +1,72 @@
+[
+    {
+        "name": "Food Consumption and Unit Upkeep",
+        "civilopediaText": [
+            {"text": "Food Consumption and Unit Upkeep", "header": 1},
+            {"text": ""},
+            {"text": "Understanding how units consume food and require upkeep is crucial for effective city and military management."},
+            {"text": ""},
+            {"text": "Unit Food Consumption", "header": 2},
+            {"text": "Most military units require food from your cities' population to maintain their strength and effectiveness. When you train military units, they effectively 'eat' from your city's food production."},
+            {"text": ""},
+            {"text": "Key mechanics:"},
+            {"text": "• Each military unit typically consumes 1 food per turn from your cities", "indent": 1},
+            {"text": "• Garrisons (units stationed in cities) may consume less food or none at all", "indent": 1},
+            {"text": "• Civilian units like Workers and Settlers usually don't consume food", "indent": 1},
+            {"text": ""},
+            {"text": "Gold Upkeep", "header": 2},
+            {"text": "Military units also require gold for maintenance, representing equipment upkeep, training, and supplies."},
+            {"text": ""},
+            {"text": "• More advanced units typically require higher upkeep costs", "indent": 1},
+            {"text": "• Units in enemy territory may require additional upkeep", "indent": 1},
+            {"text": "• Insufficient gold can result in unit disbandment", "indent": 1}
+        ]
+    },
+    {
+        "name": "Army Management and Garrisons",
+        "civilopediaText": [
+            {"text": "Army Management and Garrisons", "header": 1},
+            {"text": ""},
+            {"text": "Effective army management involves balancing active field forces with defensive garrisons in your cities."},
+            {"text": ""},
+            {"text": "City Garrisons", "header": 2},
+            {"text": "Garrisoning units in your cities provides several important benefits:"},
+            {"text": ""},
+            {"text": "• Defensive bonuses against enemy attacks on the city", "indent": 1},
+            {"text": "• Reduced unit upkeep costs (food and gold)", "indent": 1},
+            {"text": "• Faster healing and recovery for wounded units", "indent": 1},
+            {"text": "• Protection of city improvements and population", "indent": 1},
+            {"text": ""},
+            {"text": "Army Organization", "header": 2},
+            {"text": "Managing multiple units effectively requires understanding of unit stacking and movement:"},
+            {"text": ""},
+            {"text": "• Some units can stack together in the same tile", "indent": 1},
+            {"text": "• Different unit types complement each other in combat", "indent": 1},
+            {"text": "• Coordinate movements to maximize tactical advantages", "indent": 1}
+        ]
+    },
+    {
+        "name": "Heroes and Leadership",
+        "civilopediaText": [
+            {"text": "Heroes and Leadership", "header": 1},
+            {"text": ""},
+            {"text": "Heroes are unique, powerful units that provide significant bonuses to your civilization and military forces."},
+            {"text": ""},
+            {"text": "Hero Units", "header": 2},
+            {"text": "Heroes are distinguished from regular units by their exceptional abilities and leadership qualities:"},
+            {"text": ""},
+            {"text": "• Significantly higher combat strength than regular units", "indent": 1},
+            {"text": "• Special abilities that can affect nearby allied units", "indent": 1},
+            {"text": "• Often irreplaceable - losing a hero is a major setback", "indent": 1},
+            {"text": "• May provide civilization-wide bonuses", "indent": 1},
+            {"text": ""},
+            {"text": "Leadership Bonuses", "header": 2},
+            {"text": "Heroes can provide various bonuses to your civilization:"},
+            {"text": ""},
+            {"text": "• Combat bonuses to nearby units", "indent": 1},
+            {"text": "• Experience bonuses for training new units", "indent": 1},
+            {"text": "• Cultural or scientific advancement bonuses", "indent": 1},
+            {"text": "• Special diplomatic or exploration abilities", "indent": 1}
+        ]
+    }
+]

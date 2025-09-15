@@ -194,6 +194,11 @@ enum class CivilopediaCategories (
         getImage = null,
         KeyCharAndCode('S'),
         "OtherIcons/Timer"
+    ),
+    GameMechanics ("Game Mechanics", false,
+        getImage = null,
+        KeyCharAndCode('G'),
+        "OtherIcons/Options"
     );
 
     fun getByOffset(offset: Int) = values()[(ordinal + count + offset) % count]

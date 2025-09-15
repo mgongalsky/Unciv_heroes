@@ -99,6 +99,7 @@ class Ruleset {
     var victories = LinkedHashMap<String, Victory>()
     var cityStateTypes = LinkedHashMap<String, CityStateType>()
     val cityEvents = LinkedHashMap<String, CityEvent>()
+    val gameMechanics = LinkedHashMap<String, GameMechanic>()
 
 
     val mods = LinkedHashSet<String>()
@@ -147,6 +148,7 @@ class Ruleset {
         victories.putAll(ruleset.victories)
         cityStateTypes.putAll(ruleset.cityStateTypes)
         cityEvents.putAll(ruleset.cityEvents)
+        gameMechanics.putAll(ruleset.gameMechanics)
         for (unitToRemove in ruleset.modOptions.unitsToRemove) units.remove(unitToRemove)
         modOptions.uniques.addAll(ruleset.modOptions.uniques)
         modOptions.constants.merge(ruleset.modOptions.constants)
@@ -204,6 +206,7 @@ class Ruleset {
         victories.clear()
         cityStateTypes.clear()
         cityEvents.clear()
+        gameMechanics.clear()
     }
 
     fun allRulesetObjects(): Sequence<IRulesetObject> =
@@ -379,6 +382,9 @@ class Ruleset {
         val eventsFile = folderHandle.child("CityEvents.json")
         if (eventsFile.exists()) cityEvents += createHashmap(json().fromJsonFile(Array<CityEvent>::class.java, eventsFile))
 
+        val gameMechanicsFile = folderHandle.child("GameMechanics.json")
+        if (gameMechanicsFile.exists()) gameMechanics += createHashmap(json().fromJsonFile(Array<GameMechanic>::class.java, gameMechanicsFile))
+
 
         // Add objects that might not be present in base ruleset mods, but are required
         if (modOptions.isBaseRuleset) {
@@ -452,6 +458,7 @@ class Ruleset {
         if (religions.isNotEmpty()) stringList += "[${religions.size}] Religions"
         if (beliefs.isNotEmpty()) stringList += "[${beliefs.size}] Beliefs"
         if (cityEvents.isNotEmpty()) stringList += "[${cityEvents.size}] City Events"
+        if (gameMechanics.isNotEmpty()) stringList += "[${gameMechanics.size}] Game Mechanics"
         return stringList.joinToString { it.tr() }
     }
 

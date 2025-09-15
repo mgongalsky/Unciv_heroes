@@ -1,0 +1,97 @@
+[
+  {
+    "name": "Food Consumption and Unit Upkeep",
+    "civilopediaText": [
+      {
+        "text": "Food Consumption is a core mechanic that determines how your armies and population sustain themselves."
+      },
+      {
+        "text": "Units and Heroes: Every military unit and hero consumes food each turn based on their size and type. Larger armies require more food to maintain."
+      },
+      {
+        "text": "City Population: Each citizen in your cities also consumes 2 food per turn to survive and grow."
+      },
+      {
+        "text": "Garrison Units: Troops stationed in city garrisons consume food from the city's food production, reducing the surplus available for population growth."
+      },
+      {
+        "text": "Food Sources: Cities generate food from worked tiles (farms, pastures, fishing boats), trade routes, and certain buildings like granaries."
+      },
+      {
+        "text": "Consequences of Food Shortage: If a city cannot produce enough food for its population and garrison, the city will start losing population, and stationed troops may disband or lose effectiveness."
+      },
+      {
+        "text": "Managing Food: Balance your military needs with city growth by building food improvements, managing garrison sizes, and planning army movements to avoid overextending supply lines."
+      }
+    ]
+  },
+  {
+    "name": "Army Management",
+    "civilopediaText": [
+      {
+        "text": "Armies are groups of military units that can be managed together and moved as cohesive forces."
+      },
+      {
+        "text": "Army Composition: Each army can contain multiple types of troops with different strengths, abilities, and roles in combat."
+      },
+      {
+        "text": "Hero Leadership: Heroes can lead armies, providing combat bonuses and special abilities to the troops under their command."
+      },
+      {
+        "text": "Troop Types: Different unit types (Spearmen, Archers, Cavalry, etc.) have unique combat roles and resource requirements."
+      },
+      {
+        "text": "Splitting and Combining: You can split large armies into smaller forces or combine multiple armies for major campaigns."
+      },
+      {
+        "text": "Supply and Movement: Armies require supply lines and consume food while moving. Consider logistics when planning military campaigns."
+      }
+    ]
+  },
+  {
+    "name": "City Garrisons",
+    "civilopediaText": [
+      {
+        "text": "City Garrisons provide defense for your cities but require food and maintenance to sustain."
+      },
+      {
+        "text": "Garrison Capacity: Each city can support a limited number of garrison troops based on its population and infrastructure."
+      },
+      {
+        "text": "Food Consumption: Garrisoned units consume food from the city's production, reducing the food available for population growth."
+      },
+      {
+        "text": "Defensive Benefits: Garrison troops automatically defend the city when attacked and provide a defensive bonus to city combat strength."
+      },
+      {
+        "text": "Unit Training: Cities can train new military units, which are automatically added to the garrison if space is available."
+      },
+      {
+        "text": "Managing Garrisons: Balance defense needs with economic growth by adjusting garrison sizes based on threat levels and available food."
+      }
+    ]
+  },
+  {
+    "name": "Heroes and Leadership",
+    "civilopediaText": [
+      {
+        "text": "Heroes are special units that can lead armies and provide unique abilities and bonuses to your military forces."
+      },
+      {
+        "text": "Hero Abilities: Each hero has unique skills, combat bonuses, and special abilities that can turn the tide of battle."
+      },
+      {
+        "text": "Army Leadership: Heroes can command armies, providing leadership bonuses and coordinating troop movements."
+      },
+      {
+        "text": "Experience and Growth: Heroes gain experience through combat and can level up to unlock new abilities and improved stats."
+      },
+      {
+        "text": "Resource Consumption: Like other units, heroes consume food and may require special resources for their abilities."
+      },
+      {
+        "text": "Strategic Value: Heroes are valuable assets that should be protected while maximizing their impact on military operations."
+      }
+    ]
+  }
+]
