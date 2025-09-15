@@ -2,10 +2,8 @@ package com.unciv.ui.cityscreen
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
-import com.badlogic.gdx.scenes.scene2d.ui.Cell
-import com.badlogic.gdx.scenes.scene2d.ui.Label
-import com.badlogic.gdx.scenes.scene2d.ui.Slider
-import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.*
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.UncivGame
@@ -348,12 +346,53 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
             }
 
 
+            // Manual Auto-Feed Hero button
+            val manualFeedButton = "Max".toTextButton()
+            manualFeedButton.onClick {
+                // Calculate how much food can be transferred
+                val heroSpaceLeft = maxFoodHero - currFoodHero
+                val cityFoodAvailable = currFoodCity
+                val foodToTransfer = min(heroSpaceLeft, cityFoodAvailable)
+                
+                if (foodToTransfer > 0) {
+                    // Transfer maximum possible food to hero
+                    cityScreen.visitingHero.setCurrentFood(currFoodHero + foodToTransfer)
+                    cityInfo.population.foodStored = (currFoodCity - foodToTransfer).toInt()
+                    
+                    // Update the slider position to reflect the transfer
+                    val newSliderValue = minHero + foodToTransfer
+                    foodSlider.value = newSliderValue
+                    
+                    // Trigger slider's update logic to refresh all labels
+                    foodSlider.fire(ChangeListener.ChangeEvent())
+                }
+            }
+            
             val foodExchangeTable = Table()
             foodExchangeTable.defaults().pad(5f)
             foodExchangeTable.add(leftCountLabel).padRight(10f)
             foodExchangeTable.add(foodSlider).growX().pad(5f)
             foodExchangeTable.add(rightCountLabel).padLeft(10f)
+            foodExchangeTable.add(manualFeedButton).padLeft(10f)
             upperTable.add(foodExchangeTable).growX().colspan(2).row()
+            
+            // Auto-Feed Hero toggle button on separate row
+            val autoFeedToggleText = if (cityInfo.autoFeedHero) "Auto-Feed: ON" else "Auto-Feed: OFF"
+            val autoFeedToggleColor = if (cityInfo.autoFeedHero) Color.GREEN else Color.GRAY
+            val autoFeedToggle = autoFeedToggleText.toTextButton()
+            autoFeedToggle.color = autoFeedToggleColor
+            autoFeedToggle.onClick {
+                cityInfo.autoFeedHero = !cityInfo.autoFeedHero
+                val newText = if (cityInfo.autoFeedHero) "Auto-Feed: ON" else "Auto-Feed: OFF"
+                val newColor = if (cityInfo.autoFeedHero) Color.GREEN else Color.GRAY
+                autoFeedToggle.setText(newText)
+                autoFeedToggle.color = newColor
+            }
+            
+            val autoFeedTable = Table()
+            autoFeedTable.defaults().pad(5f)
+            autoFeedTable.add(autoFeedToggle)
+            upperTable.add(autoFeedTable).growX().colspan(2).row()
 
             //upperTable.add(foodSlider).row()
             /*

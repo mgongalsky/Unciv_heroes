@@ -25,6 +25,7 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.stats.Stat
 import com.unciv.models.stats.Stats
+import com.unciv.ui.utils.extensions.toPercent
 import java.util.*
 import kotlin.math.ceil
 import kotlin.math.min
@@ -141,6 +142,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
     var updateCitizens = false  // flag so that on endTurn() the Governor reassigns Citizens
     var cityAIFocus: CityFocus = CityFocus.NoFocus
     var avoidGrowth: Boolean = false
+    var autoFeedHero: Boolean = false  // Automatically transfer surplus food to visiting hero
     @Transient var currentGPPBonus: Int = 0  // temporary variable saved for rankSpecialist()
 
     var garrison = mutableListOf<TroopInfo>()
@@ -255,6 +257,38 @@ class CityInfo : IsPartOfGameInfoSerialization {
 
     fun hasVisitingHero(): Boolean = tileMap[location].militaryUnit != null
     fun getVisitingHero(): MapUnit? = tileMap[location].militaryUnit
+    
+    /**
+     * Automatically transfers surplus food from city to visiting hero if autoFeedHero is enabled.
+     * Transfers as much food as possible up to the hero's maximum capacity.
+     */
+    fun autoFeedVisitingHero() {
+        if (!autoFeedHero || !hasVisitingHero()) return
+        
+        val hero = getVisitingHero()!!
+        
+        // Calculate hero's food capacity with bonuses
+        var maxFoodHero = hero.basicFoodCapacity
+        val foodBonuses = getMatchingUniques(UniqueType.FoodCapacityBonus)
+        var totalBonusPercent = 0f
+        for (unique in foodBonuses) {
+            totalBonusPercent += unique.params[0].toInt()
+        }
+        maxFoodHero *= totalBonusPercent.toPercent()
+        
+        val currentHeroFood = hero.getCurrentFood()
+        val heroSpaceLeft = maxFoodHero - currentHeroFood
+        
+        if (heroSpaceLeft <= 0) return // Hero already at maximum capacity
+        
+        val cityFoodAvailable = population.foodStored.toFloat()
+        val foodToTransfer = min(heroSpaceLeft, cityFoodAvailable)
+        
+        if (foodToTransfer > 0) {
+            hero.setCurrentFood(currentHeroFood + foodToTransfer)
+            population.foodStored = (cityFoodAvailable - foodToTransfer).toInt()
+        }
+    }
 
     private fun addStartingBuildings(civInfo: CivilizationInfo, startingEra: String) {
         val ruleset = civInfo.gameInfo.ruleSet
@@ -420,6 +454,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
         toReturn.updateCitizens = updateCitizens
         toReturn.cityAIFocus = cityAIFocus
         toReturn.avoidGrowth = avoidGrowth
+        toReturn.autoFeedHero = autoFeedHero
         toReturn.manualSpecialists = manualSpecialists
         toReturn.conscriptionRate = conscriptionRate
         toReturn.currConscription = currConscription
@@ -730,6 +765,9 @@ class CityInfo : IsPartOfGameInfoSerialization {
             setFlag(CityFlags.ResourceDemand,
                     (if (isCapital()) 25 else 15) + Random().nextInt(10))
         }
+        
+        // Auto-feed visiting hero if enabled
+        autoFeedVisitingHero()
     }
 
     // cf DiplomacyManager nextTurnFlags
