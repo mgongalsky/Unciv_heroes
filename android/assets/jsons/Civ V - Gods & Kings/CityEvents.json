@@ -2,14 +2,9 @@
     {
         "name": "Festival",
         "description": "A city-wide festival increases happiness and culture output.",
- //       "requiredBuilding": "Smokehouse",
         "cost": 15,
-        "uniques": ["Gives bonus [1] to [morale] to [visiting hero] for [5] turns"]
-
-
-        //    "effects": ["[+20]% Production when constructing [Military] units [in this city]"],
-
-        //"duration": 5
+        "uniques": ["Gives bonus [1] to [morale] to [visiting hero] for [5] turns"],
+        "duration": 5
     },
     {
         "name": "Military Drills",

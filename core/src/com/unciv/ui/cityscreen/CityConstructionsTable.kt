@@ -305,7 +305,9 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                 for (dto in constructionButtonDTOList) {
                     val constructionButton = getConstructionButton(dto)
                     when (dto.construction) {
-                        is BaseUnit -> units.add(constructionButton)
+                        is BaseUnit -> {
+                            units.add(constructionButton)
+                        }
                         is Building -> {
                             when {
                                 dto.construction.isWonder -> buildableWonders += constructionButton
@@ -313,8 +315,12 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                                 else -> buildableBuildings += constructionButton
                             }
                         }
-                        is CityEvent -> cityEventsTables.add(constructionButton)
-                        is PerpetualConstruction -> specialConstructions.add(constructionButton)
+                        is CityEvent -> {
+                            cityEventsTables.add(constructionButton)
+                        }
+                        is PerpetualConstruction -> {
+                            specialConstructions.add(constructionButton)
+                        }
                     }
                     maxButtonWidth = max(maxButtonWidth, constructionButton.packIfNeeded().width)
                 }

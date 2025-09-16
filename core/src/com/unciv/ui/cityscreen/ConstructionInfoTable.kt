@@ -5,11 +5,13 @@ import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.UncivGame
+import com.unciv.logic.city.CityInfo
 import com.unciv.logic.city.IConstruction
 import com.unciv.logic.city.PerpetualConstruction
 import com.unciv.logic.city.PerpetualStatConversion
 import com.unciv.models.UncivSound
 import com.unciv.models.ruleset.Building
+import com.unciv.models.ruleset.CityEvent
 import com.unciv.models.ruleset.IRulesetObject
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.translations.tr
@@ -57,13 +59,12 @@ class ConstructionInfoTable(val cityScreen: CityScreen): Table() {
         val city = cityScreen.city
         val cityConstructions = city.cityConstructions
 
-        //val selectedConstructionTable = Table()
         selectedConstructionTable.run {
             pad(10f)
 
             add(ImageGetter.getPortraitImage(construction.name, 50f).apply {
-                val link = (construction as? IRulesetObject)?.makeLink() ?: return
-                if (link.isEmpty()) return
+                val link = (construction as? IRulesetObject)?.makeLink() ?: return@apply
+                if (link.isEmpty()) return@apply
                 touchable = Touchable.enabled
                 this.onClick {
                     UncivGame.Current.pushScreen(CivilopediaScreen(city.getRuleset(), link = link))
@@ -79,12 +80,23 @@ class ConstructionInfoTable(val cityScreen: CityScreen): Table() {
             add(Label(buildingText, BaseScreen.skin)).row()  // already translated
 
             val description = when (construction) {
-                is BaseUnit -> construction.getDescription(city)
-                is Building -> construction.getDescription(city, true)
-                is PerpetualStatConversion -> construction.description.replace("[rate]", "[${construction.getConversionRate(city)}]").tr()
-                else -> ""  // Should never happen
+                is BaseUnit -> {
+                    construction.getDescription(city)
+                }
+                is Building -> {
+                    construction.getDescription(city, true)
+                }
+                is CityEvent -> {
+                    getEventDescription(construction, city)
+                }
+                is PerpetualStatConversion -> {
+                    construction.description.replace("[rate]", "[${construction.getConversionRate(city)}]").tr()
+                }
+                else -> {
+                    ""  // Should never happen
+                }
             }
-
+            
             val descriptionLabel = Label(description, BaseScreen.skin)  // already translated
             descriptionLabel.wrap = true
             add(descriptionLabel).colspan(2).width(stage.width / 4)
@@ -121,6 +133,62 @@ class ConstructionInfoTable(val cityScreen: CityScreen): Table() {
                     sellBuildingButton.disable()
             }
         }
+    }
+
+    private fun getEventDescription(event: CityEvent, city: CityInfo): String {
+        val description = StringBuilder()
+        
+        // Add basic description if available
+        if (event.description.isNotEmpty()) {
+            description.append(event.description.tr())
+        }
+        
+        // Add duration info
+        if (event.duration > 0) {
+            description.append("\n\n")
+            description.append("Duration: ${event.duration} turns".tr())
+        }
+        
+        // Add unique effects with icons
+        val uniqueEffects = mutableListOf<String>()
+        for (unique in event.uniqueObjects) {
+            val effectText = formatUniqueWithIcons(unique.text)
+            if (effectText.isNotEmpty()) {
+                uniqueEffects.add(effectText)
+            }
+        }
+        
+        if (uniqueEffects.isNotEmpty()) {
+            description.append("\n\n")
+            description.append("Effects:".tr())
+            for (effect in uniqueEffects) {
+                description.append("\n• ")
+                description.append(effect)
+            }
+        }
+        
+        // Add required building info
+        if (event.requiredBuilding.isNotEmpty()) {
+            description.append("\n\n")
+            description.append("Requires: [${event.requiredBuilding}]".tr())
+        }
+        
+        return description.toString()
+    }
+    
+    private fun formatUniqueWithIcons(uniqueText: String): String {
+        // Replace stat references with game icons using Fonts constants
+        return uniqueText
+            .replace("Production", "${Fonts.production}Production")
+            .replace("Food", "${Fonts.food}Food") 
+            .replace("Gold", "${Fonts.gold}Gold")
+            .replace("Science", "${Fonts.science}Science")
+            .replace("Culture", "${Fonts.culture}Culture")
+            .replace("Faith", "${Fonts.faith}Faith")
+            .replace("Happiness", "${Fonts.happiness}Happiness")
+            .replace("Strength", "${Fonts.strength}Strength")
+            .replace("Movement", "${Fonts.movement}Movement")
+            .tr()
     }
 
 }
