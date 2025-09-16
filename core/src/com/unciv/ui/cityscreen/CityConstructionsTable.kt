@@ -453,9 +453,14 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                     .colspan(pickConstructionButton.columns).fillX().left().padTop(2f)
         }
         pickConstructionButton.onClick {
-            // Only select construction, don't add to queue from main button
-            // Adding to queue should only happen via plus button or "Add to queue" button
-            cityScreen.selectConstruction(construction)
+            // Toggle selection: if already selected, deselect; otherwise select
+            if (cityScreen.selectedConstruction == construction) {
+                // Deselect if clicking on the same construction
+                cityScreen.clearSelection()
+            } else {
+                // Select new construction
+                cityScreen.selectConstruction(construction)
+            }
             selectedQueueEntry = -1
             cityScreen.update()
         }

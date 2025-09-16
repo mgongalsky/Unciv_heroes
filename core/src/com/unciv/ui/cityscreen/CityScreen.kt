@@ -168,7 +168,7 @@ class CityScreen(
         // That's because of the bug in libGDX, which does not like nullable objects as Tables
         if(visitingArmyView.isHero()) {
             stage.addActor(visitingArmyView)
-            visitingArmyView.setPosition(stage.width - posFromEdge, posFromEdge, Align.bottomRight)
+            // Initial positioning will be set properly in update() method
         }
 
         stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
@@ -198,10 +198,13 @@ class CityScreen(
             if (visitingArmyView.isHero()) {
                 visitingArmyView.isVisible = true
                 visitingArmyView.updateView()
+                // Position visiting army view in center horizontally, same level as garrison (bottom)
+                val armyViewWidth = visitingArmyView.packIfNeeded().width
+                val centerX = stage.width / 2
                 visitingArmyView.setPosition(
-                    stage.width - posFromEdge,
-                    posFromEdge,
-                    Align.bottomRight
+                    centerX - armyViewWidth / 2,
+                    posFromEdge,  // Same bottom level as garrison
+                    Align.bottomLeft
                 )
             } else
                 visitingArmyView.isVisible = false
@@ -222,7 +225,12 @@ class CityScreen(
 
         // Bottom center: Name, paging, exit city button
         val centeredX = (stage.width - leftMargin - rightMargin) / 2 + leftMargin
-        exitCityButton.setPosition(centeredX, 10f, Align.bottom)
+        // Raise buttons to avoid overlap with visiting army view (which is now at bottom level)
+        val bottomOffset = if (visitingArmyView.isHero()) {
+            val armyHeight = visitingArmyView.packIfNeeded().height
+            armyHeight + 20f  // Army height plus some padding
+        } else 10f
+        exitCityButton.setPosition(centeredX, bottomOffset, Align.bottom)
         cityPickerTable.update()
         cityPickerTable.setPosition(centeredX, exitCityButton.top + 10f, Align.bottom)
 
