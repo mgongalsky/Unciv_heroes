@@ -17,7 +17,15 @@
             {"text": "• Larger armies require more ⁂ food per turn", "indent": 1},
             {"text": "• Different unit types may have different food requirements", "indent": 1},
             {"text": "• When food runs out, army units will start to desert", "indent": 1},
-            {"text": "• Desertion can cause significant losses to army strength", "indent": 1}
+            {"text": "• Desertion can cause significant losses to army strength", "indent": 1},
+            {"text": ""},
+            {"text": "⁂ Supply Management", "header": 2},
+            {"text": "Heroes can manage their food supplies when visiting cities:"},
+            {"text": ""},
+            {"text": "• Manual transfer of ⁂ food between city and hero using sliders", "indent": 1},
+            {"text": "• Auto-Supply toggle for automatic resupplying when visiting cities", "indent": 1},
+            {"text": "• Notification alerts when heroes reach maximum food capacity", "indent": 1},
+            {"text": "• Warning notifications when food supplies run low (3 turns or less)", "indent": 1}
         ]
     },
     {
@@ -62,6 +70,35 @@
             {"text": "• Heroes within supply range consume less ⁂ food", "indent": 1},
             {"text": "• Breaking enemy supply lines can cause starvation", "indent": 1},
             {"text": "• Merchants and supply wagons can resupply field armies", "indent": 1}
+        ]
+    },
+    {
+        "name": "Unit Production and Population",
+        "civilopediaText": [
+            {"text": "Producing military units affects your city's population through a conscription system that balances military expansion with demographic consequences."},
+            {"text": ""},
+            {"text": "◉ Conscription System", "header": 2},
+            {"text": "Each military unit produced increases the city's conscription counter:"},
+            {"text": ""},
+            {"text": "• Each unit produced adds +1 to the conscription counter", "indent": 1},
+            {"text": "• When the counter reaches 30, the city loses 1 ◉ population", "indent": 1},
+            {"text": "• The counter resets after population loss occurs", "indent": 1},
+            {"text": "• This creates a 30:1 ratio of units to population cost", "indent": 1},
+            {"text": ""},
+            {"text": "◉ Population Protection", "header": 2},
+            {"text": "Cities cannot be completely depopulated through conscription:"},
+            {"text": ""},
+            {"text": "• Cities must maintain at least 1 ◉ population at all times", "indent": 1},
+            {"text": "• Unit production will be blocked if it would eliminate the last citizen", "indent": 1},
+            {"text": "• This prevents cities from destroying themselves through over-recruitment", "indent": 1},
+            {"text": ""},
+            {"text": "⚖ Strategic Balance", "header": 2},
+            {"text": "The conscription system creates important strategic decisions:"},
+            {"text": ""},
+            {"text": "• Large armies require significant ◉ population investment", "indent": 1},
+            {"text": "• Fewer citizens means reduced ⁂ food and ⚙ production capacity", "indent": 1},
+            {"text": "• Players must balance military needs with economic growth", "indent": 1},
+            {"text": "• Population recovery requires time and ⁂ food surplus", "indent": 1}
         ]
     }
 ]

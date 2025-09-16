@@ -124,7 +124,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
         // begin lowerTable
         addCitizenManagement()
         if (cityScreen.visitingHero != null) {
-            addHeroFeedingInfo()
+            addHeroSupplyInfo()
         }
         addGreatPersonPointInfo(cityInfo)
         if (!cityInfo.population.getMaxSpecialists().isEmpty()) {
@@ -242,8 +242,8 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
         lowerTable.add(expanderTab).growX().row()
     }
 
-    private fun addHeroFeedingInfo() {
-        val expanderTab = HeroFeedingTable(cityScreen).asExpander { onContentResize() }
+    private fun addHeroSupplyInfo() {
+        val expanderTab = HeroSupplyTable(cityScreen).asExpander { onContentResize() }
         lowerTable.add(expanderTab).growX().row()
     }
 

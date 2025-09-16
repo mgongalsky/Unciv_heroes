@@ -143,7 +143,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
     var updateCitizens = false  // flag so that on endTurn() the Governor reassigns Citizens
     var cityAIFocus: CityFocus = CityFocus.NoFocus
     var avoidGrowth: Boolean = false
-    var autoFeedHero: Boolean = false  // Automatically transfer surplus food to visiting hero
+    var autoFeedHero: Boolean = false  // Automatically supply surplus food to visiting hero
     @Transient var currentGPPBonus: Int = 0  // temporary variable saved for rankSpecialist()
 
     var garrison = mutableListOf<TroopInfo>()
@@ -260,7 +260,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
     fun getVisitingHero(): MapUnit? = tileMap[location].militaryUnit
     
     /**
-     * Automatically transfers surplus food from city to visiting hero if autoFeedHero is enabled.
+     * Automatically supplies surplus food from city to visiting hero if autoFeedHero is enabled.
      * Transfers as much food as possible up to the hero's maximum capacity.
      */
     fun autoFeedVisitingHero() {
@@ -295,7 +295,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
             if (newHeroFood >= maxFoodHero && previousFood < maxFoodHero) {
                 // Hero just reached maximum food - send notification
                 civInfo.addNotification(
-                    "Hero in [$name] is fully fed and ready!",
+                    "Hero in [$name] is fully supplied and ready!",
                     HeroAction(location),
                     hero.displayName(),
                     NotificationIcon.Food
@@ -780,7 +780,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
                     (if (isCapital()) 25 else 15) + Random().nextInt(10))
         }
         
-        // Auto-feed visiting hero if enabled
+        // Auto-supply visiting hero if enabled
         autoFeedVisitingHero()
     }
 

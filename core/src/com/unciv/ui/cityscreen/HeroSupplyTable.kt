@@ -16,7 +16,7 @@ import com.unciv.ui.utils.extensions.toTextButton
 import kotlin.math.ceil
 import kotlin.math.min
 
-class HeroFeedingTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
+class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
     val city = cityScreen.city
     
     private var currFoodCity = 0f
@@ -81,8 +81,8 @@ class HeroFeedingTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
         // Create food exchange slider interface
         createFoodExchangeInterface()
         
-        // Create Auto-Feed Hero toggle
-        createAutoFeedToggle()
+        // Create Auto-Supply Hero toggle
+        createAutoSupplyToggle()
         
         pack()
     }
@@ -134,10 +134,10 @@ class HeroFeedingTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
             false
         }
         
-        // Manual "Max" Feed Hero button
-        val manualFeedButton = "Max".toTextButton()
-        manualFeedButton.onClick {
-            feedHeroMaximum()
+        // Manual "Max" Supply Hero button
+        val manualSupplyButton = "Max".toTextButton()
+        manualSupplyButton.onClick {
+            supplyHeroMaximum()
         }
         
         val foodExchangeTable = Table()
@@ -145,27 +145,27 @@ class HeroFeedingTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
         foodExchangeTable.add(leftCountLabel).padRight(10f)
         foodExchangeTable.add(foodSlider).growX().pad(5f)
         foodExchangeTable.add(rightCountLabel).padLeft(10f)
-        foodExchangeTable.add(manualFeedButton).padLeft(10f)
+        foodExchangeTable.add(manualSupplyButton).padLeft(10f)
         add(foodExchangeTable).growX().colspan(2).row()
     }
     
-    private fun createAutoFeedToggle() {
-        val autoFeedToggleText = if (city.autoFeedHero) "Auto-Feed: ON" else "Auto-Feed: OFF"
-        val autoFeedToggleColor = if (city.autoFeedHero) Color.GREEN else Color.GRAY
-        val autoFeedToggle = autoFeedToggleText.toTextButton()
-        autoFeedToggle.color = autoFeedToggleColor
-        autoFeedToggle.onClick {
+    private fun createAutoSupplyToggle() {
+        val autoSupplyToggleText = if (city.autoFeedHero) "Auto-Supply: ON" else "Auto-Supply: OFF"
+        val autoSupplyToggleColor = if (city.autoFeedHero) Color.GREEN else Color.GRAY
+        val autoSupplyToggle = autoSupplyToggleText.toTextButton()
+        autoSupplyToggle.color = autoSupplyToggleColor
+        autoSupplyToggle.onClick {
             city.autoFeedHero = !city.autoFeedHero
-            val newText = if (city.autoFeedHero) "Auto-Feed: ON" else "Auto-Feed: OFF"
+            val newText = if (city.autoFeedHero) "Auto-Supply: ON" else "Auto-Supply: OFF"
             val newColor = if (city.autoFeedHero) Color.GREEN else Color.GRAY
-            autoFeedToggle.setText(newText)
-            autoFeedToggle.color = newColor
+            autoSupplyToggle.setText(newText)
+            autoSupplyToggle.color = newColor
         }
         
-        val autoFeedTable = Table()
-        autoFeedTable.defaults().pad(5f)
-        autoFeedTable.add(autoFeedToggle)
-        add(autoFeedTable).growX().colspan(2).row()
+        val autoSupplyTable = Table()
+        autoSupplyTable.defaults().pad(5f)
+        autoSupplyTable.add(autoSupplyToggle)
+        add(autoSupplyTable).growX().colspan(2).row()
     }
     
     private fun updateFoodDistribution() {
@@ -217,7 +217,7 @@ class HeroFeedingTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
         }
     }
     
-    private fun feedHeroMaximum() {
+    private fun supplyHeroMaximum() {
         // Calculate how much food can be transferred
         val heroSpaceLeft = maxFoodHero - currFoodHero
         val cityFoodAvailable = currFoodCity
@@ -242,7 +242,7 @@ class HeroFeedingTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
             if (newHeroFood >= maxFoodHero && previousFood < maxFoodHero) {
                 // Hero just reached maximum food - send notification
                 city.civInfo.addNotification(
-                    "Hero in [${city.name}] is fully fed and ready!",
+                    "Hero in [${city.name}] is fully supplied and ready!",
                     HeroAction(city.location),
                     hero.displayName(),
                     NotificationIcon.Food
@@ -272,9 +272,9 @@ class HeroFeedingTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
     
     fun asExpander(onChange: (() -> Unit)?): ExpanderTab {
         return ExpanderTab(
-            title = "{Hero Feeding}",
+            title = "{Hero Supply}",
             fontSize = Constants.defaultFontSize,
-            persistenceID = "CityStatsTable.HeroFeeding",
+            persistenceID = "CityStatsTable.HeroSupply",
             startsOutOpened = true,
             onChange = onChange
         ) {
