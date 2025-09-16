@@ -447,11 +447,9 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                     .colspan(pickConstructionButton.columns).fillX().left().padTop(2f)
         }
         pickConstructionButton.onClick {
-            if (cityScreen.selectedConstruction == construction) {
-                addConstructionToQueue(construction, cityScreen.city.cityConstructions)
-            } else {
-                cityScreen.selectConstruction(construction)
-            }
+            // Only select construction, don't add to queue from main button
+            // Adding to queue should only happen via plus button or "Add to queue" button
+            cityScreen.selectConstruction(construction)
             selectedQueueEntry = -1
             cityScreen.update()
         }
