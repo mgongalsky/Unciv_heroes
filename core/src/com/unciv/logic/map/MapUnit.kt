@@ -1023,7 +1023,8 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     fun endTurn() {
         println("${civInfo.civName}, ${baseUnit.name}, isMonster = ${isMonster}")
-        if(!civInfo.isMonsterNation()) {
+        // Monsters do not consume food and do not lose troops due to starvation
+        if (!isMonster) {
             val currentMaintenance = army.calculateFoodMaintenance(currentTile.isCityCenter())
             if (currentFood >= currentMaintenance)
                 currentFood -= currentMaintenance
@@ -1119,8 +1120,8 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         addMovementMemory()
         attacksSinceTurnStart.clear()
         
-        // Check for food warning - only for units not in cities
-        if (!currentTile.isCityCenter()) {
+        // Check for food warning - only for non-monster units not in cities
+        if (!isMonster && !currentTile.isCityCenter()) {
             checkHeroFoodWarning()
         }
     }
