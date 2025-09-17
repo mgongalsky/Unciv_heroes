@@ -2,6 +2,7 @@ package com.unciv.ui.tilegroups
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
@@ -11,6 +12,7 @@ import com.unciv.logic.map.MapUnit
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.UnitGroup
+import com.unciv.utils.Log
 import com.unciv.ui.utils.extensions.center
 import com.unciv.ui.utils.extensions.centerX
 import com.unciv.ui.utils.extensions.darken
@@ -22,6 +24,8 @@ import kotlin.math.min
 class TileGroupIcons(val tileGroup: TileGroup) {
 
     var improvementIcon: Actor? = null
+    // Full-hex improvement overlay used for fade-out animation
+    var improvementFadeActor: Image? = null
     var populationIcon: Image? = null //reuse for acquire icon
     val startingLocationIcons = mutableListOf<Actor>()
 
@@ -124,9 +128,61 @@ class TileGroupIcons(val tileGroup: TileGroup) {
 
 
     private fun updateImprovementIcon(showResourcesAndImprovements: Boolean, viewingCiv: CivilizationInfo?) {
+        val tileInfo = tileGroup.tileInfo
+
+        // If loot collection is in progress, animate the full-tile improvement overlay (not the small icon)
+        if (tileInfo.isItemBeingCollected) {
+            // Ensure we have an overlay image for the improvement to fade out
+            if (improvementFadeActor == null) {
+                val currentImprovement = tileInfo.getShownImprovement(viewingCiv)
+                if (currentImprovement != null && showResourcesAndImprovements) {
+                    // Get the full-hex improvement texture path and image
+                    val improvementPath = tileGroup.tileSetStrings.getTile(currentImprovement)
+                    val fadeImg = ImageGetter.getImage(improvementPath)
+                    // Size and place exactly like a hex layer (preserves offsets and origin)
+                    tileGroup.sizeAndPlaceOverHex(fadeImg)
+
+                    // Add above the base layer to ensure visibility but below UI icons
+                    tileGroup.baseLayerGroup.addActor(fadeImg)
+                    improvementFadeActor = fadeImg
+                    Log.debug("Improvement fade overlay created for %s (%s)", tileInfo.position, currentImprovement)
+                }
+            }
+
+            // Hide the small icon to avoid a double image during fade sequence
+            improvementIcon?.isVisible = false
+
+            if (!tileInfo.improvementAnimationStarted && improvementFadeActor != null) {
+                tileInfo.improvementAnimationStarted = true
+                val fadeImg = improvementFadeActor!!
+                Log.debug("Improvement fade started for %s", tileInfo.position)
+                // 2-second fade-out, then execute the model callback to collect and remove improvement
+                val fadeAction = Actions.sequence(
+                    Actions.fadeOut(1.0f),
+                    Actions.run {
+                        try {
+                            tileInfo.collectionCallback?.invoke()
+                        } finally {
+                            // Cleanup: remove overlay and trigger UI update to re-render the tile without the improvement
+                            fadeImg.remove()
+                            improvementFadeActor = null
+                            improvementIcon?.remove()
+                            improvementIcon = null
+                            UncivGame.Current.worldScreen?.shouldUpdate = true
+                            Log.debug("Improvement fade finished for %s", tileInfo.position)
+                        }
+                    }
+                )
+                fadeImg.addAction(fadeAction)
+            }
+            // While animation is running or waiting to start, do not recreate/replace the normal icon
+            return
+        }
+
+        // Normal (non-animated) update path
         improvementIcon?.remove()
         improvementIcon = null
-        val shownImprovement = tileGroup.tileInfo.getShownImprovement(viewingCiv)
+        val shownImprovement = tileInfo.getShownImprovement(viewingCiv)
         if (shownImprovement == null || !showResourcesAndImprovements) return
 
         val newImprovementImage = ImageGetter.getImprovementIcon(shownImprovement)

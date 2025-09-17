@@ -1222,8 +1222,11 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     /** Triggers visit function of specific [tile], if it has [Visitable]*/
     fun visitPlace(tile: TileInfo) {
-        if (civInfo.isMajorCiv() && tile.improvement != null)
+        if (civInfo.isMajorCiv() && tile.improvement != null) {
             tile.visitable!!.visit(this)
+            // Ensure UI is prompted to update so the animation system can pick up the new flags
+            UncivGame.Current.worldScreen?.shouldUpdate = true
+        }
     }
 
     override fun moveThroughTile(tile: TileInfo) {

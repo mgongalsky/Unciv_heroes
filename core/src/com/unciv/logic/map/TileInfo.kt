@@ -197,6 +197,20 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     /** A handle to a class with information about visits of the improvement */
     var visitable: Visitable? = null
 
+    // Transient animation flags for one-time loot improvements (handled at UI level)
+    @Transient
+    var isItemBeingCollected: Boolean = false
+    @Transient
+    var improvementAnimationStarted: Boolean = false
+    @Transient
+    var collectionCallback: (() -> Unit)? = null
+
+    fun resetImprovementAnimationFlags() {
+        isItemBeingCollected = false
+        improvementAnimationStarted = false
+        collectionCallback = null
+    }
+
     fun isHill() = baseTerrain == Constants.hill || terrainFeatures.contains(Constants.hill)
 
     var hasBottomRightRiver = false

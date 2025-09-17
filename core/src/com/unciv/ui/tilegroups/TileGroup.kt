@@ -277,7 +277,7 @@ open class TileGroup(
             else baseHexagon + tileSetStrings.orFallback{ getTile(tileInfo.naturalWonder!!) }
 
         val shownImprovement = tileInfo.getShownImprovement(viewingCiv)
-        val shouldShowImprovement = shownImprovement != null && UncivGame.Current.settings.showPixelImprovements
+        val shouldShowImprovement = shownImprovement != null && UncivGame.Current.settings.showPixelImprovements && !tileInfo.isItemBeingCollected
 
         val shouldShowResource = UncivGame.Current.settings.showPixelImprovements && tileInfo.resource != null &&
                 (showEntireMap || viewingCiv == null || tileInfo.hasViewableResource(viewingCiv))
@@ -325,6 +325,11 @@ open class TileGroup(
         hexagonImage.x = hexagonImagePosition.first
         hexagonImage.y = hexagonImagePosition.second
         hexagonImage.setScale(scale ?: tileSetStrings.tileSetConfig.tileScale)
+    }
+
+    // Public helper for other components (like icons) to align full-hex overlays exactly like base images
+    fun sizeAndPlaceOverHex(image: Image, scale: Float? = null) {
+        setHexagonImageSize(image, scale)
     }
 
     private fun updateTileImage(viewingCiv: CivilizationInfo?) {

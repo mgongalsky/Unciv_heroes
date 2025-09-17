@@ -7,7 +7,9 @@ import com.unciv.logic.MovableUnit
 import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.models.helpers.UnitMovementMemoryType
+import com.unciv.UncivGame
 import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.utils.Log
 
 class UnitMovementAlgorithms(val unit: MovableUnit) {
 
@@ -501,6 +503,28 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         if (unit is MapUnit)
             unit.mostRecentMoveType = UnitMovementMemoryType.UnitMoved
         val pathToLastReachableTile = distanceToTiles.getPathToTile(lastReachableTile)
+
+        // If we are about to step onto a takeable improvement tile this turn, defer movement until after fade animation
+        if (unit is MapUnit && lastReachableTile == destination) {
+            val visitable = destination.visitable
+            if (destination.improvement != null && visitable?.visitability == Visitability.takeable) {
+                Log.debug("Deferring movement to %s for loot fade animation", destination.position)
+                // Trigger animation setup (flags + callback)
+                val started = visitable.visit(unit)
+                if (started) {
+                    val prevCallback = destination.collectionCallback
+                    destination.collectionCallback = {
+                        prevCallback?.invoke()
+                        Log.debug("Loot fade completed, proceeding to move unit to %s", destination.position)
+                        // Now perform the actual move (improvement is gone, so no defer loop)
+                        unit.movement.moveToTile(destination, considerZoneOfControl)
+                    }
+                    // Request UI update if not already
+                    UncivGame.Current.worldScreen?.shouldUpdate = true
+                    return
+                }
+            }
+        }
 
         if (unit is MapUnit && (unit.isFortified() || unit.isSetUpForSiege() || unit.isSleeping()))
             unit.action = null // un-fortify/un-setup/un-sleep after moving
