@@ -5,6 +5,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.unciv.UncivGame
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.NotificationIcon
+import com.unciv.logic.event.EventBus
+import com.unciv.logic.event.LootPickupAnimationRequested
 import com.unciv.models.stats.Stat
 import com.unciv.ui.popup.Popup
 import com.unciv.ui.utils.BaseScreen
@@ -145,6 +147,9 @@ class Visitable() :
 
 
                 }
+                EventBus.send(
+                    LootPickupAnimationRequested(parentTile, improvement)
+                )
                 parentTile.removeImprovement()
                 return true
             }

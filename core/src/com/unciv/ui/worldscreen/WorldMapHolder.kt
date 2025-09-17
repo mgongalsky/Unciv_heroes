@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.Batch
+import com.badlogic.gdx.math.Interpolation
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Action
 import com.badlogic.gdx.scenes.scene2d.Actor
@@ -533,6 +534,26 @@ class WorldMapHolder(
         swapWithButton.keyShortcuts.add(KeyCharAndCode.TAB)
 
         return swapWithButton
+    }
+
+    fun showLootPickupAnimation(tileInfo: TileInfo, improvementName: String, durationSeconds: Float) {
+        val groups = tileGroups[tileInfo] ?: return
+        for (group in groups) {
+            val overlay = ImageGetter.getImprovementIcon(improvementName)
+            overlay.setSize(20f, 20f)
+            overlay.center(group)
+            overlay.x -= 22f
+            overlay.y -= 10f
+            overlay.color.a = 0.7f
+            overlay.touchable = Touchable.disabled
+            group.miscLayerGroup.addActor(overlay)
+            overlay.addAction(
+                Actions.sequence(
+                    Actions.fadeOut(durationSeconds, Interpolation.fade),
+                    Actions.run { overlay.remove() }
+                )
+            )
+        }
     }
 
 
