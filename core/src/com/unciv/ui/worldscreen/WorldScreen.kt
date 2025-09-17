@@ -21,6 +21,7 @@ import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.ReligionState
 import com.unciv.logic.civilization.diplomacy.DiplomaticStatus
 import com.unciv.logic.event.EventBus
+import com.unciv.logic.event.LootPickupAnimationRequested
 import com.unciv.logic.map.MapVisualization
 import com.unciv.logic.multiplayer.MultiplayerGameUpdated
 import com.unciv.logic.multiplayer.storage.FileStorageRateLimitReached
@@ -144,6 +145,11 @@ class WorldScreen(
 
         // This is the most memory-intensive operation we have currently, most OutOfMemory errors will occur here
         mapHolder.addTiles()
+
+        events.receive(LootPickupAnimationRequested::class) { event ->
+            if (event.tile.tileMap != mapHolder.tileMap) return@receive
+            mapHolder.showLootPickupAnimation(event.tile, event.improvementName, event.durationSeconds)
+        }
 
         // resume music (in case choices from the menu lead to instantiation of a new WorldScreen)
         UncivGame.Current.musicController.resume()
