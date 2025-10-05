@@ -211,7 +211,7 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
             screenStack.clear()
 
             worldScreen = null // This allows the GC to collect our old WorldScreen, otherwise we keep two WorldScreens in memory.
-            val newWorldScreen = WorldScreen(newGameInfo, newGameInfo.getPlayerToViewAs(), worldScreenRestoreState)
+            val newWorldScreen = WorldScreen(newGameInfo, newGameInfo.getPlayerToViewAs(settings.multiplayer.userId), worldScreenRestoreState)
             worldScreen = newWorldScreen
 
             val moreThanOnePlayer = newGameInfo.civilizations.count { it.playerType == PlayerType.Human } > 1

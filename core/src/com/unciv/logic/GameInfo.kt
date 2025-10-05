@@ -28,8 +28,6 @@ import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.RulesetCache
 import com.unciv.models.ruleset.Speed
 import com.unciv.models.ruleset.unique.UniqueType
-import com.unciv.ui.audio.MusicMood
-import com.unciv.ui.audio.MusicTrackChooserFlags
 import com.unciv.utils.debug
 import java.util.*
 
@@ -165,12 +163,10 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         return toReturn
     }
 
-    fun getPlayerToViewAs(): CivilizationInfo {
+    fun getPlayerToViewAs(userId: String): CivilizationInfo {
         if (!gameParameters.isOnlineMultiplayer) return getCurrentPlayerCivilization() // non-online, play as human player
-        val userId = UncivGame.Current.settings.multiplayer.userId
 
-        // Iterating on all civs, starting from the the current player, gives us the one that will have the next turn
-        // This allows multiple civs from the same UserID
+        // Iterating on all civs, starting from the current player, gives us the one that will have the next turn
         if (civilizations.any { it.playerId == userId }) {
             var civIndex = civilizations.map { it.civName }.indexOf(currentPlayer)
             while (true) {
@@ -179,7 +175,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
                 civIndex++
             }
         } else {
-            // you aren't anyone. How did you even get this game? Can you spectate?
+            // you aren't anyone. Can you spectate?
             return getSpectator(userId)
         }
     }
