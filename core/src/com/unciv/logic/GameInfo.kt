@@ -266,6 +266,11 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         ensureNextTurnUseCase()
         nextTurnUseCase.execute(this)
 
+        // Временно: дублируем нотификации на основе событий (поведение не меняется)
+        com.unciv.clean.presentation.EventToNotificationMapper.apply(
+            domainEvents.peek()
+        ) { civName -> getCivilization(civName) }
+
 
     }
 
