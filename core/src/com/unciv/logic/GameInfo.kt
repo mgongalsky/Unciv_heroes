@@ -301,6 +301,15 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         currentTurnStartTime = System.currentTimeMillis()
         currentPlayer = thisPlayer.civName
         currentPlayerCiv = getCivilization(currentPlayer)
+
+        // Emit domain event for turn advanced
+        domainEvents.emit(
+            com.unciv.clean.domain.events.DomainEvent.TurnAdvanced(
+                turns,
+                currentPlayer
+            )
+        )
+
         thisPlayer.startTurn()
         if (currentPlayerCiv.isSpectator()) currentPlayerCiv.popupAlerts.clear() // no popups for spectators
 
@@ -383,6 +392,23 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     }
 
     private fun addEnemyUnitNotification(thisPlayer: CivilizationInfo, tiles: List<TileInfo>, inOrNear: String) {
+        // Emit domain event (one per group)
+        if (tiles.isNotEmpty()) {
+            val positions = tiles.map { it.position }
+            val scope = if (inOrNear == "in")
+                com.unciv.clean.domain.events.Scope.IN_TERRITORY
+            else
+                com.unciv.clean.domain.events.Scope.NEAR_TERRITORY
+
+            domainEvents.emit(
+                com.unciv.clean.domain.events.DomainEvent.EnemyUnitsSpotted(
+                    civName = thisPlayer.civName,
+                    positions = positions,
+                    scope = scope
+                )
+            )
+        }
+
         // don't flood the player with similar messages. instead cycle through units by clicking the message multiple times.
         if (tiles.size < 3) {
             for (tile in tiles) {
@@ -396,6 +422,15 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     }
 
     private fun addBombardNotification(thisPlayer: CivilizationInfo, cities: List<CityInfo>) {
+        // Emit domain event for cities that can bombard
+        if (cities.isNotEmpty()) {
+            domainEvents.emit(
+                com.unciv.clean.domain.events.DomainEvent.CitiesCanBombard(
+                    civName = thisPlayer.civName,
+                    positions = cities.map { it.location }
+                )
+            )
+        }
         if (cities.size < 3) {
             for (city in cities)
                 thisPlayer.addNotification("Your city [${city.name}] can bombard the enemy!", city.location, NotificationIcon.City, NotificationIcon.Crosshair)
@@ -459,6 +494,16 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
             "[$resourceName] revealed near [${chosenCity.name}]"
         else
             "[$positionsCount] sources of [$resourceName] revealed, e.g. near [${chosenCity.name}]"
+
+        // Emit domain event for revealed resources
+        domainEvents.emit(
+            com.unciv.clean.domain.events.DomainEvent.ResourcesRevealed(
+                civName = civInfo.civName,
+                resourceName = resourceName,
+                positions = positions.toList(),
+                nearCity = chosenCity.name
+            )
+        )
 
         civInfo.addNotification(
             text,
