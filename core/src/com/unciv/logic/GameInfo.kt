@@ -138,6 +138,9 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     @Transient
     var spaceResources = HashSet<String>()
 
+    @Transient
+    val domainEvents = com.unciv.clean.domain.events.DomainEventCollector()
+
     //endregion
     //region Pure functions
 
