@@ -141,6 +141,9 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     @Transient
     val domainEvents = com.unciv.clean.domain.events.DomainEventCollector()
 
+    @Transient
+    lateinit var nextTurnUseCase: com.unciv.clean.application.usecases.NextTurnUseCase
+
     //endregion
     //region Pure functions
 
@@ -247,84 +250,23 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     //endregion
     //region State changing functions
 
-    fun nextTurn() {
-        val previousHumanPlayer = getCurrentPlayerCivilization()
-        var thisPlayer = previousHumanPlayer // not calling it currentPlayer because that's already taken and I can't think of a better name
-        var currentPlayerIndex = civilizations.indexOf(thisPlayer)
-
-
-        fun endTurn() {
-            thisPlayer.endTurn()
-            currentPlayerIndex = (currentPlayerIndex + 1) % civilizations.size
-            if (currentPlayerIndex == 0) {
-                turns++
-                if (UncivGame.Current.simulateUntilTurnForDebug != 0)
-                    debug("Starting simulation of turn %s", turns)
-            }
-            thisPlayer = civilizations[currentPlayerIndex]
-        }
-
-        //check is important or else switchTurn
-        //would skip a turn if an AI civ calls nextTurn
-        //this happens when resigning a multiplayer game
-        if (thisPlayer.isPlayerCivilization()) {
-            endTurn()
-        }
-
-        while (thisPlayer.playerType == PlayerType.AI
-                || turns < UncivGame.Current.simulateUntilTurnForDebug
-                || turns < simulateMaxTurns && simulateUntilWin
-                // For multiplayer, if there are 3+ players and one is defeated or spectator,
-                // we'll want to skip over their turn
-                || gameParameters.isOnlineMultiplayer && (thisPlayer.isDefeated() || thisPlayer.isSpectator() && thisPlayer.playerId != UncivGame.Current.settings.multiplayer.userId)
-        ) {
-            thisPlayer.startTurn()
-            if (!thisPlayer.isDefeated() || thisPlayer.isBarbarian()) {
-                NextTurnAutomation.automateCivMoves(thisPlayer)
-
-                // Placing barbarians after their turn
-                if (thisPlayer.isBarbarian() && !gameParameters.noBarbarians)
-                    barbarians.updateEncampments()
-
-                // exit simulation mode when player wins
-                if (thisPlayer.victoryManager.hasWon() && simulateUntilWin) {
-                    // stop simulation
-                    simulateUntilWin = false
-                    break
-                }
-            }
-            endTurn()
-        }
-        if (turns == UncivGame.Current.simulateUntilTurnForDebug)
-            UncivGame.Current.simulateUntilTurnForDebug = 0
-
-        currentTurnStartTime = System.currentTimeMillis()
-        currentPlayer = thisPlayer.civName
-        currentPlayerCiv = getCivilization(currentPlayer)
-
-        // Emit domain event for turn advanced
-        domainEvents.emit(
-            com.unciv.clean.domain.events.DomainEvent.TurnAdvanced(
-                turns,
-                currentPlayer
-            )
+    private fun ensureNextTurnUseCase() {
+        if (::nextTurnUseCase.isInitialized) return
+        nextTurnUseCase = com.unciv.clean.application.usecases.NextTurnUseCase(
+            clock = com.unciv.clean.adapters.time.SystemClock(),
+            music = com.unciv.clean.adapters.music.MusicAdapter(),
+            ai = com.unciv.clean.adapters.ai.AiAdapter(),
+            barbarians = com.unciv.clean.adapters.barbarians.BarbariansAdapter(barbarians),
+            session = com.unciv.clean.adapters.session.UserSessionAdapter(),
+            logger = com.unciv.clean.adapters.log.LoggerAdapter()
         )
+    }
 
-        thisPlayer.startTurn()
-        if (currentPlayerCiv.isSpectator()) currentPlayerCiv.popupAlerts.clear() // no popups for spectators
+    fun nextTurn() {
+        ensureNextTurnUseCase()
+        nextTurnUseCase.execute(this)
 
-        if (turns % 10 == 0) //todo measuring actual play time might be nicer
-            UncivGame.Current.musicController.chooseTrack(
-                currentPlayerCiv.civName,
-                MusicMood.peaceOrWar(currentPlayerCiv.isAtWar()), MusicTrackChooserFlags.setNextTurn
-            )
 
-        // Update counters in all regular visitables
-        visitableUpdater()
-
-        // Start our turn immediately before the player can make decisions - affects
-        // whether our units can commit automated actions and then be attacked immediately etc.
-        notifyOfCloseEnemyUnits(thisPlayer)
     }
 
     /** Update counters in all regular visitables when finishing turn*/
