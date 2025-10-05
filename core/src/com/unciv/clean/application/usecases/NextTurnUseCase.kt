@@ -90,10 +90,10 @@ class NextTurnUseCase(
         }
 
         // counters on visitables
-        game.invokeVisitableUpdater()
+        game.visitableUpdater()
 
         // уведомления о близких врагах + доменные события
-        game.invokeNotifyOfCloseEnemyUnits(thisPlayer)
+        game.notifyOfCloseEnemyUnits(thisPlayer)
 
         // важное событие смены хода — уже может быть эмитировано в GameInfo, но убедимся
         if (game.domainEvents.peek().none { it is DomainEvent.TurnAdvanced }) {
@@ -118,18 +118,3 @@ private fun GameInfo.resetDebugSimTurnIfReached() {
         com.unciv.UncivGame.Current.simulateUntilTurnForDebug = 0
 }
 
-// Вызовы приватных методов GameInfo через reflection, чтобы не менять существующую видимость
-private fun GameInfo.invokeVisitableUpdater() {
-    try {
-        val m = this::class.java.getDeclaredMethod("visitableUpdater")
-        m.isAccessible = true
-        m.invoke(this)
-    } catch (_: Exception) { /* ignore to be safe */ }
-}
-private fun GameInfo.invokeNotifyOfCloseEnemyUnits(thisPlayer: CivilizationInfo) {
-    try {
-        val m = this::class.java.getDeclaredMethod("notifyOfCloseEnemyUnits", CivilizationInfo::class.java)
-        m.isAccessible = true
-        m.invoke(this, thisPlayer)
-    } catch (_: Exception) { /* ignore to be safe */ }
-}

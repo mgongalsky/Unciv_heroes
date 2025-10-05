@@ -275,7 +275,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     }
 
     /** Update counters in all regular visitables when finishing turn*/
-    private fun visitableUpdater()
+    internal fun visitableUpdater()
     {
         // Here recalculate turnsToRefresh for all regular visitables
         tileMap.tileMatrix.forEach { tm ->
@@ -294,7 +294,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
 
     }
 
-    private fun notifyOfCloseEnemyUnits(thisPlayer: CivilizationInfo) {
+    internal fun notifyOfCloseEnemyUnits(thisPlayer: CivilizationInfo) {
         val viewableInvisibleTiles = thisPlayer.viewableInvisibleUnitsTiles.map { it.position }
         val enemyUnitsCloseToTerritory = thisPlayer.viewableTiles
             .filter {
@@ -356,16 +356,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
             )
         }
 
-        // don't flood the player with similar messages. instead cycle through units by clicking the message multiple times.
-        if (tiles.size < 3) {
-            for (tile in tiles) {
-                val unitName = tile.militaryUnit!!.name
-                thisPlayer.addNotification("An enemy [$unitName] was spotted $inOrNear our territory", tile.position, NotificationIcon.War, unitName)
-            }
-        } else {
-            val positions = tiles.asSequence().map { it.position }
-            thisPlayer.addNotification("[${tiles.size}] enemy units were spotted $inOrNear our territory", LocationAction(positions), NotificationIcon.War)
-        }
+        // legacy UI notifications removed in favor of domain events + mapper
     }
 
     private fun addBombardNotification(thisPlayer: CivilizationInfo, cities: List<CityInfo>) {
@@ -378,13 +369,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
                 )
             )
         }
-        if (cities.size < 3) {
-            for (city in cities)
-                thisPlayer.addNotification("Your city [${city.name}] can bombard the enemy!", city.location, NotificationIcon.City, NotificationIcon.Crosshair)
-        } else {
-            val positions = cities.asSequence().map { it.location }
-            thisPlayer.addNotification("[${cities.size}] of your cities can bombard the enemy!", LocationAction(positions), NotificationIcon.City, NotificationIcon.Crosshair)
-        }
+        // legacy UI notifications removed in favor of domain events + mapper
     }
 
     /** Generate a notification pointing out resources.
@@ -452,11 +437,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
             )
         )
 
-        civInfo.addNotification(
-            text,
-            LocationAction(positions),
-            "ResourceIcons/$resourceName"
-        )
+        // legacy UI notifications removed in favor of domain events + mapper
         return true
     }
 
