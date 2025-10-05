@@ -84,8 +84,28 @@ object Battle {
     fun attackOrNuke(attacker: ICombatant, attackableTile: AttackableTile) {
         if (attacker is MapUnitCombatant && attacker.unit.baseUnit.isNuclearWeapon())
             NUKE(attacker, attackableTile.tileToAttack)
-        else
-            attack(attacker, getMapCombatantOfTile(attackableTile.tileToAttack)!!)
+        else {
+            val defender = getMapCombatantOfTile(attackableTile.tileToAttack) ?: return
+            // Stage 10: route unit-vs-unit attack through ResolveAttackUseCase without changing behavior
+            if (attacker is MapUnitCombatant && defender is MapUnitCombatant) {
+                val game = attacker.getCivInfo().gameInfo
+                val combatResolver = com.unciv.clean.adapters.battle.LegacyCombatResolverAdapter(game)
+                val bus = com.unciv.clean.adapters.events.InProcessDomainEventBus(emptyList(), com.unciv.clean.adapters.log.LoggerAdapter())
+                val useCase = com.unciv.clean.application.usecases.battle.ResolveAttackUseCase(
+                    combat = combatResolver,
+                    events = game.domainEvents,
+                    bus = bus
+                )
+                val cmd = com.unciv.clean.application.usecases.battle.AttackCommand(
+                    attacker = com.unciv.clean.application.usecases.battle.UnitRef(attacker.getCivInfo().civName, attacker.unit.id),
+                    defender = com.unciv.clean.application.usecases.battle.UnitRef(defender.getCivInfo().civName, defender.unit.id),
+                    type = if (attacker.isRanged()) com.unciv.clean.application.usecases.battle.AttackType.Ranged else com.unciv.clean.application.usecases.battle.AttackType.Melee
+                )
+                useCase.execute(cmd)
+            } else {
+                attack(attacker, defender)
+            }
+        }
     }
 
     fun attack(attacker: ICombatant, defender: ICombatant) {
