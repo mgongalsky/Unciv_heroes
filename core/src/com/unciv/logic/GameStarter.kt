@@ -95,12 +95,15 @@ object GameStarter {
             }
 
         runAndMeasure("setTransients") {
-            tileMap.setTransients(ruleset) // if we're starting from a map with pre-placed units, they need the civs to exist first
-            tileMap.setStartingLocationsTransients()
-
+            // Apply chosen difficulty from setup
             gameInfo.difficulty = gameSetupInfo.gameParameters.difficulty
 
-            gameInfo.setTransients() // needs to be before placeBarbarianUnit because it depends on the tilemap having its gameInfo set
+            // Initialize domain/session structures and transients via use-case
+            com.unciv.clean.application.usecases.InitializeSessionUseCase(
+                com.unciv.clean.adapters.ruleset.RulesetCacheProvider()
+            ).execute(gameInfo)
+            // Keep starting location setup as before
+            tileMap.setStartingLocationsTransients()
         }
 
         runAndMeasure("addCivStartingUnits") {
