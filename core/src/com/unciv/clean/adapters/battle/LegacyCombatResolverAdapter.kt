@@ -16,16 +16,13 @@ class LegacyCombatResolverAdapter(
 ) : CombatResolver {
 
     override fun resolve(command: AttackCommand): BattleResult {
-        val attackerUnit = findUnit(command.attacker)
-        val defenderUnit = findUnit(command.defender)
+        val attackerUnit = findUnitAt(command.attackerTile) ?: findByRef(command.attacker)
+        val defenderUnit = findUnitAt(command.defenderTile) ?: findByRef(command.defender)
 
         val attackerCombatant = MapUnitCombatant(attackerUnit)
         val defenderCombatant = MapUnitCombatant(defenderUnit)
 
-        val beforeA = attackerCombatant.getHealth()
-        val beforeD = defenderCombatant.getHealth()
-
-        // Delegate to legacy battle logic
+        // Delegate to legacy battle logic (this will show BattleScreen etc.)
         Battle.attack(attackerCombatant, defenderCombatant)
 
         val afterA = attackerCombatant.getHealth()
@@ -41,6 +38,9 @@ class LegacyCombatResolverAdapter(
         )
     }
 
-    private fun findUnit(ref: UnitRef) =
+    private fun findUnitAt(pos: com.badlogic.gdx.math.Vector2) =
+        game.tileMap[pos].militaryUnit ?: game.tileMap[pos].civilianUnit
+
+    private fun findByRef(ref: UnitRef) =
         game.getCivilization(ref.civId).getCivUnits().first { it.id == ref.unitId }
 }

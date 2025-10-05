@@ -99,6 +99,8 @@ object Battle {
                 val cmd = com.unciv.clean.application.usecases.battle.AttackCommand(
                     attacker = com.unciv.clean.application.usecases.battle.UnitRef(attacker.getCivInfo().civName, attacker.unit.id),
                     defender = com.unciv.clean.application.usecases.battle.UnitRef(defender.getCivInfo().civName, defender.unit.id),
+                    attackerTile = attacker.getTile().position,
+                    defenderTile = defender.getTile().position,
                     type = if (attacker.isRanged()) com.unciv.clean.application.usecases.battle.AttackType.Ranged else com.unciv.clean.application.usecases.battle.AttackType.Melee
                 )
                 useCase.execute(cmd)
