@@ -8,6 +8,7 @@ plugins {
 }
 
 android {
+    namespace = "com.unciv.app"
     compileSdk = 32
     sourceSets {
         getByName("main").apply {
