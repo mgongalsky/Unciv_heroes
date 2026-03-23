@@ -122,7 +122,8 @@ class TroopInfo(
     }
 
     private fun initializeVariables() {
-        baseUnit = ruleset.units[unitName]!!
+        val unit = ImageGetter.ruleset.units[unitName] ?: return
+        baseUnit = unit
         currentAmount = amount
         currentHealth = baseUnit.health
     }

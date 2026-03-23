@@ -159,3 +159,5 @@ android/assets/music/
 node_modules/
 package-lock.json
 package.json
+/.maxvibes/logs/maxvibes.log
+/.maxvibes/plugin.log
