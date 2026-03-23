@@ -28,6 +28,7 @@ import com.unciv.models.ruleset.tile.TileImprovement
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
+import com.unciv.ui.images.ImageGetter
 
 class TestGame {
 
@@ -133,7 +134,7 @@ class TestGame {
         replacePalace: Boolean = false,
         initialPopulation: Int = 0
     ): CityInfo {
-        val cityInfo = CityInfo(civInfo, tile.position)
+        val cityInfo = CityInfo(civInfo, tile.position, MapUnit())
         if (initialPopulation != 1)
             cityInfo.population.addPopulation(initialPopulation - 1) // With defaults this will remove population
 
