@@ -59,7 +59,7 @@ enum class Proximity : IsPartOfGameInfoSerialization {
     Distant
 }
 
-class CivilizationInfo : IsPartOfGameInfoSerialization {
+open class CivilizationInfo : IsPartOfGameInfoSerialization {
 
 
     @Transient
@@ -80,9 +80,12 @@ class CivilizationInfo : IsPartOfGameInfoSerialization {
         var monsterNation = Nation()
     }
 
-    init{
+    init {
+        initialize()
+    }
+    // Seam: Extracted method
+    open fun initialize() {
         monsterGameInfo.loadRulesetForMap()
-
     }
 
 

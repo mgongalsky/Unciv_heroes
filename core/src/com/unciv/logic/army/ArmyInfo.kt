@@ -14,7 +14,7 @@ import com.unciv.models.ruleset.unique.UniqueType
  *
  * An optional hero (leader) reference is maintained and passed to all troops.
  */
-class ArmyInfo(
+open class ArmyInfo(
     @Transient
     var civInfo: CivilizationInfo = CivilizationInfo(),
     val maxSlots: Int = GameConstants.armySize

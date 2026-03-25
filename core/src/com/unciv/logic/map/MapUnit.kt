@@ -45,7 +45,18 @@ import kotlin.math.pow
 // That's gonna be a Hero instead of MapUnit
 open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSerialization, MovableUnit() {
     companion object {
-        var monsterCivInfo = CivilizationInfo() // Dummy CivInfo for loading and saving maps
+
+        // Seam: testing instance
+        private var _monsterCivInfo: CivilizationInfo? = null
+        var monsterCivInfo: CivilizationInfo
+            get() = _monsterCivInfo ?: CivilizationInfo().also { _monsterCivInfo = it }
+            set(value) { _monsterCivInfo = value }
+
+        fun setTestingInstance(civInfo: CivilizationInfo) {
+            _monsterCivInfo = civInfo
+        }
+        // End of Seam
+
 
         val armyToPopulationFactor = 30
         // We need to assign unique ID for each MapUnit
@@ -82,10 +93,9 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     // TODO: troops must be changed from list to a finite array with possible empty slots. And army manager must be written.
     //var troops = mutableListOf<TroopInfo>()
 
-    var army: ArmyInfo = ArmyInfo(
-        civInfo,
-        "Peasant", 25
-    )
+    // Seam: extract method
+    open fun createArmy(): ArmyInfo = ArmyInfo(civInfo, "Peasant", 25)
+    var army: ArmyInfo = createArmy()
 
     var basicFoodCapacity = 15f
     var foodCapacityBonus = 0f
@@ -233,8 +243,8 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
         // Очищаем текущие отряды
 
-        baseUnit = ImageGetter.ruleset.units[name]!!
-        baseUnit.ruleset = ImageGetter.ruleset
+        baseUnit = civInfo.gameInfo.ruleSet.units[name]!!// ImageGetter.ruleset.units[name]!!
+        baseUnit.ruleset = civInfo.gameInfo.ruleSet
 
         army.fillArmy(name, amount)
     }
@@ -1119,31 +1129,31 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
         addMovementMemory()
         attacksSinceTurnStart.clear()
-        
+
         // Check for food warning - only for non-monster units not in cities
         if (!isMonster && !currentTile.isCityCenter()) {
             checkHeroFoodWarning()
         }
     }
-    
+
     /**
      * Checks if unit has low food supplies and sends warning notification
      * if food will last 3 turns or less
      */
     private fun checkHeroFoodWarning() {
         val dailyConsumption = army.calculateFoodMaintenance(isInCity = false)
-        
+
         if (dailyConsumption <= 0) return // No consumption, no warning needed
-        
+
         val daysRemaining = (currentFood / dailyConsumption).toInt()
-        
+
         if (daysRemaining <= 3) {
             val warningText = when (daysRemaining) {
                 0 -> "[${shortDisplayName()}] has no food left!"
                 1 -> "[${shortDisplayName()}] has food for only 1 turn!"
                 else -> "[${shortDisplayName()}] has food for only $daysRemaining turns!"
             }
-            
+
             civInfo.addNotification(
                 warningText,
                 HeroAction(currentTile.position),
