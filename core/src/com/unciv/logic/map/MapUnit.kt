@@ -1133,25 +1133,23 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
         // Check for food warning - only for non-monster units not in cities
         if (!isMonster && !currentTile.isCityCenter()) {
-            checkHeroFoodWarning()
+            HeroFoodWarningUseCase.execute(
+                currentFood = getCurrentFood(),
+                dailyConsumption = army.calculateFoodMaintenance(isInCity = false),
+                unitDisplayName = shortDisplayName(),
+                unitName = name,
+                civInfo = civInfo,
+                position = currentTile.position
+            )
         }
     }
 
     /**
+     * Deprecated function: checkHeroFoodWarning
      * Checks if unit has low food supplies and sends warning notification
      * if food will last 3 turns or less
      * Seam: HeroFoodWarningUseCase
      */
-    private fun checkHeroFoodWarning() {
-        HeroFoodWarningUseCase.execute(
-            currentFood = getCurrentFood(),
-            dailyConsumption = army.calculateFoodMaintenance(isInCity = false),
-            unitDisplayName = shortDisplayName(),
-            unitName = name,
-            civInfo = civInfo,
-            position = currentTile.position
-        )
-    }
 
     fun destroy(destroyTransportedUnit: Boolean = true) {
         removeProtectedTiles()
