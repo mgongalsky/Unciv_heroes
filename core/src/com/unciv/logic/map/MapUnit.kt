@@ -14,6 +14,7 @@ import com.unciv.logic.city.CityInfo
 import com.unciv.logic.city.RejectionReason
 import com.unciv.logic.city.RejectionReasons
 import com.unciv.logic.civilization.CivilizationInfo
+import com.unciv.pure.application.HeroFoodWarningUseCase
 import com.unciv.logic.civilization.HeroAction
 import com.unciv.logic.civilization.LocationAction
 import com.unciv.logic.civilization.NotificationIcon
@@ -1139,28 +1140,17 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     /**
      * Checks if unit has low food supplies and sends warning notification
      * if food will last 3 turns or less
+     * Seam: HeroFoodWarningUseCase
      */
     private fun checkHeroFoodWarning() {
-        val dailyConsumption = army.calculateFoodMaintenance(isInCity = false)
-
-        if (dailyConsumption <= 0) return // No consumption, no warning needed
-
-        val daysRemaining = (currentFood / dailyConsumption).toInt()
-
-        if (daysRemaining <= 3) {
-            val warningText = when (daysRemaining) {
-                0 -> "[${shortDisplayName()}] has no food left!"
-                1 -> "[${shortDisplayName()}] has food for only 1 turn!"
-                else -> "[${shortDisplayName()}] has food for only $daysRemaining turns!"
-            }
-
-            civInfo.addNotification(
-                warningText,
-                HeroAction(currentTile.position),
-                name,
-                NotificationIcon.Death  // Use Death icon for urgent warnings
-            )
-        }
+        HeroFoodWarningUseCase.execute(
+            currentFood = getCurrentFood(),
+            dailyConsumption = army.calculateFoodMaintenance(isInCity = false),
+            unitDisplayName = shortDisplayName(),
+            unitName = name,
+            civInfo = civInfo,
+            position = currentTile.position
+        )
     }
 
     fun destroy(destroyTransportedUnit: Boolean = true) {

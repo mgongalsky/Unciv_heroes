@@ -1257,7 +1257,7 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization {
 
     fun addNotification(text: String, vararg notificationIcons: String) = addNotification(text, null, *notificationIcons)
 
-    fun addNotification(text: String, action: NotificationAction?, vararg notificationIcons: String) {
+    open fun addNotification(text: String, action: NotificationAction?, vararg notificationIcons: String) {
         if (playerType == PlayerType.AI) return // no point in lengthening the saved game info if no one will read it
         val arrayList = notificationIcons.toCollection(ArrayList())
         notifications.add(Notification(text, arrayList,

@@ -11,7 +11,7 @@ class FakeArmyInfo : ArmyInfo(FakeCivilizationInfo(), maxSlots = 1)
 
 
 
-class MapUnitCreateTest {
+class MapUnitCreateCharTest {
 
     @Before
     fun setUp() {
