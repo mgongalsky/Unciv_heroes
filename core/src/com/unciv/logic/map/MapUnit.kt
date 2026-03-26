@@ -33,6 +33,7 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.models.stats.Stats
+import com.unciv.pure.application.WorkOnImprovementUseCase
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.extensions.filterAndLogic
 import com.unciv.ui.utils.extensions.toPercent
@@ -899,59 +900,27 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         if (isExploring()) UnitAutomation.automatedExplore(this)
     }
 
+    // Seam: extracting tutorial event
+    open fun onImprovementCompleted() {
+        UncivGame.Current.settings.addCompletedTutorialTask("Construct an improvement")
+    }
+
+    // Seam: extracting UI event
+    open fun onVisitPlace() {
+        UncivGame.Current.worldScreen?.shouldUpdate = true
+    }
 
     private fun workOnImprovement() {
-        val tile = getTile()
-        if (tile.isMarkedForCreatesOneImprovement()) return
-        tile.turnsToImprovement -= 1
-        if (tile.turnsToImprovement != 0) return
-
-        if (civInfo.isCurrentPlayer())
-            UncivGame.Current.settings.addCompletedTutorialTask("Construct an improvement")
-
-        when {
-            tile.improvementInProgress!!.startsWith(Constants.remove) -> {
-                val removedFeatureName = tile.improvementInProgress!!.removePrefix(Constants.remove)
-                val tileImprovement = tile.getTileImprovement()
-                if (tileImprovement != null
-                        && tile.terrainFeatures.any {
-                            tileImprovement.terrainsCanBeBuiltOn.contains(it) && it == removedFeatureName
-                        }
-                        && !tileImprovement.terrainsCanBeBuiltOn.contains(tile.baseTerrain)
-                ) {
-                    // We removed a terrain (e.g. Forest) and the improvement (e.g. Lumber mill) requires it!
-                    tile.removeImprovement()
-                    if (tile.resource != null) civInfo.updateDetailedCivResources() // unlikely, but maybe a mod makes a resource improvement dependent on a terrain feature
-                }
-                if (RoadStatus.values().any { tile.improvementInProgress == it.removeAction }) {
-                    tile.removeRoad()
-                } else {
-                    val removedFeatureObject = ruleset.terrains[removedFeatureName]
-                    if (removedFeatureObject != null && removedFeatureObject.hasUnique(UniqueType.ProductionBonusWhenRemoved)) {
-                        tryProvideProductionToClosestCity(removedFeatureName)
-                    }
-                    tile.removeTerrainFeature(removedFeatureName)
-                }
-            }
-            tile.improvementInProgress == RoadStatus.Road.name -> tile.addRoad(
-                RoadStatus.Road,
-                this.civInfo
-            )
-            tile.improvementInProgress == RoadStatus.Railroad.name -> tile.addRoad(
-                RoadStatus.Railroad,
-                this.civInfo
-            )
-            tile.improvementInProgress == Constants.repair -> tile.setRepaired()
-            else -> {
-                val improvement =
-                        ruleset.tileImprovements[tile.improvementInProgress]!!
-                improvement.handleImprovementCompletion(this)
-                tile.changeImprovement(tile.improvementInProgress)
-            }
-        }
-
-        tile.improvementInProgress = null
-        tile.getCity()?.updateCitizens = true
+        WorkOnImprovementUseCase.execute(
+            tile = getTile(),
+            civInfo = civInfo,
+            ruleset = ruleset,
+            mapUnit = this,
+            onImprovementCompleted = {
+                onImprovementCompleted()
+            },
+            tryProvideProductionToClosestCity = { tryProvideProductionToClosestCity(it) }
+        )
     }
 
 
@@ -1228,7 +1197,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         if (civInfo.isMajorCiv() && tile.improvement != null) {
             tile.visitable!!.visit(this)
             // Ensure UI is prompted to update so the animation system can pick up the new flags
-            UncivGame.Current.worldScreen?.shouldUpdate = true
+            onVisitPlace()
         }
     }
 
