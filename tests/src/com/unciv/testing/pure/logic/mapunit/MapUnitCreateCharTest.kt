@@ -12,6 +12,9 @@ import org.junit.Test
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 
 class FakeArmyInfo : ArmyInfo(FakeCivilizationInfo(), maxSlots = 1)
 
@@ -49,5 +52,38 @@ class MapUnitCreateCharTest {
         }
         assert(unit.name == "Warrior")
         assert(unit.amount == 1)
+    }
+
+    @Test
+    fun characterize_emptyConstructor() {
+        val unit = TestableMapUnit()
+
+        assertEquals(100, unit.health)
+        assertNull(unit.action)
+        assertEquals(0, unit.attacksThisTurn)
+        assertEquals(3.0f, unit.getCurrentFood(), 0.01f)
+        assertEquals(15.0f, unit.basicFoodCapacity, 0.01f)
+        assertEquals(3, unit.morale)
+        assertEquals(3, unit.luck)
+        assertFalse(unit.isDestroyed)
+        assertFalse(unit.isTransported)
+        assertEquals(0, unit.amount)
+    }
+
+    @Test
+    fun characterize_createMonster() {
+        val monster = object : MapUnit(1, "Warrior") {
+            override fun createArmy() = FakeArmyInfo()
+        }
+
+        assertEquals("Warrior", monster.name)
+        assertEquals(1, monster.amount)
+        assertEquals(100, monster.health)
+        assertEquals("Warrior", monster.baseUnit().name)
+        assertEquals("[Warrior]", monster.displayName())
+        assertFalse(monster.isFortified())
+        assertFalse(monster.isSleeping())
+        assertFalse(monster.isMoving())
+        assertEquals(0, monster.calculateArmyPopulation())
     }
 }
