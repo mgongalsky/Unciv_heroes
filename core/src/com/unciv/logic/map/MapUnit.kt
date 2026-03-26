@@ -513,7 +513,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
         hasStrengthBonusInRadiusUnique = hasUnique(UniqueType.StrengthBonusInRadius)
         hasCitadelPlacementUnique = getMatchingUniques(UniqueType.ConstructImprovementConsumingUnit)
-            .mapNotNull { civInfo.gameInfo.ruleSet.tileImprovements[it.params[0]] }
+            .mapNotNull { ruleset.tileImprovements[it.params[0]] }
             .any { it.hasUnique(UniqueType.TakeOverTilesAroundWhenBuilt) }
     }
 
@@ -529,7 +529,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
         newUnit.promotions = promotions.clone()
 
-        newUnit.updateUniques(civInfo.gameInfo.ruleSet)
+        newUnit.updateUniques(ruleset)
         newUnit.updateVisibleTiles()
     }
 
@@ -763,7 +763,6 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
         var goldCostOfUpgrade = 0
 
-        val ruleset = civInfo.gameInfo.ruleSet
         val constants = ruleset.modOptions.constants.unitUpgradeCost
         // apply modifiers: Wonders (Pentagon), Policies (Professional Army). Cached outside loop despite
         // the UniqueType being allowed on a BaseUnit - we don't have a MapUnit in the loop.
@@ -927,7 +926,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
                 if (RoadStatus.values().any { tile.improvementInProgress == it.removeAction }) {
                     tile.removeRoad()
                 } else {
-                    val removedFeatureObject = tile.ruleset.terrains[removedFeatureName]
+                    val removedFeatureObject = ruleset.terrains[removedFeatureName]
                     if (removedFeatureObject != null && removedFeatureObject.hasUnique(UniqueType.ProductionBonusWhenRemoved)) {
                         tryProvideProductionToClosestCity(removedFeatureName)
                     }
@@ -945,7 +944,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
             tile.improvementInProgress == Constants.repair -> tile.setRepaired()
             else -> {
                 val improvement =
-                        civInfo.gameInfo.ruleSet.tileImprovements[tile.improvementInProgress]!!
+                        ruleset.tileImprovements[tile.improvementInProgress]!!
                 improvement.handleImprovementCompletion(this)
                 tile.changeImprovement(tile.improvementInProgress)
             }
