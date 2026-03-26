@@ -32,6 +32,8 @@ import com.unciv.ui.audio.MusicMood
 import com.unciv.ui.audio.MusicTrackChooserFlags
 import com.unciv.utils.debug
 import java.util.*
+import org.koin.core.context.loadKoinModules
+import org.koin.dsl.module
 
 
 /**
@@ -477,6 +479,10 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         barbarians.migrateBarbarianCamps()
 
         ruleSet = RulesetCache.getComplexRuleset(gameParameters)
+
+        loadKoinModules(module {
+            single { ruleSet }
+        })
 
         // any mod the saved game lists that is currently not installed causes null pointer
         // exceptions in this routine unless it contained no new objects or was very simple.

@@ -63,6 +63,7 @@ project(":desktop") {
 
         "implementation"("net.java.dev.jna:jna:5.11.0")
         "implementation"("net.java.dev.jna:jna-platform:5.11.0")
+        "implementation"("io.insert-koin:koin-core:3.2.2")
     }
 }
 
@@ -118,6 +119,8 @@ project(":core") {
         "implementation"("com.badlogicgames.gdx:gdx:$gdxVersion")
         "implementation"("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1")
         "implementation"("org.jetbrains.kotlin:kotlin-reflect:${com.unciv.build.BuildConfig.kotlinVersion}")
+
+        "implementation"("io.insert-koin:koin-core:3.2.2")
     }
 
 
@@ -146,6 +149,9 @@ project(":core") {
             "testImplementation"("com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion")
             "testImplementation"("com.badlogicgames.gdx:gdx:$gdxVersion")
             "testImplementation"("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop")
+
+            "testImplementation"("io.insert-koin:koin-test:3.2.2")
+            "testImplementation"("io.insert-koin:koin-test-junit4:3.2.2")
         }
     }
 }

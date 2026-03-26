@@ -21,6 +21,8 @@ import com.unciv.utils.debug
 import java.awt.GraphicsEnvironment
 import java.util.*
 import kotlin.concurrent.timer
+import com.unciv.di.gameModule
+import org.koin.core.context.startKoin
 
 
 internal object DesktopLauncher {
@@ -81,6 +83,10 @@ internal object DesktopLauncher {
             audioExceptionHelper = HardenGdxAudio()
         )
 
+        startKoin {
+            allowOverride(true)
+            modules(gameModule)
+        }
         val game = UncivGame(desktopParameters)
 
         tryActivateDiscord(game)

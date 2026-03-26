@@ -38,13 +38,16 @@ import com.unciv.ui.utils.extensions.filterAndLogic
 import com.unciv.ui.utils.extensions.toPercent
 import java.text.DecimalFormat
 import kotlin.math.pow
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 
 /**
  * The immutable properties and mutable game state of an individual unit present on the map
  */
 // That's gonna be a Hero instead of MapUnit
-open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSerialization, MovableUnit() {
+open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSerialization,
+    MovableUnit(), KoinComponent {
     companion object {
 
         // Seam: testing instance
@@ -63,6 +66,8 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         // We need to assign unique ID for each MapUnit
         var currID: Int = 1
     }
+
+    private val ruleset: Ruleset by inject()
 
     @Transient
     override var civInfo: CivilizationInfo = monsterCivInfo
@@ -244,8 +249,8 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
         // Очищаем текущие отряды
 
-        baseUnit = civInfo.gameInfo.ruleSet.units[name]!!// ImageGetter.ruleset.units[name]!!
-        baseUnit.ruleset = civInfo.gameInfo.ruleSet
+        baseUnit = ruleset.units[name]!!// ImageGetter.ruleset.units[name]!!
+        baseUnit.ruleset = ruleset
 
         army.fillArmy(name, amount)
     }
