@@ -910,6 +910,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
         UncivGame.Current.worldScreen?.shouldUpdate = true
     }
 
+    // UseCase Reference
     private fun workOnImprovement() {
         WorkOnImprovementUseCase.execute(
             tile = getTile(),
