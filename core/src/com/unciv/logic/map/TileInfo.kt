@@ -388,7 +388,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     }
 
     // function handling when adding a road to the tile
-    fun addRoad(roadType: RoadStatus, unitCivInfo: CivilizationInfo) {
+    open fun addRoad(roadType: RoadStatus, unitCivInfo: CivilizationInfo) {
         roadStatus = roadType
         roadIsPillaged = false
         if (getOwner() == null) {
@@ -400,7 +400,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     }
 
     // function handling when removing a road from the tile
-    fun removeRoad() {
+    open fun removeRoad() {
         roadStatus = RoadStatus.None
         roadIsPillaged = false
         if (owningCity == null)
@@ -1467,7 +1467,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         }
     }
 
-    fun removeImprovement(){
+    open fun removeImprovement(){
         changeImprovement(null)
        // improvement = null
        // visitable = null
@@ -1520,7 +1520,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
         return improvementIsPillaged || roadIsPillaged
     }
 
-    fun setRepaired() {
+    open fun setRepaired() {
         improvementInProgress = null
         turnsToImprovement = 0
         if (improvementIsPillaged)

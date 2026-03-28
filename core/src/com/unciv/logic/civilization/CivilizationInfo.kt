@@ -368,7 +368,7 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization {
             playerType == PlayerType.Human &&
                     gameInfo.gameParameters.oneCityChallenge)
 
-    fun isCurrentPlayer() = gameInfo.currentPlayerCiv == this
+    open fun isCurrentPlayer() = gameInfo.currentPlayerCiv == this
     fun isBarbarian() = nation.isBarbarian()
     fun isSpectator() = nation.isSpectator()
     fun isCityState(): Boolean = nation.isCityState()
