@@ -33,6 +33,7 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.models.stats.Stats
+import com.unciv.pure.application.MapUnitEndTurnUseCase
 import com.unciv.pure.application.MapUnitStartTurnUseCase
 import com.unciv.pure.application.WorkOnImprovementUseCase
 import com.unciv.ui.images.ImageGetter
@@ -69,6 +70,7 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
         var currID: Int = 1
     }
 
+    @delegate:Transient
     private val ruleset: Ruleset by inject()
 
     // TB removed
@@ -1008,41 +1010,7 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
         return healing
     }
 
-    fun endTurn() {
-        println("${civInfo.civName}, ${baseUnit.name}, isMonster = ${isMonster}")
-        // Monsters do not consume food and do not lose troops due to starvation
-        if (!isMonster) {
-            val currentMaintenance = army.calculateFoodMaintenance(currentTile.isCityCenter())
-            if (currentFood >= currentMaintenance)
-                currentFood -= currentMaintenance
-            else {
-                army.dismissByMostMaintenance()
-            }
-        }
-
-        movement.clearPathfindingCache()
-        if (currentMovement > 0
-                && getTile().improvementInProgress != null
-                && canBuildImprovement(getTile().getTileImprovementInProgress()!!)
-        ) workOnImprovement()
-        if (currentMovement == getMaxMovement().toFloat() && isFortified() && turnsFortified < 2) {
-            turnsFortified++
-        }
-        if (!isFortified())
-            turnsFortified = 0
-
-        if (currentMovement == getMaxMovement().toFloat() // didn't move this turn
-                || hasUnique(UniqueType.HealsEvenAfterAction)
-        ) heal()
-
-        if (action != null && health > 99)
-            if (isActionUntilHealed()) {
-                action = null // wake up when healed
-            }
-
-        if (isPreparingParadrop() || isPreparingAirSweep())
-            action = null
-
+    fun onReligiousStrengthLost() {
         if (hasUnique(UniqueType.ReligiousUnit)
                 && getTile().getOwner() != null
                 && !getTile().getOwner()!!.isCityState()
@@ -1063,11 +1031,23 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
                 destroy()
             }
         }
+    }
 
-        doCitadelDamage()
-        doTerrainDamage()
-
-        addMovementMemory()
+    fun endTurn() {
+        println("${civInfo.civName}, ${baseUnit.name}, isMonster = ${isMonster}")
+        MapUnitEndTurnUseCase.execute(
+            unit = this,
+            civInfo = civInfo,
+            currentTile = getTile(),
+            ruleset = ruleset,
+            clearPathfindingCache = { movement.clearPathfindingCache() },
+            heal = { heal() },
+            doCitadelDamage = { doCitadelDamage() },
+            doTerrainDamage = { doTerrainDamage() },
+            addMovementMemory = { addMovementMemory() },
+            onReligiousStrengthLost = { onReligiousStrengthLost() },
+            isPreparingParadropOrAirSweep = { isPreparingParadrop() || isPreparingAirSweep() }
+        )
     }
 
     fun startTurn() {
