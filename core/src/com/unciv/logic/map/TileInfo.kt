@@ -321,7 +321,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
             if (naturalWonder == null) throw Exception("No natural wonder exists for this tile!")
             else ruleset.terrains[naturalWonder!!]!!
 
-    fun isCityCenter(): Boolean = isCityCenterInternal
+    open fun isCityCenter(): Boolean = isCityCenterInternal
     fun isNaturalWonder(): Boolean = naturalWonder != null
     fun isImpassible() = getLastTerrain().impassable
 

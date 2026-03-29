@@ -13,11 +13,17 @@ class FakeTileInfo : TileInfo(), KoinComponent {
         ruleset = get()
     }
 
+    // --- Configurable overrides ---
+    var isCityCenterOverride: Boolean = false
+
     // --- Tracked calls ---
     var removeRoadCalled = false
     var addRoadCalled = false
     var setRepairedCalled = false
     var removeImprovementCalled = false
+
+    // --- Override configurable methods ---
+    override fun isCityCenter(): Boolean = isCityCenterOverride
 
     // --- Override problematic methods that touch tileMap/owningCity ---
 

@@ -33,6 +33,7 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.models.stats.Stats
+import com.unciv.pure.application.MapUnitStartTurnUseCase
 import com.unciv.pure.application.WorkOnImprovementUseCase
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.extensions.filterAndLogic
@@ -47,7 +48,7 @@ import org.koin.core.component.inject
  * The immutable properties and mutable game state of an individual unit present on the map
  */
 // That's gonna be a Hero instead of MapUnit
-open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSerialization,
+open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerialization,
     MovableUnit(), KoinComponent {
     companion object {
 
@@ -70,6 +71,7 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
 
     private val ruleset: Ruleset by inject()
 
+    // TB removed
     @Transient
     override var civInfo: CivilizationInfo = monsterCivInfo
 
@@ -1069,53 +1071,15 @@ open class MapUnit(private val isMonster: Boolean = false) : IsPartOfGameInfoSer
     }
 
     fun startTurn() {
-        movement.clearPathfindingCache()
-        currentMovement = getMaxMovement().toFloat()
-        attacksThisTurn = 0
-        due = true
-
-        // Hakkapeliitta movement boost
-        if (getTile().getUnits().count() > 1) {
-            // For every double-stacked tile, check if our cohabitant can boost our speed
-            for (unit in getTile().getUnits()) {
-                if (unit == this)
-                    continue
-
-                if (unit.getMatchingUniques(UniqueType.TransferMovement)
-                            .any { matchesFilter(it.params[0]) }
-                )
-                    currentMovement =
-                            maxOf(getMaxMovement().toFloat(), unit.getMaxMovement().toFloat())
-            }
-        }
-
-        // Wake sleeping units if there's an enemy in vision range:
-        // Military units always but civilians only if not protected.
-        if (isSleeping() && (isMilitary() || (currentTile.militaryUnit == null && !currentTile.isCityCenter())) &&
-                this.viewableTiles.any {
-                    it.militaryUnit != null && it.militaryUnit!!.civInfo.isAtWarWith(civInfo)
-                }
+        MapUnitStartTurnUseCase.execute(
+            unit = this,
+            civInfo = civInfo,
+            currentTile = getTile(),
+            clearPathfindingCache = { movement.clearPathfindingCache() },
+            getMaxMovement = { getMaxMovement() },
+            teleportToClosestMoveableTile = { movement.teleportToClosestMoveableTile() },
+            addMovementMemory = { addMovementMemory() }
         )
-            action = null
-
-        val tileOwner = getTile().getOwner()
-        if (tileOwner != null && !canEnterForeignTerrain && !civInfo.canPassThroughTiles(tileOwner) && !tileOwner.isCityState()) // if an enemy city expanded onto this tile while I was in it
-            movement.teleportToClosestMoveableTile()
-
-        addMovementMemory()
-        attacksSinceTurnStart.clear()
-
-        // Check for food warning - only for non-monster units not in cities
-        if (!isMonster && !currentTile.isCityCenter()) {
-            HeroFoodWarningUseCase.execute(
-                currentFood = getCurrentFood(),
-                dailyConsumption = army.calculateFoodMaintenance(isInCity = false),
-                unitDisplayName = shortDisplayName(),
-                unitName = name,
-                civInfo = civInfo,
-                position = currentTile.position
-            )
-        }
     }
 
     /**
