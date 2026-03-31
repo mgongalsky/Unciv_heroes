@@ -5,5 +5,4 @@ interface HeroWithSupply {
     val baseFoodCapacity: Float
     fun addFood(amount: Float)
     fun setFood(amount: Float)
-    fun isLowOnFood(turns: Int): Boolean
 }

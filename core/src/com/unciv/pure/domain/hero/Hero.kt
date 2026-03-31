@@ -19,7 +19,6 @@ class Hero(
 
     override fun addFood(amount: Float) { currentFood += amount }
     override fun setFood(amount: Float) { currentFood = amount }
-    override fun isLowOnFood(turns: Int) = currentFood <= turns
 
     override fun canSettle(): Boolean {
         TODO("Not yet implemented")
