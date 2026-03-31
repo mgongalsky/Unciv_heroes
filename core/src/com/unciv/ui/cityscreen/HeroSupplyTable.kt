@@ -6,6 +6,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.unciv.Constants
 import com.unciv.logic.civilization.HeroAction
 import com.unciv.logic.civilization.NotificationIcon
+import com.unciv.logic.map.MapUnit
 import com.unciv.models.translations.tr
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.ExpanderTab
@@ -219,36 +220,27 @@ class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
     }
 
     private fun supplyHeroMaximum() {
-        // Calculate how much food can be transferred
-        val heroSpaceLeft = maxFoodHero - currFoodHero
-        val cityFoodAvailable = currFoodCity
-        val foodToTransfer = min(heroSpaceLeft, cityFoodAvailable)
+        val hero = cityScreen.visitingHero!!
 
-        if (foodToTransfer > 0) {
-            // Transfer maximum possible food to hero
-            val hero = cityScreen.visitingHero!!
-            val previousFood = currFoodHero
+        val transferred = SupplyHeroMaximumUseCase.execute(hero.hero, city)
+        if (transferred <= 0f) return
 
-            SupplyHeroMaximumUseCase.execute(hero.hero, city)
+        foodSlider.value = minHero + transferred
+        foodSlider.fire(ChangeListener.ChangeEvent())
 
-            // Update the slider position to reflect the transfer
-            val newSliderValue = minHero + foodToTransfer
-            foodSlider.value = newSliderValue
+        // TODO: уведомление не должно быть в UI — перенести в логику хода
+        checkHeroFullySuppliedNotification(hero, transferred)
+    }
 
-            // Trigger slider's update logic to refresh all labels
-            foodSlider.fire(ChangeListener.ChangeEvent())
-
-            // Check if hero reached maximum food capacity
-            val newHeroFood = hero.hero.currentFood
-            if (newHeroFood >= maxFoodHero && previousFood < maxFoodHero) {
-                // Hero just reached maximum food - send notification
-                city.civInfo.addNotification(
-                    "Hero in [${city.name}] is fully supplied and ready!",
-                    HeroAction(city.location),
-                    hero.displayName(),
-                    NotificationIcon.Food
-                )
-            }
+    private fun checkHeroFullySuppliedNotification(hero: MapUnit, transferred: Float) {
+        val previousFood = hero.hero.currentFood - transferred
+        if (hero.hero.currentFood >= maxFoodHero && previousFood < maxFoodHero) {
+            city.civInfo.addNotification(
+                "Hero in [${city.name}] is fully supplied and ready!",
+                HeroAction(city.location),
+                hero.displayName(),
+                NotificationIcon.Food
+            )
         }
     }
 
