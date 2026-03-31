@@ -6,11 +6,11 @@ import kotlin.math.min
 
 object SupplyHeroMaximumUseCase {
     fun execute(hero: HeroWithSupply, city: CityInfo): Float {
-        val heroSpaceLeft = hero.baseFoodCapacity - hero.currentFood
-        val foodToTransfer = min(heroSpaceLeft, city.population.foodStored.toFloat())
-        if (foodToTransfer <= 0f) return 0f
-        hero.addFood(foodToTransfer)
-        city.population.foodStored -= foodToTransfer.toInt()
-        return foodToTransfer
+        val amount = min(
+            hero.baseFoodCapacity - hero.currentFood,
+            city.population.foodStored.toFloat()
+        )
+        TransferFoodUseCase.execute(hero, city, amount)
+        return amount
     }
 }

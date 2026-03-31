@@ -8,6 +8,7 @@ import com.unciv.logic.civilization.HeroAction
 import com.unciv.logic.civilization.NotificationIcon
 import com.unciv.logic.map.MapUnit
 import com.unciv.models.translations.tr
+import com.unciv.pure.application.CalculateFoodDistributionUseCase
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.ExpanderTab
 import com.unciv.ui.utils.Fonts
@@ -17,6 +18,8 @@ import com.unciv.ui.utils.extensions.toTextButton
 import kotlin.math.ceil
 import kotlin.math.min
 import com.unciv.pure.application.SupplyHeroMaximumUseCase
+import com.unciv.pure.application.TransferFoodUseCase
+import com.unciv.pure.domain.hero.FoodDistributionState
 
 class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
     val city = cityScreen.city
@@ -122,6 +125,13 @@ class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
             println("currFoodCity $currFoodCity, maxFoodCity $maxFoodCity, freeFoodCity $freeFoodCity")
             foodRange = 0f
         }
+
+        foodState = FoodDistributionState(
+            currFoodHero = cityScreen.visitingHero!!.hero.currentFood,
+            currFoodCity = city.population.foodStored.toFloat(),
+            maxFoodHero = maxFoodHero,
+            maxFoodCity = maxFoodCity
+        )
     }
 
     private fun createFoodExchangeInterface() {
@@ -170,53 +180,32 @@ class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
         add(autoSupplyTable).growX().colspan(2).row()
     }
 
+    private var foodState: FoodDistributionState? = null
+
+    // updateFoodDistribution() — только UI
     private fun updateFoodDistribution() {
+
         val hero = cityScreen.visitingHero!!
 
-        // Update food distribution based on slider
-        hero.hero.setFood(foodSlider.value + currFoodHero - minHero)
-        city.population.foodStored = (foodRange - foodSlider.value + currFoodCity - minCity).toInt()
+        val state = foodState ?: return
 
-        currFoodHero = foodSlider.value + currFoodHero - minHero
-        currFoodCity = foodRange - foodSlider.value + currFoodCity - minCity
+        val result = CalculateFoodDistributionUseCase.execute(
+            state = state,
+            sliderValue = foodSlider.value,
+            heroMaintenance = hero.army.calculateFoodMaintenance(isInCity = false)
+        )
 
-        freeFoodHero = maxFoodHero - currFoodHero
-        freeFoodCity = maxFoodCity - currFoodCity
+        foodState = result.state
+        TransferFoodUseCase.execute(hero.hero, city,
+            result.state.currFoodHero - state.currFoodHero)
 
-        minHero = min(currFoodHero, freeFoodCity)
-        minCity = min(currFoodCity, freeFoodHero)
-
-        // Update labels
-        leftCountLabel.setText("City: " + currFoodCity.toInt().toString())
-        rightCountLabel.setText(currFoodHero.toInt().toString() + " :Hero")
-
-        // Update hero info labels
-        val heroFoodConsumption = "City has ${city.population.foodStored}${Fonts.food}, hero consumes ${ceil(hero.army.calculateFoodMaintenance(isInCity = false)).toInt()}${Fonts.food}."
-        foodToVisitingHeroLabel.setText(heroFoodConsumption)
-
-        val heroCurrentFood = "Hero has ${hero.hero.currentFood.toInt()}${Fonts.food}, hero max ${hero.basicFoodCapacity.toInt()}${Fonts.food}."
-        foodOfVisitingHeroLabel.setText(heroCurrentFood)
-
-        // Update food duration info
-        val heroFoodMaintenance = hero.army.calculateFoodMaintenance(isInCity = false)
-        val updatedFoodDuration = if (heroFoodMaintenance > 0) {
-            (hero.hero.currentFood / heroFoodMaintenance).toInt()
-        } else {
-            Int.MAX_VALUE
-        }
-
-        val updatedDurationString = if (updatedFoodDuration == Int.MAX_VALUE) {
-            "Hero food will last indefinitely."
-        } else {
-            "Hero food will last for $updatedFoodDuration${Fonts.turn}."
-        }
-
-        foodDurationLabel.setText(updatedDurationString)
-
-        // Update city population info if turnsToPopLabel exists
-        if (::turnsToPopLabel.isInitialized) {
-            turnsToPopLabel.setText(updateTurnsToPopString())
-        }
+        leftCountLabel.setText("City: ${result.state.currFoodCity.toInt()}")
+        rightCountLabel.setText("${result.state.currFoodHero.toInt()} :Hero")
+        foodDurationLabel.setText(
+            if (result.foodDurationTurns == Int.MAX_VALUE)
+                "Hero food will last indefinitely."
+            else "Hero food will last for ${result.foodDurationTurns}${Fonts.turn}."
+        )
     }
 
     private fun supplyHeroMaximum() {
