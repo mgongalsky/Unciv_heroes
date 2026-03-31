@@ -258,16 +258,16 @@ class CityInfo : IsPartOfGameInfoSerialization {
 
     fun hasVisitingHero(): Boolean = tileMap[location].militaryUnit != null
     fun getVisitingHero(): MapUnit? = tileMap[location].militaryUnit
-    
+
     /**
      * Automatically supplies surplus food from city to visiting hero if autoFeedHero is enabled.
      * Transfers as much food as possible up to the hero's maximum capacity.
      */
     fun autoFeedVisitingHero() {
         if (!autoFeedHero || !hasVisitingHero()) return
-        
+
         val hero = getVisitingHero()!!
-        
+
         // Calculate hero's food capacity with bonuses
         var maxFoodHero = hero.basicFoodCapacity
         val foodBonuses = getMatchingUniques(UniqueType.FoodCapacityBonus)
@@ -276,22 +276,22 @@ class CityInfo : IsPartOfGameInfoSerialization {
             totalBonusPercent += unique.params[0].toInt()
         }
         maxFoodHero *= (1f + totalBonusPercent / 100f)
-        
-        val currentHeroFood = hero.getCurrentFood()
+
+        val currentHeroFood = hero.hero.currentFood
         val heroSpaceLeft = maxFoodHero - currentHeroFood
-        
+
         if (heroSpaceLeft <= 0) return // Hero already at maximum capacity
-        
+
         val cityFoodAvailable = population.foodStored.toFloat()
         val foodToTransfer = min(heroSpaceLeft, cityFoodAvailable)
-        
+
         if (foodToTransfer > 0) {
             val previousFood = currentHeroFood
-            hero.setCurrentFood(currentHeroFood + foodToTransfer)
+            hero.hero.addFood(foodToTransfer)
             population.foodStored = (cityFoodAvailable - foodToTransfer).toInt()
-            
+
             // Check if hero reached maximum food capacity after transfer
-            val newHeroFood = hero.getCurrentFood()
+            val newHeroFood = hero.hero.currentFood
             if (newHeroFood >= maxFoodHero && previousFood < maxFoodHero) {
                 // Hero just reached maximum food - send notification
                 civInfo.addNotification(
@@ -779,7 +779,7 @@ class CityInfo : IsPartOfGameInfoSerialization {
             setFlag(CityFlags.ResourceDemand,
                     (if (isCapital()) 25 else 15) + Random().nextInt(10))
         }
-        
+
         // Auto-supply visiting hero if enabled
         autoFeedVisitingHero()
     }

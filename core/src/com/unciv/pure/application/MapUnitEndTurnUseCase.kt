@@ -23,7 +23,7 @@ object MapUnitEndTurnUseCase {
         // Food and army logic — hero mechanic
         if (!unit.isMonster) {
             val currentMaintenance = unit.army.calculateFoodMaintenance(currentTile.isCityCenter())
-            if (unit.getCurrentFood() >= currentMaintenance)
+            if (unit.hero.currentFood >= currentMaintenance)
                 unit.addFood(-currentMaintenance)
             else
                 unit.army.dismissByMostMaintenance()

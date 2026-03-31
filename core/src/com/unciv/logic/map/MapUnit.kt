@@ -36,6 +36,7 @@ import com.unciv.models.stats.Stats
 import com.unciv.pure.application.MapUnitEndTurnUseCase
 import com.unciv.pure.application.MapUnitStartTurnUseCase
 import com.unciv.pure.application.WorkOnImprovementUseCase
+import com.unciv.pure.domain.hero.Hero
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.extensions.filterAndLogic
 import com.unciv.ui.utils.extensions.toPercent
@@ -77,6 +78,41 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
     @Transient
     override var civInfo: CivilizationInfo = monsterCivInfo
 
+    @Transient
+    var hero: Hero = Hero(
+        baseAttackSkill = 5,
+        baseDefenseSkill = 5,
+        baseFoodCapacity = 15f,
+        currentFood = 3f,
+        morale = 3,
+        luck = 3
+    )
+
+    // Было: var heroAttackSkill: Int = 5
+    var heroAttackSkill: Int
+        get() = hero.baseAttackSkill
+        set(value) { /* hero.baseAttackSkill immutable, пока оставим */ }
+
+    // Было: var heroDefenseSkill: Int = 5
+    var heroDefenseSkill: Int
+        get() = hero.baseDefenseSkill
+        set(value) { }
+
+    // Было: var morale = 3
+    var morale: Int
+        get() = hero.morale
+        set(value) { hero.morale = value } // нужно убрать private set в Hero
+
+    // Было: var luck = 3
+    var luck: Int
+        get() = hero.luck
+        set(value) { hero.luck = value }
+
+    // Было: private var currentFood = 3f
+    private var currentFood: Float
+        get() = hero.currentFood
+        set(value) { hero.setFood(value) }
+
 
 
     @Transient
@@ -111,20 +147,14 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
     var basicFoodCapacity = 15f
     var foodCapacityBonus = 0f
 
-    private var currentFood = 3f
-    var morale = 3
-    var luck = 3
 
     var tempBoosts = mutableListOf<TempBoost>()
 
-    fun getCurrentFood() : Float = currentFood
-    fun setCurrentFood(newFood: Float){
-        // TODO: that must be checked by percent bonuses implemented first into this class
-        //if(newFood <= basicFoodCapacity + foodCapacityBonus)
-            currentFood = newFood
-    }
 
-    fun addFood(addAmount: Float) = setCurrentFood(currentFood + addAmount)
+    fun addFood(addAmount: Float) {
+        hero.addFood(addAmount)
+        currentFood = hero.currentFood
+    }
 
 
 
@@ -223,10 +253,6 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
     var due: Boolean = true
     var isTransported: Boolean = false
     var turnsFortified = 0
-
-
-    var heroAttackSkill: Int = 5
-    var heroDefenseSkill: Int = 5
 
     var abilityUsesLeft: HashMap<String, Int> = hashMapOf()
     var maxAbilityUses: HashMap<String, Int> = hashMapOf()
@@ -847,6 +873,15 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
         promotions.setTransients(this)
         baseUnit = ruleset.units[name]
             ?: throw java.lang.Exception("Unit $name is not found!")
+
+        hero = Hero(
+            baseAttackSkill = baseUnit.strength,
+            baseDefenseSkill = baseUnit.rangedStrength,
+            baseFoodCapacity = 15f,
+            currentFood = 3f,
+            morale = 3,
+            luck = 3
+        )
 
         updateUniques(ruleset)
         army.setTransients(civInfo, this)

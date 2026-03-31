@@ -184,7 +184,7 @@ class HeroOverviewScreen(
         heroStatsTable.row()
 
         // Show food consumption parameters
-        val currentFood = viewingHero.getCurrentFood()
+        val currentFood = viewingHero.hero.currentFood
         val maxFood = viewingHero.basicFoodCapacity
         // Always show food consumption as if outside city - more useful for planning
         val foodMaintenance = viewingHero.army.calculateFoodMaintenance(false)
@@ -193,20 +193,20 @@ class HeroOverviewScreen(
 
         heroStatsTable.add(Label(supplyString, BaseScreen.skin)).align(Align.left).pad(5f)
         heroStatsTable.row()
-        
+
         // Calculate and display food duration
         val foodDuration = if (foodMaintenance > 0) {
             (currentFood / foodMaintenance).toInt()
         } else {
             Int.MAX_VALUE // Infinite if no consumption
         }
-        
+
         val durationString = if (foodDuration == Int.MAX_VALUE) {
             "Food will last indefinitely."
         } else {
             "Food will last for $foodDuration${Fonts.turn}."
         }
-        
+
         heroStatsTable.add(Label(durationString, BaseScreen.skin)).align(Align.left).pad(5f)
         heroStatsTable.row()
 
@@ -217,12 +217,12 @@ class HeroOverviewScreen(
 
         // Calculate city population from army
         val cityPopulation = viewingHero.calculateArmyPopulation() + 1  // Add 1 to match actual founded city size
-        
+
         // Create a table for the settlement size display using font icon for population
         val settlementTable = Table().apply {
             add(Label("Can settle city with $cityPopulation${Fonts.population}", BaseScreen.skin))
         }
-        
+
         heroStatsTable.add(settlementTable)
             .colspan(2).align(Align.center).pad(5f)
         heroStatsTable.row()

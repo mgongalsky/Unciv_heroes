@@ -55,7 +55,7 @@ object MapUnitStartTurnUseCase {
         // Food warning — only for non-monster units not in cities
         if (!unit.isMonster && !currentTile.isCityCenter()) {
             HeroFoodWarningUseCase.execute(
-                currentFood = unit.getCurrentFood(),
+                currentFood = unit.hero.currentFood,
                 dailyConsumption = unit.army.calculateFoodMaintenance(isInCity = false),
                 unitDisplayName = unit.shortDisplayName(),
                 unitName = unit.name,

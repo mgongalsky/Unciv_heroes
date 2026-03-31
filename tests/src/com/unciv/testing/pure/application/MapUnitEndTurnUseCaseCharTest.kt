@@ -101,7 +101,7 @@ class MapUnitEndTurnUseCaseCharTest {
         )
 
         assertEquals(100, unit.health)
-        assertEquals(3.0f, unit.getCurrentFood(), 0.01f)
+        assertEquals(3.0f, unit.hero.currentFood, 0.01f)
         assertFalse(healCalled)
         assertTrue(citadelCalled)
         assertTrue(terrainCalled)
@@ -109,12 +109,12 @@ class MapUnitEndTurnUseCaseCharTest {
     }
     @Test
     fun characterize_nonMonster_foodConsumed() {
-        unit.setCurrentFood(10f)
+        unit.hero.currentFood = 10f
         tile.isCityCenterOverride = false
 
         execute()
 
-        assertEquals(10.0f, unit.getCurrentFood(), 0.01f)
+        assertEquals(10.0f, unit.hero.currentFood, 0.01f)
     }
 
     @Test
@@ -122,7 +122,7 @@ class MapUnitEndTurnUseCaseCharTest {
         val monster = object : MapUnit(1, "Warrior") {
             override fun createArmy() = unit.army
         }
-        monster.setCurrentFood(10f)
+        monster.hero.currentFood = 10f
         monster.baseUnit = unit.baseUnit
 
         MapUnitEndTurnUseCase.execute(
@@ -139,7 +139,7 @@ class MapUnitEndTurnUseCaseCharTest {
             isPreparingParadropOrAirSweep = { false }
         )
 
-        assertEquals(10.0f, monster.getCurrentFood(), 0.01f)
+        assertEquals(10.0f, monster.hero.currentFood, 0.01f)
     }
 
     @Test
@@ -167,10 +167,10 @@ class MapUnitEndTurnUseCaseCharTest {
 
     @Test
     fun characterize_nonMonster_inCity_foodNotConsumed() {
-        unit.setCurrentFood(10f)
+        unit.hero.currentFood = 10f
         tile.isCityCenterOverride = true
 
         execute()
 
-        assertEquals(10.0f, unit.getCurrentFood(), 0.01f)
+        assertEquals(10.0f, unit.hero.currentFood, 0.01f)
     }}

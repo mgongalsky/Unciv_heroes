@@ -19,17 +19,17 @@ class MapUnitFoodCharTest {
         val unit = TestableMapUnit()
 
         // Initial state
-        assertEquals(3.0f, unit.getCurrentFood(), 0.01f)
+        assertEquals(3.0f, unit.hero.currentFood, 0.01f)
         assertEquals(15.0f, unit.basicFoodCapacity, 0.01f)
         assertEquals(0.0f, unit.foodCapacityBonus, 0.01f)
 
         // After addFood(5f)
         unit.addFood(5f)
-        assertEquals(8.0f, unit.getCurrentFood(), 0.01f)
+        assertEquals(8.0f, unit.hero.currentFood, 0.01f)
 
         // After addFood(-10f) — уходит в минус, ограничений нет
         unit.addFood(-10f)
-        assertEquals(-2.0f, unit.getCurrentFood(), 0.01f)
+        assertEquals(-2.0f, unit.hero.currentFood, 0.01f)
 
         // Army population с пустой FakeArmyInfo
         assertEquals(0, unit.calculateArmyPopulation())

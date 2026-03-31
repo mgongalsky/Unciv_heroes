@@ -61,7 +61,7 @@ class MapUnitCreateCharTest {
         assertEquals(100, unit.health)
         assertNull(unit.action)
         assertEquals(0, unit.attacksThisTurn)
-        assertEquals(3.0f, unit.getCurrentFood(), 0.01f)
+        assertEquals(3.0f, unit.hero.currentFood, 0.01f)
         assertEquals(15.0f, unit.basicFoodCapacity, 0.01f)
         assertEquals(3, unit.morale)
         assertEquals(3, unit.luck)
