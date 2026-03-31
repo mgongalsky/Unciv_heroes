@@ -82,7 +82,7 @@ enum class CityFocus(val label: String, val tableEnabled: Boolean, val stat: Sta
 }
 
 
-class CityInfo : IsPartOfGameInfoSerialization {
+open class CityInfo : IsPartOfGameInfoSerialization {
     @Suppress("JoinDeclarationAndAssignment")
     @Transient
     lateinit var civInfo: CivilizationInfo

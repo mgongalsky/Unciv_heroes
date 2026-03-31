@@ -13,7 +13,7 @@ import com.unciv.ui.utils.extensions.withoutItem
 import kotlin.math.floor
 import kotlin.math.pow
 
-class PopulationManager : IsPartOfGameInfoSerialization {
+open class PopulationManager : IsPartOfGameInfoSerialization {
     @Transient
     lateinit var cityInfo: CityInfo
 
