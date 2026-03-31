@@ -38,6 +38,8 @@ import com.unciv.pure.application.MapUnitStartTurnUseCase
 import com.unciv.pure.application.WorkOnImprovementUseCase
 import com.unciv.pure.domain.hero.Hero
 import com.unciv.pure.domain.hero.HeroFactory
+import com.unciv.pure.infrastructure.hero.HardcodedHeroDefinitionSource
+import com.unciv.pure.infrastructure.hero.RulesetHeroDefinitionSource
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.extensions.filterAndLogic
 import com.unciv.ui.utils.extensions.toPercent
@@ -79,14 +81,9 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
     @Transient
     override var civInfo: CivilizationInfo = monsterCivInfo
 
-    @Transient
-    var hero: Hero = Hero(
-        baseAttackSkill = 5,
-        baseDefenseSkill = 5,
-        baseFoodCapacity = 15f,
-        currentFood = 3f,
-        morale = 3,
-        luck = 3
+    var hero: Hero = HeroFactory.create(
+        source = HardcodedHeroDefinitionSource(5, 5),
+        unitName = "default"
     )
 
     // Было: var heroAttackSkill: Int = 5
@@ -876,8 +873,11 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
             ?: throw java.lang.Exception("Unit $name is not found!")
 
         hero = HeroFactory.create(
-            baseAttackSkill = baseUnit.attackSkill,
-            baseDefenseSkill = baseUnit.defenceSkill
+            source = RulesetHeroDefinitionSource(ruleset),
+            unitName = name,
+            currentFood = hero.currentFood, // сохраняем состояние если уже было
+            morale = hero.morale,
+            luck = hero.luck
         )
 
         updateUniques(ruleset)

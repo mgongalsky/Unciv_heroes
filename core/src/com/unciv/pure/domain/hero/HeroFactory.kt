@@ -2,15 +2,17 @@ package com.unciv.pure.domain.hero
 
 object HeroFactory {
     fun create(
-        baseAttackSkill: Int,
-        baseDefenseSkill: Int,
-        baseFoodCapacity: Float = 15f
+        source: IHeroDefinitionSource,
+        unitName: String,
+        currentFood: Float = 3f,
+        morale: Int = 3,
+        luck: Int = 3
     ): Hero = Hero(
-        baseAttackSkill = baseAttackSkill,
-        baseDefenseSkill = baseDefenseSkill,
-        baseFoodCapacity = baseFoodCapacity,
-        currentFood = 3f,
-        morale = 3,
-        luck = 3
+        baseAttackSkill = source.getAttackSkill(unitName),
+        baseDefenseSkill = source.getDefenseSkill(unitName),
+        baseFoodCapacity = source.getFoodCapacity(unitName),
+        currentFood = currentFood,
+        morale = morale,
+        luck = luck
     )
 }
