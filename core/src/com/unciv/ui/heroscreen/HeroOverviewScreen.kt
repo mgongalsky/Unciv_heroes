@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.logic.army.ArmyManager
 import com.unciv.logic.map.MapUnit
+import com.unciv.pure.domain.supply.SupplyMechanic
 import com.unciv.ui.army.ArmyView
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
@@ -21,13 +22,16 @@ import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
 import com.unciv.ui.utils.extensions.toLabel
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import kotlin.math.ceil
 
 class HeroOverviewScreen(
     private var viewingHero: MapUnit,
     defaultPage: String = "",
     selection: String = ""
-) : BaseScreen(), RecreateOnResize {
+) : BaseScreen(), RecreateOnResize, KoinComponent {
+    private val supplyMechanic: SupplyMechanic by inject()
     // 50 normal button height + 2*10 topTable padding + 2 Separator + 2*5 centerTable padding
     // Since a resize recreates this screen this should be fine as a val
     internal val centerAreaHeight = stage.height - 82f
@@ -178,37 +182,43 @@ class HeroOverviewScreen(
         heroStatsTable.add(Label(viewingHero.luck.toString(), BaseScreen.skin)).align(Align.right).pad(5f)
         heroStatsTable.row()
 
-        // Заголовок
-        heroStatsTable.add(Label("Food supply", BaseScreen.skin))
-            .colspan(2).align(Align.center).padBottom(10f)
-        heroStatsTable.row()
+        if (supplyMechanic.isEnabled) {
+            // Заголовок
+            heroStatsTable.add(Label("Food supply", BaseScreen.skin))
+                .colspan(2).align(Align.center).padBottom(10f)
+            heroStatsTable.row()
 
-        // Show food consumption parameters
-        val currentFood = viewingHero.hero.currentFood
-        val maxFood = viewingHero.basicFoodCapacity
-        // Always show food consumption as if outside city - more useful for planning
-        val foodMaintenance = viewingHero.army.calculateFoodMaintenance(false)
+            // Show food consumption parameters
+            val currentFood = viewingHero.hero.currentFood
+            val maxFood = viewingHero.basicFoodCapacity
+            // Always show food consumption as if outside city - more useful for planning
+            val foodMaintenance = viewingHero.army.calculateFoodMaintenance(false)
 
-        val supplyString = "Now ${currentFood.toInt()}${Fonts.food} of max ${maxFood.toInt()}${Fonts.food}. Per turn when outside city: %.1f${Fonts.food}.".format(foodMaintenance)
+            val supplyString =
+                    "Now ${currentFood.toInt()}${Fonts.food} of max ${maxFood.toInt()}${Fonts.food}. Per turn when outside city: %.1f${Fonts.food}.".format(
+                        foodMaintenance
+                    )
 
-        heroStatsTable.add(Label(supplyString, BaseScreen.skin)).align(Align.left).pad(5f)
-        heroStatsTable.row()
+            heroStatsTable.add(Label(supplyString, BaseScreen.skin)).align(Align.left).pad(5f)
+            heroStatsTable.row()
 
-        // Calculate and display food duration
-        val foodDuration = if (foodMaintenance > 0) {
-            (currentFood / foodMaintenance).toInt()
-        } else {
-            Int.MAX_VALUE // Infinite if no consumption
+            // Calculate and display food duration
+            val foodDuration = if (foodMaintenance > 0) {
+                (currentFood / foodMaintenance).toInt()
+            } else {
+                Int.MAX_VALUE // Infinite if no consumption
+            }
+
+            val durationString = if (foodDuration == Int.MAX_VALUE) {
+                "Food will last indefinitely."
+            } else {
+                "Food will last for $foodDuration${Fonts.turn}."
+            }
+
+            heroStatsTable.add(Label(durationString, BaseScreen.skin)).align(Align.left).pad(5f)
+            heroStatsTable.row()
+
         }
-
-        val durationString = if (foodDuration == Int.MAX_VALUE) {
-            "Food will last indefinitely."
-        } else {
-            "Food will last for $foodDuration${Fonts.turn}."
-        }
-
-        heroStatsTable.add(Label(durationString, BaseScreen.skin)).align(Align.left).pad(5f)
-        heroStatsTable.row()
 
         // Settlement information
         heroStatsTable.add(Label("City Settlement", BaseScreen.skin))

@@ -28,6 +28,9 @@ import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.RulesetCache
 import com.unciv.models.ruleset.Speed
 import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.pure.domain.supply.NoSupplyMechanic
+import com.unciv.pure.domain.supply.RealSupplyMechanic
+import com.unciv.pure.domain.supply.SupplyMechanic
 import com.unciv.ui.audio.MusicMood
 import com.unciv.ui.audio.MusicTrackChooserFlags
 import com.unciv.utils.debug
@@ -482,6 +485,8 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
 
         loadKoinModules(module {
             single { ruleSet }
+            single<SupplyMechanic> { RealSupplyMechanic() }
+            //single<SupplyMechanic> { NoSupplyMechanic() }
         })
 
         // any mod the saved game lists that is currently not installed causes null pointer

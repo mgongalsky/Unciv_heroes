@@ -48,7 +48,7 @@ class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
 
         if (cityScreen.visitingHero == null) return
 
-        val hero = cityScreen.visitingHero!!
+        val hero = cityScreen.visitingHero
 
         // Display basic hero food information
         val heroFoodConsumption = "City has ${city.population.foodStored}${Fonts.food}, hero consumes ${ceil(hero.army.calculateFoodMaintenance(isInCity = false)).toInt()}${Fonts.food}."
@@ -127,7 +127,7 @@ class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
         }
 
         foodState = FoodDistributionState(
-            currFoodHero = cityScreen.visitingHero!!.hero.currentFood,
+            currFoodHero = cityScreen.visitingHero.hero.currentFood,
             currFoodCity = city.population.foodStored.toFloat(),
             maxFoodHero = maxFoodHero,
             maxFoodCity = maxFoodCity

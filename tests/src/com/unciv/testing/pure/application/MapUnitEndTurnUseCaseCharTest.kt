@@ -5,6 +5,7 @@ import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.pure.application.MapUnitEndTurnUseCase
+import com.unciv.pure.domain.supply.RealSupplyMechanic
 import com.unciv.testing.pure.fakes.FakeCivilizationInfo
 import com.unciv.testing.pure.fakes.FakeTileInfo
 import com.unciv.testing.pure.fakes.TestableMapUnit
@@ -75,6 +76,7 @@ class MapUnitEndTurnUseCaseCharTest {
             civInfo = civInfo,
             currentTile = tile,
             ruleset = org.koin.core.context.GlobalContext.get().get(),
+            supplyMechanic = RealSupplyMechanic(), // добавляем
             clearPathfindingCache = clearPathfindingCache,
             heal = heal,
             doCitadelDamage = doCitadelDamage,
@@ -130,6 +132,7 @@ class MapUnitEndTurnUseCaseCharTest {
             civInfo = civInfo,
             currentTile = tile,
             ruleset = org.koin.core.context.GlobalContext.get().get(),
+            supplyMechanic = RealSupplyMechanic(), // добавляем
             clearPathfindingCache = {},
             heal = {},
             doCitadelDamage = {},

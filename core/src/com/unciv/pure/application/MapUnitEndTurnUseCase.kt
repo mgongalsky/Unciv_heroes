@@ -5,6 +5,8 @@ import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.pure.domain.supply.RealSupplyMechanic
+import com.unciv.pure.domain.supply.SupplyMechanic
 
 object MapUnitEndTurnUseCase {
     fun execute(
@@ -12,6 +14,7 @@ object MapUnitEndTurnUseCase {
         civInfo: CivilizationInfo,
         currentTile: TileInfo,
         ruleset: Ruleset,
+        supplyMechanic: SupplyMechanic = RealSupplyMechanic(),
         clearPathfindingCache: () -> Unit,
         heal: () -> Unit,
         doCitadelDamage: () -> Unit,
@@ -22,11 +25,10 @@ object MapUnitEndTurnUseCase {
     ) {
         // Food and army logic — hero mechanic
         if (!unit.isMonster) {
-            val currentMaintenance = unit.army.calculateFoodMaintenance(currentTile.isCityCenter())
-            if (unit.hero.currentFood >= currentMaintenance)
-                unit.addFood(-currentMaintenance)
-            else
-                unit.army.dismissByMostMaintenance()
+            supplyMechanic.consumeFood(unit.hero, unit.army)
+            if (supplyMechanic.isStarving(unit.hero)) {
+                supplyMechanic.onStarving(unit.hero, unit.army)
+            }
         }
 
         clearPathfindingCache()

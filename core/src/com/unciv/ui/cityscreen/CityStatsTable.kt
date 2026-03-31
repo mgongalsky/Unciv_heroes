@@ -16,6 +16,7 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.stats.Stat
 import com.unciv.models.translations.tr
+import com.unciv.pure.domain.supply.SupplyMechanic
 import com.unciv.ui.civilopedia.CivilopediaScreen
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.images.ImageGetter.ruleset
@@ -32,13 +33,16 @@ import com.unciv.ui.utils.extensions.toGroup
 import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toPercent
 import com.unciv.ui.utils.extensions.toTextButton
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.round
 import kotlin.math.roundToInt
 import com.unciv.ui.utils.AutoScrollPane as ScrollPane
 
-class CityStatsTable(val cityScreen: CityScreen): Table() {
+class CityStatsTable(val cityScreen: CityScreen): Table(), KoinComponent {
+    private val supplyMechanic: SupplyMechanic by inject()
     private val innerTable = Table() // table within this Table. Slightly smaller creates border
     private val upperTable = Table() // fixed position table
     private val lowerTable = Table() // table that will be in the ScrollPane
@@ -243,6 +247,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table() {
     }
 
     private fun addHeroSupplyInfo() {
+        if (!supplyMechanic.isEnabled) return
         val expanderTab = HeroSupplyTable(cityScreen).asExpander { onContentResize() }
         lowerTable.add(expanderTab).growX().row()
     }
