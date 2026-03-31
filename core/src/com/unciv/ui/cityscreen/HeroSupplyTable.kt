@@ -15,6 +15,7 @@ import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toTextButton
 import kotlin.math.ceil
 import kotlin.math.min
+import com.unciv.pure.application.SupplyHeroMaximumUseCase
 
 class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
     val city = cityScreen.city
@@ -172,7 +173,7 @@ class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
         val hero = cityScreen.visitingHero!!
 
         // Update food distribution based on slider
-        hero.hero.currentFood = (foodSlider.value + currFoodHero - minHero)
+        hero.hero.setFood(foodSlider.value + currFoodHero - minHero)
         city.population.foodStored = (foodRange - foodSlider.value + currFoodCity - minCity).toInt()
 
         currFoodHero = foodSlider.value + currFoodHero - minHero
@@ -227,8 +228,8 @@ class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
             // Transfer maximum possible food to hero
             val hero = cityScreen.visitingHero!!
             val previousFood = currFoodHero
-            hero.hero.currentFood = (currFoodHero + foodToTransfer)
-            city.population.foodStored = (currFoodCity - foodToTransfer).toInt()
+
+            SupplyHeroMaximumUseCase.execute(hero.hero, city)
 
             // Update the slider position to reflect the transfer
             val newSliderValue = minHero + foodToTransfer
