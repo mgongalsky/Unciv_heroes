@@ -9,6 +9,8 @@ import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.models.helpers.UnitMovementMemoryType
 import com.unciv.UncivGame
 import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.pure.application.pathfinding.UnitMovementContext
+import com.unciv.pure.domain.pathfinding.IMovementContext
 import com.unciv.utils.Log
 
 class UnitMovementAlgorithms(val unit: MovableUnit) {
@@ -16,7 +18,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
     private val pathfindingCache = PathfindingCache(unit)
 
     // This function is called ALL THE TIME and should be as time-optimal as possible!
-    private fun getMovementCostBetweenAdjacentTiles(
+    fun getMovementCostBetweenAdjacentTiles(
         from: TileInfo,
         to: TileInfo,
         civInfo: CivilizationInfo,
@@ -161,7 +163,13 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
      * Does not consider if tiles can actually be entered, use canMoveTo for that.
      * If a tile can be reached within the turn, but it cannot be passed through, the total distance to it is set to unitMovement
      */
-    fun getDistanceToTilesWithinTurn(origin: Vector2, unitMovement: Float, considerZoneOfControl: Boolean = true, tilesToIgnore: HashSet<TileInfo>? = null, targetTile: TileInfo? = null): PathsToTilesWithinTurn {
+    fun getDistanceToTilesWithinTurn(origin: Vector2,
+                                     unitMovement: Float,
+                                     considerZoneOfControl: Boolean = true,
+                                     tilesToIgnore: HashSet<TileInfo>? = null,
+                                     targetTile: TileInfo? = null,
+                                     context: IMovementContext = UnitMovementContext(unit)
+    ): PathsToTilesWithinTurn {
         val distanceToTiles = PathsToTilesWithinTurn()
         if (unitMovement == 0f) return distanceToTiles
 
@@ -181,12 +189,12 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                     var totalDistanceToTile: Float = when {
                         unit is MapUnit && !unit.civInfo.hasExplored(neighbor) ->
                             distanceToTiles[tileToCheck]!!.totalDistance + 1f  // If we don't know then we just guess it to be 1.
-                        unit is MapUnit && !canPassThrough(neighbor) -> unitMovement // Can't go here.
+                        unit is MapUnit && !context.canPassThrough(neighbor) -> unitMovement // Can't go here.
                         // The reason that we don't just "return" is so that when calculating how to reach an enemy,
                         // You need to assume his tile is reachable, otherwise all movement algorithms on reaching enemy
                         // cities and units goes kaput.
                         else -> {
-                            val distanceBetweenTiles = getMovementCostBetweenAdjacentTiles(tileToCheck, neighbor, unit.civInfo, considerZoneOfControl)
+                            val distanceBetweenTiles = context.getMovementCost(tileToCheck, neighbor)
                             distanceToTiles[tileToCheck]!!.totalDistance + distanceBetweenTiles // added here
                         }
                     }
