@@ -10,6 +10,7 @@ import com.unciv.logic.HexMath
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 import com.unciv.models.GameConstants
+import com.unciv.pure.application.pathfinding.TroopMovementContext
 import kotlin.random.Random
 
 /**
@@ -506,12 +507,12 @@ class BattleManager(
      * @return Список доступных клеток (`TileInfo`).
      */
     fun getReachableTiles(troop: TroopInfo): List<TileInfo> {
-        return troop.movement.getReachableTilesInCurrentTurn().toList()
+        return troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop)).toList()
     }
 
     /*
     fun getReachableTiles(troop: TroopInfo): List<Vector2> {
-        return troop.movement.getReachableTilesInCurrentTurn().map { it.position }.toList()
+        return troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop))().map { it.position }.toList()
 
         val reachableTiles = mutableListOf<Vector2>()
 
@@ -547,7 +548,7 @@ class BattleManager(
         }
 
         // Проверяем, может ли юнит дойти до клетки в текущем ходу
-        val reachableTiles = troop.movement.getReachableTilesInCurrentTurn(targetTile = targetTile)
+        val reachableTiles = troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop), targetTile = targetTile)
         if (!reachableTiles.contains(targetTile)) {
             if (verboseAttack) println("Target tile ${targetTile.position} is not reachable for ${troop.unitName} in this turn.")
             return false

@@ -9,7 +9,7 @@ import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.models.helpers.UnitMovementMemoryType
 import com.unciv.UncivGame
 import com.unciv.models.ruleset.unique.UniqueType
-import com.unciv.pure.application.pathfinding.UnitMovementContext
+import com.unciv.pure.application.pathfinding.HeroMovementContext
 import com.unciv.pure.domain.pathfinding.IMovementContext
 import com.unciv.utils.Log
 
@@ -168,7 +168,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                                      considerZoneOfControl: Boolean = true,
                                      tilesToIgnore: HashSet<TileInfo>? = null,
                                      targetTile: TileInfo? = null,
-                                     context: IMovementContext = UnitMovementContext(unit)
+                                     context: IMovementContext = HeroMovementContext(unit)
     ): PathsToTilesWithinTurn {
         val distanceToTiles = PathsToTilesWithinTurn()
         if (unitMovement == 0f) return distanceToTiles
@@ -366,7 +366,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         return getDistanceToTiles().containsKey(destination)
     }
 
-    fun getReachableTilesInCurrentTurn(targetTile: TileInfo? = null): Sequence<TileInfo> {
+    fun getReachableTilesInCurrentTurn(targetTile: TileInfo? = null, context: IMovementContext = HeroMovementContext(unit)): Sequence<TileInfo> {
         return when {
             unit is MapUnit && unit.baseUnit.movesLikeAirUnits() ->
                 unit.getTile().getTilesInDistanceRange(IntRange(1, unit.getMaxMovementForAirUnits()))
@@ -374,7 +374,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                 unit.getTile().getTilesInDistance(unit.paradropRange)
                     .filter { unit.movement.canParadropOn(it) }
             else ->
-                unit.movement.getDistanceToTiles(targetTile = targetTile).keys.asSequence()
+                unit.movement.getDistanceToTiles(targetTile = targetTile, context = context).keys.asSequence()
         }
     }
 
@@ -778,12 +778,19 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
     }
 
 
-    fun getDistanceToTiles(considerZoneOfControl: Boolean = true, targetTile: TileInfo? = null): PathsToTilesWithinTurn {
+    fun getDistanceToTiles(considerZoneOfControl: Boolean = true,
+                           targetTile: TileInfo? = null,
+                           context: IMovementContext = HeroMovementContext(unit)
+    ): PathsToTilesWithinTurn {
         val cacheResults = pathfindingCache.getDistanceToTiles(considerZoneOfControl)
         if (cacheResults != null) {
             return cacheResults
         }
-        val distanceToTiles = getDistanceToTilesWithinTurn(unit.currentTile.position, unit.currentMovement, considerZoneOfControl, targetTile = targetTile)
+        val distanceToTiles = getDistanceToTilesWithinTurn(unit.currentTile.position,
+            unit.currentMovement,
+            considerZoneOfControl,
+            targetTile = targetTile,
+            context = context)
         pathfindingCache.setDistanceToTiles(considerZoneOfControl, distanceToTiles)
         return distanceToTiles
     }

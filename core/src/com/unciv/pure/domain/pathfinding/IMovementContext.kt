@@ -6,4 +6,6 @@ import com.unciv.logic.map.TileInfo
 interface IMovementContext {
     fun canPassThrough(tile: TileInfo): Boolean
     fun getMovementCost(from: TileInfo, to: TileInfo): Float
+    fun hasExplored(tile: TileInfo): Boolean
+    fun shouldSkipTile(tile: TileInfo, targetTile: TileInfo?): Boolean
 }

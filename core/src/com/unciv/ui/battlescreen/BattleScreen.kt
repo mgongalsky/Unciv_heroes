@@ -29,6 +29,7 @@ import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 import com.unciv.logic.map.mapgenerator.MapGenerator
+import com.unciv.pure.application.pathfinding.TroopMovementContext
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.map.TileGroupMap
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
@@ -707,7 +708,7 @@ class BattleScreen(
                         val currentTroopNew = manager.getCurrentTroop()
 
                         val currentTroopOnTile = getCurrentTroopView() ?: return
-                        if (currentTroopNew != null && currentTroopNew.movement.getReachableTilesInCurrentTurn().contains(tileGroup.tileInfo))
+                        if (currentTroopNew != null && currentTroopNew.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroopNew)).contains(tileGroup.tileInfo))
                         /*
                         if (manager.isHexAchievable(
                                     currentTroopOnTile.getTroopInfo(),
@@ -828,7 +829,7 @@ class BattleScreen(
 
         // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
         daTileGroups.forEach {
-            if (currentTroop != null && currentTroop.movement.getReachableTilesInCurrentTurn().contains(it.tileInfo))
+            if (currentTroop != null && currentTroop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroop)).contains(it.tileInfo))
 
             //if (manager.isHexAchievable(currentTroop.getTroopInfo(), it.tileInfo.position))
                 it.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
@@ -988,7 +989,7 @@ class BattleScreen(
         }
 
         // for non-shooting troops:
-        if (!currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn().contains(tileGroup.tileInfo)
+        if (!currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroop.getTroopInfo())).contains(tileGroup.tileInfo)
                 && manager.isTileFree(targetTile))
         //if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
             Gdx.graphics.setCursor(cursorCancel)
@@ -1010,7 +1011,10 @@ class BattleScreen(
 
                  */
 
-                if (currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn().contains(tileToMove)
+                if (currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(
+                            currentTroop.getTroopInfo()
+                        )
+                        ).contains(tileToMove)
                         && (tileToMove != null && manager.isTileFree(tileToMove) || tileToMove == currentTroop.getTroopInfo().currentTile))
                         //if (manager.isHexAchievable(currentTroop.getTroopInfo(), hexToMove))
                     Gdx.graphics.setCursor(cursorAttack[direction.num])
