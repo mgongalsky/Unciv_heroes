@@ -11,6 +11,7 @@ import com.unciv.logic.HexMath
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 import com.unciv.models.GameConstants
+import com.unciv.pure.application.battle.CalculateDamageUseCase
 import com.unciv.pure.application.pathfinding.TroopMovementContext
 import com.unciv.pure.domain.battle.IBattleRandom
 import kotlin.random.Random
@@ -571,52 +572,25 @@ class BattleManager(
      * @return True if luck influenced the attack (damage doubled), false otherwise.
      */
     fun attack(defender: TroopInfo, attacker: TroopInfo? = getCurrentTroop()): Boolean {
-        var isLuck = false
-        if (attacker == null) {
-            return isLuck
-        }
-        if (verboseAttack) {
-            println("Starting attack: ${attacker.unitName} (Position: ${attacker.currentTile.position}) attacking ${defender.unitName} (Position: ${defender.currentTile.position})")
-            println("Initial attacker amount: ${attacker.currentAmount}, Initial defender amount: ${defender.currentAmount}")
-        }
+        if (attacker == null) return false
 
-        // Calculate maximum damage
-        var damage = attacker.currentAmount * attacker.baseUnit.damage
+        val isLuck = isLuckTriggered(attacker)
 
-        // Determine if luck is triggered for the attacker
-        isLuck = isLuckTriggered(attacker)
-        if (isLuck) {
-            damage *= 2  // Double the damage if luck triggers
-            if (verboseAttack) println("Troop ${attacker.baseUnit.name} has luck, doubling damage")
-        }
+        val result = CalculateDamageUseCase.execute(
+            attackerAmount = attacker.currentAmount,
+            attackerDamage = attacker.baseUnit.damage,
+            defenderAmount = defender.currentAmount,
+            defenderHealth = defender.currentHealth,
+            defenderMaxHealth = defender.baseUnit.health,
+            isLuck = isLuck
+        )
 
-        if (verboseAttack) println("Base damage calculated: $damage")
+        defender.currentAmount = result.remainingAmount
+        defender.currentHealth = result.remainingHealth
 
-        // Include health deficit in the calculation
-        val healthDeficit = defender.baseUnit.health - defender.currentHealth
-        if (verboseAttack) println("Defender health deficit: $healthDeficit")
+        if (defender.currentAmount <= 0) perishTroop(defender)
 
-        val totalDamage = damage + healthDeficit
-        if (verboseAttack) println("Total damage after health deficit adjustment: $totalDamage")
-
-        // Calculate the number of perished units
-        val perished = (totalDamage / defender.baseUnit.health).toInt()
-        defender.currentAmount -= perished
-        defender.currentHealth = defender.baseUnit.health - (totalDamage % defender.baseUnit.health)
-
-        if (verboseAttack) {
-            println("Perished units: $perished")
-            println("Defender remaining amount: ${defender.currentAmount}, Remaining health: ${defender.currentHealth}")
-        }
-
-        if (defender.currentAmount <= 0) {
-            defender.currentAmount = 0
-            if (verboseAttack) println("Defender ${defender.unitName} at position ${defender.currentTile.position} has been defeated.")
-            perishTroop(defender)
-        }
-
-        if (verboseAttack) println("Attack complete: ${attacker.unitName} caused $damage damage to ${defender.unitName}.")
-        return isLuck
+        return result.isLuck
     }
 
     /**
