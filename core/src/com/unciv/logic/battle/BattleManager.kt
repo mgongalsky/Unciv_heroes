@@ -6,11 +6,13 @@ import com.unciv.logic.army.TroopInfo
 import com.unciv.ui.battlescreen.ActionType
 import com.unciv.ui.battlescreen.BattleActionRequest
 import com.badlogic.gdx.math.Vector2
+import com.unciv.infrastructure.battle.RealBattleRandom
 import com.unciv.logic.HexMath
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 import com.unciv.models.GameConstants
 import com.unciv.pure.application.pathfinding.TroopMovementContext
+import com.unciv.pure.domain.battle.IBattleRandom
 import kotlin.random.Random
 
 /**
@@ -23,7 +25,8 @@ import kotlin.random.Random
 class BattleManager(
     private var attackerArmy: ArmyInfo,
     private var defenderArmy: ArmyInfo,
-    val battleField: TileMap // BattleField on use
+    val battleField: TileMap, // BattleField on use
+    private val random: IBattleRandom = RealBattleRandom()
 ) {
     private val turnQueue: MutableList<TroopInfo> = mutableListOf() // Queue of troops for turn order
     private var currentTurnIndex: Int = 0 // Index of the current troop's turn
@@ -100,7 +103,7 @@ class BattleManager(
                     "Effective morale probability: $effectiveProbability"
         )
 
-        return Random.nextDouble() < effectiveProbability
+        return random.nextDouble() < effectiveProbability
     }
 
     /**
@@ -129,7 +132,7 @@ class BattleManager(
                     "Hero present: ${troop.hasHero()}, Hero luck: $troopLuck, " +
                     "Effective luck probability: $effectiveProbability"
         )
-        return Random.nextDouble() < effectiveProbability
+        return random.nextDouble() < effectiveProbability
     }
 
 
