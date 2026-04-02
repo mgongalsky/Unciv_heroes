@@ -54,6 +54,7 @@
     {
         "name": "Smithy",
         "production": 2,
+        "cost": 40,
         "hurryCostModifier": 25,
         "uniques": [],
         "requiredTech": "Mining"

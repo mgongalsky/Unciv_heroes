@@ -36,6 +36,7 @@
         "name": "Smithy",
         "production": 2,
         "maintenance": 1,
+        "cost": 40,
         "hurryCostModifier": 25,
         "uniques": [],
     },

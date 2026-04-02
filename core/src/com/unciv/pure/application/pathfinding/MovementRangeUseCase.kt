@@ -7,23 +7,25 @@ import com.unciv.pure.domain.pathfinding.PathsToTilesWithinTurn
 
 object MovementRangeUseCase {
 
-    fun execute(
-        startTile: TileInfo,
+    fun <T : INavigableTile> execute(
+        startTile: T,
         unitMovement: Float,
         context: IMovementContext,
-        tilesToIgnore: HashSet<TileInfo>? = null,
-        targetTile: TileInfo? = null
-    ): PathsToTilesWithinTurn<TileInfo> {
-        val distanceToTiles = PathsToTilesWithinTurn<TileInfo>()
+        tilesToIgnore: HashSet<T>? = null,
+        targetTile: T? = null
+    ): PathsToTilesWithinTurn<T> {
+        val distanceToTiles = PathsToTilesWithinTurn<T>()
         if (unitMovement == 0f) return distanceToTiles
 
-        distanceToTiles[startTile] = ParentTileAndTotalDistance<TileInfo>(startTile, 0f)
+        distanceToTiles[startTile] = ParentTileAndTotalDistance(startTile, 0f)
         var tilesToCheck = listOf(startTile)
 
         while (tilesToCheck.isNotEmpty()) {
-            val updatedTiles = ArrayList<TileInfo>()
+            val updatedTiles = ArrayList<T>()
             for (tileToCheck in tilesToCheck)
                 for (neighbor in tileToCheck.neighbors) {
+                    @Suppress("UNCHECKED_CAST")
+                    neighbor as T
                     if (tilesToIgnore?.contains(neighbor) == true) continue
                     if (context.shouldSkipTile(neighbor, targetTile)) continue
                     var totalDistanceToTile: Float = when {

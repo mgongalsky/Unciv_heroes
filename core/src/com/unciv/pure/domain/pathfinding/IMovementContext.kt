@@ -1,11 +1,10 @@
 package com.unciv.pure.domain.pathfinding
 
-import com.unciv.logic.map.TileInfo
+import com.unciv.pure.application.pathfinding.INavigableTile
 
-// pure/domain/pathfinding/IMovementContext.kt
 interface IMovementContext {
-    fun canPassThrough(tile: TileInfo): Boolean
-    fun getMovementCost(from: TileInfo, to: TileInfo): Float
-    fun hasExplored(tile: TileInfo): Boolean
-    fun shouldSkipTile(tile: TileInfo, targetTile: TileInfo?): Boolean
+    fun canPassThrough(tile: INavigableTile): Boolean
+    fun getMovementCost(from: INavigableTile, to: INavigableTile): Float
+    fun hasExplored(tile: INavigableTile): Boolean
+    fun shouldSkipTile(tile: INavigableTile, targetTile: INavigableTile?): Boolean
 }
