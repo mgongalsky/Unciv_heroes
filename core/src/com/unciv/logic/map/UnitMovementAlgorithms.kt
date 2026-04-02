@@ -14,6 +14,7 @@ import com.unciv.pure.domain.pathfinding.IMovementContext
 import com.unciv.pure.domain.pathfinding.PathsToTilesWithinTurn
 import com.unciv.pure.domain.pathfinding.ParentTileAndTotalDistance
 import com.unciv.utils.Log
+import com.unciv.pure.application.pathfinding.MovementRangeUseCase
 
 class UnitMovementAlgorithms(val unit: MovableUnit) {
 
@@ -169,56 +170,21 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
      * Does not consider if tiles can actually be entered, use canMoveTo for that.
      * If a tile can be reached within the turn, but it cannot be passed through, the total distance to it is set to unitMovement
      */
-    fun getDistanceToTilesWithinTurn(origin: Vector2,
-                                     unitMovement: Float,
-                                     considerZoneOfControl: Boolean = true,
-                                     tilesToIgnore: HashSet<TileInfo>? = null,
-                                     targetTile: TileInfo? = null,
-                                     context: IMovementContext = HeroMovementContext(unit)
+    fun getDistanceToTilesWithinTurn(
+        origin: Vector2,
+        unitMovement: Float,
+        considerZoneOfControl: Boolean = true,
+        tilesToIgnore: HashSet<TileInfo>? = null,
+        targetTile: TileInfo? = null,
+        context: IMovementContext = HeroMovementContext(unit)
     ): PathsToTilesWithinTurn<TileInfo> {
-        val distanceToTiles = PathsToTilesWithinTurn<TileInfo>()
-        if (unitMovement == 0f) return distanceToTiles
-
-        // This is for performance, because this is called all the time
-        val unitTile = getStartTile(origin)
-        distanceToTiles[unitTile] = ParentTileAndTotalDistance<TileInfo>(unitTile, 0f)
-        var tilesToCheck = listOf(unitTile)
-
-        while (tilesToCheck.isNotEmpty()) {
-            val updatedTiles = ArrayList<TileInfo>()
-            for (tileToCheck in tilesToCheck)
-                for (neighbor in tileToCheck.neighbors) {
-                    if (tilesToIgnore?.contains(neighbor) == true) continue // ignore this tile
-                    if (context.shouldSkipTile(neighbor, targetTile)) continue
-                    var totalDistanceToTile: Float = when {
-                        !context.hasExplored(neighbor) ->
-                            distanceToTiles[tileToCheck]!!.totalDistance + 1f  // If we don't know then we just guess it to be 1.
-                        !context.canPassThrough(neighbor) -> unitMovement // Can't go here.
-                        // The reason that we don't just "return" is so that when calculating how to reach an enemy,
-                        // You need to assume his tile is reachable, otherwise all movement algorithms on reaching enemy
-                        // cities and units goes kaput.
-                        else -> {
-                            val distanceBetweenTiles = context.getMovementCost(tileToCheck, neighbor)
-                            distanceToTiles[tileToCheck]!!.totalDistance + distanceBetweenTiles // added here
-                        }
-                    }
-
-                    if (!distanceToTiles.containsKey(neighbor) || distanceToTiles[neighbor]!!.totalDistance > totalDistanceToTile) { // this is the new best path
-                        if (totalDistanceToTile < unitMovement)  // We can still keep moving from here!
-                            updatedTiles += neighbor
-                        //else
-                        //    totalDistanceToTile = unitMovement
-                        // In Civ V, you can always travel between adjacent tiles, even if you don't technically
-                        // have enough movement points - it simply depletes what you have
-
-                        distanceToTiles[neighbor] = ParentTileAndTotalDistance(tileToCheck, totalDistanceToTile)
-                    }
-                }
-
-            tilesToCheck = updatedTiles
-        }
-
-        return distanceToTiles
+        return MovementRangeUseCase.execute(
+            startTile = getStartTile(origin),
+            unitMovement = unitMovement,
+            context = context,
+            tilesToIgnore = tilesToIgnore,
+            targetTile = targetTile
+        )
     }
 
     // TODO: add context here?
