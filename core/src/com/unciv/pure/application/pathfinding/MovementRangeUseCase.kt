@@ -2,6 +2,7 @@ package com.unciv.pure.application.pathfinding
 
 import com.unciv.logic.map.TileInfo
 import com.unciv.pure.domain.pathfinding.IMovementContext
+import com.unciv.pure.domain.pathfinding.INavigableTile
 import com.unciv.pure.domain.pathfinding.ParentTileAndTotalDistance
 import com.unciv.pure.domain.pathfinding.PathsToTilesWithinTurn
 

@@ -1,6 +1,6 @@
 package com.unciv.pure.domain.pathfinding
 
-import com.unciv.pure.application.pathfinding.INavigableTile
+import com.unciv.pure.domain.pathfinding.INavigableTile
 
 class PathsToTilesWithinTurn<T : INavigableTile> : LinkedHashMap<T, ParentTileAndTotalDistance<T>>() {
     fun getPathToTile(tile: T): List<T> {

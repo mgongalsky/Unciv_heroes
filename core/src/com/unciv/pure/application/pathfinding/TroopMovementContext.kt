@@ -3,6 +3,7 @@ package com.unciv.pure.application.pathfinding
 import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.TileInfo
 import com.unciv.pure.domain.pathfinding.IMovementContext
+import com.unciv.pure.domain.pathfinding.INavigableTile
 
 class TroopMovementContext(private val unit: TroopInfo) : IMovementContext {
     override fun canPassThrough(tile: INavigableTile) = !(tile as TileInfo).isImpassible()

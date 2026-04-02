@@ -3,6 +3,7 @@ package com.unciv.pure.application.pathfinding
 import com.unciv.logic.MovableUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.pure.domain.pathfinding.IMovementContext
+import com.unciv.pure.domain.pathfinding.INavigableTile
 
 class HeroMovementContext(private val unit: MovableUnit) : IMovementContext {
     override fun canPassThrough(tile: INavigableTile) =

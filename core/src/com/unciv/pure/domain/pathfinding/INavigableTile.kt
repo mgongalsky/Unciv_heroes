@@ -1,4 +1,4 @@
-package com.unciv.pure.application.pathfinding
+package com.unciv.pure.domain.pathfinding
 
 import com.badlogic.gdx.math.Vector2
 
