@@ -23,6 +23,7 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.stats.Stat
 import com.unciv.models.stats.Stats
 import com.unciv.models.translations.tr
+import com.unciv.pure.application.pathfinding.INavigableTile
 import com.unciv.ui.civilopedia.FormattedLine
 import com.unciv.ui.utils.Fonts
 import com.unciv.ui.utils.extensions.toPercent
@@ -30,7 +31,7 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.random.Random
 
-open class TileInfo : IsPartOfGameInfoSerialization {
+open class TileInfo : IsPartOfGameInfoSerialization, INavigableTile {
 
     /**
      * Вспомогательный класс для хранения климатических параметров.
@@ -151,7 +152,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     private var protecters = mutableListOf<MapUnit>()
 
     /** Position of a tile in hex coordinates */
-    var position: Vector2 = Vector2.Zero
+    override var position: Vector2 = Vector2.Zero
 
     lateinit var baseTerrain: String
     var terrainFeatures: List<String> = listOf()
@@ -464,7 +465,7 @@ open class TileInfo : IsPartOfGameInfoSerialization {
     // This is for performance - since we access the neighbors of a tile ALL THE TIME,
     // and the neighbors of a tile never change, it's much more efficient to save the list once and for all!
     @delegate:Transient
-    val neighbors: Sequence<TileInfo> by lazy { getTilesAtDistance(1).toList().asSequence() }
+    override val neighbors: Sequence<TileInfo> by lazy { getTilesAtDistance(1).toList().asSequence() }
     // We have to .toList() so that the values are stored together once for caching,
     // and the toSequence so that aggregations (like neighbors.flatMap{it.units} don't take up their own space
 

@@ -159,6 +159,12 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
 
     fun isUnknownTileWeShouldAssumeToBePassable(tileInfo: TileInfo) = !unit.civInfo.hasExplored(tileInfo)
 
+    private fun getStartTile(origin: Vector2): TileInfo {
+        val currentUnitTile = unit.currentTile
+        return if (origin == currentUnitTile.position) currentUnitTile
+        else currentUnitTile.tileMap[origin]
+    }
+
     /**
      * Does not consider if tiles can actually be entered, use canMoveTo for that.
      * If a tile can be reached within the turn, but it cannot be passed through, the total distance to it is set to unitMovement
@@ -173,9 +179,8 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         val distanceToTiles = PathsToTilesWithinTurn()
         if (unitMovement == 0f) return distanceToTiles
 
-        val currentUnitTile = unit.currentTile
         // This is for performance, because this is called all the time
-        val unitTile = if (origin == currentUnitTile.position) currentUnitTile else currentUnitTile.tileMap[origin]
+        val unitTile = getStartTile(origin)
         distanceToTiles[unitTile] = ParentTileAndTotalDistance(unitTile, 0f)
         var tilesToCheck = listOf(unitTile)
 
@@ -217,6 +222,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         return distanceToTiles
     }
 
+    // TODO: add context here?
     /**
      * Does not consider if the [destination] tile can actually be entered, use [canMoveTo] for that.
      * Returns an empty list if there's no way to get to the destination.
@@ -265,6 +271,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                     getDistanceToTiles(considerZoneOfControl) // check cache
                 }
                 else {
+                    //TODO: add context here?
                     getDistanceToTilesWithinTurn(tileToCheck.position, movementThisTurn, considerZoneOfControl, visitedTiles)
                 }
                 for (reachableTile in distanceToTilesThisTurn.keys) {
