@@ -15,8 +15,7 @@ import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.MovableUnit
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.models.ruleset.unit.BaseUnit
-import com.unciv.ui.images.ImageGetter
-import com.unciv.ui.images.ImageGetter.ruleset
+
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.BaseScreen
 
@@ -24,6 +23,9 @@ import com.unciv.ui.utils.BaseScreen
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
+import com.unciv.models.ruleset.Ruleset
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 /**
  * Represents battle units with a specified [amount],
@@ -34,7 +36,10 @@ import com.unciv.logic.map.TileMap
 class TroopInfo(
     var amount: Int = 0,
     var unitName: String = "Spearman"
-) : IsPartOfGameInfoSerialization, Json.Serializable, MovableUnit() {
+) : IsPartOfGameInfoSerialization, Json.Serializable, MovableUnit(), KoinComponent {
+
+    @delegate:Transient
+    private val ruleset: Ruleset by inject()
 
     /** Current total health and unit count, which may change during battle. */
     @Transient
@@ -122,7 +127,7 @@ class TroopInfo(
     }
 
     private fun initializeVariables() {
-        val unit = ImageGetter.ruleset.units[unitName] ?: return
+        val unit = ruleset.units[unitName] ?: return
         baseUnit = unit
         currentAmount = amount
         currentHealth = baseUnit.health
