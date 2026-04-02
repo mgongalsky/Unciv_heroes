@@ -11,6 +11,8 @@ import com.unciv.UncivGame
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.pure.application.pathfinding.HeroMovementContext
 import com.unciv.pure.domain.pathfinding.IMovementContext
+import com.unciv.pure.domain.pathfinding.PathsToTilesWithinTurn
+import com.unciv.pure.domain.pathfinding.ParentTileAndTotalDistance
 import com.unciv.utils.Log
 
 class UnitMovementAlgorithms(val unit: MovableUnit) {
@@ -155,8 +157,6 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         return true
     }
 
-    class ParentTileAndTotalDistance(val parentTile: TileInfo, val totalDistance: Float)
-
     fun isUnknownTileWeShouldAssumeToBePassable(tileInfo: TileInfo) = !unit.civInfo.hasExplored(tileInfo)
 
     private fun getStartTile(origin: Vector2): TileInfo {
@@ -175,13 +175,13 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                                      tilesToIgnore: HashSet<TileInfo>? = null,
                                      targetTile: TileInfo? = null,
                                      context: IMovementContext = HeroMovementContext(unit)
-    ): PathsToTilesWithinTurn {
-        val distanceToTiles = PathsToTilesWithinTurn()
+    ): PathsToTilesWithinTurn<TileInfo> {
+        val distanceToTiles = PathsToTilesWithinTurn<TileInfo>()
         if (unitMovement == 0f) return distanceToTiles
 
         // This is for performance, because this is called all the time
         val unitTile = getStartTile(origin)
-        distanceToTiles[unitTile] = ParentTileAndTotalDistance(unitTile, 0f)
+        distanceToTiles[unitTile] = ParentTileAndTotalDistance<TileInfo>(unitTile, 0f)
         var tilesToCheck = listOf(unitTile)
 
         while (tilesToCheck.isNotEmpty()) {
@@ -189,12 +189,11 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             for (tileToCheck in tilesToCheck)
                 for (neighbor in tileToCheck.neighbors) {
                     if (tilesToIgnore?.contains(neighbor) == true) continue // ignore this tile
-                    if (unit is TroopInfo && neighbor.troopUnit != null && neighbor.troopUnit != unit && neighbor != targetTile)
-                        continue
+                    if (context.shouldSkipTile(neighbor, targetTile)) continue
                     var totalDistanceToTile: Float = when {
-                        unit is MapUnit && !unit.civInfo.hasExplored(neighbor) ->
+                        !context.hasExplored(neighbor) ->
                             distanceToTiles[tileToCheck]!!.totalDistance + 1f  // If we don't know then we just guess it to be 1.
-                        unit is MapUnit && !context.canPassThrough(neighbor) -> unitMovement // Can't go here.
+                        !context.canPassThrough(neighbor) -> unitMovement // Can't go here.
                         // The reason that we don't just "return" is so that when calculating how to reach an enemy,
                         // You need to assume his tile is reachable, otherwise all movement algorithms on reaching enemy
                         // cities and units goes kaput.
@@ -788,10 +787,10 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
     fun getDistanceToTiles(considerZoneOfControl: Boolean = true,
                            targetTile: TileInfo? = null,
                            context: IMovementContext = HeroMovementContext(unit)
-    ): PathsToTilesWithinTurn {
+    ): PathsToTilesWithinTurn<TileInfo> {
         val cacheResults = pathfindingCache.getDistanceToTiles(considerZoneOfControl)
         if (cacheResults != null) {
-            return cacheResults
+            return cacheResults as PathsToTilesWithinTurn<TileInfo>
         }
         val distanceToTiles = getDistanceToTilesWithinTurn(unit.currentTile.position,
             unit.currentMovement,
@@ -873,7 +872,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
 class PathfindingCache(private val unit: MovableUnit) {
     private var shortestPathCache = listOf<TileInfo>()
     private var destination: TileInfo? = null
-    private val distanceToTilesCache = mutableMapOf<Boolean, PathsToTilesWithinTurn>()
+    private val distanceToTilesCache = mutableMapOf<Boolean, PathsToTilesWithinTurn<TileInfo>>()
     private var movement = -1f
     private var currentTile: TileInfo? = null
 
@@ -898,14 +897,14 @@ class PathfindingCache(private val unit: MovableUnit) {
         }
     }
 
-    fun getDistanceToTiles(zoneOfControl: Boolean): PathsToTilesWithinTurn? {
+    fun getDistanceToTiles(zoneOfControl: Boolean): PathsToTilesWithinTurn<TileInfo>? {
         if (unit.civInfo.isPlayerCivilization()) return null
         if (isValid())
             return distanceToTilesCache[zoneOfControl]
         return null
     }
 
-    fun setDistanceToTiles(zoneOfControl: Boolean, paths: PathsToTilesWithinTurn) {
+    fun setDistanceToTiles(zoneOfControl: Boolean, paths: PathsToTilesWithinTurn<TileInfo>) {
         if (unit.civInfo.isPlayerCivilization()) return
         if (!isValid()) {
             clear() // we want to reset the entire cache at this point
@@ -919,19 +918,5 @@ class PathfindingCache(private val unit: MovableUnit) {
         currentTile = unit.getTile()
         destination = null
         shortestPathCache = listOf()
-    }
-}
-
-class PathsToTilesWithinTurn : LinkedHashMap<TileInfo, UnitMovementAlgorithms.ParentTileAndTotalDistance>() {
-    fun getPathToTile(tile: TileInfo): List<TileInfo> {
-        if (!containsKey(tile))
-            throw Exception("Can't reach this tile!")
-        val reversePathList = ArrayList<TileInfo>()
-        var currentTile = tile
-        while (get(currentTile)!!.parentTile != currentTile) {
-            reversePathList.add(currentTile)
-            currentTile = get(currentTile)!!.parentTile
-        }
-        return reversePathList.reversed()
     }
 }
