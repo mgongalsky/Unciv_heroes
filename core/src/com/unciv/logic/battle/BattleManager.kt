@@ -13,7 +13,9 @@ import com.unciv.logic.map.TileMap
 import com.unciv.models.GameConstants
 import com.unciv.pure.application.battle.CalculateDamageUseCase
 import com.unciv.pure.application.pathfinding.TroopMovementContext
+import com.unciv.pure.domain.battle.IBattleField
 import com.unciv.pure.domain.battle.IBattleRandom
+import com.unciv.pure.domain.pathfinding.INavigableTile
 import kotlin.random.Random
 
 /**
@@ -26,7 +28,7 @@ import kotlin.random.Random
 class BattleManager(
     private var attackerArmy: ArmyInfo,
     private var defenderArmy: ArmyInfo,
-    val battleField: TileMap, // BattleField on use
+    val battleField: IBattleField, // BattleField on use
     private val random: IBattleRandom = RealBattleRandom()
 ) {
     private val turnQueue: MutableList<TroopInfo> = mutableListOf() // Queue of troops for turn order
@@ -170,8 +172,8 @@ class BattleManager(
      * @param tile The tile to check.
      * @return The [TroopInfo] located at the tile or `null` if the tile is empty.
      */
-    private fun getTroopOnTile(tile: TileInfo): TroopInfo? {
-        return tile.troopUnit  // Теперь получаем юнита напрямую из клетки
+    open fun getTroopOnTile(tile: INavigableTile): TroopInfo? {
+        return (tile as? TileInfo)?.troopUnit  // Теперь получаем юнита напрямую из клетки
     }
 
 
@@ -475,8 +477,8 @@ class BattleManager(
      * @param targetTile The tile to check.
      * @return True if the tile is free, false otherwise.
      */
-    fun isTileFree(targetTile: TileInfo): Boolean {
-        return targetTile.troopUnit == null  // Если юнита нет, клетка свободна
+    fun isTileFree(targetTile: INavigableTile): Boolean {
+        return (targetTile as? TileInfo)?.troopUnit == null  // Если юнита нет, клетка свободна
     }
 
 
@@ -544,7 +546,7 @@ class BattleManager(
      * @param targetTile Целевая клетка.
      * @return `true`, если клетка достижима юнитом в этот ход, иначе `false`.
      */
-    fun isTileAchievable(troop: TroopInfo, targetTile: TileInfo): Boolean {
+    fun isTileAchievable(troop: TroopInfo, targetTile: INavigableTile): Boolean {
         // Проверяем, находится ли клетка на поле битвы
         if (!battleField.contains(targetTile)) {
             if (verboseAttack) println("Target tile ${targetTile.position} is outside the battlefield.")
@@ -552,7 +554,7 @@ class BattleManager(
         }
 
         // Проверяем, может ли юнит дойти до клетки в текущем ходу
-        val reachableTiles = troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop), targetTile = targetTile)
+        val reachableTiles = troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop), targetTile = targetTile as TileInfo)
         if (!reachableTiles.contains(targetTile)) {
             if (verboseAttack) println("Target tile ${targetTile.position} is not reachable for ${troop.unitName} in this turn.")
             return false

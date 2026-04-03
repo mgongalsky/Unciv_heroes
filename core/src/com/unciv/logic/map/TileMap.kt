@@ -13,6 +13,8 @@ import com.unciv.models.ruleset.Nation
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.tile.TerrainType
 import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.pure.domain.pathfinding.INavigableTile
+import com.unciv.pure.domain.battle.IBattleField
 import kotlin.math.abs
 
 /** An Unciv map with all properties as produced by the [map editor][com.unciv.ui.mapeditor.MapEditorScreen]
@@ -20,7 +22,7 @@ import kotlin.math.abs
  *
  * Note: Will be Serialized -> Take special care with lateinit and lazy!
  */
-class TileMap : IsPartOfGameInfoSerialization {
+class TileMap : IsPartOfGameInfoSerialization, IBattleField {
     companion object {
         /** Legacy way to store starting locations - now this is used only in [translateStartingLocationsFromMap] */
         const val startingLocationPrefix = "StartingLocation "
@@ -157,6 +159,9 @@ class TileMap : IsPartOfGameInfoSerialization {
         return toReturn
     }
 
+    override fun getNeighborTile(tile: INavigableTile, direction: Direction) =
+            getNeighborTile(tile as TileInfo, direction)
+
     /**
      * Finds the neighboring tile of a given tile in the specified direction.
      *
@@ -184,8 +189,14 @@ class TileMap : IsPartOfGameInfoSerialization {
     operator fun contains(vector: Vector2) =
             contains(vector.x.toInt(), vector.y.toInt())
 
+    override fun contains(tile: INavigableTile) =
+            contains(tile as TileInfo)
+
     operator fun contains(tile: TileInfo) =
             tileList.contains(tile)
+
+    override fun getTileAt(position: Vector2): INavigableTile? =
+            try { get(position) } catch (e: Exception) { null }
 
     operator fun get(vector: Vector2) =
         get(vector.x.toInt(), vector.y.toInt())
