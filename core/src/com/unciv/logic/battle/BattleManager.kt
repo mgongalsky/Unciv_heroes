@@ -61,6 +61,9 @@ open class BattleManager(
     protected open fun getTroopCurrentTile(troop: TroopInfo): IBattleTile? =
             troop.currentTile  // TileInfo : IBattleTile
 
+    protected open fun moveTroop(troop: TroopInfo, targetTile: IBattleTile) {
+        targetTile.receiveTroop(troop)
+    }
     /**
      * Returns the troop currently taking its turn.
      *
@@ -238,7 +241,7 @@ open class BattleManager(
                 val oldTile = getTroopCurrentTile(troop)
                 //troop.moveToPosition(targetPosition)
                 //troop.moveToTile(actionRequest.targetPosition)
-                actionRequest.targetPosition.receiveTroop(troop)
+                moveTroop(troop, actionRequest.targetPosition)
 
                 if (verboseAttack) println("Troop moved from $oldTile to $actionRequest.targetPosition")
 
@@ -315,7 +318,7 @@ open class BattleManager(
                 // Move attacker to attack position
                 val oldTile = getTroopCurrentTile(troop)
                 //troop.moveToTile(actionRequest.attackTile)
-                actionRequest.attackTile.receiveTroop(troop)
+                moveTroop(troop, actionRequest.attackTile)
 
                 if (verboseAttack) println("Troop moved to attack position $actionRequest.attackTile")
 
@@ -681,6 +684,4 @@ open class BattleManager(
         )
         return reachableTiles.contains(targetTile)
     }
-
-    open fun moveTroop(troop: TroopInfo, targetTile: INavigableTile) {}
 }
