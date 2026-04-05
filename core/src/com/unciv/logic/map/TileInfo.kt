@@ -9,6 +9,7 @@ import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.PlayerType
 import com.unciv.logic.HexMath
 import com.unciv.logic.army.TroopInfo
+import com.unciv.logic.battle.IBattleTile
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.tile.ResourceType
 import com.unciv.models.ruleset.tile.Terrain
@@ -31,7 +32,7 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.random.Random
 
-open class TileInfo : IsPartOfGameInfoSerialization, INavigableTile {
+open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
 
     /**
      * Вспомогательный класс для хранения климатических параметров.
@@ -58,6 +59,12 @@ open class TileInfo : IsPartOfGameInfoSerialization, INavigableTile {
     @Transient
     var owningCity: CityInfo? = null
         private set
+
+    // Seams from interface IBattleTile
+    override fun getTroop(): TroopInfo? = troopUnit
+
+    override fun receiveTroop(troop: TroopInfo) = troop.moveToTile(this)
+    override fun clearTroop() { troopUnit = null }
 
     /**
      * Возвращает климатические параметры для данной плитки,

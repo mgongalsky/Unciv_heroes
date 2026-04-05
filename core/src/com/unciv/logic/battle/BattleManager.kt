@@ -25,7 +25,7 @@ import kotlin.random.Random
  * @property attackerArmy The attacking army participating in the battle.
  * @property defenderArmy The defending army participating in the battle.
  */
-class BattleManager(
+open class BattleManager(
     private var attackerArmy: ArmyInfo,
     private var defenderArmy: ArmyInfo,
     val battleField: IBattleField, // BattleField on use
@@ -57,6 +57,9 @@ class BattleManager(
         // Set the first troop as the current turn
         currentTurnIndex = 0
     }
+
+    protected open fun getTroopCurrentTile(troop: TroopInfo): IBattleTile? =
+            troop.currentTile  // TileInfo : IBattleTile
 
     /**
      * Returns the troop currently taking its turn.
@@ -173,7 +176,8 @@ class BattleManager(
      * @return The [TroopInfo] located at the tile or `null` if the tile is empty.
      */
     open fun getTroopOnTile(tile: INavigableTile): TroopInfo? {
-        return (tile as? TileInfo)?.troopUnit  // Теперь получаем юнита напрямую из клетки
+        //return (tile as? TileInfo)?.troopUnit  // Теперь получаем юнита напрямую из клетки
+        return (tile as? IBattleTile)?.getTroop()
     }
 
 
@@ -198,8 +202,8 @@ class BattleManager(
                 return BattleActionResult(
                     actionType = ActionType.SKIP,
                     success = true,
-                    movedFrom = troop.currentTile,
-                    movedTo = troop.currentTile,
+                    movedFrom = null,
+                    movedTo = null,
                     isMorale = false,
                     battleEnded = !isBattleOn()
                 )
@@ -231,9 +235,10 @@ class BattleManager(
                 }
 
                 // Successful movement
-                val oldTile = troop.currentTile
+                val oldTile = getTroopCurrentTile(troop)
                 //troop.moveToPosition(targetPosition)
-                troop.moveToTile(actionRequest.targetPosition)
+                //troop.moveToTile(actionRequest.targetPosition)
+                actionRequest.targetPosition.receiveTroop(troop)
 
                 if (verboseAttack) println("Troop moved from $oldTile to $actionRequest.targetPosition")
 
@@ -294,7 +299,8 @@ class BattleManager(
                 if (!isTileAchievable(
                             troop,
                             actionRequest.attackTile
-                        ) || (!isTileFree(actionRequest.attackTile) && troop.currentTile != actionRequest.attackTile)
+                        ) || (!isTileFree(actionRequest.attackTile) &&
+                                getTroopCurrentTile(troop) != actionRequest.attackTile)
                 ) {
                     if (verboseAttack) {
                         println("Attack position $actionRequest.attackTile not achievable or not free")
@@ -307,8 +313,9 @@ class BattleManager(
                 }
 
                 // Move attacker to attack position
-                val oldTile = troop.currentTile
-                troop.moveToTile(actionRequest.attackTile)
+                val oldTile = getTroopCurrentTile(troop)
+                //troop.moveToTile(actionRequest.attackTile)
+                actionRequest.attackTile.receiveTroop(troop)
 
                 if (verboseAttack) println("Troop moved to attack position $actionRequest.attackTile")
 
@@ -329,7 +336,7 @@ class BattleManager(
             }
 
             ActionType.SHOOT -> {
-                if (verboseAttack) println("Starting ActionType.SHOOT for troop: ${troop.unitName} at position: ${troop.currentTile.position}")
+                if (verboseAttack) println("Starting ActionType.SHOOT for troop: ${troop.unitName}.")
 
                 // Get defender
                 val defender = getTroopOnTile(actionRequest.targetPosition)
@@ -407,8 +414,9 @@ class BattleManager(
      * @param targetTile The tile to check.
      * @return True if the tile is occupied by an allied troop, false otherwise.
      */
-    fun isTileOccupiedByAlly(troop: TroopInfo, targetTile: TileInfo): Boolean {
-        val targetTroop = targetTile.troopUnit ?: return false  // Если клетка пустая, значит не занята союзником
+    fun isTileOccupiedByAlly(troop: TroopInfo, targetTile: IBattleTile): Boolean {
+        //val targetTroop = targetTile.troopUnit ?: return false  // Если клетка пустая, значит не занята союзником
+        val targetTroop = targetTile.getTroop() ?: return false
 
         // Определяем, к какой армии относится юнит
         val isAlly = if (attackerArmy.contains(troop)) {
@@ -451,8 +459,9 @@ class BattleManager(
      * @param targetTile The tile to check.
      * @return True if the tile is occupied by an enemy troop, false otherwise.
      */
-    fun isTileOccupiedByEnemy(troop: TroopInfo, targetTile: TileInfo): Boolean {
-        val targetTroop = targetTile.troopUnit ?: return false  // Если клетка пустая, значит нет врага
+    fun isTileOccupiedByEnemy(troop: TroopInfo, targetTile: IBattleTile): Boolean {
+        //val targetTroop = targetTile.troopUnit ?: return false  // Если клетка пустая, значит нет врага
+        val targetTroop = targetTile.getTroop() ?: return false
 
         // Определяем, к какой армии относится юнит и является ли цель врагом
         return if (attackerArmy.contains(troop)) {
@@ -478,7 +487,8 @@ class BattleManager(
      * @return True if the tile is free, false otherwise.
      */
     fun isTileFree(targetTile: INavigableTile): Boolean {
-        return (targetTile as? TileInfo)?.troopUnit == null  // Если юнита нет, клетка свободна
+        //return (targetTile as? TileInfo)?.troopUnit == null  // Если юнита нет, клетка свободна
+        return (targetTile as? IBattleTile)?.getTroop() == null
     }
 
 
@@ -539,6 +549,8 @@ class BattleManager(
 
      */
 
+
+
     /**
      * Проверяет, достижима ли целевая клетка для данного отряда.
      *
@@ -547,19 +559,8 @@ class BattleManager(
      * @return `true`, если клетка достижима юнитом в этот ход, иначе `false`.
      */
     fun isTileAchievable(troop: TroopInfo, targetTile: INavigableTile): Boolean {
-        // Проверяем, находится ли клетка на поле битвы
-        if (!battleField.contains(targetTile)) {
-            if (verboseAttack) println("Target tile ${targetTile.position} is outside the battlefield.")
-            return false
-        }
-
-        // Проверяем, может ли юнит дойти до клетки в текущем ходу
-        val reachableTiles = troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop), targetTile = targetTile as TileInfo)
-        if (!reachableTiles.contains(targetTile)) {
-            if (verboseAttack) println("Target tile ${targetTile.position} is not reachable for ${troop.unitName} in this turn.")
-            return false
-        }
-
+        if (!battleField.contains(targetTile)) return false
+        if (!isReachableInCurrentTurn(troop, targetTile)) return false
         return true
     }
 
@@ -672,4 +673,14 @@ class BattleManager(
     fun getTurnQueue(): List<TroopInfo> {
         return turnQueue
     }
+
+    protected open fun isReachableInCurrentTurn(troop: TroopInfo, targetTile: INavigableTile): Boolean {
+        val reachableTiles = troop.movement.getReachableTilesInCurrentTurn(
+            context = TroopMovementContext(troop),
+            targetTile = targetTile as TileInfo  // legacy cast изолирован здесь
+        )
+        return reachableTiles.contains(targetTile)
+    }
+
+    open fun moveTroop(troop: TroopInfo, targetTile: INavigableTile) {}
 }
