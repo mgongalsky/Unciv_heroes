@@ -123,11 +123,14 @@ class BattleScreen private constructor(
         )
     }
 
+    /*
     private var defenderCiv = when (val d = defender) {
         is MapUnitCombatant -> d.unit.civInfo // Если защитник - MapUnitCombatant, берем армию юнита
         is CityCombatant -> d.city.civInfo // Если защитник - CityCombatant, берем информацию о гарнизоне
         else -> throw IllegalArgumentException("Unsupported defender type")
     }
+
+     */
 
 
     // Arrays to store visual representations of troops for attackers and defenders
@@ -136,18 +139,21 @@ class BattleScreen private constructor(
     private val defenderTroopViewsArray: Array<TroopBattleView?> =
             Array(defenderArmy.getAllTroops().size ?: 0) { null }
 
-    private val verboseTurn = false // Toggle for detailed logging of turns
+    private val verboseTurn = true // Toggle for detailed logging of turns
 
     // Constants for the center area and battlefield dimensions
     internal val centerAreaHeight = stage.height - 82f
     internal val BFwidth: Int = 14
     internal val BFheight: Int = 8
 
+    /*
     private val defenderTile = when (val d = defender) {
         is MapUnitCombatant -> d.unit.currentTile // Если защитник - MapUnitCombatant, берем армию юнита
         is CityCombatant -> d.city.getCenterTile() // Если защитник - CityCombatant, берем информацию о гарнизоне
         else -> throw IllegalArgumentException("Unsupported defender type")
     }
+
+     */
 
     // TileMap represents the battlefield layout
     //private val battleField: TileMap = TileMap(
@@ -213,7 +219,7 @@ class BattleScreen private constructor(
 
         defenderArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
-                troop.enterBattle(defenderCiv, index, attacker = false, battleField)
+                troop.enterBattle(defenderIsPlayer, index, attacker = false, battleField)
                 val troopView = TroopBattleView(troop, this)
                 defenderTroopViewsArray[index] = troopView
             }
@@ -809,48 +815,41 @@ class BattleScreen private constructor(
         }
 
         val currentTroop = currentTroopView.getTroopInfo()
-        //val targetPosition = tileGroup.tileInfo.position
+        val targetTile = tileGroup.tileInfo
 
-        // Проверяем, можно ли стрелять
-        if (manager.canShoot(currentTroop) && manager.isTileOccupiedByEnemy(currentTroop, tileGroup.tileInfo)) {
-            val actionRequest = BattleActionRequest(
+        // 1. Стрельба — приоритет выше всего
+        if (manager.canShoot(currentTroop) && manager.isTileOccupiedByEnemy(currentTroop, targetTile)) {
+            onPlayerActionReceived?.invoke(Pair(BattleActionRequest(
                 troop = currentTroop,
-                targetPosition = tileGroup.tileInfo,
+                targetPosition = targetTile,
                 actionType = ActionType.SHOOT
-            )
-            onPlayerActionReceived?.invoke(Pair(actionRequest, tileGroup))
+            ), tileGroup))
             return
         }
 
-        if (!manager.isTileAchievable(currentTroop, tileGroup.tileInfo))
-            return
-
-        // Проверяем, можем ли атаковать
-        if (manager.isTileOccupiedByEnemy(currentTroop, tileGroup.tileInfo)) {
-            // Вычисляем направление атаки
+        // 2. Атака — проверяем ДО isTileAchievable
+        if (manager.isTileOccupiedByEnemy(currentTroop, targetTile)) {
             val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
-            val attackTile = battleField.getNeighborTile(tileGroup.tileInfo, direction)
-
-            // Создаём запрос атаки
-            val attackRequest = BattleActionRequest(
+            val attackTile = battleField.getNeighborTile(targetTile, direction)
+            onPlayerActionReceived?.invoke(Pair(BattleActionRequest(
                 troop = currentTroop,
-                targetPosition = tileGroup.tileInfo,
+                targetPosition = targetTile,
                 actionType = ActionType.ATTACK,
                 attackTile = attackTile
-            )
-
-            // Передаём запрос
-            onPlayerActionReceived?.invoke(Pair(attackRequest, tileGroup))
-        } else {
-            // Иначе создаём запрос перемещения
-            val moveRequest = BattleActionRequest(
-                troop = currentTroop,
-                targetPosition = tileGroup.tileInfo,
-                actionType = ActionType.MOVE
-            )
-
-            onPlayerActionReceived?.invoke(Pair(moveRequest, tileGroup))
+            ), tileGroup))
+            return
         }
+
+        // 3. Движение — только теперь проверяем достижимость
+        if (!manager.isTileAchievable(currentTroop, targetTile)) {
+            return
+        }
+
+        onPlayerActionReceived?.invoke(Pair(BattleActionRequest(
+            troop = currentTroop,
+            targetPosition = targetTile,
+            actionType = ActionType.MOVE
+        ), tileGroup))
     }
 
     /**
@@ -1138,6 +1137,11 @@ class BattleScreen private constructor(
         val a = attacker ?: return this
         val d = defender ?: return this
         return fromCombatants(a, d)
+    }
+
+    override fun resize(width: Int, height: Int) {
+        // BattleScreen не пересоздаётся при ресайзе — это вызывает бесконечную рекурсию
+        stage.viewport.update(width, height, true)
     }
 
     fun resizePage(tab: EmpireOverviewTab) {

@@ -53,6 +53,7 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
     val crashReportSysInfo = parameters.crashReportSysInfo
     val cancelDiscordEvent = parameters.cancelDiscordEvent
     var fontImplementation = parameters.fontImplementation
+    val initialScreenFactory = parameters.initialScreenFactory
     val consoleMode = parameters.consoleMode
     private val customSaveLocationHelper = parameters.customFileLocationHelper
     val platformSpecificHelper = parameters.platformSpecificHelper
@@ -162,6 +163,8 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
                 ImageGetter.ruleset = vanillaRuleset // so that we can enter the map editor without having to load a game first
 
                 when {
+                    initialScreenFactory != null ->
+                        setAsRootScreen(initialScreenFactory!!.invoke())
                     settings.isFreshlyCreated -> setAsRootScreen(LanguagePickerScreen())
                     deepLinkedMultiplayerGame == null -> setAsRootScreen(MainMenuScreen())
                     else -> tryLoadDeepLinkedGame()
