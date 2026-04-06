@@ -21,14 +21,17 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.Align
 import com.unciv.ai.AIBattle
 import com.unciv.logic.HexMath
+import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.battle.CityCombatant
 import com.unciv.logic.battle.ICombatant
 import com.unciv.logic.battle.MapUnitCombatant
+import com.unciv.logic.map.ClimateParameters
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 import com.unciv.logic.map.mapgenerator.MapGenerator
+import com.unciv.models.ruleset.Ruleset
 import com.unciv.pure.application.pathfinding.TroopMovementContext
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.map.TileGroupMap
@@ -43,6 +46,8 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import kotlin.coroutines.resume
 
 // Now it's just copied from HeroOverviewScreen
@@ -54,29 +59,68 @@ import kotlin.coroutines.resume
  * The battle logic itself is managed by the [BattleManager] class.
  * Should not be used for AI duels as it includes player interaction logic.
  */
-class BattleScreen(
-    private var attacker: ICombatant,
-    private var defender: ICombatant,
-    defaultPage: String = "",
-    selection: String = ""
-) : BaseScreen(), RecreateOnResize{
+class BattleScreen private constructor(
+    private val attackerArmy: ArmyInfo,
+    private val defenderArmy: ArmyInfo,
+    private val attackerIsPlayer: Boolean,
+    private val defenderIsPlayer: Boolean,
+    private val attackerClimate: ClimateParameters,
+    private val defenderClimate: ClimateParameters,
+    // Null в sandbox — world-map cleanup не нужен
+    private val attacker: ICombatant? = null,
+    private val defender: ICombatant? = null,
+) : BaseScreen(), RecreateOnResize, KoinComponent {
 
-    private var attackerArmy = when (val a = attacker) {
-        is MapUnitCombatant -> a.unit.army // Явно создаем локальную переменную `a` для проверки типа
-        is CityCombatant -> a.city.garrisonInfo
-        else -> throw IllegalArgumentException("Unsupported attacker type")
-    }
+    private val ruleset: Ruleset by inject()
 
-    private var defenderArmy = when (val d = defender) {
-        is MapUnitCombatant -> d.unit.army // Если защитник - MapUnitCombatant, берем армию юнита
-        is CityCombatant -> d.city.garrisonInfo // Если защитник - CityCombatant, берем информацию о гарнизоне
-        else -> throw IllegalArgumentException("Unsupported defender type")
-    }
+    companion object {
+        fun fromCombatants(attacker: ICombatant, defender: ICombatant): BattleScreen {
+            val attackerArmy = when (attacker) {
+                is MapUnitCombatant -> attacker.unit.army
+                is CityCombatant   -> attacker.city.garrisonInfo
+                else -> throw IllegalArgumentException("Unsupported attacker type")
+            }
+            val defenderArmy = when (defender) {
+                is MapUnitCombatant -> defender.unit.army
+                is CityCombatant   -> defender.city.garrisonInfo
+                else -> throw IllegalArgumentException("Unsupported defender type")
+            }
+            val attackerCiv = when (attacker) {
+                is MapUnitCombatant -> attacker.unit.civInfo
+                is CityCombatant   -> attacker.city.civInfo
+                else -> throw IllegalArgumentException()
+            }
+            val defenderCiv = when (defender) {
+                is MapUnitCombatant -> defender.unit.civInfo
+                is CityCombatant   -> defender.city.civInfo
+                else -> throw IllegalArgumentException()
+            }
+            return BattleScreen(
+                attackerArmy = attackerArmy,
+                defenderArmy = defenderArmy,
+                attackerIsPlayer = attackerCiv.isPlayerCivilization(),
+                defenderIsPlayer = defenderCiv.isPlayerCivilization(),
+                attackerClimate = attacker.getTile().getClimateParameters()
+                    ?: ClimateParameters(0.3, 0.5, 0.6),
+                defenderClimate = defender.getTile().getClimateParameters()
+                    ?: ClimateParameters(0.3, 0.5, 0.6),
+                attacker = attacker,
+                defender = defender,
+            )
+        }
 
-    private var attackerCiv = when (val a = attacker) {
-        is MapUnitCombatant -> a.unit.civInfo // Явно создаем локальную переменную `a` для проверки типа
-        is CityCombatant -> a.city.civInfo
-        else -> throw IllegalArgumentException("Unsupported attacker type")
+        fun forTesting(
+            attackerArmy: ArmyInfo,
+            defenderArmy: ArmyInfo,
+            climate: ClimateParameters = ClimateParameters(0.3, 0.5, 0.6)
+        ): BattleScreen = BattleScreen(
+            attackerArmy = attackerArmy,
+            defenderArmy = defenderArmy,
+            attackerIsPlayer = true,
+            defenderIsPlayer = false,
+            attackerClimate = climate,
+            defenderClimate = climate,
+        )
     }
 
     private var defenderCiv = when (val d = defender) {
@@ -111,8 +155,8 @@ class BattleScreen(
      //   game.gameInfo!!.ruleSet, defenderTile.baseTerrain
     //)
     // Предположим, что BFwidth, BFheight, attackerTile и defenderTile уже определены
-    val mapGenerator = MapGenerator(game.gameInfo!!.ruleSet)
-    val battleField: TileMap = mapGenerator.generateBattlefield(BFwidth, BFheight, attacker.getTile(), defender.getTile())
+    val mapGenerator = MapGenerator(ruleset)
+    val battleField: TileMap = mapGenerator.generateBattlefield(BFwidth, BFheight, attackerClimate, defenderClimate)
 
     /*private val battleField: TileMap = TileMap(
         BFwidth, BFheight,
@@ -161,7 +205,7 @@ class BattleScreen(
 
         attackerArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
-                troop.enterBattle(attackerCiv, index, attacker = true, battleField)
+                troop.enterBattle(attackerIsPlayer, index, attacker = true, battleField)
                 val troopView = TroopBattleView(troop, this)
                 attackerTroopViewsArray[index] = troopView
             }
@@ -414,7 +458,8 @@ class BattleScreen(
                         }
                         if (d is CityCombatant) {
                             val defenderCity = d.city
-                            defenderCity.moveToCiv(attackerCiv)
+                            val aCiv = attacker?.getCivInfo() ?: return  // sandbox — нет civ, нет захвата
+                            defenderCity.moveToCiv(aCiv)
                         }
 
                     }
@@ -1090,7 +1135,9 @@ class BattleScreen(
      * @return A new instance of [BattleScreen].
      */
     override fun recreate(): BaseScreen {
-        return BattleScreen(attacker, defender)
+        val a = attacker ?: return this
+        val d = defender ?: return this
+        return fromCombatants(a, d)
     }
 
     fun resizePage(tab: EmpireOverviewTab) {
