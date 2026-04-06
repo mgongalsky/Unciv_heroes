@@ -34,19 +34,6 @@ import kotlin.random.Random
 
 open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
 
-    /**
-     * Вспомогательный класс для хранения климатических параметров.
-     *
-     * averageElevation — усреднённая высота (например, от 0 до 1),
-     * averageTemperature — температура (от -1 до 1),
-     * averageHumidity — влажность (от 0 до 1).
-     */
-    data class ClimateParameters(
-        val averageElevation: Double,
-        val averageTemperature: Double,
-        val averageHumidity: Double
-    )
-
     @Transient
     lateinit var tileMap: TileMap
 

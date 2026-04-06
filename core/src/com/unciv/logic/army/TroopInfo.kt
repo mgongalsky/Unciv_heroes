@@ -58,6 +58,9 @@ class TroopInfo(
     @Transient
     var hero: MapUnit? = null
 
+    @Transient
+    var isPlayerControlledOverride: Boolean? = null
+
     /**
      * Checks if a hero (MapUnit) is assigned to this troop.
      *
@@ -133,9 +136,8 @@ class TroopInfo(
         currentHealth = baseUnit.health
     }
 
-    fun isPlayerControlled(): Boolean {
-        return civInfo.isPlayerCivilization()
-    }
+    fun isPlayerControlled(): Boolean =
+            isPlayerControlledOverride ?: civInfo.isPlayerCivilization()
 
     override fun write(json: Json) {
         // Write minimal data for serialization
@@ -150,6 +152,27 @@ class TroopInfo(
         amount = json.readValue("amount", Int::class.java, jsonData)
         unitName = json.readValue("unitName", String::class.java, jsonData)
         initializeVariables()
+    }
+
+
+    // Seam: Новый overload — без CivilizationInfo, для sandbox-режима
+    fun enterBattle(isPlayerControlled: Boolean, number: Int, attacker: Boolean, battleField0: TileMap) {
+        isPlayerControlledOverride = isPlayerControlled
+        baseUnit = ruleset.units[unitName]!!
+
+        battleField = battleField0
+
+        val positionToSet = if (attacker)
+            HexMath.evenQ2HexCoords(Vector2(-7f, 3f - number.toFloat() * 2))
+        else
+            HexMath.evenQ2HexCoords(Vector2(6f, 3f - number.toFloat() * 2))
+
+        currentTile = battleField!![positionToSet]
+        currentMovement = baseUnit.speed.toFloat()
+        currentTile.troopUnit = this
+
+        currentHealth = baseUnit.health
+        currentAmount = amount
     }
 
     /**
