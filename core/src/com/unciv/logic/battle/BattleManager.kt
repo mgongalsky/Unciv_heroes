@@ -12,6 +12,7 @@ import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 import com.unciv.models.GameConstants
 import com.unciv.pure.application.battle.CalculateDamageUseCase
+import com.unciv.pure.application.battle.IsMoraleTriggeredUseCase
 import com.unciv.pure.application.pathfinding.TroopMovementContext
 import com.unciv.pure.domain.battle.IBattleField
 import com.unciv.pure.domain.battle.IBattleRandom
@@ -95,25 +96,8 @@ open class BattleManager(
      * @param troopMorale The morale value of the troop.
      * @return True if the morale bonus is triggered, false otherwise.
      */
-    private fun isMoraleTriggered(troop: TroopInfo): Boolean {
-        val troopMorale = troop.getHeroMorale()
-        val effectiveProbability = if (troopMorale <= 3) {
-            (GameConstants.moraleProbability / 3.0) * troopMorale
-        } else {
-            GameConstants.moraleProbability
-        }
-
-        // Verbose logging: output unit name, amount, hero presence, hero morale, and effective probability
-        println(
-            "Unit: ${troop.unitName}, " +
-                    "Amount: ${troop.amount}, " +
-                    "Hero present: ${troop.hasHero()}, " +
-                    "Hero morale: $troopMorale, " +
-                    "Effective morale probability: $effectiveProbability"
-        )
-
-        return random.nextDouble() < effectiveProbability
-    }
+    private fun isMoraleTriggered(troop: TroopInfo) =
+            IsMoraleTriggeredUseCase.execute(troop.getHeroMorale(), random, GameConstants.moraleProbability)
 
     /**
      * Determines whether the luck bonus is triggered for a troop.
