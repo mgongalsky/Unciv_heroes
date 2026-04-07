@@ -112,6 +112,14 @@ open class BattleManager(
         return turnQueue[currentTurnIndex]
     }
 
+    private fun getArmyOf(troop: Troop): ArmyInfo? {
+        return when {
+            attackerArmy.contains(troop) -> attackerArmy
+            defenderArmy.contains(troop) -> defenderArmy
+            else -> null
+        }
+    }
+
     /**
      * Determines whether the morale bonus is triggered for a troop.
      *
@@ -124,7 +132,7 @@ open class BattleManager(
      * @return True if the morale bonus is triggered, false otherwise.
      */
     private fun isMoraleTriggered(troop: Troop) =
-            IsMoraleTriggeredUseCase.execute(troop.getHeroMorale(), random, GameConstants.moraleProbability)
+            IsMoraleTriggeredUseCase.execute(getArmyOf(troop)?.hero?.morale ?: 0, random, GameConstants.moraleProbability)
 
     /**
      * Determines whether the luck bonus is triggered for a troop.
@@ -141,7 +149,7 @@ open class BattleManager(
      */
     private fun isLuckTriggered(troop: Troop): Boolean {
         // Assume hero's luck value is stored in hero.luck; if no hero, default to 1.
-        val troopLuck = troop.hero?.luck ?: 1
+        val troopLuck = getArmyOf(troop)?.hero?.luck ?: 1
         val effectiveProbability = if (troopLuck <= 3) {
             (GameConstants.luckProbability / 3.0) * troopLuck
         } else {
@@ -149,7 +157,7 @@ open class BattleManager(
         }
         println(
             "Unit: ${troop.unitName}, Amount: ${troop.amount}, " +
-                    "Hero present: ${troop.hasHero()}, Hero luck: $troopLuck, " +
+                    "Hero present: ${getArmyOf(troop)?.hero != null}, Hero luck: $troopLuck, " +
                     "Effective luck probability: $effectiveProbability"
         )
         return random.nextDouble() < effectiveProbability
@@ -649,9 +657,11 @@ open class BattleManager(
 
         // Remove the troop from its respective army
         if (attackerArmy.contains(troop)) {
-            if(attackerArmy.removeTroop(troop)) troop.perish()
+            attackerArmy.removeTroop(troop)
+            troopPositions.remove(troop)
         } else if (defenderArmy.contains(troop)) {
-            if(defenderArmy.removeTroop(troop)) troop.perish()
+            defenderArmy.removeTroop(troop)
+            troopPositions.remove(troop)
         }
 
         println("Troop ${troop.unitName} removed from the battle.")
