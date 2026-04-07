@@ -98,11 +98,14 @@ open class BattleManager(
     }
 
     fun getTroopTile(troop: Troop): IBattleTile? = troopPositions[troop]
-
-    protected open fun getTroopCurrentTile(troop: Troop): IBattleTile? =
-            getTroopTile(troop)  // TileInfo : IBattleTile
+    protected open fun getTroopCurrentTile(troop: Troop): IBattleTile? = troopPositions[troop]
 
     protected open fun moveTroop(troop: Troop, targetTile: IBattleTile) {
+        // Очищаем старый тайл
+        troopPositions[troop]?.clearTroop()
+        // Обновляем позицию
+        troopPositions[troop] = targetTile
+        // Ставим на новый тайл
         targetTile.receiveTroop(troop)
     }
     /**
