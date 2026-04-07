@@ -131,7 +131,7 @@ open class ArmyInfo(
 
     fun dismissByMostMaintenance() {
         val troopToDismiss = troops.maxBy { it?.amount ?: 0 } ?: return
-        removeTroop(troopToDismiss)
+        if(removeTroop(troopToDismiss.troop))troopToDismiss.perish()
     }
 
     /** Returns the troop at the given index or null if the slot is empty. */
@@ -158,15 +158,19 @@ open class ArmyInfo(
      * @param troop The troop to remove.
      * @return True if the troop was successfully removed, false if not found.
      */
-    fun removeTroop(troop: TroopInfo): Boolean {
-        val index = troops.indexOfFirst { it == troop }
+    fun removeTroop(troop: Troop): Boolean {
+        val index = troops.indexOfFirst { it?.troop?.id == troop.id }
         if (index != -1) {
-            troop.perish()
             troops[index] = null
             return true
         }
         return false
     }
+
+    //fun removeTroop(troop: Troop): Boolean {
+    //    val troopInfo = troops.firstOrNull { it?.troop?.id == troop.id } ?: return false
+   //     return removeTroop(troopInfo)
+    //}
 
     /** Sets a troop at the given index. */
     internal fun setTroopAt(index: Int, troop: TroopInfo?) {

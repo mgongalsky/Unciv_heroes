@@ -620,9 +620,9 @@ open class BattleManager(
 
         // Remove the troop from its respective army
         if (attackerArmy.contains(troop.troop)) {
-            attackerArmy.removeTroop(troop)
+            if(attackerArmy.removeTroop(troop.troop)) troop.perish()
         } else if (defenderArmy.contains(troop.troop)) {
-            defenderArmy.removeTroop(troop)
+            if(defenderArmy.removeTroop(troop.troop)) troop.perish()
         }
 
         println("Troop ${troop.baseUnit.name} removed from the battle.")
