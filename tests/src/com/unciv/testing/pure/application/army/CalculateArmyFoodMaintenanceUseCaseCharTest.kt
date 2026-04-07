@@ -6,8 +6,8 @@ import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
+import com.unciv.pure.domain.troop.Troop
 import com.unciv.pure.domain.troop.TroopFactory
-import com.unciv.logic.army.TroopInfo
 import com.unciv.testing.pure.fakes.FakeCivilizationInfo
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -44,9 +44,8 @@ class CalculateArmyFoodMaintenanceUseCaseCharTest {
     @After
     fun tearDown() = stopKoin()
 
-    private fun selfFeedingTroop(unitName: String, amount: Int): TroopInfo {
-        return TroopInfo(amount = amount, unitName = unitName).apply {
-            troop = TroopFactory.create(
+    private fun selfFeedingTroop(unitName: String, amount: Int): Troop =
+            TroopFactory.create(
                 unitName = unitName,
                 amount = amount,
                 source = HardcodedTroopDefinitionSource(
@@ -57,10 +56,6 @@ class CalculateArmyFoodMaintenanceUseCaseCharTest {
                     isSelfFeeding = true
                 )
             )
-        }
-    }
-
-    // --- not in city ---
 
     @Test
     fun `print food maintenance - single troop not in city`() {

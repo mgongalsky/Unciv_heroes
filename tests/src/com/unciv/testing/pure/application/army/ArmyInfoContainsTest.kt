@@ -57,7 +57,7 @@ class ArmyInfoContainsTest {
         val army = ArmyInfo(FakeCivilizationInfo(), 7).apply {
             addUnits("Spearman", 10)
         }
-        val troop = army.getAllTroops().filterNotNull().first().troop
+        val troop = army.getAllTroops().filterNotNull().first()
         assertTrue(army.contains(troop))
     }
 
@@ -84,7 +84,7 @@ class ArmyInfoContainsTest {
             addUnits("Spearman", 20)
             addUnits("Spearman", 30)
         }
-        val troop = army.getAllTroops().filterNotNull().last().troop
+        val troop = army.getAllTroops().filterNotNull().last()
         assertTrue(army.contains(troop))
     }
 }

@@ -1,7 +1,6 @@
 package com.unciv.testing.pure.fakes
 
 import com.unciv.logic.army.ArmyInfo
-import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.battle.BattleManager
 import com.unciv.logic.battle.IBattleTile
 import com.unciv.pure.application.pathfinding.BattleMovementContext
@@ -9,6 +8,7 @@ import com.unciv.pure.application.pathfinding.MovementRangeUseCase
 import com.unciv.pure.domain.battle.IBattleField
 import com.unciv.pure.domain.battle.IBattleRandom
 import com.unciv.pure.domain.pathfinding.INavigableTile
+import com.unciv.pure.domain.troop.Troop
 
 class TestableBattleManager(
     attackerArmy: ArmyInfo,
@@ -19,19 +19,19 @@ class TestableBattleManager(
     private val useRealMovement: Boolean = false
 ) : BattleManager(attackerArmy, defenderArmy, battleField, random) {
 
-    private val troopPositions = mutableMapOf<TroopInfo, FakeBattleTile>()
+    private val fakeTroopPositions = mutableMapOf<Troop, FakeBattleTile>()
 
-    fun placeTroop(troop: TroopInfo, tile: FakeBattleTile) {
+    fun placeTroop(troop: Troop, tile: FakeBattleTile) {
         tile.setTroop(troop)
-        troopPositions[troop] = tile
+        fakeTroopPositions[troop] = tile
     }
 
-    override fun isReachableInCurrentTurn(troop: TroopInfo, targetTile: INavigableTile): Boolean {
+    override fun isReachableInCurrentTurn(troop: Troop, targetTile: INavigableTile): Boolean {
         if (useRealMovement) {
-            val startTile = getTroopCurrentTile(troop) ?: return false
+            val startTile = fakeTroopPositions[troop] ?: return false
             val reachable = MovementRangeUseCase.execute(
                 startTile = startTile,
-                unitMovement = troop.baseUnit.speed.toFloat(),
+                unitMovement = troop.speed.toFloat(),
                 context = BattleMovementContext()
             )
             return reachable.containsKey(targetTile)
@@ -39,13 +39,13 @@ class TestableBattleManager(
         return allTilesReachable
     }
 
-    public override fun getTroopCurrentTile(troop: TroopInfo): IBattleTile? = troopPositions[troop]
+    override fun getTroopCurrentTile(troop: Troop): IBattleTile? = fakeTroopPositions[troop]
 
-    override fun moveTroop(troop: TroopInfo, targetTile: IBattleTile) {
-        troopPositions[troop]?.setTroop(null)
+    override fun moveTroop(troop: Troop, targetTile: IBattleTile) {
+        fakeTroopPositions[troop]?.setTroop(null)
         (targetTile as? FakeBattleTile)?.let {
             it.setTroop(troop)
-            troopPositions[troop] = it
+            fakeTroopPositions[troop] = it
         }
     }
 }
