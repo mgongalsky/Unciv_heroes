@@ -6,7 +6,7 @@ import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.MapUnit
 import com.unciv.models.GameConstants
-import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.pure.application.army.CalculateArmyFoodMaintenanceUseCase
 import com.unciv.pure.domain.army.IArmy
 
 /**
@@ -18,8 +18,17 @@ import com.unciv.pure.domain.army.IArmy
 open class ArmyInfo(
     @Transient
     var civInfo: CivilizationInfo = CivilizationInfo(),
-    val maxSlots: Int = GameConstants.armySize
+    val maxSlots: Int = _defaultMaxSlots ?: GameConstants.armySize
 ) : IsPartOfGameInfoSerialization, Json.Serializable, IArmy {
+
+    companion object {
+        // Seam: testing instance
+        private var _defaultMaxSlots: Int? = null
+
+        fun setTestingMaxSlots(slots: Int) { _defaultMaxSlots = slots }
+        fun resetTestingMaxSlots() { _defaultMaxSlots = null }
+        // End of Seam
+    }
 
     // Array to hold troop slots (null means the slot is empty)
     private val troops: Array<TroopInfo?> = Array(maxSlots) { null }
@@ -30,14 +39,11 @@ open class ArmyInfo(
      */
     @Transient
     var hero: com.unciv.logic.map.MapUnit? = null
-
-    /** Convenience constructor to initialize army with a list of troops */
-    constructor(civInfo: CivilizationInfo, vararg troops: Pair<String, Int>) : this(civInfo, maxSlots = maxOf(GameConstants.armySize, troops.size)) {
+    constructor(civInfo: CivilizationInfo, vararg troops: Pair<String, Int>) : this(civInfo, maxSlots = maxOf(_defaultMaxSlots ?: GameConstants.armySize, troops.size)) {
         initializeTroops(troops)
     }
 
-    // Default constructor
-    constructor() : this(CivilizationInfo(), GameConstants.armySize)
+    constructor() : this(CivilizationInfo(), _defaultMaxSlots ?: GameConstants.armySize)
 
     /**
      * Sets transient properties for the army and passes the hero reference to all troops.
@@ -119,14 +125,8 @@ open class ArmyInfo(
         return false
     }
 
-    fun calculateFoodMaintenance(isInCity: Boolean): Float {
-        var foodMaintenance = 0f
-        troops.filterNotNull().forEach {
-            if (!isInCity || !it.baseUnit.hasUnique(UniqueType.SelfFeeding))
-                foodMaintenance += it.amount.toFloat() / 30f
-        }
-        return foodMaintenance
-    }
+    fun calculateFoodMaintenance(isInCity: Boolean): Float =
+            CalculateArmyFoodMaintenanceUseCase.execute(this, isInCity)
 
     fun dismissByMostMaintenance() {
         val troopToDismiss = troops.maxBy { it?.amount ?: 0 } ?: return
@@ -182,7 +182,7 @@ open class ArmyInfo(
     }
 
     /** Adds a troop to the first available slot. Returns true if successful, false if full. */
-    internal fun addTroop(troop: TroopInfo): Boolean {
+    fun addTroop(troop: TroopInfo): Boolean {
         val emptySlotIndex = troops.indexOfFirst { it == null }
         return if (emptySlotIndex != -1) {
             troops[emptySlotIndex] = troop

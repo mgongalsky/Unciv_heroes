@@ -7,6 +7,7 @@ class Troop(
     val damage: Int,
     val maxHealth: Int,
     val rangedStrength: Int,
+    val isSelfFeeding: Boolean,
     currentAmount: Int,
     currentHealth: Int,
     val id: Int

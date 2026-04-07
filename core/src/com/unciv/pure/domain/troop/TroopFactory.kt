@@ -19,6 +19,7 @@ object TroopFactory {
         maxHealth = source.getMaxHealth(unitName),
         rangedStrength = source.getRangedStrength(unitName),
         currentAmount = amount,
-        currentHealth = source.getMaxHealth(unitName)
+        currentHealth = source.getMaxHealth(unitName),
+        isSelfFeeding = source.isSelfFeeding(unitName)
     )
 }
