@@ -5,12 +5,15 @@ import com.unciv.pure.domain.pathfinding.IMovementContext
 import com.unciv.pure.domain.pathfinding.INavigableTile
 import com.unciv.pure.domain.troop.Troop
 
-class TroopMovementContext(private val troop: Troop) : IMovementContext {
+class TroopMovementContext(
+    private val unit: Troop,
+    private val isEnemy: (Troop) -> Boolean = { false }
+) : IMovementContext {
     override fun canPassThrough(tile: INavigableTile) = !(tile as TileInfo).isImpassible()
     override fun getMovementCost(from: INavigableTile, to: INavigableTile) = 1f
     override fun hasExplored(tile: INavigableTile) = true
     override fun shouldSkipTile(tile: INavigableTile, targetTile: INavigableTile?) =
             (tile as TileInfo).troopUnit != null &&
-                    tile.troopUnit?.troop?.id != troop.id &&
+                    tile.troopUnit?.id != unit.id &&
                     tile != targetTile
 }

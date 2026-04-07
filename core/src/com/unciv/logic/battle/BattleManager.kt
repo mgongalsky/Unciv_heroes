@@ -10,9 +10,11 @@ import com.unciv.infrastructure.battle.RealBattleRandom
 import com.unciv.logic.HexMath
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
+import com.unciv.logic.map.UnitMovementAlgorithms
 import com.unciv.models.GameConstants
 import com.unciv.pure.application.battle.CalculateDamageUseCase
 import com.unciv.pure.application.battle.IsMoraleTriggeredUseCase
+import com.unciv.pure.application.pathfinding.TroopMovementAdapter
 import com.unciv.pure.application.pathfinding.TroopMovementContext
 import com.unciv.pure.domain.battle.IBattleField
 import com.unciv.pure.domain.battle.IBattleRandom
@@ -546,8 +548,22 @@ open class BattleManager(
      * @param troop Отряд, для которого определяется доступность клеток.
      * @return Список доступных клеток (`TileInfo`).
      */
+    //fun getReachableTiles(troop: Troop): List<TileInfo> {
+    //    return troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop)).toList()
+    //}
+
+
+    private fun enemyChecker(troop: Troop): (Troop) -> Boolean = { other ->
+        attackerArmy.contains(troop) && defenderArmy.contains(other) ||
+                defenderArmy.contains(troop) && attackerArmy.contains(other)
+    }
+
     fun getReachableTiles(troop: Troop): List<TileInfo> {
-        return troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop)).toList()
+        val currentTile = getTroopTile(troop) as? TileInfo ?: return emptyList()
+        val movement = UnitMovementAlgorithms(TroopMovementAdapter(troop, currentTile, enemyChecker(troop)))
+        return movement.getReachableTilesInCurrentTurn(
+            context = TroopMovementContext(troop)
+        ).toList()
     }
 
     /*
@@ -701,9 +717,11 @@ open class BattleManager(
     }
 
     protected open fun isReachableInCurrentTurn(troop: Troop, targetTile: INavigableTile): Boolean {
-        val reachableTiles = troop.movement.getReachableTilesInCurrentTurn(
+        val currentTile = getTroopTile(troop) as? TileInfo ?: return false
+        val movement = UnitMovementAlgorithms(TroopMovementAdapter(troop, currentTile, isEnemy = enemyChecker(troop)))
+        val reachableTiles = movement.getReachableTilesInCurrentTurn(
             context = TroopMovementContext(troop),
-            targetTile = targetTile as TileInfo  // legacy cast изолирован здесь
+            targetTile = targetTile as TileInfo
         )
         return reachableTiles.contains(targetTile)
     }

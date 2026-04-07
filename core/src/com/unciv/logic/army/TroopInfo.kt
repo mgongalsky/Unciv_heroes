@@ -223,7 +223,7 @@ class TroopInfo(
         //position = targetTile.position
 
         // Устанавливаем отряд на новую клетку
-        currentTile?.troopUnit = this
+        currentTile?.troopUnit = this.troop
     }
 
 

@@ -15,6 +15,7 @@ import com.unciv.pure.domain.pathfinding.PathsToTilesWithinTurn
 import com.unciv.pure.domain.pathfinding.ParentTileAndTotalDistance
 import com.unciv.utils.Log
 import com.unciv.pure.application.pathfinding.MovementRangeUseCase
+import com.unciv.pure.application.pathfinding.TroopMovementAdapter
 
 class UnitMovementAlgorithms(val unit: MovableUnit) {
 
@@ -115,10 +116,8 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             else if (tile.militaryUnit != null && civInfo.isAtWarWith(tile.militaryUnit!!.civInfo)) {
                 if (tile.militaryUnit!!.type.isWaterUnit() || (unit is MapUnit && unit.type.isLandUnit() && !tile.militaryUnit!!.isEmbarked()))
                     yield(tile)
-            } else if (unit is TroopInfo && tile.troopUnit != null && unit.civInfo != tile.troopUnit?.civInfo){
-               // println("Control zone at tile ${tileInfo.position} for unit ${unit.unitName} detected.")
+            } else if (unit is TroopMovementAdapter && tile.troopUnit != null && unit.isEnemy(tile.troopUnit!!)) {
                 yield(tile)
-
             }
         }
     }

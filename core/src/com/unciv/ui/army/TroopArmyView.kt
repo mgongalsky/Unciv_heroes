@@ -48,7 +48,7 @@ class TroopArmyView(
      * Copies `troopInfo` and initializes `armyView` for standalone usage.
      */
     constructor(original: TroopArmyView, isAvatarOnly: Boolean, newSlotSize: Float = 140f, interactive: Boolean = false) : this(
-        troopInfo = original.troopInfo?.copy(), // Copy troopInfo to ensure it's not the same reference
+        troopInfo = original.troopInfo, // Copy troopInfo to ensure it's not the same reference
         armyView = original.armyView, // ArmyView reference remains the same, modify if needed for detached usage
         avatarOnly = isAvatarOnly,
         slotSize = newSlotSize,
@@ -58,6 +58,7 @@ class TroopArmyView(
 
     }
 
+    // TODO: inject Ruleset here.
     init {
         // Load troop images based on the troop's unit name
         if(troopInfo != null) {

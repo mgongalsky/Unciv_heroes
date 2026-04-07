@@ -318,6 +318,12 @@ class BattleScreen private constructor(
 
     }
 
+
+    private fun isTroopPlayerControlled(troop: Troop): Boolean {
+        return if (manager.getAttackerArmy().contains(troop)) attackerIsPlayer
+        else defenderIsPlayer
+    }
+
     /**
      * The main battle loop. Runs until the battle ends.
      */
@@ -332,7 +338,7 @@ class BattleScreen private constructor(
 
             var result: BattleActionResult? = null
 
-            if (currentTroop.isPlayerControlled()) {
+            if (isTroopPlayerControlled(currentTroop)) {
                 while (true) {
                     if (verboseTurn) println("Waiting for player action...")
                     val (action, targetTileGroup) = waitForPlayerAction()
@@ -768,8 +774,7 @@ class BattleScreen private constructor(
                         val currentTroopNew = manager.getCurrentTroop()
 
                         val currentTroopOnTile = getCurrentTroopView() ?: return
-                        if (currentTroopNew != null && currentTroopNew.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroopNew.troop)).contains(tileGroup.tileInfo))
-                        /*
+                        if (currentTroopNew != null && manager.getReachableTiles(currentTroopNew).contains(tileGroup.tileInfo))                        /*
                         if (manager.isHexAchievable(
                                     currentTroopOnTile.getTroopInfo(),
                                     tileGroup.tileInfo.position
@@ -882,7 +887,7 @@ class BattleScreen private constructor(
 
         // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
         daTileGroups.forEach {
-            if (currentTroop != null && currentTroop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroop)).contains(it.tileInfo))
+            if (currentTroop != null && manager.getReachableTiles(currentTroop).contains(it.tileInfo))
 
             //if (manager.isHexAchievable(currentTroop.getTroopInfo(), it.tileInfo.position))
                 it.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
@@ -1038,15 +1043,15 @@ class BattleScreen private constructor(
             return
         }
 
-        if (!currentTroop.getTroopInfo().isCurrentTileInitialized()){
+        if (manager.getTroopTile(currentTroop.getTroopInfo()) != null){
             Gdx.graphics.setCursor(cursorCancel)
             return
         }
 
         // for non-shooting troops:
-        if (!currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroop.getTroopInfo().troop)).contains(tileGroup.tileInfo)
+        if (!manager.getReachableTiles(currentTroop.getTroopInfo()).contains(tileGroup.tileInfo)
                 && manager.isTileFree(targetTile))
-        //if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
+            //if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
             Gdx.graphics.setCursor(cursorCancel)
         else {
             if (manager.isTileOccupiedByAlly(currentTroop.getTroopInfo(), tileGroup.tileInfo)) {
@@ -1066,12 +1071,8 @@ class BattleScreen private constructor(
 
                  */
 
-                if (currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(
-                            currentTroop.getTroopInfo().troop
-                        )
-                        ).contains(tileToMove)
+                if (manager.getReachableTiles(currentTroop.getTroopInfo()).contains(tileToMove)
                         && (tileToMove != null && manager.isTileFree(tileToMove) || tileToMove == manager.getTroopTile(currentTroop.getTroopInfo())))
-                        //if (manager.isHexAchievable(currentTroop.getTroopInfo(), hexToMove))
                     Gdx.graphics.setCursor(cursorAttack[direction.num])
                 else
                     Gdx.graphics.setCursor(cursorCancel)

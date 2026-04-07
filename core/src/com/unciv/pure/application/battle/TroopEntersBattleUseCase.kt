@@ -24,7 +24,7 @@ object TroopEntersBattleUseCase {
 
         input.troop.currentTile = input.battleField[positionToSet]
         input.troop.currentMovement = input.troop.speed.toFloat()
-        input.troop.currentTile.troopUnit = input.troop
+        //input.troop.currentTile.troopUnit = input.troop
         input.troop.currentHealth = input.troop.maxHealth
         input.troop.currentAmount = input.troop.amount
         input.troop.battleField = input.battleField

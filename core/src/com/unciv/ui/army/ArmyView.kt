@@ -5,6 +5,7 @@ import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.army.ArmyManager
 import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.city.CityInfo
+import com.unciv.pure.domain.troop.Troop
 import com.unciv.ui.cityscreen.CityScreen
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popup.SimplePopup
@@ -73,7 +74,7 @@ class ArmyView(
      * @param index The index of the slot to update.
      * @param troop The new troop to place in the slot, or null for an empty slot.
      */
-    fun updateSlot(index: Int, troop: TroopInfo?) {
+    fun updateSlot(index: Int, troop: Troop?) {
         if (index < 0 || index >= troopViewsArray.size) return // Check array bounds
 
         // Remove the current actor from the table

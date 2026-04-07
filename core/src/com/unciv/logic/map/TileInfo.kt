@@ -25,6 +25,7 @@ import com.unciv.models.stats.Stat
 import com.unciv.models.stats.Stats
 import com.unciv.models.translations.tr
 import com.unciv.pure.domain.pathfinding.INavigableTile
+import com.unciv.pure.domain.troop.Troop
 import com.unciv.ui.civilopedia.FormattedLine
 import com.unciv.ui.utils.Fonts
 import com.unciv.ui.utils.extensions.toPercent
@@ -48,9 +49,11 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
         private set
 
     // Seams from interface IBattleTile
-    override fun getTroop(): TroopInfo? = troopUnit
+    override fun getTroop(): Troop? = troopUnit
 
-    override fun receiveTroop(troop: TroopInfo) = troop.moveToTile(this)
+    override fun receiveTroop(troop: Troop) {
+        troopUnit = troop
+    }
     override fun clearTroop() { troopUnit = null }
 
     /**
@@ -137,7 +140,7 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
     var civilianUnit: MapUnit? = null
 
     @Transient
-    var troopUnit: TroopInfo? = null
+    var troopUnit: Troop? = null
     var airUnits = ArrayList<MapUnit>()
 
     @Transient
@@ -1621,3 +1624,4 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
 
     //endregion
 }
+
