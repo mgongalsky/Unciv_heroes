@@ -23,7 +23,7 @@ class TestableBattleManager(
 
     fun placeTroop(troop: Troop, tile: FakeBattleTile) {
         tile.setTroop(troop)
-        fakeTroopPositions[troop] = tile
+        troopPositions[troop] = tile  // пишем в родительский map
     }
 
     override fun isReachableInCurrentTurn(troop: Troop, targetTile: INavigableTile): Boolean {

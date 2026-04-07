@@ -7,7 +7,7 @@ object CalculateArmyFoodMaintenanceUseCase {
         var foodMaintenance = 0f
         army.getAllTroops().filterNotNull().forEach {
             if (!isInCity || !it.isSelfFeeding)
-                foodMaintenance += it.amount.toFloat() / 30f
+                foodMaintenance += it.currentAmount.toFloat() / 30f
         }
         return foodMaintenance
     }

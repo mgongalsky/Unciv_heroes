@@ -36,7 +36,7 @@ open class BattleManager(
     val battleField: IBattleField, // BattleField on use
     private val random: IBattleRandom = RealBattleRandom()
 ) {
-    private val troopPositions = mutableMapOf<Troop, IBattleTile>()
+    protected val troopPositions = mutableMapOf<Troop, IBattleTile>()
     private val turnQueue: MutableList<Troop> = mutableListOf() // Queue of troops for turn order
     private var currentTurnIndex: Int = 0 // Index of the current troop's turn
 
