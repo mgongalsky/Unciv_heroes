@@ -1037,50 +1037,32 @@ class BattleScreen private constructor(
      * @param y The y-coordinate of the pointer relative to the tile.
      * @param width The width of the hexagon tile.
      */
-    fun chooseCrosshair(tileGroup:TileGroup, x: Float, y: Float, width: Float)
-    {
-
-        // The code is similar to onClick routines. See details comments there.
-        //val targetHex = tileGroup.tileInfo.position
+    fun chooseCrosshair(tileGroup: TileGroup, x: Float, y: Float, width: Float) {
         val targetTile = tileGroup.tileInfo
         val currentTroop = getCurrentTroopView() ?: return
 
-        if (    manager.canShoot(currentTroop.getTroopInfo()) &&
-                manager.isTileOccupiedByEnemy(currentTroop.getTroopInfo(), targetTile)){
+        if (manager.canShoot(currentTroop.getTroopInfo()) &&
+                manager.isTileOccupiedByEnemy(currentTroop.getTroopInfo(), targetTile)) {
             Gdx.graphics.setCursor(cursorShoot)
             return
         }
 
-        if (manager.getTroopTile(currentTroop.getTroopInfo()) != null){
-            Gdx.graphics.setCursor(cursorCancel)
-            return
-        }
-
-        // for non-shooting troops:
         if (!manager.getReachableTiles(currentTroop.getTroopInfo()).contains(tileGroup.tileInfo)
-                && manager.isTileFree(targetTile))
-            //if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
+                && manager.isTileFree(targetTile)) {
             Gdx.graphics.setCursor(cursorCancel)
-        else {
+        } else {
             if (manager.isTileOccupiedByAlly(currentTroop.getTroopInfo(), tileGroup.tileInfo)) {
-                Gdx.graphics.setCursor(cursorCancel) /// TODO: change to question
+                Gdx.graphics.setCursor(cursorCancel)
                 return
             }
 
             if (manager.isTileOccupiedByEnemy(currentTroop.getTroopInfo(), targetTile)) {
                 val direction = pixelToDirection(x, y, width)
                 val tileToMove = battleField.getNeighborTile(targetTile, direction)
-                //val hexToMove = HexMath.oneStepTowards(targetHex, direction)
-                /*
-                if(!manager.isTileOnBattleField(hexToMove)){
-                    Gdx.graphics.setCursor(cursorCancel)
-                    return
-                }
-
-                 */
 
                 if (manager.getReachableTiles(currentTroop.getTroopInfo()).contains(tileToMove)
-                        && (tileToMove != null && manager.isTileFree(tileToMove) || tileToMove == manager.getTroopTile(currentTroop.getTroopInfo())))
+                        && (tileToMove != null && manager.isTileFree(tileToMove)
+                                || tileToMove == manager.getTroopTile(currentTroop.getTroopInfo())))
                     Gdx.graphics.setCursor(cursorAttack[direction.num])
                 else
                     Gdx.graphics.setCursor(cursorCancel)
@@ -1089,12 +1071,7 @@ class BattleScreen private constructor(
 
             Gdx.graphics.setCursor(cursorMove)
         }
-
-
-
-    }
-
-    /**
+    }    /**
      * Determines the direction of the attack based on the mouse pointer position.
      *
      * @param x The x-coordinate of the pointer relative to the tile.
