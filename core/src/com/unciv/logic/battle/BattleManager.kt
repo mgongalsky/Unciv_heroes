@@ -8,6 +8,7 @@ import com.unciv.ui.battlescreen.BattleActionRequest
 import com.badlogic.gdx.math.Vector2
 import com.unciv.infrastructure.battle.RealBattleRandom
 import com.unciv.logic.HexMath
+import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 import com.unciv.logic.map.UnitMovementAlgorithms
@@ -39,6 +40,11 @@ open class BattleManager(
     private val turnQueue: MutableList<Troop> = mutableListOf() // Queue of troops for turn order
     private var currentTurnIndex: Int = 0 // Index of the current troop's turn
 
+    private fun makeAdapter(troop: Troop, tile: TileInfo): TroopMovementAdapter {
+        val armyCivInfo = getArmyOf(troop)?.civInfo ?: CivilizationInfo()
+        return TroopMovementAdapter(troop, tile, enemyChecker(troop), armyCivInfo)
+    }
+
     fun initializeBattle() {
         val attackerTroops = attackerArmy.getAllTroops().filterNotNull()
         val defenderTroops = defenderArmy.getAllTroops().filterNotNull()
@@ -46,7 +52,12 @@ open class BattleManager(
         // Расставляем атакующих
         attackerTroops.forEachIndexed { index, troop ->
             val position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f - index.toFloat() * 2))
-            val tile = battleField.getTileAt(position) as? IBattleTile ?: return@forEachIndexed
+            val rawTile = battleField.getTileAt(position)
+            println("Attacker $index: position=$position, tile=$rawTile, isBattleTile=${rawTile is IBattleTile}")
+            val tile = rawTile as? IBattleTile ?: run {
+                println("WARNING: tile is null or not IBattleTile for attacker $index at $position")
+                return@forEachIndexed
+            }
             troopPositions[troop] = tile
             tile.receiveTroop(troop)
         }
@@ -560,7 +571,7 @@ open class BattleManager(
 
     fun getReachableTiles(troop: Troop): List<TileInfo> {
         val currentTile = getTroopTile(troop) as? TileInfo ?: return emptyList()
-        val movement = UnitMovementAlgorithms(TroopMovementAdapter(troop, currentTile, enemyChecker(troop)))
+        val movement = UnitMovementAlgorithms(makeAdapter(troop, currentTile))
         return movement.getReachableTilesInCurrentTurn(
             context = TroopMovementContext(troop)
         ).toList()
@@ -718,7 +729,7 @@ open class BattleManager(
 
     protected open fun isReachableInCurrentTurn(troop: Troop, targetTile: INavigableTile): Boolean {
         val currentTile = getTroopTile(troop) as? TileInfo ?: return false
-        val movement = UnitMovementAlgorithms(TroopMovementAdapter(troop, currentTile, isEnemy = enemyChecker(troop)))
+        val movement = UnitMovementAlgorithms(makeAdapter(troop, currentTile))
         val reachableTiles = movement.getReachableTilesInCurrentTurn(
             context = TroopMovementContext(troop),
             targetTile = targetTile as TileInfo

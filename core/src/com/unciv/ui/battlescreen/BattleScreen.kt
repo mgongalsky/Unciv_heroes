@@ -681,18 +681,26 @@ class BattleScreen private constructor(
         // Draw attacking troops
         attackerTroopViewsArray.forEach { troopView ->
             if (troopView != null) {
-                var troopTileGroup =
-                        daTileGroups.first { it.tileInfo.position == manager.getTroopTile(troopView.getTroopInfo()) }
-                troopView.draw(troopTileGroup, attacker = true)
+                val troopTile = manager.getTroopTile(troopView.getTroopInfo())
+                val troopTileGroup = daTileGroups.firstOrNull {
+                    it.tileInfo == troopTile
+                }
+                if (troopTileGroup != null)
+                    troopView.draw(troopTileGroup, attacker = true)
+                else
+                    println("Warning: no tile group found for troop ${troopView.getTroopInfo().unitName}")
             }
         }
 
-        // Draw defending troops
+// Draw defending troops
         defenderTroopViewsArray.forEach { troopView ->
             if (troopView != null) {
-                var troopTileGroup =
-                        daTileGroups.first { it.tileInfo.position == manager.getTroopTile(troopView.getTroopInfo()) }
-                troopView.draw(troopTileGroup, attacker = false)
+                val troopTile = manager.getTroopTile(troopView.getTroopInfo())
+                val troopTileGroup = daTileGroups.firstOrNull { it.tileInfo == troopTile }
+                if (troopTileGroup != null)
+                    troopView.draw(troopTileGroup, attacker = false)
+                else
+                    println("Warning: no tile group found for troop ${troopView.getTroopInfo().unitName}")
             }
         }
 
