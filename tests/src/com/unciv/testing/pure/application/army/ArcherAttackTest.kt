@@ -13,6 +13,7 @@ import com.unciv.testing.pure.testModule
 import com.unciv.ui.battlescreen.ActionType
 import com.unciv.ui.battlescreen.BattleActionRequest
 import com.badlogic.gdx.math.Vector2
+import com.unciv.ai.AIBattle
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -180,5 +181,30 @@ class ArcherAttackTest {
 
         println("SHOOT melee result: success=${result.success} errorId=${result.errorId}")
         assertTrue(!result.success)
+    }
+
+    @Test
+    fun `ranged AI targets enemy tile not own tile`() {
+        val attackerArmy = ArmyInfo(FakeCivilizationInfo(), 7).apply { addUnits("Archer", 10) }
+        val defenderArmy = ArmyInfo(FakeCivilizationInfo(), 7).apply { addUnits("Spearman", 10) }
+        val manager = makeManager(attackerArmy, defenderArmy)
+
+        val archer = attackerArmy.getAllTroops().filterNotNull().first()
+        val defender = defenderArmy.getAllTroops().filterNotNull().first()
+
+        val archerTile = FakeBattleTile(Vector2(0f, 0f))
+        val defenderTile = FakeBattleTile(Vector2(5f, 0f))
+        defenderTile.receiveTroop(defender)
+
+        manager.placeTroop(archer, archerTile)
+        manager.placeTroop(defender, defenderTile)
+        manager.initializeTurnQueue()
+
+        val ai = AIBattle(manager)
+        val result = ai.performTurn(archer)
+
+        assertTrue(result.success)
+        // Главная проверка — дефендер получил урон, значит стреляли в него а не в себя
+        assertTrue(defender.currentHealth < defender.maxHealth || defender.currentAmount < 10)
     }
 }
