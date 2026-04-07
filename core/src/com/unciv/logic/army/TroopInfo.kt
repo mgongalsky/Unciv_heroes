@@ -1,29 +1,22 @@
 package com.unciv.logic.army
 
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.math.Vector
 import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.scenes.scene2d.Group
-import com.badlogic.gdx.scenes.scene2d.Touchable
-import com.badlogic.gdx.scenes.scene2d.actions.Actions
-import com.badlogic.gdx.scenes.scene2d.ui.Image
-import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
 import com.unciv.logic.HexMath
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.MovableUnit
 import com.unciv.logic.civilization.CivilizationInfo
-import com.unciv.models.ruleset.unit.BaseUnit
-
-import com.unciv.ui.tilegroups.TileGroup
-import com.unciv.ui.utils.BaseScreen
 
 // Import MapUnit as the hero type
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 import com.unciv.models.ruleset.Ruleset
+import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
+import com.unciv.pure.domain.troop.RulesetTroopDefinitionSource
+import com.unciv.pure.domain.troop.Troop
+import com.unciv.pure.domain.troop.TroopFactory
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -41,12 +34,37 @@ class TroopInfo(
     @delegate:Transient
     private val ruleset: Ruleset by inject()
 
-    /** Current total health and unit count, which may change during battle. */
-    @Transient
-    var currentHealth = 0
+    var troop: Troop = TroopFactory.create(
+        unitName = "Spearman",
+        amount = 0,
+        source = HardcodedTroopDefinitionSource(
+            speed = 0,
+            damage = 0,
+            maxHealth = 1,
+            rangedStrength = 0
+        )
+    )
 
-    @Transient
-    var currentAmount = amount
+    val speed: Int
+        get() = troop.speed
+
+    val damage: Int
+        get() = troop.damage
+
+    val maxHealth: Int
+        get() = troop.maxHealth
+
+    val rangedStrength: Int
+        get() = troop.rangedStrength
+
+    /** Current total health and unit count, which may change during battle. */
+    var currentAmount: Int
+        get() = troop.currentAmount
+        set(value) { troop.currentAmount = value }
+
+    var currentHealth: Int
+        get() = troop.currentHealth
+        set(value) { troop.currentHealth = value }
 
     /** Position of the troop in hex coordinates (offset coordinates). */
     //lateinit var position: Vector2
@@ -95,7 +113,7 @@ class TroopInfo(
         civInfo = civInfo0
         baseUnit = ruleset.units[unitName]!!
         currentAmount = amount
-        currentHealth = baseUnit.health
+        currentHealth = maxHealth
         hero = hero0
     }
 
@@ -114,9 +132,9 @@ class TroopInfo(
             copiedTroop.civInfo = this.civInfo
         }
 
-        if (isBaseUnitInitialized()) {
-            copiedTroop.baseUnit = this.baseUnit
-        }
+        //if (isBaseUnitInitialized()) {
+        //    copiedTroop.baseUnit = this.baseUnit
+        //}
 
         if (isCurrentTileInitialized()) {
             copiedTroop.currentTile = this.currentTile
@@ -130,10 +148,14 @@ class TroopInfo(
     }
 
     private fun initializeVariables() {
+        // baseUnit deprecated. just for interability.
         val unit = ruleset.units[unitName] ?: return
         baseUnit = unit
-        currentAmount = amount
-        currentHealth = baseUnit.health
+        troop = TroopFactory.create(
+            unitName = unitName,
+            amount = amount,
+            source = RulesetTroopDefinitionSource(ruleset)
+        )
     }
 
     fun isPlayerControlled(): Boolean =
@@ -158,7 +180,7 @@ class TroopInfo(
     // Seam: Новый overload — без CivilizationInfo, для sandbox-режима
     fun enterBattle(isPlayerControlled: Boolean, number: Int, attacker: Boolean, battleField0: TileMap) {
         isPlayerControlledOverride = isPlayerControlled
-        baseUnit = ruleset.units[unitName]!!
+        //baseUnit = ruleset.units[unitName]!!
 
         battleField = battleField0
 
@@ -168,10 +190,10 @@ class TroopInfo(
             HexMath.evenQ2HexCoords(Vector2(6f, 3f - number.toFloat() * 2))
 
         currentTile = battleField!![positionToSet]
-        currentMovement = baseUnit.speed.toFloat()
+        currentMovement = speed.toFloat()
         currentTile.troopUnit = this
 
-        currentHealth = baseUnit.health
+        currentHealth = maxHealth
         currentAmount = amount
     }
 
@@ -185,7 +207,7 @@ class TroopInfo(
      */
     fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean, battleField0: TileMap) {
         civInfo = civInfo0
-        baseUnit = ruleset.units[unitName]!!
+        //baseUnit = ruleset.units[unitName]!!
 
         battleField = battleField0
         lateinit var positionToSet: Vector2
@@ -196,10 +218,10 @@ class TroopInfo(
             positionToSet = HexMath.evenQ2HexCoords(Vector2(6f, 3f - number.toFloat() * 2))
 
         currentTile = battleField!![positionToSet]
-        currentMovement = baseUnit.speed.toFloat()
+        currentMovement = speed.toFloat()
         currentTile.troopUnit = this
 
-        currentHealth = baseUnit.health
+        currentHealth = maxHealth
         currentAmount = amount
     }
 
@@ -236,7 +258,7 @@ class TroopInfo(
 
     fun finishBattle() {
         amount = currentAmount
-        currentHealth = baseUnit.health
+        currentHealth = maxHealth
         currentTile.troopUnit = null
         battleField = null
     }
