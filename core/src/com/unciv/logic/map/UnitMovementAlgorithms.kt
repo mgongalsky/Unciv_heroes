@@ -116,8 +116,10 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             else if (tile.militaryUnit != null && civInfo.isAtWarWith(tile.militaryUnit!!.civInfo)) {
                 if (tile.militaryUnit!!.type.isWaterUnit() || (unit is MapUnit && unit.type.isLandUnit() && !tile.militaryUnit!!.isEmbarked()))
                     yield(tile)
-            } else if (unit is TroopMovementAdapter && tile.troopUnit != null && unit.isEnemy(tile.troopUnit!!)) {
-                yield(tile)
+            } else if (unit is TroopMovementAdapter && tile.troopUnit != null) {
+                val enemy = unit.isEnemy(tile.troopUnit!!)
+                println("ZoC check: unit=${unit.troop.unitName} tile=${tile.position} troopOnTile=${tile.troopUnit!!.unitName} isEnemy=$enemy")
+                if (enemy) yield(tile)
             }
         }
     }
