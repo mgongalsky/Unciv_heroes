@@ -759,7 +759,7 @@ class BattleScreen private constructor(
                         val currentTroopNew = manager.getCurrentTroop()
 
                         val currentTroopOnTile = getCurrentTroopView() ?: return
-                        if (currentTroopNew != null && currentTroopNew.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroopNew)).contains(tileGroup.tileInfo))
+                        if (currentTroopNew != null && currentTroopNew.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroopNew.troop)).contains(tileGroup.tileInfo))
                         /*
                         if (manager.isHexAchievable(
                                     currentTroopOnTile.getTroopInfo(),
@@ -873,7 +873,7 @@ class BattleScreen private constructor(
 
         // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
         daTileGroups.forEach {
-            if (currentTroop != null && currentTroop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroop)).contains(it.tileInfo))
+            if (currentTroop != null && currentTroop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroop.troop)).contains(it.tileInfo))
 
             //if (manager.isHexAchievable(currentTroop.getTroopInfo(), it.tileInfo.position))
                 it.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
@@ -1033,7 +1033,7 @@ class BattleScreen private constructor(
         }
 
         // for non-shooting troops:
-        if (!currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroop.getTroopInfo())).contains(tileGroup.tileInfo)
+        if (!currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroop.getTroopInfo().troop)).contains(tileGroup.tileInfo)
                 && manager.isTileFree(targetTile))
         //if (!manager.isHexAchievable(currentTroop.getTroopInfo(), targetHex))
             Gdx.graphics.setCursor(cursorCancel)
@@ -1056,7 +1056,7 @@ class BattleScreen private constructor(
                  */
 
                 if (currentTroop.getTroopInfo().movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(
-                            currentTroop.getTroopInfo()
+                            currentTroop.getTroopInfo().troop
                         )
                         ).contains(tileToMove)
                         && (tileToMove != null && manager.isTileFree(tileToMove) || tileToMove == currentTroop.getTroopInfo().currentTile))

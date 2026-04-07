@@ -510,7 +510,7 @@ open class BattleManager(
      * @return Список доступных клеток (`TileInfo`).
      */
     fun getReachableTiles(troop: TroopInfo): List<TileInfo> {
-        return troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop)).toList()
+        return troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop.troop)).toList()
     }
 
     /*
@@ -663,7 +663,7 @@ open class BattleManager(
 
     protected open fun isReachableInCurrentTurn(troop: TroopInfo, targetTile: INavigableTile): Boolean {
         val reachableTiles = troop.movement.getReachableTilesInCurrentTurn(
-            context = TroopMovementContext(troop),
+            context = TroopMovementContext(troop.troop),
             targetTile = targetTile as TileInfo  // legacy cast изолирован здесь
         )
         return reachableTiles.contains(targetTile)

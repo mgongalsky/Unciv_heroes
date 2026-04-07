@@ -1,11 +1,17 @@
 package com.unciv.pure.domain.troop
 
 object TroopFactory {
+    private var nextId = 1
+
+    // Seam for testing
+    fun resetIdCounter() { nextId = 1 }
+
     fun create(
         unitName: String,
         amount: Int,
         source: ITroopDefinitionSource
     ): Troop = Troop(
+        id = nextId++,
         unitName = unitName,
         amount = amount,
         speed = source.getSpeed(unitName),

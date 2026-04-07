@@ -8,7 +8,8 @@ class Troop(
     val maxHealth: Int,
     val rangedStrength: Int,
     currentAmount: Int,
-    currentHealth: Int
+    currentHealth: Int,
+    val id: Int
 ) {
     var currentAmount: Int = currentAmount
     var currentHealth: Int = currentHealth
