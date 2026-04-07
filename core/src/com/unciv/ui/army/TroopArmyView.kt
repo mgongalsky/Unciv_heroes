@@ -16,6 +16,7 @@ import com.badlogic.gdx.utils.Align
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.logic.army.TroopInfo
+import com.unciv.pure.domain.troop.Troop
 import com.unciv.ui.utils.TextureUtils
 
 /**
@@ -23,7 +24,7 @@ import com.unciv.ui.utils.TextureUtils
  * Includes functionality for selection/deselection and updating the display accordingly.
  */
 class TroopArmyView(
-    internal val troopInfo: TroopInfo?, // Null indicates an empty slot
+    internal val troopInfo: Troop?, // Null indicates an empty slot
     private val armyView: ArmyView,
     private val avatarOnly: Boolean = false, // avatar-only mode
     private val slotSize: Float = 64f, // Размер слота, по умолчанию 64x64

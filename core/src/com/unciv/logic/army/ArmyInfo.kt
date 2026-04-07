@@ -8,7 +8,10 @@ import com.unciv.logic.map.MapUnit
 import com.unciv.models.GameConstants
 import com.unciv.pure.application.army.CalculateArmyFoodMaintenanceUseCase
 import com.unciv.pure.domain.army.IArmy
+import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
+import com.unciv.pure.domain.troop.ITroopDefinitionSource
 import com.unciv.pure.domain.troop.Troop
+import com.unciv.pure.domain.troop.TroopFactory
 
 /**
  * Represents an army consisting of a fixed number of slots,
@@ -19,7 +22,9 @@ import com.unciv.pure.domain.troop.Troop
 open class ArmyInfo(
     @Transient
     var civInfo: CivilizationInfo = CivilizationInfo(),
-    val maxSlots: Int = _defaultMaxSlots ?: GameConstants.armySize
+    val maxSlots: Int = _defaultMaxSlots ?: GameConstants.armySize,
+    @Transient
+    val troopSource: ITroopDefinitionSource = HardcodedTroopDefinitionSource(5, 10, 100, 0, false)
 ) : IsPartOfGameInfoSerialization, Json.Serializable, IArmy {
 
     companion object {
@@ -32,7 +37,8 @@ open class ArmyInfo(
     }
 
     // Array to hold troop slots (null means the slot is empty)
-    private val troops: Array<TroopInfo?> = Array(maxSlots) { null }
+    //private val troops: Array<TroopInfo?> = Array(maxSlots) { null }
+    private val troops: Array<Troop?> = Array(maxSlots) { null }
 
     /**
      * Optional reference to the hero (MapUnit) leading this army.
@@ -54,9 +60,9 @@ open class ArmyInfo(
     fun setTransients(civInfo0: CivilizationInfo, hero0: MapUnit?) {
         civInfo = civInfo0
         hero = hero0
-        troops.forEach { troop ->
-            troop?.setTransients(civInfo, hero0)
-        }
+        //troops.forEach { troop ->
+        //    troop?.setTransients(civInfo, hero0)
+        //}
     }
 
     /** Initializes troops in slots from a list of pairs (name, count) */
@@ -65,7 +71,8 @@ open class ArmyInfo(
             if (index >= maxSlots) break
             val (name, count) = troop
             // Create troop without hero; hero will be set later via setTransients.
-            this.troops[index] = TroopInfo(name, count, civInfo, hero)
+            this.troops[index] = TroopFactory.create(name, count, troopSource)
+            //this.troops[index] = TroopInfo(name, count, civInfo, hero)
         }
         // Fill remaining slots with null if the number of troops is less than maxSlots
         for (index in troops.size until maxSlots) {
@@ -97,7 +104,7 @@ open class ArmyInfo(
         for (i in troops.indices) {
             val countForThisSlot = troopsPerSlot + if (i < remainder) 1 else 0
             if (countForThisSlot > 0) {
-                troops[i] = TroopInfo(unitName, countForThisSlot, civInfo, hero)
+                troops[i] = TroopFactory.create(unitName, countForThisSlot, troopSource)
             }
         }
     }
@@ -114,13 +121,13 @@ open class ArmyInfo(
         if (amount <= 0) return false
         for (slot in troops) {
             if (slot?.unitName == unitName) {
-                slot.amount += amount
+                slot.currentAmount += amount
                 return true
             }
         }
         val emptySlotIndex = troops.indexOfFirst { it == null }
         if (emptySlotIndex != -1) {
-            troops[emptySlotIndex] = TroopInfo(unitName, amount, civInfo, hero)
+            troops[emptySlotIndex] = TroopFactory.create(unitName, amount, troopSource)
             return true
         }
         return false
@@ -131,11 +138,11 @@ open class ArmyInfo(
 
     fun dismissByMostMaintenance() {
         val troopToDismiss = troops.maxBy { it?.amount ?: 0 } ?: return
-        if(removeTroop(troopToDismiss.troop))troopToDismiss.perish()
+        removeTroop(troopToDismiss)
     }
 
     /** Returns the troop at the given index or null if the slot is empty. */
-    fun getTroopAt(index: Int): TroopInfo? {
+    fun getTroopAt(index: Int): Troop? {
         return troops.getOrNull(index)
     }
 
@@ -150,7 +157,7 @@ open class ArmyInfo(
     //}
 
     fun contains(troop: Troop): Boolean =
-            troops.any { it?.troop?.id == troop.id }
+            troops.any { it?.id == troop.id }
 
     /**
      * Removes the specified troop from the army.
@@ -159,7 +166,7 @@ open class ArmyInfo(
      * @return True if the troop was successfully removed, false if not found.
      */
     fun removeTroop(troop: Troop): Boolean {
-        val index = troops.indexOfFirst { it?.troop?.id == troop.id }
+        val index = troops.indexOfFirst { it?.id == troop.id }
         if (index != -1) {
             troops[index] = null
             return true
@@ -173,14 +180,14 @@ open class ArmyInfo(
     //}
 
     /** Sets a troop at the given index. */
-    internal fun setTroopAt(index: Int, troop: TroopInfo?) {
+    internal fun setTroopAt(index: Int, troop: Troop?) {
         if (index in troops.indices) {
             troops[index] = troop
         }
     }
 
     /** Removes a troop from the given index and returns it. */
-    internal fun removeTroopAt(index: Int): TroopInfo? {
+    internal fun removeTroopAt(index: Int): Troop? {
         if (index in troops.indices) {
             val removedTroop = troops[index]
             troops[index] = null
@@ -190,7 +197,7 @@ open class ArmyInfo(
     }
 
     /** Adds a troop to the first available slot. Returns true if successful, false if full. */
-    fun addTroop(troop: TroopInfo): Boolean {
+    fun addTroop(troop: Troop): Boolean {
         val emptySlotIndex = troops.indexOfFirst { it == null }
         return if (emptySlotIndex != -1) {
             troops[emptySlotIndex] = troop
@@ -209,9 +216,7 @@ open class ArmyInfo(
         }
     }
 
-    override fun getAllTroops(): Array<TroopInfo?> {
-        return troops
-    }
+    override fun getAllTroops(): Array<Troop?> = troops
 
     // ===== Serialization Methods =====
 
@@ -228,7 +233,7 @@ open class ArmyInfo(
         for (i in 0 until maxSlots) {
             val troopData = slotArray.get(i)
             troops[i] = if (troopData != null && troopData.has("amount")) {
-                json.readValue(TroopInfo::class.java, troopData)
+                json.readValue(Troop::class.java, troopData)
             } else {
                 null
             }
@@ -236,7 +241,7 @@ open class ArmyInfo(
     }
 
     fun finishBattle() {
-        troops.forEach { it?.finishBattle() }
+    //    troops.forEach { it?.finishBattle() }
     }
 
     /**
@@ -245,10 +250,11 @@ open class ArmyInfo(
      *
      * @return A new array with the copied troop slots.
      */
-    fun copySlots(): Array<TroopInfo?> {
-        return troops.map { troop ->
-            troop?.copy()
-        }.toTypedArray()
+    fun copySlots(): Array<Troop?> {
+        return troops
+        //return troops.map { troop ->
+        //    troop?.copy()
+       // }.toTypedArray()
     }
 
     fun clone(): ArmyInfo {

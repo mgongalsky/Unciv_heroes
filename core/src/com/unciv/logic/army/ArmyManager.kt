@@ -1,12 +1,19 @@
 package com.unciv.logic.army
 
+import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
+import com.unciv.pure.domain.troop.ITroopDefinitionSource
+import com.unciv.pure.domain.troop.Troop
+import com.unciv.pure.domain.troop.TroopFactory
+
 /**
  * Manages operations on armies, including swapping, combining, and splitting troops.
  * Ensures that hero references are updated accordingly when troops move between armies.
  */
 class ArmyManager(
     private val army1: ArmyInfo, // The first army
-    private val army2: ArmyInfo? = null // The second army for exchange operations (optional)
+    private val army2: ArmyInfo? = null, // The second army for exchange operations (optional)
+    @Transient
+    val troopDefinitionSource: ITroopDefinitionSource = HardcodedTroopDefinitionSource(5, 10, 100, 0, false)
 ) {
 
     /**
@@ -15,10 +22,10 @@ class ArmyManager(
      * @param toArmy1 If true, adds to army1; otherwise, to army2.
      * @return True if the troop was added successfully, false otherwise.
      */
-    fun addTroop(troop: TroopInfo, toArmy1: Boolean = true): Boolean {
+    fun addTroop(troop: Troop, toArmy1: Boolean = true): Boolean {
         val targetArmy = if (toArmy1) army1 else army2 ?: return false
         // Update the troop's hero reference to match the target army
-        troop.hero = targetArmy.hero
+        //troop.hero = targetArmy.hero
         return targetArmy.addTroop(troop)
     }
 
@@ -28,7 +35,7 @@ class ArmyManager(
      * @param fromArmy1 If true, removes from army1; otherwise, from army2.
      * @return The removed troop, or null if the operation failed.
      */
-    fun removeTroop(index: Int, fromArmy1: Boolean = true): TroopInfo? {
+    fun removeTroop(index: Int, fromArmy1: Boolean = true): Troop? {
         val targetArmy = if (fromArmy1) army1 else army2 ?: return null
         return targetArmy.removeTroopAt(index)
     }
@@ -39,7 +46,7 @@ class ArmyManager(
      * @param fromArmy1 If true, retrieves from army1; otherwise, from army2.
      * @return The troop at the specified index, or null if not found.
      */
-    fun getTroop(index: Int, fromArmy1: Boolean = true): TroopInfo? {
+    fun getTroop(index: Int, fromArmy1: Boolean = true): Troop? {
         val targetArmy = if (fromArmy1) army1 else army2 ?: return null
         return targetArmy.getTroopAt(index)
     }
@@ -77,14 +84,14 @@ class ArmyManager(
             secondTroop.amount += firstTroop.amount
             firstArmy.removeTroopAt(firstIndex)
             // Update hero reference in the combined troop to match the target army (secondArmy)
-            secondTroop.hero = secondArmy.hero
+            //secondTroop.hero = secondArmy.hero
             return true
         } else {
             // Perform the swap
             if (secondTroop != null) {
                 firstArmy.setTroopAt(firstIndex, secondTroop)
                 // Update hero reference: troop now belongs to firstArmy.
-                secondTroop.hero = firstArmy.hero
+                //secondTroop.hero = firstArmy.hero
             } else {
                 firstArmy.removeTroopAt(firstIndex)
             }
@@ -92,7 +99,7 @@ class ArmyManager(
             if (firstTroop != null) {
                 secondArmy.setTroopAt(secondIndex, firstTroop)
                 // Update hero reference: troop now belongs to secondArmy.
-                firstTroop.hero = secondArmy.hero
+                //firstTroop.hero = secondArmy.hero
             } else {
                 secondArmy.removeTroopAt(secondIndex)
             }
@@ -133,7 +140,7 @@ class ArmyManager(
 
             // Create a new troop for the target slot with the split amount,
             // passing along civInfo and setting hero from targetArmy.
-            val newTroop = TroopInfo(sourceTroop.unitName, splitAmount, sourceArmy.civInfo, targetArmy.hero)
+            val newTroop = TroopFactory.create(sourceTroop.unitName, splitAmount, troopDefinitionSource)
             targetArmy.setTroopAt(targetIndex, newTroop)
         } else if (targetTroop.unitName == sourceTroop.unitName) {
             // Combine with the existing troop in the target slot.
@@ -143,7 +150,7 @@ class ArmyManager(
                 sourceArmy.removeTroopAt(sourceIndex)
             }
             // Update target troop's hero reference (if needed).
-            targetTroop.hero = targetArmy.hero
+            //targetTroop.hero = targetArmy.hero
         } else {
             return false // Invalid target: different troop types.
         }

@@ -5,6 +5,7 @@ import com.unciv.logic.Direction
 import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.battle.IBattleTile
 import com.unciv.logic.map.TileInfo
+import com.unciv.pure.domain.troop.Troop
 
 /**
  * Enumeration of possible action types in battle.
@@ -25,7 +26,7 @@ enum class ActionType {
  * @property direction The attack direction, if applicable.
  */
 data class BattleActionRequest(
-    val troop: TroopInfo,
+    val troop: Troop,
     val targetPosition: IBattleTile,
     val actionType: ActionType,
     val attackTile: IBattleTile? = null

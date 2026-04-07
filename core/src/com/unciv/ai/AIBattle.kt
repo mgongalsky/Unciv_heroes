@@ -7,6 +7,7 @@ import com.unciv.logic.HexMath
 import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.battle.BattleManager
 import com.unciv.logic.map.TileInfo
+import com.unciv.pure.domain.troop.Troop
 import com.unciv.ui.battlescreen.ActionType
 import com.unciv.ui.battlescreen.BattleActionRequest
 
@@ -17,9 +18,9 @@ class AIBattle(private val battleManager: BattleManager) {
     }
 
     /** Выполняет ход для указанного отряда AI */
-    fun performTurn(troop: TroopInfo): BattleActionResult {
+    fun performTurn(troop: Troop): BattleActionResult {
         if (AI_verbose) println("AI Turn: ${troop.unitName} at ${troop.currentTile.position}")
-        return if (troop.baseUnit.isRanged()) {
+        return if (troop.isRanged) {
             performRangedAction(troop)
         } else {
             performMeleeAction(troop)
@@ -27,7 +28,7 @@ class AIBattle(private val battleManager: BattleManager) {
     }
 
     /** Логика для ближнего боя */
-    private fun performMeleeAction(troop: TroopInfo): BattleActionResult {
+    private fun performMeleeAction(troop: Troop): BattleActionResult {
         val enemies = battleManager.getEnemies(troop)
 
         if (enemies.isEmpty()) {
@@ -115,7 +116,7 @@ class AIBattle(private val battleManager: BattleManager) {
      * @param targetTile Целевая клетка атаки.
      * @return Клетка (`TileInfo`), с которой можно атаковать, или `null`, если подходящей нет.
      */
-    private fun findAttackTile(troop: TroopInfo, targetTile: TileInfo): TileInfo? {
+    private fun findAttackTile(troop: Troop, targetTile: TileInfo): TileInfo? {
         if (AI_verbose) println("Finding attack tile for ${troop.unitName} attacking ${targetTile.position}")
 
         // Проверяем, находится ли текущий тайл юнита в соседях цели
@@ -163,7 +164,7 @@ class AIBattle(private val battleManager: BattleManager) {
 
      */
     /** Логика для стреляющих юнитов */
-    private fun performRangedAction(troop: TroopInfo): BattleActionResult {
+    private fun performRangedAction(troop: Troop): BattleActionResult {
         val enemies = battleManager.getEnemies(troop)
 
         if (enemies.isEmpty()) {
@@ -177,8 +178,8 @@ class AIBattle(private val battleManager: BattleManager) {
 
         val target = enemies
             .sortedWith(
-                compareByDescending<TroopInfo> { it.baseUnit.isRanged() }
-                    .thenByDescending { it.baseUnit.speed }
+                compareByDescending<Troop> { it.baseUnit.isRanged() }
+                    .thenByDescending { it.speed }
             )
             .firstOrNull()
 
@@ -213,7 +214,7 @@ class AIBattle(private val battleManager: BattleManager) {
      */
 
     /** Проверить, валидна ли клетка для атаки */
-    private fun isDirectionValid(troop: TroopInfo, targetTile: TileInfo, direction: Direction): Boolean {
+    private fun isDirectionValid(troop: Troop, targetTile: TileInfo, direction: Direction): Boolean {
         // Получаем клетку, с которой можно атаковать
         val attackTile = battleManager.battleField.getNeighborTile(targetTile, direction) ?: return false
 
@@ -228,7 +229,7 @@ class AIBattle(private val battleManager: BattleManager) {
      * @param targetTile Целевая клетка.
      * @return Лучшая клетка для перемещения или `null`, если перемещение невозможно.
      */
-    private fun findBestMoveTarget(troop: TroopInfo, targetTile: TileInfo): TileInfo? {
+    private fun findBestMoveTarget(troop: Troop, targetTile: TileInfo): TileInfo? {
         val reachableTiles = battleManager.getReachableTiles(troop)
         if (reachableTiles.isEmpty()) {
             if (AI_verbose) println("No reachable tiles for ${troop.unitName}")

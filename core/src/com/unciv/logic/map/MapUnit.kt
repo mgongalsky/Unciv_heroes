@@ -1294,8 +1294,9 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
 
         // TODO: Exclude this! I hate those lateinits. There is no reason for the troop to change civilization!
         // If the MapUnit has an army, update civInfo for all troops in the army
-        army.getAllTroops().forEach { troop ->
-            troop?.civInfo = civInfo // Update civInfo only for non-null troops
+        army.getAllTroops().forEach {
+            //troop ->
+            //troop?.civInfo = civInfo // Update civInfo only for non-null troops
         }
     }
 

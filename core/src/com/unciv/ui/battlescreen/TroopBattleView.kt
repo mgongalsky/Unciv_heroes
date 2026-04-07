@@ -13,12 +13,13 @@ import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.TileInfo
+import com.unciv.pure.domain.troop.Troop
 
 /**
  * Represents the view of a troop in battles.
  */
 class TroopBattleView(
-    private val troopInfo: TroopInfo,
+    private val troop: Troop,
     private val battleScreen: BattleScreen
     ) {
     private val troopGroup = Group()
@@ -27,12 +28,12 @@ class TroopBattleView(
     /** Initialize the troop's battle appearance. */
     // Deprecated. To be removed
     fun initialize(civColor: Color) {
-        val unitImagePath = "TileSets/AbsoluteUnits/Units/${troopInfo.unitName}"
+        val unitImagePath = "TileSets/AbsoluteUnits/Units/${troop.unitName}"
         troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, civColor, civColor)
     }
 
     init {
-        val unitImagePath = "TileSets/AbsoluteUnits/Units/${troopInfo.unitName}"
+        val unitImagePath = "TileSets/AbsoluteUnits/Units/${troop.unitName}"
         troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, null, null)
         troopGroup.name = "troopGroup"
 
@@ -40,16 +41,16 @@ class TroopBattleView(
     }
 
     fun getBattlefieldPosition(): Vector2 {
-        return troopInfo.currentTile.position
+        return troop.currentTile.position
     }
 
     fun getBattlefieldTile(): TileInfo {
-        return troopInfo.currentTile
+        return troop.currentTile
     }
 
 
-    fun getTroopInfo(): TroopInfo{
-        return troopInfo
+    fun getTroopInfo(): Troop{
+        return troop
     }
 
     /** Returns the current group of the troop for rendering. */
@@ -96,7 +97,7 @@ class TroopBattleView(
     /** Draw the troop on the battle field. */
     fun draw(tileGroup: TileGroup, attacker: Boolean) {
         // Создаем или обновляем Label для отображения количества юнитов
-        val amountLabel = Label(troopInfo.currentAmount.toString(), BaseScreen.skin).apply {
+        val amountLabel = Label(troop.currentAmount.toString(), BaseScreen.skin).apply {
             name = "amountLabel" // Устанавливаем имя для последующего поиска
             setPosition(tileGroup.width * 0.5f, 0f) // Позиция внутри группы
         }
@@ -146,7 +147,7 @@ class TroopBattleView(
             val amountLabel = troopGroup.findActor<Label>("amountLabel")
             if (amountLabel != null) {
                 // Обновляем текст в существующем Label
-                amountLabel.setText(troopInfo.currentAmount.toString())
+                amountLabel.setText(troop.currentAmount.toString())
             } else {
                 // Если Label отсутствует, создаем его
                 println("Amount Label not found")
@@ -156,7 +157,7 @@ class TroopBattleView(
                 //}
                 //troopGroup.addActor(newAmountLabel) // Добавляем новый Label в группу
             }
-            println("Troop stats updated: ${troopInfo.unitName}, Amount: ${troopInfo.currentAmount}")
+            println("Troop stats updated: ${troop.unitName}, Amount: ${troop.currentAmount}")
         }
     }
 

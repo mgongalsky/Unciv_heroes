@@ -33,6 +33,7 @@ import com.unciv.logic.map.TileMap
 import com.unciv.logic.map.mapgenerator.MapGenerator
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.pure.application.pathfinding.TroopMovementContext
+import com.unciv.pure.domain.troop.Troop
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.map.TileGroupMap
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
@@ -211,7 +212,7 @@ class BattleScreen private constructor(
 
         attackerArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
-                troop.enterBattle(attackerIsPlayer, index, attacker = true, battleField)
+                //troop.enterBattle(attackerIsPlayer, index, attacker = true, battleField)
                 val troopView = TroopBattleView(troop, this)
                 attackerTroopViewsArray[index] = troopView
             }
@@ -219,7 +220,7 @@ class BattleScreen private constructor(
 
         defenderArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
-                troop.enterBattle(defenderIsPlayer, index, attacker = false, battleField)
+                //troop.enterBattle(defenderIsPlayer, index, attacker = false, battleField)
                 val troopView = TroopBattleView(troop, this)
                 defenderTroopViewsArray[index] = troopView
             }
@@ -323,7 +324,7 @@ class BattleScreen private constructor(
                 Gdx.app.postRunnable { shutdownScreen() }
                 return@coroutineScope
             }
-            if (verboseTurn) println("Current troop: ${currentTroop.baseUnit.name} at position ${currentTroop.currentTile.position}")
+            if (verboseTurn) println("Current troop: ${currentTroop.unitName} at position ${currentTroop.currentTile.position}")
 
             var result: BattleActionResult? = null
 
@@ -342,7 +343,7 @@ class BattleScreen private constructor(
                     if (result.success) break
                 }
             } else {
-                if (verboseTurn) println("AI is performing action for troop: ${currentTroop.baseUnit.name}")
+                if (verboseTurn) println("AI is performing action for troop: ${currentTroop.unitName}")
                 val aiBattle = AIBattle(manager)
                 result = aiBattle.performTurn(currentTroop)
                 handleBattleResult(result, currentTroop)
@@ -370,7 +371,7 @@ class BattleScreen private constructor(
      */
     private fun handleBattleResult(
         result: BattleActionResult,
-        currentTroop: TroopInfo
+        currentTroop: Troop
     ) {
         if (result.success) {
             if (verboseTurn) {
@@ -526,7 +527,7 @@ class BattleScreen private constructor(
      * @param troop The TroopInfo for which the view is needed.
      * @return The corresponding TroopBattleView, or null if not found.
      */
-    fun getTroopViewFor(troop: TroopInfo): TroopBattleView? {
+    fun getTroopViewFor(troop: Troop): TroopBattleView? {
         // Search in the attacker's troop views
         attackerTroopViewsArray.forEach { troopView ->
             if (troopView?.getTroopInfo() == troop) {
@@ -873,7 +874,7 @@ class BattleScreen private constructor(
 
         // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
         daTileGroups.forEach {
-            if (currentTroop != null && currentTroop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroop.troop)).contains(it.tileInfo))
+            if (currentTroop != null && currentTroop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(currentTroop)).contains(it.tileInfo))
 
             //if (manager.isHexAchievable(currentTroop.getTroopInfo(), it.tileInfo.position))
                 it.baseLayerGroup.color = Color(1f,1f,1f,0.7f)

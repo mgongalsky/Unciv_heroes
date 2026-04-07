@@ -2,7 +2,7 @@ package com.unciv.pure.domain.troop
 
 class Troop(
     val unitName: String,
-    val amount: Int,
+    var amount: Int,
     val speed: Int,
     val damage: Int,
     val maxHealth: Int,
@@ -14,4 +14,5 @@ class Troop(
 ) {
     var currentAmount: Int = currentAmount
     var currentHealth: Int = currentHealth
+    val isRanged: Boolean get() = rangedStrength > 0
 }

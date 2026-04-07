@@ -1,7 +1,8 @@
 package com.unciv.pure.domain.army
 
 import com.unciv.logic.army.TroopInfo
+import com.unciv.pure.domain.troop.Troop
 
 interface IArmy {
-    fun getAllTroops(): Array<TroopInfo?>
+    fun getAllTroops(): Array<Troop?>
 }
