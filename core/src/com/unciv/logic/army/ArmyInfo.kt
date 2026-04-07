@@ -8,6 +8,7 @@ import com.unciv.logic.map.MapUnit
 import com.unciv.models.GameConstants
 import com.unciv.pure.application.army.CalculateArmyFoodMaintenanceUseCase
 import com.unciv.pure.domain.army.IArmy
+import com.unciv.pure.domain.troop.Troop
 
 /**
  * Represents an army consisting of a fixed number of slots,
@@ -144,9 +145,12 @@ open class ArmyInfo(
      * @param troop The troop to check.
      * @return True if the troop belongs to this army, false otherwise.
      */
-    fun contains(troop: TroopInfo): Boolean {
-        return troops.any { it == troop }
-    }
+    //fun contains(troop: TroopInfo): Boolean {
+    //    return troops.any { it?.troop?.id == troop.troop.id }
+    //}
+
+    fun contains(troop: Troop): Boolean =
+            troops.any { it?.troop?.id == troop.id }
 
     /**
      * Removes the specified troop from the army.

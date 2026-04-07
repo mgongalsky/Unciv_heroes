@@ -406,10 +406,10 @@ open class BattleManager(
         val targetTroop = targetTile.getTroop() ?: return false
 
         // Определяем, к какой армии относится юнит
-        val isAlly = if (attackerArmy.contains(troop)) {
-            attackerArmy.contains(targetTroop)
+        val isAlly = if (attackerArmy.contains(troop.troop)) {
+            attackerArmy.contains(targetTroop.troop)
         } else {
-            defenderArmy.contains(targetTroop)
+            defenderArmy.contains(targetTroop.troop)
         }
 
         return isAlly && targetTroop != troop  // Союзный, но не сам себе союзник
@@ -451,10 +451,10 @@ open class BattleManager(
         val targetTroop = targetTile.getTroop() ?: return false
 
         // Определяем, к какой армии относится юнит и является ли цель врагом
-        return if (attackerArmy.contains(troop)) {
-            defenderArmy.contains(targetTroop)  // Если юнит из атакующей армии, то ищем врага в защитниках
+        return if (attackerArmy.contains(troop.troop)) {
+            defenderArmy.contains(targetTroop.troop)  // Если юнит из атакующей армии, то ищем врага в защитниках
         } else {
-            attackerArmy.contains(targetTroop)  // И наоборот
+            attackerArmy.contains(targetTroop.troop)  // И наоборот
         }
     }
 
@@ -486,9 +486,9 @@ open class BattleManager(
      * @return A list of enemy troops.
      */
     fun getEnemies(troop: TroopInfo): List<TroopInfo> {
-        return if (attackerArmy.contains(troop)) {
+        return if (attackerArmy.contains(troop.troop)) {
             defenderArmy.getAllTroops().filterNotNull().toList()
-        } else if (defenderArmy.contains(troop)) {
+        } else if (defenderArmy.contains(troop.troop)) {
             attackerArmy.getAllTroops().filterNotNull().toList()
         } else {
             emptyList() // No enemies
@@ -619,9 +619,9 @@ open class BattleManager(
         }
 
         // Remove the troop from its respective army
-        if (attackerArmy.contains(troop)) {
+        if (attackerArmy.contains(troop.troop)) {
             attackerArmy.removeTroop(troop)
-        } else if (defenderArmy.contains(troop)) {
+        } else if (defenderArmy.contains(troop.troop)) {
             defenderArmy.removeTroop(troop)
         }
 
