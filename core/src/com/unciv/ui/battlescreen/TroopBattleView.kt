@@ -40,13 +40,13 @@ class TroopBattleView(
 
     }
 
-    fun getBattlefieldPosition(): Vector2 {
-        return troop.currentTile.position
-    }
+   // fun getBattlefieldPosition(): Vector2 {
+  //      return troop.currentTile.position
+   // }
 
-    fun getBattlefieldTile(): TileInfo {
-        return troop.currentTile
-    }
+   // fun getBattlefieldTile(): TileInfo {
+  //      return troop.currentTile
+  //  }
 
 
     fun getTroopInfo(): Troop{

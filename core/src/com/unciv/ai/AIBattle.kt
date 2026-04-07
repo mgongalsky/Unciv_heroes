@@ -19,7 +19,7 @@ class AIBattle(private val battleManager: BattleManager) {
 
     /** Выполняет ход для указанного отряда AI */
     fun performTurn(troop: Troop): BattleActionResult {
-        if (AI_verbose) println("AI Turn: ${troop.unitName} at ${troop.currentTile.position}")
+        if (AI_verbose) println("AI Turn: ${troop.unitName} at ${battleManager.getTroopTile(troop)?.position}")
         return if (troop.isRanged) {
             performRangedAction(troop)
         } else {
@@ -30,9 +30,12 @@ class AIBattle(private val battleManager: BattleManager) {
     /** Логика для ближнего боя */
     private fun performMeleeAction(troop: Troop): BattleActionResult {
         val enemies = battleManager.getEnemies(troop)
+        val currentTile = battleManager.getTroopTile(troop)
+        if(currentTile == null)
+            return BattleActionResult(actionType = ActionType.ATTACK, success = false)
 
         if (enemies.isEmpty()) {
-            if (AI_verbose) println("No enemies left for melee troop ${troop.unitName} at ${troop.currentTile.position}")
+            if (AI_verbose) println("No enemies left for melee troop ${troop.unitName} at ${battleManager.getTroopTile(troop)?.position}")
             return BattleActionResult(
                 actionType = ActionType.ATTACK,
                 success = false,
@@ -40,10 +43,27 @@ class AIBattle(private val battleManager: BattleManager) {
             )
         }
 
-        val closestEnemy = enemies.minByOrNull { HexMath.getDistance(troop.currentTile.position, it.currentTile.position) }
-        if (AI_verbose) println("Closest enemy for ${troop.unitName}: ${closestEnemy?.unitName} at ${closestEnemy?.currentTile?.position}")
 
-        val attackTile = closestEnemy?.currentTile?.let { findAttackTile(troop, it) }
+
+        val closestEnemy = enemies.minByOrNull {
+            val iteratedTile = battleManager.getTroopTile(it)
+            if (iteratedTile != null)
+                HexMath.getDistance(currentTile.position, (iteratedTile as TileInfo).position)
+            else
+                Int.MAX_VALUE
+        }
+        if (closestEnemy == null)
+            return BattleActionResult(actionType = ActionType.ATTACK, success = false, errorId = ErrorId.AI_NO_CLOSEST_ENEMY)
+        val closestEnemyTile = battleManager.getTroopTile(closestEnemy)
+        if (closestEnemyTile == null)
+            return BattleActionResult(actionType = ActionType.ATTACK, success = false, errorId = ErrorId.AI_NO_CLOSEST_ENEMY)
+
+        if (AI_verbose) println("Closest enemy for ${troop.unitName}: ${closestEnemy?.unitName} at ${closestEnemyTile.position}")
+
+
+        val attackTile = battleManager.getTroopTile(closestEnemy)?.let { findAttackTile(troop,
+            it as TileInfo
+        ) }
 
         if (attackTile != null) {
             //val attackTile = battleManager.battleField.getNeighborTile(closestEnemy.currentTile, attackDirection)
@@ -52,13 +72,13 @@ class AIBattle(private val battleManager: BattleManager) {
             return battleManager.performTurn(
                 BattleActionRequest(
                     troop = troop,
-                    targetPosition = closestEnemy.currentTile,
+                    targetPosition = closestEnemyTile,
                     actionType = ActionType.ATTACK,
                     attackTile = attackTile
                 )
             )
         } else {
-            val moveTarget = closestEnemy?.currentTile?.let { findBestMoveTarget(troop, it) }
+            val moveTarget = closestEnemyTile.let { findBestMoveTarget(troop, it as TileInfo) }
             if (moveTarget != null) {
                 if (AI_verbose) println("${troop.unitName} moving to $moveTarget")
                 return battleManager.performTurn(
@@ -119,10 +139,14 @@ class AIBattle(private val battleManager: BattleManager) {
     private fun findAttackTile(troop: Troop, targetTile: TileInfo): TileInfo? {
         if (AI_verbose) println("Finding attack tile for ${troop.unitName} attacking ${targetTile.position}")
 
+        val currentTile = battleManager.getTroopTile(troop)
+        if(currentTile == null)
+            return null
+
         // Проверяем, находится ли текущий тайл юнита в соседях цели
-        if (targetTile.neighbors.contains(troop.currentTile)) {
-            if (AI_verbose) println("Troop is already in a valid attack position: ${troop.currentTile.position}")
-            return troop.currentTile
+        if (targetTile.neighbors.contains(currentTile)) {
+            if (AI_verbose) println("Troop is already in a valid attack position: ${currentTile.position}")
+            return currentTile as TileInfo?
         }
 
         // Ищем ближайший соседний тайл, с которого можно атаковать
@@ -167,8 +191,13 @@ class AIBattle(private val battleManager: BattleManager) {
     private fun performRangedAction(troop: Troop): BattleActionResult {
         val enemies = battleManager.getEnemies(troop)
 
+        val currentTile = battleManager.getTroopTile(troop)
+        if(currentTile == null)
+            return BattleActionResult(actionType = ActionType.SHOOT, success = false)
+
+
         if (enemies.isEmpty()) {
-            if (AI_verbose) println("No enemies left for ranged troop ${troop.unitName} at ${troop.currentTile.position}")
+            if (AI_verbose) println("No enemies left for ranged troop ${troop.unitName} at ${currentTile.position}")
             return BattleActionResult(
                 actionType = ActionType.SHOOT,
                 success = false,
@@ -178,18 +207,18 @@ class AIBattle(private val battleManager: BattleManager) {
 
         val target = enemies
             .sortedWith(
-                compareByDescending<Troop> { it.baseUnit.isRanged() }
+                compareByDescending<Troop> { it.isRanged }
                     .thenByDescending { it.speed }
             )
             .firstOrNull()
 
-        if (AI_verbose) println("Selected ranged target for ${troop.unitName}: ${target?.unitName} at ${target?.currentTile?.position}")
+        if (AI_verbose) println("Selected ranged target for ${troop.unitName}: ${target?.unitName} at ${currentTile.position}")
 
         return if (target != null) {
             battleManager.performTurn(
                 BattleActionRequest(
                     troop = troop,
-                    targetPosition = target.currentTile,
+                    targetPosition = currentTile,
                     actionType = ActionType.SHOOT
                 )
             )

@@ -33,8 +33,32 @@ open class BattleManager(
     val battleField: IBattleField, // BattleField on use
     private val random: IBattleRandom = RealBattleRandom()
 ) {
+    private val troopPositions = mutableMapOf<Troop, IBattleTile>()
     private val turnQueue: MutableList<Troop> = mutableListOf() // Queue of troops for turn order
     private var currentTurnIndex: Int = 0 // Index of the current troop's turn
+
+    fun initializeBattle() {
+        val attackerTroops = attackerArmy.getAllTroops().filterNotNull()
+        val defenderTroops = defenderArmy.getAllTroops().filterNotNull()
+
+        // Расставляем атакующих
+        attackerTroops.forEachIndexed { index, troop ->
+            val position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f - index.toFloat() * 2))
+            val tile = battleField.getTileAt(position) as? IBattleTile ?: return@forEachIndexed
+            troopPositions[troop] = tile
+            tile.receiveTroop(troop)
+        }
+
+        // Расставляем защитников
+        defenderTroops.forEachIndexed { index, troop ->
+            val position = HexMath.evenQ2HexCoords(Vector2(6f, 3f - index.toFloat() * 2))
+            val tile = battleField.getTileAt(position) as? IBattleTile ?: return@forEachIndexed
+            troopPositions[troop] = tile
+            tile.receiveTroop(troop)
+        }
+
+        initializeTurnQueue()
+    }
 
     /**
      * Initializes the turn queue based on troop speed and priority rules.
@@ -60,8 +84,10 @@ open class BattleManager(
         currentTurnIndex = 0
     }
 
+    fun getTroopTile(troop: Troop): IBattleTile? = troopPositions[troop]
+
     protected open fun getTroopCurrentTile(troop: Troop): IBattleTile? =
-            troop.currentTile  // TileInfo : IBattleTile
+            getTroopTile(troop)  // TileInfo : IBattleTile
 
     protected open fun moveTroop(troop: Troop, targetTile: IBattleTile) {
         targetTile.receiveTroop(troop)
@@ -163,9 +189,11 @@ open class BattleManager(
      * @param tile The tile to check.
      * @return The [TroopInfo] located at the tile or `null` if the tile is empty.
      */
-    open fun getTroopOnTile(tile: INavigableTile): Troop? {
-        //return (tile as? TileInfo)?.troopUnit  // Теперь получаем юнита напрямую из клетки
-        return (tile as? IBattleTile)?.getTroop()
+    fun getTroopOnTile(tile: IBattleTile): Troop? =
+            troopPositions.entries.find { it.value == tile }?.key
+
+    fun setTroopPosition(troop: Troop, tile: IBattleTile) {
+        troopPositions[troop] = tile
     }
 
 

@@ -208,7 +208,7 @@ class BattleScreen private constructor(
     }
 
     init {
-        manager.initializeTurnQueue()
+        manager.initializeBattle()
 
         attackerArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
@@ -281,14 +281,18 @@ class BattleScreen private constructor(
      */
     private fun sendSkipTurnRequest() {
         val currentTroop = manager.getCurrentTroop() ?: return
+        val currentTile = manager.getTroopTile(currentTroop)
+        if (currentTile == null)
+            return
+
         // Create a SKIP action request using current troop and its current position
         val skipRequest = BattleActionRequest(
             troop = currentTroop,
-            targetPosition = currentTroop.currentTile,
+            targetPosition = currentTile,
             actionType = ActionType.SKIP
         )
         // Find the TileGroup corresponding to the current troop's position
-        val targetTileGroup = daTileGroups.firstOrNull { it.tileInfo == currentTroop.currentTile }
+        val targetTileGroup = daTileGroups.firstOrNull { it.tileInfo == currentTile }
         if (targetTileGroup == null) {
             println("Error: No tile group found for current troop's position.")
             return
@@ -324,7 +328,7 @@ class BattleScreen private constructor(
                 Gdx.app.postRunnable { shutdownScreen() }
                 return@coroutineScope
             }
-            if (verboseTurn) println("Current troop: ${currentTroop.unitName} at position ${currentTroop.currentTile.position}")
+            if (verboseTurn) println("Current troop: ${currentTroop.unitName} at position ${manager.getTroopTile(currentTroop)?.position}")
 
             var result: BattleActionResult? = null
 
@@ -379,7 +383,8 @@ class BattleScreen private constructor(
                 println("Moved from: ${result.movedFrom}, Moved to: ${result.movedTo}")
             }
 
-            val targetTileGroup = daTileGroups.firstOrNull(){it.tileInfo == currentTroop.currentTile}
+            val currentTile = manager.getTroopTile(currentTroop)
+            val targetTileGroup = daTileGroups.firstOrNull(){it.tileInfo == currentTile}
 
             // Handle specific action types
             when (result.actionType) {
@@ -670,18 +675,18 @@ class BattleScreen private constructor(
         // Draw attacking troops
         attackerTroopViewsArray.forEach { troopView ->
             if (troopView != null) {
-                var troopTile =
-                        daTileGroups.first { it.tileInfo.position == troopView.getBattlefieldPosition() }
-                troopView.draw(troopTile, attacker = true)
+                var troopTileGroup =
+                        daTileGroups.first { it.tileInfo.position == manager.getTroopTile(troopView.getTroopInfo()) }
+                troopView.draw(troopTileGroup, attacker = true)
             }
         }
 
         // Draw defending troops
         defenderTroopViewsArray.forEach { troopView ->
             if (troopView != null) {
-                var troopTile =
-                        daTileGroups.first { it.tileInfo.position == troopView.getBattlefieldPosition() }
-                troopView.draw(troopTile, attacker = false)
+                var troopTileGroup =
+                        daTileGroups.first { it.tileInfo.position == manager.getTroopTile(troopView.getTroopInfo()) }
+                troopView.draw(troopTileGroup, attacker = false)
             }
         }
 
@@ -694,8 +699,11 @@ class BattleScreen private constructor(
             shutdownScreen()
             return
         }
+        val currentTile = manager.getTroopTile(currentTroop)
+            ?: throw IllegalStateException("Current troop has no tile: $currentTroop")
+
         // TODO: switch to tile
-        pointerPosition = currentTroop.currentTile.position
+        pointerPosition = currentTile.position
         draw_pointer()
 
         // Add various mouse listeners to each tile
@@ -891,7 +899,9 @@ class BattleScreen private constructor(
     fun movePointerToNextTroop() {
         val currentTroop = manager.getCurrentTroop()
         if (currentTroop != null){
-            pointerPosition = currentTroop.currentTile.position
+            val currentTile = manager.getTroopTile(currentTroop)
+                ?: throw IllegalStateException("Current troop has no tile: $currentTroop")
+            pointerPosition = currentTile.position
             draw_pointer()
         } else
             println("Queue is empty, nowhere to put pointer")
@@ -1060,7 +1070,7 @@ class BattleScreen private constructor(
                             currentTroop.getTroopInfo().troop
                         )
                         ).contains(tileToMove)
-                        && (tileToMove != null && manager.isTileFree(tileToMove) || tileToMove == currentTroop.getTroopInfo().currentTile))
+                        && (tileToMove != null && manager.isTileFree(tileToMove) || tileToMove == manager.getTroopTile(currentTroop.getTroopInfo())))
                         //if (manager.isHexAchievable(currentTroop.getTroopInfo(), hexToMove))
                     Gdx.graphics.setCursor(cursorAttack[direction.num])
                 else
