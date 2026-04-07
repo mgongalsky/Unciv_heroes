@@ -12,6 +12,8 @@ import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
 import com.unciv.pure.domain.troop.ITroopDefinitionSource
 import com.unciv.pure.domain.troop.Troop
 import com.unciv.pure.domain.troop.TroopFactory
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 /**
  * Represents an army consisting of a fixed number of slots,
@@ -23,9 +25,7 @@ open class ArmyInfo(
     @Transient
     var civInfo: CivilizationInfo = CivilizationInfo(),
     val maxSlots: Int = _defaultMaxSlots ?: GameConstants.armySize,
-    @Transient
-    val troopSource: ITroopDefinitionSource = HardcodedTroopDefinitionSource(5, 10, 100, 0, false)
-) : IsPartOfGameInfoSerialization, Json.Serializable, IArmy {
+) : IsPartOfGameInfoSerialization, Json.Serializable, IArmy, KoinComponent {
 
     companion object {
         // Seam: testing instance
@@ -35,6 +35,9 @@ open class ArmyInfo(
         fun resetTestingMaxSlots() { _defaultMaxSlots = null }
         // End of Seam
     }
+
+    @delegate:Transient
+    private val troopSource: ITroopDefinitionSource by inject()
 
     // Array to hold troop slots (null means the slot is empty)
     //private val troops: Array<TroopInfo?> = Array(maxSlots) { null }

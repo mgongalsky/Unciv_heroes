@@ -17,7 +17,7 @@ class TestableBattleManager(
     random: IBattleRandom,
     private val allTilesReachable: Boolean = true,
     private val useRealMovement: Boolean = false
-) : BattleManager(attackerArmy, defenderArmy, battleField, random) {
+) : BattleManager(attackerArmy, defenderArmy, battleField, random, moraleProbability = 0.3, luckProbability = 0.3) {
 
     private val fakeTroopPositions = mutableMapOf<Troop, FakeBattleTile>()
 

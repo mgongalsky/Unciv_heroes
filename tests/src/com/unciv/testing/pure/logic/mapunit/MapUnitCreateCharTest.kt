@@ -6,6 +6,7 @@ import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.testing.pure.fakes.FakeCivilizationInfo
 import com.unciv.testing.pure.fakes.TestableMapUnit
+import com.unciv.testing.pure.testModule
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -29,9 +30,10 @@ class MapUnitCreateCharTest {
         }
         startKoin {
             allowOverride(true)
-            modules(module {
-                single { fakeRuleset }
-            })
+            modules(
+                module { single { fakeRuleset } },
+                testModule
+            )
         }
     }
 

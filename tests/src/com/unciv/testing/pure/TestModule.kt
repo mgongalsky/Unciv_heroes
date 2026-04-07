@@ -1,12 +1,9 @@
-package com.unciv.di
+package com.unciv.testing.pure
 
-import com.unciv.logic.GameInfo
-import com.unciv.models.ruleset.Ruleset
 import com.unciv.pure.domain.troop.ITroopDefinitionSource
 import com.unciv.pure.domain.troop.RulesetTroopDefinitionSource
 import org.koin.dsl.module
 
-val gameModule = module {
-    single<Ruleset> { GameInfo.monsterRuleset }
+val testModule = module {
     single<ITroopDefinitionSource> { RulesetTroopDefinitionSource(get()) }
 }

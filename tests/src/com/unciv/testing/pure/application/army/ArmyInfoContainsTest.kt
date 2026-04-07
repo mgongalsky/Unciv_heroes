@@ -6,8 +6,11 @@ import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
+import com.unciv.pure.domain.troop.ITroopDefinitionSource
+import com.unciv.pure.domain.troop.RulesetTroopDefinitionSource
 import com.unciv.pure.domain.troop.TroopFactory
 import com.unciv.testing.pure.fakes.FakeCivilizationInfo
+import com.unciv.testing.pure.testModule
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -32,7 +35,10 @@ class ArmyInfoContainsTest {
         }
         startKoin {
             allowOverride(true)
-            modules(module { single { fakeRuleset } })
+            modules(
+                module { single { fakeRuleset } },
+                testModule
+            )
         }
     }
 

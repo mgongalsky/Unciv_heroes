@@ -86,6 +86,7 @@ internal object DesktopLauncher {
         startKoin {
             allowOverride(true)
             modules(gameModule)
+
         }
         val game = UncivGame(desktopParameters)
 

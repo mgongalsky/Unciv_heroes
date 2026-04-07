@@ -212,24 +212,21 @@ class AIBattle(private val battleManager: BattleManager) {
             )
             .firstOrNull()
 
-        if (AI_verbose) println("Selected ranged target for ${troop.unitName}: ${target?.unitName} at ${currentTile.position}")
+        if(target == null)
+            return BattleActionResult(actionType = ActionType.SHOOT, success = false, errorId = ErrorId.AI_NO_TARGET)
 
-        return if (target != null) {
-            battleManager.performTurn(
-                BattleActionRequest(
-                    troop = troop,
-                    targetPosition = currentTile,
-                    actionType = ActionType.SHOOT
-                )
+        val targetTile = battleManager.getTroopTile(target)
+            ?: return BattleActionResult(actionType = ActionType.SHOOT, success = false, errorId = ErrorId.AI_NO_TARGET)
+
+        if (AI_verbose) println("Selected ranged target for ${troop.unitName}: ${target.unitName} at ${targetTile.position}")
+
+        return battleManager.performTurn(
+            BattleActionRequest(
+                troop = troop,
+                targetPosition = targetTile,
+                actionType = ActionType.SHOOT
             )
-        } else {
-            if (AI_verbose) println("No valid targets in range for ${troop.unitName}")
-            BattleActionResult(
-                actionType = ActionType.SHOOT,
-                success = false,
-                errorId = ErrorId.AI_NO_TARGET
-            )
-        }
+        )
     }
 
     /*

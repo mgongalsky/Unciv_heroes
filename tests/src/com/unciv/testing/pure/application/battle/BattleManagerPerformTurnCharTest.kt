@@ -14,6 +14,7 @@ import com.unciv.testing.pure.fakes.FakeBattleTile
 import com.unciv.testing.pure.fakes.FakeCivilizationInfo
 import com.unciv.testing.pure.fakes.TestableBattleManager
 import com.badlogic.gdx.math.Vector2
+import com.unciv.testing.pure.testModule
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -67,7 +68,10 @@ class BattleManagerPerformTurnCharTest {
 
         startKoin {
             allowOverride(true)
-            modules(module { single { fakeRuleset } })
+            modules(
+                module { single { fakeRuleset } },
+                testModule
+            )
         }
 
         tileA = FakeBattleTile(Vector2(0f, 0f))

@@ -11,6 +11,7 @@ import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.testing.pure.fakes.FakeBattleField
 import com.unciv.testing.pure.fakes.FakeBattleRandom
 import com.unciv.testing.pure.fakes.FakeCivilizationInfo
+import com.unciv.testing.pure.testModule
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -55,7 +56,10 @@ class BattleManagerCharTest {
 
         startKoin {
             allowOverride(true)
-            modules(module { single { fakeRuleset } })
+            modules(
+                module { single { fakeRuleset } },
+                testModule
+            )
         }
 
         val civInfo = FakeCivilizationInfo()

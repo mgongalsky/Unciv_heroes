@@ -9,6 +9,7 @@ import com.unciv.pure.domain.supply.RealSupplyMechanic
 import com.unciv.testing.pure.fakes.FakeCivilizationInfo
 import com.unciv.testing.pure.fakes.FakeTileInfo
 import com.unciv.testing.pure.fakes.TestableMapUnit
+import com.unciv.testing.pure.testModule
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -42,9 +43,10 @@ class MapUnitEndTurnUseCaseCharTest {
 
         startKoin {
             allowOverride(true)
-            modules(module {
-                single { fakeRuleset }
-            })
+            modules(
+                module { single { fakeRuleset } },
+                testModule
+            )
         }
 
         civInfo = FakeCivilizationInfo()

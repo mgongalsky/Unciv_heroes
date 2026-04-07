@@ -34,7 +34,9 @@ open class BattleManager(
     private var attackerArmy: ArmyInfo,
     private var defenderArmy: ArmyInfo,
     val battleField: IBattleField, // BattleField on use
-    private val random: IBattleRandom = RealBattleRandom()
+    private val random: IBattleRandom = RealBattleRandom(),
+    private val moraleProbability: Double = GameConstants.moraleProbability,
+    private val luckProbability: Double = GameConstants.luckProbability
 ) {
     protected val troopPositions = mutableMapOf<Troop, IBattleTile>()
     private val turnQueue: MutableList<Troop> = mutableListOf() // Queue of troops for turn order
@@ -148,7 +150,7 @@ open class BattleManager(
      * @return True if the morale bonus is triggered, false otherwise.
      */
     private fun isMoraleTriggered(troop: Troop) =
-            IsMoraleTriggeredUseCase.execute(getArmyOf(troop)?.hero?.morale ?: 0, random, GameConstants.moraleProbability)
+            IsMoraleTriggeredUseCase.execute(getArmyOf(troop)?.hero?.morale ?: 0, random, moraleProbability)
 
     /**
      * Determines whether the luck bonus is triggered for a troop.
@@ -167,9 +169,9 @@ open class BattleManager(
         // Assume hero's luck value is stored in hero.luck; if no hero, default to 1.
         val troopLuck = getArmyOf(troop)?.hero?.luck ?: 1
         val effectiveProbability = if (troopLuck <= 3) {
-            (GameConstants.luckProbability / 3.0) * troopLuck
+            (luckProbability / 3.0) * troopLuck
         } else {
-            GameConstants.luckProbability
+            luckProbability
         }
         println(
             "Unit: ${troop.unitName}, Amount: ${troop.amount}, " +

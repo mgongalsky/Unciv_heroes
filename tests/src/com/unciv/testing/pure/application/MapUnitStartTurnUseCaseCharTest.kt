@@ -8,6 +8,7 @@ import com.unciv.pure.application.MapUnitStartTurnUseCase
 import com.unciv.testing.pure.fakes.FakeCivilizationInfo
 import com.unciv.testing.pure.fakes.FakeTileInfo
 import com.unciv.testing.pure.fakes.TestableMapUnit
+import com.unciv.testing.pure.testModule
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -36,7 +37,7 @@ class MapUnitStartTurnUseCaseCharTest {
                         units["Warrior"] = warrior
                     }
                 }
-            })
+            }, testModule)
         }
         civInfo = FakeCivilizationInfo()
         tile = FakeTileInfo()
