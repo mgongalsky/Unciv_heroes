@@ -7,6 +7,7 @@ import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.MapUnit
 import com.unciv.models.GameConstants
 import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.pure.domain.army.IArmy
 
 /**
  * Represents an army consisting of a fixed number of slots,
@@ -18,7 +19,7 @@ open class ArmyInfo(
     @Transient
     var civInfo: CivilizationInfo = CivilizationInfo(),
     val maxSlots: Int = GameConstants.armySize
-) : IsPartOfGameInfoSerialization, Json.Serializable {
+) : IsPartOfGameInfoSerialization, Json.Serializable, IArmy {
 
     // Array to hold troop slots (null means the slot is empty)
     private val troops: Array<TroopInfo?> = Array(maxSlots) { null }
@@ -200,7 +201,7 @@ open class ArmyInfo(
         }
     }
 
-    fun getAllTroops(): Array<TroopInfo?> {
+    override fun getAllTroops(): Array<TroopInfo?> {
         return troops
     }
 
