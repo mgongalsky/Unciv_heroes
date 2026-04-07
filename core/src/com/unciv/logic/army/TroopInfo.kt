@@ -1,9 +1,7 @@
 package com.unciv.logic.army
 
-import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
-import com.unciv.logic.HexMath
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.MovableUnit
 import com.unciv.logic.civilization.CivilizationInfo
@@ -13,6 +11,7 @@ import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
 import com.unciv.models.ruleset.Ruleset
+import com.unciv.pure.application.battle.TroopEntersBattleUseCase
 import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
 import com.unciv.pure.domain.troop.RulesetTroopDefinitionSource
 import com.unciv.pure.domain.troop.Troop
@@ -176,53 +175,25 @@ class TroopInfo(
         initializeVariables()
     }
 
-
-    // Seam: Новый overload — без CivilizationInfo, для sandbox-режима
     fun enterBattle(isPlayerControlled: Boolean, number: Int, attacker: Boolean, battleField0: TileMap) {
-        isPlayerControlledOverride = isPlayerControlled
-        //baseUnit = ruleset.units[unitName]!!
-
-        battleField = battleField0
-
-        val positionToSet = if (attacker)
-            HexMath.evenQ2HexCoords(Vector2(-7f, 3f - number.toFloat() * 2))
-        else
-            HexMath.evenQ2HexCoords(Vector2(6f, 3f - number.toFloat() * 2))
-
-        currentTile = battleField!![positionToSet]
-        currentMovement = speed.toFloat()
-        currentTile.troopUnit = this
-
-        currentHealth = maxHealth
-        currentAmount = amount
+        TroopEntersBattleUseCase.execute(TroopEntersBattleUseCase.Input(
+            troop = this,
+            isPlayerControlled = isPlayerControlled,
+            number = number,
+            isAttacker = attacker,
+            battleField = battleField0
+        ))
     }
 
-    /**
-     * Called when the battle is started (or the troop is summoned).
-     * [number] corresponds to the troop's index in the army and determines the initial position.
-     *
-     * @param civInfo0 The civilization information.
-     * @param number The troop's index.
-     * @param attacker Flag indicating if the troop is an attacker.
-     */
     fun enterBattle(civInfo0: CivilizationInfo, number: Int, attacker: Boolean, battleField0: TileMap) {
         civInfo = civInfo0
-        //baseUnit = ruleset.units[unitName]!!
-
-        battleField = battleField0
-        lateinit var positionToSet: Vector2
-        // Set initial position based on whether the troop is attacking or defending.
-        if (attacker)
-            positionToSet = HexMath.evenQ2HexCoords(Vector2(-7f, 3f - number.toFloat() * 2))
-        else
-            positionToSet = HexMath.evenQ2HexCoords(Vector2(6f, 3f - number.toFloat() * 2))
-
-        currentTile = battleField!![positionToSet]
-        currentMovement = speed.toFloat()
-        currentTile.troopUnit = this
-
-        currentHealth = maxHealth
-        currentAmount = amount
+        TroopEntersBattleUseCase.execute(TroopEntersBattleUseCase.Input(
+            troop = this,
+            isPlayerControlled = civInfo0.isPlayerCivilization(),
+            number = number,
+            isAttacker = attacker,
+            battleField = battleField0
+        ))
     }
 
     /*
