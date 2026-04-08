@@ -15,6 +15,7 @@ import com.unciv.logic.map.UnitMovementAlgorithms
 import com.unciv.models.GameConstants
 import com.unciv.pure.application.battle.CalculateDamageUseCase
 import com.unciv.pure.application.battle.IsMoraleTriggeredUseCase
+import com.unciv.pure.application.battle.PerformMoveUseCase
 import com.unciv.pure.application.pathfinding.TroopMovementAdapter
 import com.unciv.pure.application.pathfinding.TroopMovementContext
 import com.unciv.pure.domain.battle.IBattleField
@@ -225,44 +226,24 @@ open class BattleManager(
                 )
             }
             ActionType.MOVE -> {
-                if (!isTileAchievable(troop, actionRequest.targetPosition)) {
-                    if (verboseAttack) println("Hex not achievable for troop at position $actionRequest.targetPosition")
-                    return BattleActionResult(
-                        actionType = ActionType.MOVE,
-                        success = false,
-                        errorId = ErrorId.TOO_FAR
+                val output = PerformMoveUseCase.execute(
+                    PerformMoveUseCase.Input(
+                        troop = troop,
+                        targetTile = actionRequest.targetPosition,
+                        currentTile = getTroopCurrentTile(troop),
+                        isTileAchievable = isTileAchievable(troop, actionRequest.targetPosition),
+                        isTileOccupiedByAlly = isTileOccupiedByAlly(troop, actionRequest.targetPosition),
+                        isTileFree = isTileFree(actionRequest.targetPosition)
                     )
-                }
-                if (isTileOccupiedByAlly(troop, actionRequest.targetPosition)) {
-                    if (verboseAttack) println("Hex occupied by ally at position $actionRequest.targetPosition")
-                    return BattleActionResult(
-                        actionType = ActionType.MOVE,
-                        success = false,
-                        errorId = ErrorId.OCCUPIED_BY_ALLY
-                    )
-                }
-                if (!isTileFree(actionRequest.targetPosition)) {
-                    if (verboseAttack) println("Hex occupied by another troop $actionRequest.targetPosition")
-                    return BattleActionResult(
-                        actionType = ActionType.MOVE,
-                        success = false,
-                        errorId = ErrorId.HEX_OCCUPIED
-                    )
-                }
-
-                // Successful movement
-                val oldTile = getTroopCurrentTile(troop)
-                //troop.moveToPosition(targetPosition)
-                //troop.moveToTile(actionRequest.targetPosition)
-                moveTroop(troop, actionRequest.targetPosition)
-
-                if (verboseAttack) println("Troop moved from $oldTile to $actionRequest.targetPosition")
-
+                )
+                if (output.success) moveTroop(troop, actionRequest.targetPosition)
+                if (verboseAttack) println("Troop moved from ${output.movedFrom} to ${output.movedTo}")
                 return BattleActionResult(
                     actionType = ActionType.MOVE,
-                    success = true,
-                    movedFrom = oldTile,
-                    movedTo = actionRequest.targetPosition,
+                    success = output.success,
+                    errorId = output.errorId,
+                    movedFrom = output.movedFrom,
+                    movedTo = output.movedTo,
                     isMorale = isMorale,
                     battleEnded = !isBattleOn()
                 )
