@@ -12,7 +12,7 @@ object TroopFactory {
         source: ITroopDefinitionSource
     ): Troop {
         val ranged = source.getRangedStrength(unitName)
-        println("TroopFactory.create: unitName=$unitName rangedStrength=$ranged")
+        //println("TroopFactory.create: unitName=$unitName rangedStrength=$ranged")
         return Troop(
             id = nextId++,
             unitName = unitName,
