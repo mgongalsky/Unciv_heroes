@@ -19,6 +19,7 @@ import com.unciv.pure.application.pathfinding.TroopMovementAdapter
 import com.unciv.pure.application.pathfinding.TroopMovementContext
 import com.unciv.pure.domain.battle.IBattleField
 import com.unciv.pure.domain.battle.IBattleRandom
+import com.unciv.pure.domain.battle.TurnQueue
 import com.unciv.pure.domain.pathfinding.INavigableTile
 import com.unciv.pure.domain.troop.Troop
 import kotlin.random.Random
@@ -39,8 +40,7 @@ open class BattleManager(
     private val luckProbability: Double = GameConstants.luckProbability
 ) {
     protected val troopPositions = mutableMapOf<Troop, IBattleTile>()
-    private val turnQueue: MutableList<Troop> = mutableListOf() // Queue of troops for turn order
-    private var currentTurnIndex: Int = 0 // Index of the current troop's turn
+    private val turnQueue = TurnQueue()
 
     private fun makeAdapter(troop: Troop, tile: TileInfo): TroopMovementAdapter {
         val armyCivInfo = getArmyOf(troop)?.civInfo ?: CivilizationInfo()
@@ -80,23 +80,10 @@ open class BattleManager(
      * Attacker troops have priority in case of equal speed.
      */
     fun initializeTurnQueue() {
-        val allTroops = mutableListOf<Troop>()
-
-        // Collect all troops from both armies
-        allTroops.addAll(attackerArmy.getAllTroops().filterNotNull())
-        allTroops.addAll(defenderArmy.getAllTroops().filterNotNull())
-
-        // Sort troops by speed (descending). Attacker troops have priority for equal speed.
-        turnQueue.clear()
-        turnQueue.addAll(
-            allTroops.sortedWith(
-                compareByDescending<Troop> { it.speed }
-                    .thenByDescending { attackerArmy.getAllTroops().contains(it) }
-            )
+        turnQueue.initialize(
+            attackerArmy.getAllTroops().filterNotNull(),
+            defenderArmy.getAllTroops().filterNotNull()
         )
-
-        // Set the first troop as the current turn
-        currentTurnIndex = 0
     }
 
     fun getTroopTile(troop: Troop): IBattleTile? = troopPositions[troop]
@@ -115,20 +102,7 @@ open class BattleManager(
      *
      * @return The current troop or `null` if the queue is empty.
      */
-    fun getCurrentTroop(): Troop? {
-        if (turnQueue.isEmpty()) {
-            println("Warning: turnQueue is empty. No troops left to process. Battle likely ended.")
-            return null
-        }
-
-        // Ensure currentTurnIndex is within bounds
-        if (currentTurnIndex >= turnQueue.size) {
-            println("Warning: currentTurnIndex ($currentTurnIndex) is out of bounds. Adjusting to last valid index (${turnQueue.size - 1}).")
-            currentTurnIndex = turnQueue.size - 1
-        }
-
-        return turnQueue[currentTurnIndex]
-    }
+    fun getCurrentTroop(): Troop? = turnQueue.current()
 
     private fun getArmyOf(troop: Troop): ArmyInfo? {
         return when {
@@ -670,24 +644,9 @@ open class BattleManager(
      * @param troop The troop to remove.
      */
     fun removeTroop(troop: Troop) {
-        // Find the index of the troop in the turn queue
-        val index = turnQueue.indexOf(troop)
-        if (index != -1) {
-            // Remove the troop from the turn queue
-            turnQueue.removeAt(index)
-            // Adjust currentTurnIndex:
-            // If the removed troop was located before the current turn,
-            // decrement currentTurnIndex to keep the turn order consistent.
-            if (index < currentTurnIndex) {
-                currentTurnIndex--
-            }
-            // If currentTurnIndex is now out of bounds, wrap it around to the start.
-            if (currentTurnIndex >= turnQueue.size) {
-                currentTurnIndex = 0
-            }
-        }
+        turnQueue.remove(troop)  // queue-логика
 
-        // Remove the troop from its respective army
+        // остаётся в BattleManager
         if (attackerArmy.contains(troop)) {
             attackerArmy.removeTroop(troop)
             troopPositions.remove(troop)
@@ -695,8 +654,6 @@ open class BattleManager(
             defenderArmy.removeTroop(troop)
             troopPositions.remove(troop)
         }
-
-        println("Troop ${troop.unitName} removed from the battle.")
     }
 
     /**
@@ -705,12 +662,10 @@ open class BattleManager(
      */
     fun advanceTurn() {
         if (turnQueue.isEmpty()) {
-            println("The turn queue is empty. Ending battle...")
             finishBattle()
             return
         }
-
-        currentTurnIndex = (currentTurnIndex + 1) % turnQueue.size
+        turnQueue.advance()
     }
 
     /**
@@ -728,9 +683,7 @@ open class BattleManager(
      *
      * @return A list of troops in the turn queue.
      */
-    fun getTurnQueue(): List<Troop> {
-        return turnQueue
-    }
+    fun getTurnQueue(): List<Troop> = turnQueue.getAll()
 
     protected open fun isReachableInCurrentTurn(troop: Troop, targetTile: INavigableTile): Boolean {
         val currentTile = getTroopTile(troop) as? TileInfo ?: return false
