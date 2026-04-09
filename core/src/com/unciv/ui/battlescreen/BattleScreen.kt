@@ -285,7 +285,25 @@ class BattleScreen private constructor(
                         if (event.isMorale && manager.isBattleOn()) showMoraleBird(troopView)
                     }
                 }
-                is BattleEvent.TroopAttacked -> println("[EVENT] TroopAttacked: attacker=${event.attackerId} defender=${event.defenderId} remaining=${event.defenderRemainingAmount}")
+
+                is BattleEvent.TroopAttacked -> {
+                    Gdx.app.postRunnable {
+                        val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
+                        val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
+
+                        if (event.isLuck) showLuckRainbow(attackerView)
+
+                        val attackTileGroup = daTileGroups.firstOrNull {
+                            it.tileInfo == manager.getTroopTile(attacker)
+                        }
+                        attackerView.updatePosition(attackTileGroup)
+
+                        refreshTroopViews()
+
+                        if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
+                    }
+                }
+
                 is BattleEvent.TroopShot     -> println("[EVENT] TroopShot: attacker=${event.attackerId} defender=${event.defenderId} remaining=${event.defenderRemainingAmount}")
                 is BattleEvent.TurnAdvanced  -> println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
                 is BattleEvent.BattleEnded   -> println("[EVENT] BattleEnded: attackerWon=${event.winnerIsAttacker}")
@@ -423,7 +441,7 @@ class BattleScreen private constructor(
                 ActionType.SKIP -> {
                     // Add action here if necessary
                 }
-                ActionType.ATTACK -> {
+                ActionType.ATTACK -> {/*
                     if (result.isLuck) {
                         val troopView = getTroopViewFor(currentTroop)
                         troopView?.let { showLuckRainbow(it) }
@@ -448,6 +466,7 @@ class BattleScreen private constructor(
                         val troopView = getTroopViewFor(currentTroop)
                         troopView?.let { showMoraleBird(it) }
                     }
+                    */
                 }
 
                 ActionType.SHOOT -> {
@@ -463,7 +482,7 @@ class BattleScreen private constructor(
                     }
                 }
 
-                ActionType.MOVE -> {
+                ActionType.MOVE -> {/*
                     val currentTroopView = getTroopViewFor(currentTroop)
                     currentTroopView?.updatePosition(targetTileGroup)
                     if (verboseTurn) println("Moved troop view to ${targetTileGroup?.tileInfo?.position}")
@@ -475,6 +494,7 @@ class BattleScreen private constructor(
                         val troopView = getTroopViewFor(currentTroop)
                         troopView?.let { showMoraleBird(it) }
                     }
+                    */
                 }
             }
 
