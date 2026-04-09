@@ -9,6 +9,7 @@ import com.unciv.models.GameConstants
 import com.unciv.pure.application.army.AddUnitsUseCase
 import com.unciv.pure.application.army.CalculateArmyFoodMaintenanceUseCase
 import com.unciv.pure.application.army.DismissByMostMaintenanceUseCase
+import com.unciv.pure.application.army.FillArmyUseCase
 import com.unciv.pure.domain.army.Army
 import com.unciv.pure.domain.army.IArmy
 import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
@@ -101,22 +102,8 @@ open class ArmyInfo(
      * @param unitName The name of the troop unit to fill the army with.
      * @param totalCount The total number of troops to distribute across all slots.
      */
-    fun fillArmy(unitName: String, totalCount: Int) {
-        if (totalCount <= 0 || unitName.isBlank()) {
-            throw IllegalArgumentException("Invalid unit name or total count")
-        }
-        for (i in troops.indices) {
-            troops[i] = null
-        }
-        val troopsPerSlot = totalCount / maxSlots
-        val remainder = totalCount % maxSlots
-        for (i in troops.indices) {
-            val countForThisSlot = troopsPerSlot + if (i < remainder) 1 else 0
-            if (countForThisSlot > 0) {
-                troops[i] = TroopFactory.create(unitName, countForThisSlot, troopSource)
-            }
-        }
-    }
+    fun fillArmy(unitName: String, totalCount: Int) =
+            FillArmyUseCase.execute(this, unitName, totalCount, troopSource)
 
     /**
      * Adds units to the army. If a unit of the same type exists, it increases its count.
