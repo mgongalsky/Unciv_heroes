@@ -33,6 +33,7 @@ import com.unciv.logic.map.TileMap
 import com.unciv.logic.map.mapgenerator.MapGenerator
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.pure.application.pathfinding.TroopMovementContext
+import com.unciv.pure.domain.battle.BattleEvent
 import com.unciv.pure.domain.troop.Troop
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.map.TileGroupMap
@@ -209,6 +210,18 @@ class BattleScreen private constructor(
 
     init {
         manager.initializeBattle()
+
+
+        manager.onEvent = { event ->
+            when (event) {
+                is BattleEvent.TroopMoved    -> println("[EVENT] TroopMoved: troopId=${event.troopId} from=${event.from} to=${event.to}")
+                is BattleEvent.TroopAttacked -> println("[EVENT] TroopAttacked: attacker=${event.attackerId} defender=${event.defenderId} remaining=${event.defenderRemainingAmount}")
+                is BattleEvent.TroopShot     -> println("[EVENT] TroopShot: attacker=${event.attackerId} defender=${event.defenderId} remaining=${event.defenderRemainingAmount}")
+                is BattleEvent.TurnAdvanced  -> println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
+                is BattleEvent.BattleEnded   -> println("[EVENT] BattleEnded: attackerWon=${event.winnerIsAttacker}")
+                is BattleEvent.TurnSkipped   -> println("[EVENT] TurnSkipped")
+            }
+        }
 
         attackerArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
