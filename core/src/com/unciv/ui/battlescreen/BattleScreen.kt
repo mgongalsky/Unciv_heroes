@@ -304,7 +304,19 @@ class BattleScreen private constructor(
                     }
                 }
 
-                is BattleEvent.TroopShot     -> println("[EVENT] TroopShot: attacker=${event.attackerId} defender=${event.defenderId} remaining=${event.defenderRemainingAmount}")
+                is BattleEvent.TroopShot -> {
+                    Gdx.app.postRunnable {
+                        val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
+                        val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
+
+                        if (event.isLuck) showLuckRainbow(attackerView)
+
+                        refreshTroopViews()
+
+                        if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
+                    }
+                }
+
                 is BattleEvent.TurnAdvanced  -> println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
                 is BattleEvent.BattleEnded   -> println("[EVENT] BattleEnded: attackerWon=${event.winnerIsAttacker}")
                 is BattleEvent.TurnSkipped   -> println("[EVENT] TurnSkipped")
@@ -469,7 +481,7 @@ class BattleScreen private constructor(
                     */
                 }
 
-                ActionType.SHOOT -> {
+                ActionType.SHOOT -> {/*
                     if (result.isLuck) {
                         val troopView = getTroopViewFor(currentTroop)
                         troopView?.let { showLuckRainbow(it) }
@@ -480,6 +492,7 @@ class BattleScreen private constructor(
                         val troopView = getTroopViewFor(currentTroop)
                         troopView?.let { showMoraleBird(it) }
                     }
+                    */
                 }
 
                 ActionType.MOVE -> {/*
