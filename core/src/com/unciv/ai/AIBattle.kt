@@ -17,117 +17,76 @@ class AIBattle(private val battleManager: BattleManager) {
         var AI_verbose = true // Флаг для включения/выключения вербозинга
     }
 
-    /** Выполняет ход для указанного отряда AI */
-    fun performTurn(troop: Troop): BattleActionResult {
+
+    fun performTurn(troop: Troop) {
         if (AI_verbose) println("AI Turn: ${troop.unitName} at ${battleManager.getTroopTile(troop)?.position}")
-        return if (troop.isRanged) {
-            performRangedAction(troop)
-        } else {
-            performMeleeAction(troop)
-        }
+        if (troop.isRanged) performRangedAction(troop)
+        else performMeleeAction(troop)
     }
 
-    /** Логика для ближнего боя */
-    private fun performMeleeAction(troop: Troop): BattleActionResult {
+    private fun performMeleeAction(troop: Troop) {
         val enemies = battleManager.getEnemies(troop)
-        val currentTile = battleManager.getTroopTile(troop)
-        if(currentTile == null)
-            return BattleActionResult(actionType = ActionType.ATTACK, success = false)
+        val currentTile = battleManager.getTroopTile(troop) ?: return
 
         if (enemies.isEmpty()) {
-            if (AI_verbose) println("No enemies left for melee troop ${troop.unitName} at ${battleManager.getTroopTile(troop)?.position}")
-            return BattleActionResult(
-                actionType = ActionType.ATTACK,
-                success = false,
-                errorId = ErrorId.AI_NO_ENEMIES
-            )
+            if (AI_verbose) println("No enemies left for ${troop.unitName}")
+            return
         }
-
-
 
         val closestEnemy = enemies.minByOrNull {
-            val iteratedTile = battleManager.getTroopTile(it)
-            if (iteratedTile != null)
-                HexMath.getDistance(currentTile.position, (iteratedTile as TileInfo).position)
-            else
-                Int.MAX_VALUE
-        }
-        if (closestEnemy == null)
-            return BattleActionResult(actionType = ActionType.ATTACK, success = false, errorId = ErrorId.AI_NO_CLOSEST_ENEMY)
-        val closestEnemyTile = battleManager.getTroopTile(closestEnemy)
-        if (closestEnemyTile == null)
-            return BattleActionResult(actionType = ActionType.ATTACK, success = false, errorId = ErrorId.AI_NO_CLOSEST_ENEMY)
+            battleManager.getTroopTile(it)?.let { tile ->
+                HexMath.getDistance(currentTile.position, (tile as TileInfo).position)
+            } ?: Int.MAX_VALUE
+        } ?: return
 
-        if (AI_verbose) println("Closest enemy for ${troop.unitName}: ${closestEnemy?.unitName} at ${closestEnemyTile.position}")
+        val closestEnemyTile = battleManager.getTroopTile(closestEnemy) ?: return
+        if (AI_verbose) println("Closest enemy for ${troop.unitName}: ${closestEnemy.unitName} at ${closestEnemyTile.position}")
 
-
-        val attackTile = battleManager.getTroopTile(closestEnemy)?.let { findAttackTile(troop,
-            it as TileInfo
-        ) }
-
+        val attackTile = findAttackTile(troop, closestEnemyTile as TileInfo)
         if (attackTile != null) {
-            //val attackTile = battleManager.battleField.getNeighborTile(closestEnemy.currentTile, attackDirection)
-
-            if (AI_verbose) println("Attacking direction for ${troop.unitName}: $attackTile")
-            return battleManager.performTurn(
-                BattleActionRequest(
-                    troop = troop,
-                    targetPosition = closestEnemyTile,
-                    actionType = ActionType.ATTACK,
-                    attackTile = attackTile
-                )
-            )
+            battleManager.performTurn(BattleActionRequest(
+                troop = troop,
+                targetPosition = closestEnemyTile,
+                actionType = ActionType.ATTACK,
+                attackTile = attackTile
+            ))
         } else {
-            val moveTarget = closestEnemyTile.let { findBestMoveTarget(troop, it as TileInfo) }
+            val moveTarget = findBestMoveTarget(troop, closestEnemyTile)
             if (moveTarget != null) {
                 if (AI_verbose) println("${troop.unitName} moving to $moveTarget")
-                return battleManager.performTurn(
-                    BattleActionRequest(
-                        troop = troop,
-                        targetPosition = moveTarget,
-                        actionType = ActionType.MOVE
-                    )
-                )
+                battleManager.performTurn(BattleActionRequest(
+                    troop = troop,
+                    targetPosition = moveTarget,
+                    actionType = ActionType.MOVE
+                ))
             } else {
                 if (AI_verbose) println("${troop.unitName} cannot find a valid move target.")
-                return BattleActionResult(
-                    actionType = ActionType.MOVE,
-                    success = false,
-                    errorId = ErrorId.AI_NO_VALID_MOVE
-                )
             }
         }
     }
 
-    /*
-    /**
-     * Найти направление атаки для юнита
-     *
-     * @param troop Отряд, совершающий атаку.
-     * @param targetTile Целевая клетка атаки.
-     * @return Направление атаки (`Direction`) или `null`, если подходящего нет.
-     */
-    private fun findAttackDirection(troop: TroopInfo, targetTile: TileInfo): Direction? {
-        val defaultDirection = HexMath.getDirection(troop.currentTile.position, targetTile.position)
-        if (AI_verbose) println("Default direction for attack: $defaultDirection")
+    private fun performRangedAction(troop: Troop) {
+        val enemies = battleManager.getEnemies(troop)
+        val currentTile = battleManager.getTroopTile(troop) ?: return
 
-        if (isDirectionValid(troop, targetTile, defaultDirection)) {
-            return defaultDirection
+        if (enemies.isEmpty()) {
+            if (AI_verbose) println("No enemies left for ${troop.unitName}")
+            return
         }
 
-        for (i in 1..5) {
-            val direction = HexMath.rotateClockwise(defaultDirection, i)
-            if (isDirectionValid(troop, targetTile, direction)) {
-                if (AI_verbose) println("Found valid attack direction: $direction")
-                return direction
-            }
-        }
+        val target = enemies
+            .sortedWith(compareByDescending<Troop> { it.isRanged }.thenByDescending { it.speed })
+            .firstOrNull() ?: return
 
-        if (AI_verbose) println("No valid attack direction found for ${troop.unitName}")
-        return null
+        val targetTile = battleManager.getTroopTile(target) ?: return
+        if (AI_verbose) println("Selected ranged target for ${troop.unitName}: ${target.unitName} at ${targetTile.position}")
+
+        battleManager.performTurn(BattleActionRequest(
+            troop = troop,
+            targetPosition = targetTile,
+            actionType = ActionType.SHOOT
+        ))
     }
-
-     */
 
     /**
      * Найти клетку для атаки юнита.
@@ -187,47 +146,6 @@ class AIBattle(private val battleManager: BattleManager) {
 
 
      */
-    /** Логика для стреляющих юнитов */
-    private fun performRangedAction(troop: Troop): BattleActionResult {
-        val enemies = battleManager.getEnemies(troop)
-
-        val currentTile = battleManager.getTroopTile(troop)
-        if(currentTile == null)
-            return BattleActionResult(actionType = ActionType.SHOOT, success = false)
-
-
-        if (enemies.isEmpty()) {
-            if (AI_verbose) println("No enemies left for ranged troop ${troop.unitName} at ${currentTile.position}")
-            return BattleActionResult(
-                actionType = ActionType.SHOOT,
-                success = false,
-                errorId = ErrorId.AI_NO_ENEMIES
-            )
-        }
-
-        val target = enemies
-            .sortedWith(
-                compareByDescending<Troop> { it.isRanged }
-                    .thenByDescending { it.speed }
-            )
-            .firstOrNull()
-
-        if(target == null)
-            return BattleActionResult(actionType = ActionType.SHOOT, success = false, errorId = ErrorId.AI_NO_TARGET)
-
-        val targetTile = battleManager.getTroopTile(target)
-            ?: return BattleActionResult(actionType = ActionType.SHOOT, success = false, errorId = ErrorId.AI_NO_TARGET)
-
-        if (AI_verbose) println("Selected ranged target for ${troop.unitName}: ${target.unitName} at ${targetTile.position}")
-
-        return battleManager.performTurn(
-            BattleActionRequest(
-                troop = troop,
-                targetPosition = targetTile,
-                actionType = ActionType.SHOOT
-            )
-        )
-    }
 
     /*
     /** Проверить, валидна ли клетка для атаки */
