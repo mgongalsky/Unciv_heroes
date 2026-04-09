@@ -17,6 +17,7 @@ import com.unciv.pure.application.battle.CalculateDamageUseCase
 import com.unciv.pure.application.battle.IsMoraleTriggeredUseCase
 import com.unciv.pure.application.battle.PerformAttackUseCase
 import com.unciv.pure.application.battle.PerformMoveUseCase
+import com.unciv.pure.application.battle.PerformShootUseCase
 import com.unciv.pure.application.pathfinding.TroopMovementAdapter
 import com.unciv.pure.application.pathfinding.TroopMovementContext
 import com.unciv.pure.domain.battle.IBattleField
@@ -312,61 +313,50 @@ open class BattleManager(
             }
 
             ActionType.SHOOT -> {
-                if (verboseAttack) println("Starting ActionType.SHOOT for troop: ${troop.unitName}.")
-
-                // Get defender
                 val defender = getTroopOnTile(actionRequest.targetPosition)
-                    ?: return BattleActionResult(
-                        actionType = ActionType.SHOOT,
-                        success = false,
-                        errorId = ErrorId.INVALID_TARGET
-                    ).also {
-                        if (verboseAttack) println("Error: No troop found on target position: $actionRequest.targetPosition")
-                    }
+                val currentTile = getTroopCurrentTile(troop)
 
-                // Check shooting capability
-                if (!canShoot(troop)) {
-                    if (verboseAttack) println("Error: Troop ${troop.unitName} cannot shoot")
-                    return BattleActionResult(
-                        actionType = ActionType.SHOOT,
-                        success = false,
-                        errorId = ErrorId.NOT_IMPLEMENTED
-                    )
-                }
+                val canShoot = canShoot(troop)
+                val isTargetOccupiedByEnemy = defender != null &&
+                        isTileOccupiedByEnemy(troop, actionRequest.targetPosition)
 
-                if (!isTileOccupiedByEnemy(troop, actionRequest.targetPosition)) {
-                    if (verboseAttack) println("Error: Target position $actionRequest.targetPosition is not occupied by an enemy")
-                    return BattleActionResult(
-                        actionType = ActionType.SHOOT,
-                        success = false,
-                        errorId = ErrorId.INVALID_TARGET
-                    )
-                }
+                val isLuck: Boolean
+                val defenderRemainingAmount: Int
+                val defenderDied: Boolean
 
-                if (verboseAttack) println("Troop ${troop.unitName} is shooting at target: ${defender.unitName} on position: $actionRequest.targetPosition")
-
-                // Perform shooting
-                val isLuck = attack(defender, troop) // Use the same attack logic
-
-                // Check if defender is defeated
-                if (defender.currentAmount <= 0) {
-                    if (verboseAttack) println("Defender ${defender.unitName} at position $actionRequest.targetPosition defeated.")
-                    removeTroop(defender)
+                if (defender != null && canShoot && isTargetOccupiedByEnemy) {
+                    isLuck = attack(defender, troop)
+                    defenderRemainingAmount = defender.currentAmount
+                    defenderDied = defender.currentAmount <= 0
+                    if (defenderDied) removeTroop(defender)
                 } else {
-                    if (verboseAttack) println("Defender ${defender.unitName} survived with ${defender.currentAmount} units.")
+                    isLuck = false
+                    defenderRemainingAmount = 0
+                    defenderDied = false
                 }
 
+                val output = PerformShootUseCase.execute(
+                    PerformShootUseCase.Input(
+                        attacker = troop,
+                        defender = defender,
+                        canShoot = canShoot,
+                        isTargetOccupiedByEnemy = isTargetOccupiedByEnemy,
+                        isLuck = isLuck,
+                        isMorale = isMorale,
+                        defenderRemainingAmount = defenderRemainingAmount,
+                        defenderDied = defenderDied
+                    )
+                )
                 return BattleActionResult(
                     actionType = ActionType.SHOOT,
-                    success = true,
+                    success = output.success,
+                    errorId = output.errorId,
                     movedFrom = null,
                     movedTo = null,
-                    isLuck = isLuck,
-                    isMorale = isMorale,
+                    isLuck = output.isLuck,
+                    isMorale = output.isMorale,
                     battleEnded = !isBattleOn()
-                ).also {
-                    if (verboseAttack) println("ActionType.SHOOT completed successfully for troop: ${troop.unitName}")
-                }
+                )
             }
         }
     }
