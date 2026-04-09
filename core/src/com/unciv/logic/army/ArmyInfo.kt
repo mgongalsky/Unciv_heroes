@@ -7,6 +7,7 @@ import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.MapUnit
 import com.unciv.models.GameConstants
 import com.unciv.pure.application.army.CalculateArmyFoodMaintenanceUseCase
+import com.unciv.pure.application.army.DismissByMostMaintenanceUseCase
 import com.unciv.pure.domain.army.Army
 import com.unciv.pure.domain.army.IArmy
 import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
@@ -143,10 +144,7 @@ open class ArmyInfo(
     fun calculateFoodMaintenance(isInCity: Boolean): Float =
             CalculateArmyFoodMaintenanceUseCase.execute(this, isInCity)
 
-    fun dismissByMostMaintenance() {
-        val troopToDismiss = troops.maxBy { it?.amount ?: 0 } ?: return
-        removeTroop(troopToDismiss)
-    }
+    fun dismissByMostMaintenance() = DismissByMostMaintenanceUseCase.execute(this)
 
     /** Returns the troop at the given index or null if the slot is empty. */
     fun getTroopAt(index: Int): Troop? {
@@ -173,7 +171,7 @@ open class ArmyInfo(
      * @param troop The troop to remove.
      * @return True if the troop was successfully removed, false if not found.
      */
-    fun removeTroop(troop: Troop): Boolean = army.removeTroop(troop)
+    override fun removeTroop(troop: Troop): Boolean = army.removeTroop(troop)
 
     //fun removeTroop(troop: Troop): Boolean {
     //    val troopInfo = troops.firstOrNull { it?.troop?.id == troop.id } ?: return false

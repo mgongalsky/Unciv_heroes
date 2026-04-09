@@ -24,7 +24,7 @@ class Army(
         }
     }
 
-    fun removeTroop(troop: Troop): Boolean {
+    override fun removeTroop(troop: Troop): Boolean {
         val index = troops.indexOfFirst { it?.id == troop.id }
         if (index != -1) {
             troops[index] = null

@@ -5,4 +5,5 @@ import com.unciv.pure.domain.troop.Troop
 
 interface IArmy {
     fun getAllTroops(): Array<Troop?>
+    fun removeTroop(troop: Troop): Boolean
 }
