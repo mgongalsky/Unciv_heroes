@@ -318,7 +318,39 @@ class BattleScreen private constructor(
                 }
 
                 is BattleEvent.TurnAdvanced  -> println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
-                is BattleEvent.BattleEnded   -> println("[EVENT] BattleEnded: attackerWon=${event.winnerIsAttacker}")
+                is BattleEvent.BattleEnded -> {
+                    Gdx.app.postRunnable {
+                        shutdownScreen()
+                        manager.finishBattle()
+                        val battleResult = manager.getBattleResult()
+                        if (battleResult == null) {
+                            println("Bug with battle result.")
+                        } else {
+                            if (verboseTurn) println("Army of ${battleResult.winningArmy.civInfo.nation.name} won.")
+                            if (attackerArmy == battleResult.winningArmy) {
+                                val d = defender
+                                if (d is MapUnitCombatant) {
+                                    d.unit.removeFromTile()
+                                    d.unit.civInfo.removeUnit(d.unit)
+                                    d.unit.civInfo.updateViewableTiles()
+                                }
+                                if (d is CityCombatant) {
+                                    val aCiv = attacker?.getCivInfo() ?: return@postRunnable
+                                    d.city.moveToCiv(aCiv)
+                                }
+                            }
+                            if (defenderArmy == battleResult.winningArmy) {
+                                val a = attacker
+                                if (a is MapUnitCombatant) {
+                                    a.unit.removeFromTile()
+                                    a.unit.civInfo.removeUnit(a.unit)
+                                    a.unit.civInfo.updateViewableTiles()
+                                }
+                            }
+                        }
+                    }
+                }
+
                 is BattleEvent.TurnSkipped   -> println("[EVENT] TurnSkipped")
             }
         }
@@ -512,6 +544,7 @@ class BattleScreen private constructor(
             }
 
             // Handle end of the battle
+            /*
             if (result.battleEnded) {
                 if (verboseTurn) println("Battle finished after action ${result.actionType}. Closing screen.")
                 Gdx.app.postRunnable {
@@ -552,6 +585,8 @@ class BattleScreen private constructor(
 
                 }
             }
+
+             */
         } else {
             if (verboseTurn) println("Action ${result.actionType} failed with error: ${result.errorId}")
             handleActionError(result.errorId)
