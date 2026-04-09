@@ -424,34 +424,33 @@ class BattleScreen private constructor(
             }
             if (verboseTurn) println("Current troop: ${currentTroop.unitName} at position ${manager.getTroopTile(currentTroop)?.position}")
 
-            var result: BattleActionResult? = null
-
             if (isTroopPlayerControlled(currentTroop)) {
-                while (true) {
+                var success = false
+                while (!success) {
                     if (verboseTurn) println("Waiting for player action...")
-                    val (action, targetTileGroup) = waitForPlayerAction()
+                    val (action, _) = waitForPlayerAction()
                     if (verboseTurn) {
                         println("Received action: ${action.actionType} targeting ${action.targetPosition}")
-                        if (action.actionType == ActionType.ATTACK) {
+                        if (action.actionType == ActionType.ATTACK)
                             println("Tile for attack: ${action.attackTile}")
-                        }
                     }
-                    result = manager.performTurn(action)
-                    handleBattleResult(result, currentTroop)
-                    if (result.success) break
+                    val result = manager.performTurn(action)
+                    if (result.success) {
+                        success = true
+                    } else {
+                        if (verboseTurn) println("Action ${result.actionType} failed with error: ${result.errorId}")
+                        handleActionError(result.errorId)
+                    }
                 }
             } else {
                 if (verboseTurn) println("AI is performing action for troop: ${currentTroop.unitName}")
-                val aiBattle = AIBattle(manager)
-                result = aiBattle.performTurn(currentTroop)
-                handleBattleResult(result, currentTroop)
+                AIBattle(manager).performTurn(currentTroop)
             }
 
-            if (result != null && !result.isMorale) {
+            val currentTroopAfter = manager.getCurrentTroop()
+            if (currentTroopAfter != null && !manager.getTurnQueue().isEmpty()) {
                 manager.advanceTurn()
                 if (verboseTurn) println("Turn advanced to next troop")
-            } else if (verboseTurn) {
-                println("Current troop has morale and gets an extra turn")
             }
 
             movePointerToNextTroop()
@@ -460,139 +459,6 @@ class BattleScreen private constructor(
         manager.finishBattle()
         println("Battle has ended!")
     }
-
-    /**
-     * Processes the result of a battle action.
-     *
-     * @param result The result of the action.
-     * @param currentTroop The troop that performed the action.
-     */
-    private fun handleBattleResult(
-        result: BattleActionResult,
-        currentTroop: Troop
-    ) {
-        if (result.success) {
-            if (verboseTurn) {
-                println("Action ${result.actionType} succeeded")
-                println("Moved from: ${result.movedFrom}, Moved to: ${result.movedTo}")
-            }
-
-            val currentTile = manager.getTroopTile(currentTroop)
-            val targetTileGroup = daTileGroups.firstOrNull(){it.tileInfo == currentTile}
-
-            // Handle specific action types
-            when (result.actionType) {
-                ActionType.SKIP -> {
-                    // Add action here if necessary
-                }
-                ActionType.ATTACK -> {/*
-                    if (result.isLuck) {
-                        val troopView = getTroopViewFor(currentTroop)
-                        troopView?.let { showLuckRainbow(it) }
-                    }
-
-
-                    if (result.movedTo != null) {
-                        val attackingTroopView = getTroopViewFor(currentTroop)
-                        val attackTile = result.movedTo
-                        val attackTileGroup = daTileGroups.firstOrNull { it.tileInfo == attackTile }
-
-                        if (attackTileGroup != null && attackingTroopView != null) {
-                            attackingTroopView.updatePosition(attackTileGroup)
-                            if (verboseTurn) println("Updated attacking troop view to position $attackTile")
-                        }
-                    }
-
-                    refreshTroopViews()
-
-
-                    if (result.isMorale && manager.isBattleOn()) {
-                        val troopView = getTroopViewFor(currentTroop)
-                        troopView?.let { showMoraleBird(it) }
-                    }
-                    */
-                }
-
-                ActionType.SHOOT -> {/*
-                    if (result.isLuck) {
-                        val troopView = getTroopViewFor(currentTroop)
-                        troopView?.let { showLuckRainbow(it) }
-                    }
-                    refreshTroopViews()
-
-                    if (result.isMorale && manager.isBattleOn()) {
-                        val troopView = getTroopViewFor(currentTroop)
-                        troopView?.let { showMoraleBird(it) }
-                    }
-                    */
-                }
-
-                ActionType.MOVE -> {/*
-                    val currentTroopView = getTroopViewFor(currentTroop)
-                    currentTroopView?.updatePosition(targetTileGroup)
-                    if (verboseTurn) println("Moved troop view to ${targetTileGroup?.tileInfo?.position}")
-
-                    refreshTroopViews()
-
-
-                    if (result.isMorale && manager.isBattleOn()) {
-                        val troopView = getTroopViewFor(currentTroop)
-                        troopView?.let { showMoraleBird(it) }
-                    }
-                    */
-                }
-            }
-
-            // Handle end of the battle
-            /*
-            if (result.battleEnded) {
-                if (verboseTurn) println("Battle finished after action ${result.actionType}. Closing screen.")
-                Gdx.app.postRunnable {
-                    shutdownScreen() // Закрываем экран в UI-потоке
-                }
-                manager.finishBattle()
-                val battleResult = manager.getBattleResult()
-                if (battleResult == null){
-                    println("Bug with battle result.")
-                } else {
-                    if (verboseTurn) println("Army of ${battleResult.winningArmy.civInfo.nation.name} won.")
-
-                    // Remove defeated unit from map
-                    if (attackerArmy == battleResult.winningArmy) {
-                        val d = defender
-                        if (d is MapUnitCombatant) {
-                            val defenderHero = d.unit
-                            defenderHero.removeFromTile()
-                            defenderHero.civInfo.removeUnit(defenderHero)
-                            defenderHero.civInfo.updateViewableTiles()
-                        }
-                        if (d is CityCombatant) {
-                            val defenderCity = d.city
-                            val aCiv = attacker?.getCivInfo() ?: return  // sandbox — нет civ, нет захвата
-                            defenderCity.moveToCiv(aCiv)
-                        }
-
-                    }
-                    if (defenderArmy == battleResult.winningArmy) {
-                        val a = attacker
-                        if (a is MapUnitCombatant) {
-                            val attackerHero = a.unit
-                            attackerHero.removeFromTile()
-                            attackerHero.civInfo.removeUnit(attackerHero)
-                            attackerHero.civInfo.updateViewableTiles()
-                        }
-                    }
-
-                }
-            }
-
-             */
-        } else {
-            if (verboseTurn) println("Action ${result.actionType} failed with error: ${result.errorId}")
-            handleActionError(result.errorId)
-        }
-    }
-
 
     /**
      * Refreshes the arrays of troop views for both attackers and defenders
