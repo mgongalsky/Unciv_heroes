@@ -18,4 +18,8 @@ class FakeArmy(troops: List<Troop?>) : IArmy {
         troops[index] = null
         return true
     }
+
+    override fun setTroopAt(index: Int, troop: Troop?) {
+        if (index in troops.indices) troops[index] = troop
+    }
 }

@@ -6,6 +6,7 @@ import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.MapUnit
 import com.unciv.models.GameConstants
+import com.unciv.pure.application.army.AddUnitsUseCase
 import com.unciv.pure.application.army.CalculateArmyFoodMaintenanceUseCase
 import com.unciv.pure.application.army.DismissByMostMaintenanceUseCase
 import com.unciv.pure.domain.army.Army
@@ -125,21 +126,8 @@ open class ArmyInfo(
      * @param amount The number of units to add.
      * @return True if the units were added successfully, false if no slot was available.
      */
-    fun addUnits(unitName: String, amount: Int): Boolean {
-        if (amount <= 0) return false
-        for (slot in troops) {
-            if (slot?.unitName == unitName) {
-                slot.currentAmount += amount
-                return true
-            }
-        }
-        val emptySlotIndex = troops.indexOfFirst { it == null }
-        if (emptySlotIndex != -1) {
-            troops[emptySlotIndex] = TroopFactory.create(unitName, amount, troopSource)
-            return true
-        }
-        return false
-    }
+    fun addUnits(unitName: String, amount: Int): Boolean =
+            AddUnitsUseCase.execute(this, unitName, amount, troopSource)
 
     fun calculateFoodMaintenance(isInCity: Boolean): Float =
             CalculateArmyFoodMaintenanceUseCase.execute(this, isInCity)
@@ -179,11 +167,7 @@ open class ArmyInfo(
     //}
 
     /** Sets a troop at the given index. */
-    internal fun setTroopAt(index: Int, troop: Troop?) {
-        if (index in troops.indices) {
-            troops[index] = troop
-        }
-    }
+    override fun setTroopAt(index: Int, troop: Troop?) = army.setTroopAt(index, troop)
 
     /** Removes a troop from the given index and returns it. */
     internal fun removeTroopAt(index: Int): Troop? {

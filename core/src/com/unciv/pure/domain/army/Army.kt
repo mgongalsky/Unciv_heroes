@@ -33,6 +33,12 @@ class Army(
         return false
     }
 
+    override fun setTroopAt(index: Int, troop: Troop?) {
+        if (index in troops.indices) {
+            troops[index] = troop
+        }
+    }
+
     fun isEmpty(): Boolean = troops.all { it == null || it.currentAmount <= 0 }
 
     fun aliveTroops(): List<Troop> = troops.filterNotNull().filter { it.currentAmount > 0 }
