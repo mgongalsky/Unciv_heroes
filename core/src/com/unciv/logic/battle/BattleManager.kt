@@ -15,6 +15,7 @@ import com.unciv.logic.map.UnitMovementAlgorithms
 import com.unciv.models.GameConstants
 import com.unciv.pure.application.battle.CalculateDamageUseCase
 import com.unciv.pure.application.battle.IsMoraleTriggeredUseCase
+import com.unciv.pure.application.battle.PerformAttackUseCase
 import com.unciv.pure.application.battle.PerformMoveUseCase
 import com.unciv.pure.application.pathfinding.TroopMovementAdapter
 import com.unciv.pure.application.pathfinding.TroopMovementContext
@@ -250,84 +251,62 @@ open class BattleManager(
             }
 
             ActionType.ATTACK -> {
-                /*
-                val direction = actionRequest.direction
-                    ?: return BattleActionResult(
-                        actionType = ActionType.ATTACK,
-                        success = false,
-                        errorId = ErrorId.INVALID_TARGET
-                    )
-
-                 */
-
-                //if (verboseAttack) println("Attempting attack with direction $direction")
-
                 val defender = getTroopOnTile(actionRequest.targetPosition)
-                    ?: return BattleActionResult(
-                        actionType = ActionType.ATTACK,
-                        success = false,
-                        errorId = ErrorId.INVALID_TARGET
-                    )
+                val attackTile = actionRequest.attackTile
+                val currentTile = getTroopCurrentTile(troop)
 
-                if (!isTileOccupiedByEnemy(troop, actionRequest.targetPosition)) {
-                    if (verboseAttack) println("No enemy found at $actionRequest.targetPosition")
-                    return BattleActionResult(
-                        actionType = ActionType.ATTACK,
-                        success = false,
-                        errorId = ErrorId.INVALID_TARGET
-                    )
+                // все флаги вычисляем ДО moveTroop
+                val isTargetOccupiedByEnemy = defender != null &&
+                        isTileOccupiedByEnemy(troop, actionRequest.targetPosition)
+                val isAttackTileAchievable = attackTile != null &&
+                        isTileAchievable(troop, attackTile)
+                val isAttackTileFree = attackTile != null &&
+                        isTileFree(attackTile)
+
+                val canAttack = defender != null &&
+                        attackTile != null &&
+                        isTargetOccupiedByEnemy &&
+                        isAttackTileAchievable &&
+                        (isAttackTileFree || currentTile == attackTile)
+
+                val isLuck: Boolean
+                val defenderRemainingAmount: Int
+                val defenderDied: Boolean
+
+                if (canAttack) {
+                    moveTroop(troop, attackTile!!)
+                    isLuck = attack(defender!!, troop)
+                    defenderRemainingAmount = defender.currentAmount
+                    defenderDied = defender.currentAmount <= 0
+                } else {
+                    isLuck = false
+                    defenderRemainingAmount = 0
+                    defenderDied = false
                 }
 
-                //val attackPosition = HexMath.oneStepTowards(targetPosition, direction)
-                //val attackTile = battleField.getNeighborTile(actionRequest.targetPosition, direction)
-
-                if (actionRequest.attackTile == null) {
-                    if (verboseAttack) println("Invalid attackTile")
-                    return BattleActionResult(
-                        actionType = ActionType.ATTACK,
-                        success = false,
-                        errorId = ErrorId.INVALID_TARGET
+                val output = PerformAttackUseCase.execute(
+                    PerformAttackUseCase.Input(
+                        attacker = troop,
+                        defender = defender,
+                        attackTile = attackTile,
+                        currentTile = currentTile,
+                        isTargetOccupiedByEnemy = isTargetOccupiedByEnemy,
+                        isAttackTileAchievable = isAttackTileAchievable,
+                        isAttackTileFree = isAttackTileFree,
+                        isLuck = isLuck,
+                        isMorale = isMorale,
+                        defenderRemainingAmount = defenderRemainingAmount,
+                        defenderDied = defenderDied
                     )
-                }
-
-                // If troop:
-                // 1. Cannot achieve hex for attack
-                // 2. That hex is occupied, but not by that troop
-                if (!isTileAchievable(
-                            troop,
-                            actionRequest.attackTile
-                        ) || (!isTileFree(actionRequest.attackTile) &&
-                                getTroopCurrentTile(troop) != actionRequest.attackTile)
-                ) {
-                    if (verboseAttack) {
-                        println("Attack position $actionRequest.attackTile not achievable or not free")
-                    }
-                    return BattleActionResult(
-                        actionType = ActionType.ATTACK,
-                        success = false,
-                        errorId = ErrorId.INVALID_TARGET
-                    )
-                }
-
-                // Move attacker to attack position
-                val oldTile = getTroopCurrentTile(troop)
-                //troop.moveToTile(actionRequest.attackTile)
-                moveTroop(troop, actionRequest.attackTile)
-
-                if (verboseAttack) println("Troop moved to attack position $actionRequest.attackTile")
-
-                // Perform attack
-                val isLuck = attack(defender, troop)
-
-                if (verboseAttack) println("Attack performed on defender at $actionRequest.targetPosition")
-
+                )
                 return BattleActionResult(
                     actionType = ActionType.ATTACK,
-                    success = true,
-                    movedFrom = oldTile,
-                    movedTo = actionRequest.attackTile,
-                    isLuck = isLuck,
-                    isMorale = isMorale,
+                    success = output.success,
+                    errorId = output.errorId,
+                    movedFrom = output.movedFrom,
+                    movedTo = output.movedTo,
+                    isLuck = output.isLuck,
+                    isMorale = output.isMorale,
                     battleEnded = !isBattleOn()
                 )
             }
