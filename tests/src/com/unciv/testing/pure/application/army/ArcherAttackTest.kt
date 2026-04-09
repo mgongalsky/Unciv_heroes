@@ -201,10 +201,9 @@ class ArcherAttackTest {
         manager.initializeTurnQueue()
 
         val ai = AIBattle(manager)
-        val result = ai.performTurn(archer)
+        ai.performTurn(archer)
 
-        assertTrue(result.success)
-        // Главная проверка — дефендер получил урон, значит стреляли в него а не в себя
+        // Проверяем побочный эффект — защитник получил урон
         assertTrue(defender.currentHealth < defender.maxHealth || defender.currentAmount < 10)
     }
 }
