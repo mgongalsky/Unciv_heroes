@@ -7,6 +7,7 @@ import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.MapUnit
 import com.unciv.models.GameConstants
 import com.unciv.pure.application.army.CalculateArmyFoodMaintenanceUseCase
+import com.unciv.pure.domain.army.Army
 import com.unciv.pure.domain.army.IArmy
 import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
 import com.unciv.pure.domain.troop.ITroopDefinitionSource
@@ -27,6 +28,7 @@ open class ArmyInfo(
     val maxSlots: Int = _defaultMaxSlots ?: GameConstants.armySize,
 ) : IsPartOfGameInfoSerialization, Json.Serializable, IArmy, KoinComponent {
 
+
     companion object {
         // Seam: testing instance
         private var _defaultMaxSlots: Int? = null
@@ -36,12 +38,14 @@ open class ArmyInfo(
         // End of Seam
     }
 
+    private val army = Army(maxSlots)
+
     @delegate:Transient
     private val troopSource: ITroopDefinitionSource by inject()
 
     // Array to hold troop slots (null means the slot is empty)
     //private val troops: Array<TroopInfo?> = Array(maxSlots) { null }
-    private val troops: Array<Troop?> = Array(maxSlots) { null }
+    private val troops get() = army.getAllTroops()
 
     /**
      * Optional reference to the hero (MapUnit) leading this army.
@@ -159,8 +163,9 @@ open class ArmyInfo(
     //    return troops.any { it?.troop?.id == troop.troop.id }
     //}
 
-    fun contains(troop: Troop): Boolean =
-            troops.any { it?.id == troop.id }
+    fun contains(troop: Troop): Boolean = army.contains(troop)
+
+    override fun getAllTroops(): Array<Troop?> = army.getAllTroops()
 
     /**
      * Removes the specified troop from the army.
@@ -168,14 +173,7 @@ open class ArmyInfo(
      * @param troop The troop to remove.
      * @return True if the troop was successfully removed, false if not found.
      */
-    fun removeTroop(troop: Troop): Boolean {
-        val index = troops.indexOfFirst { it?.id == troop.id }
-        if (index != -1) {
-            troops[index] = null
-            return true
-        }
-        return false
-    }
+    fun removeTroop(troop: Troop): Boolean = army.removeTroop(troop)
 
     //fun removeTroop(troop: Troop): Boolean {
     //    val troopInfo = troops.firstOrNull { it?.troop?.id == troop.id } ?: return false
@@ -200,15 +198,7 @@ open class ArmyInfo(
     }
 
     /** Adds a troop to the first available slot. Returns true if successful, false if full. */
-    fun addTroop(troop: Troop): Boolean {
-        val emptySlotIndex = troops.indexOfFirst { it == null }
-        return if (emptySlotIndex != -1) {
-            troops[emptySlotIndex] = troop
-            true
-        } else {
-            false
-        }
-    }
+    fun addTroop(troop: Troop): Boolean = army.addTroop(troop)
 
     /** Swaps two troops in the array by their indices. */
     internal fun swapTroops(index1: Int, index2: Int) {
@@ -218,9 +208,6 @@ open class ArmyInfo(
             troops[index2] = temp
         }
     }
-
-    override fun getAllTroops(): Array<Troop?> = troops
-
     // ===== Serialization Methods =====
 
     override fun write(json: Json) {
