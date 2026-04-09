@@ -20,6 +20,7 @@ import com.unciv.pure.application.battle.PerformMoveUseCase
 import com.unciv.pure.application.battle.PerformShootUseCase
 import com.unciv.pure.application.pathfinding.TroopMovementAdapter
 import com.unciv.pure.application.pathfinding.TroopMovementContext
+import com.unciv.pure.domain.battle.BattleEvent
 import com.unciv.pure.domain.battle.IBattleField
 import com.unciv.pure.domain.battle.IBattleRandom
 import com.unciv.pure.domain.battle.TurnQueue
@@ -44,6 +45,8 @@ open class BattleManager(
 ) {
     protected val troopPositions = mutableMapOf<Troop, IBattleTile>()
     private val turnQueue = TurnQueue()
+
+    var onEvent: ((BattleEvent) -> Unit)? = null
 
     private fun makeAdapter(troop: Troop, tile: TileInfo): TroopMovementAdapter {
         val armyCivInfo = getArmyOf(troop)?.civInfo ?: CivilizationInfo()
@@ -169,6 +172,9 @@ open class BattleManager(
         defenderArmy.finishBattle()
     }
 
+    private fun isAttackerWinner(): Boolean =
+            attackerArmy.getAllTroops().any { (it?.currentAmount ?: 0) > 0 }
+
     /**
      * Determines the result of the battle.
      *
@@ -218,6 +224,8 @@ open class BattleManager(
 
         when (actionRequest.actionType) {
             ActionType.SKIP -> {
+                onEvent?.invoke(BattleEvent.TurnSkipped)
+                if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
                 return BattleActionResult(
                     actionType = ActionType.SKIP,
                     success = true,
@@ -238,8 +246,17 @@ open class BattleManager(
                         isTileFree = isTileFree(actionRequest.targetPosition)
                     )
                 )
-                if (output.success) moveTroop(troop, actionRequest.targetPosition)
+                if (output.success) {
+                    moveTroop(troop, actionRequest.targetPosition) // ← это потерялось
+                    onEvent?.invoke(BattleEvent.TroopMoved(
+                        troopId = troop.id,
+                        from = output.movedFrom!!.toPoint(),
+                        to = output.movedTo!!.toPoint(),
+                        isMorale = isMorale
+                    ))
+                }
                 if (verboseAttack) println("Troop moved from ${output.movedFrom} to ${output.movedTo}")
+                if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
                 return BattleActionResult(
                     actionType = ActionType.MOVE,
                     success = output.success,
@@ -300,6 +317,17 @@ open class BattleManager(
                         defenderDied = defenderDied
                     )
                 )
+                if (output.success) {
+                    onEvent?.invoke(BattleEvent.TroopAttacked(
+                        attackerId = troop.id,
+                        defenderId = defender!!.id,
+                        defenderRemainingAmount = defenderRemainingAmount,
+                        isLuck = output.isLuck,
+                        isMorale = output.isMorale,
+                        defenderDied = defenderDied
+                    ))
+                }
+                if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
                 return BattleActionResult(
                     actionType = ActionType.ATTACK,
                     success = output.success,
@@ -347,6 +375,17 @@ open class BattleManager(
                         defenderDied = defenderDied
                     )
                 )
+                if (output.success) {
+                    onEvent?.invoke(BattleEvent.TroopShot(
+                        attackerId = troop.id,
+                        defenderId = defender!!.id,
+                        defenderRemainingAmount = defenderRemainingAmount,
+                        isLuck = output.isLuck,
+                        isMorale = output.isMorale,
+                        defenderDied = defenderDied
+                    ))
+                }
+                if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
                 return BattleActionResult(
                     actionType = ActionType.SHOOT,
                     success = output.success,
