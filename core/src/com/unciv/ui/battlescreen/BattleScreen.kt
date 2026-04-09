@@ -212,17 +212,6 @@ class BattleScreen private constructor(
         manager.initializeBattle()
 
 
-        manager.onEvent = { event ->
-            when (event) {
-                is BattleEvent.TroopMoved    -> println("[EVENT] TroopMoved: troopId=${event.troopId} from=${event.from} to=${event.to}")
-                is BattleEvent.TroopAttacked -> println("[EVENT] TroopAttacked: attacker=${event.attackerId} defender=${event.defenderId} remaining=${event.defenderRemainingAmount}")
-                is BattleEvent.TroopShot     -> println("[EVENT] TroopShot: attacker=${event.attackerId} defender=${event.defenderId} remaining=${event.defenderRemainingAmount}")
-                is BattleEvent.TurnAdvanced  -> println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
-                is BattleEvent.BattleEnded   -> println("[EVENT] BattleEnded: attackerWon=${event.winnerIsAttacker}")
-                is BattleEvent.TurnSkipped   -> println("[EVENT] TurnSkipped")
-            }
-        }
-
         attackerArmy.getAllTroops()?.forEachIndexed { index, troop ->
             if (troop != null) {
                 //troop.enterBattle(attackerIsPlayer, index, attacker = true, battleField)
@@ -280,6 +269,30 @@ class BattleScreen private constructor(
 
         tabbedPager.setFillParent(true)
         updateTilesShadowing()
+
+        manager.onEvent = { event ->
+            when (event) {
+                is BattleEvent.TroopMoved -> {
+                    Gdx.app.postRunnable {
+                        val troop = manager.getTroopById(event.troopId) ?: return@postRunnable
+                        val troopView = getTroopViewFor(troop) ?: return@postRunnable
+                        val newTile = daTileGroups.firstOrNull {
+                            it.tileInfo.position.x.toInt() == event.to.x &&
+                                    it.tileInfo.position.y.toInt() == event.to.y
+                        }
+                        troopView.updatePosition(newTile)
+                        refreshTroopViews()
+                        if (event.isMorale && manager.isBattleOn()) showMoraleBird(troopView)
+                    }
+                }
+                is BattleEvent.TroopAttacked -> println("[EVENT] TroopAttacked: attacker=${event.attackerId} defender=${event.defenderId} remaining=${event.defenderRemainingAmount}")
+                is BattleEvent.TroopShot     -> println("[EVENT] TroopShot: attacker=${event.attackerId} defender=${event.defenderId} remaining=${event.defenderRemainingAmount}")
+                is BattleEvent.TurnAdvanced  -> println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
+                is BattleEvent.BattleEnded   -> println("[EVENT] BattleEnded: attackerWon=${event.winnerIsAttacker}")
+                is BattleEvent.TurnSkipped   -> println("[EVENT] TurnSkipped")
+            }
+        }
+
 
         GlobalScope.launch {
             runBattleLoop()

@@ -400,6 +400,12 @@ open class BattleManager(
         }
     }
 
+    fun getTroopById(id: Int): Troop? =
+            (attackerArmy.getAllTroops() + defenderArmy.getAllTroops())
+                .filterNotNull()
+                .find { it.id == id }
+
+
     /**
      * Checks if the battle is still ongoing.
      *
