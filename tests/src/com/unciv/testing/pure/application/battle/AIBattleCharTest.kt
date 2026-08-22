@@ -213,4 +213,18 @@ class AIBattleCharTest {
         val targetTroop = mixedDefArmy.getAllTroops().filterNotNull().find { it.id == shot.defenderId }
         assertNotNull(targetTroop)
         assertTrue(targetTroop!!.isRanged)
-    }}
+    }
+
+    @Test
+    fun `AI forwards application events while preserving legacy events`() {
+        val legacyEvents = mutableListOf<BattleEvent>()
+        val applicationEvents = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
+        manager.onEvent = { legacyEvents.add(it) }
+        val troop = attackerArmy.getAllTroops().filterNotNull().first()
+
+        AIBattle(manager) { applicationEvents.add(it) }.performTurn(troop)
+
+        assertEquals(listOf("TroopAttacked"), legacyEvents.map { it.javaClass.simpleName })
+        assertEquals(listOf("TroopAttacked"), applicationEvents.map { it.javaClass.simpleName })
+    }
+}

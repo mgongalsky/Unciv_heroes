@@ -8,7 +8,10 @@ import com.unciv.logic.battle.execute
 import com.unciv.pure.application.battle.BattleCommand
 import com.unciv.pure.domain.troop.Troop
 
-class AIBattle(private val battleManager: BattleManager) {
+class AIBattle(
+    private val battleManager: BattleManager,
+    private val onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+) {
 
     companion object {
         var AI_verbose = true
@@ -45,14 +48,16 @@ class AIBattle(private val battleManager: BattleManager) {
                     troopId = troop.id,
                     target = closestEnemyTile.toPoint(),
                     attackFrom = attackTile.toPoint()
-                )
+                ),
+                onApplicationEvent
             )
         } else {
             val moveTarget = findBestMoveTarget(troop, closestEnemyTile)
             if (moveTarget != null) {
                 if (AI_verbose) println("${troop.unitName} moving to ${moveTarget.position}")
                 battleManager.execute(
-                    BattleCommand.Move(troop.id, moveTarget.toPoint())
+                    BattleCommand.Move(troop.id, moveTarget.toPoint()),
+                    onApplicationEvent
                 )
             } else {
                 if (AI_verbose) println("${troop.unitName} cannot find a valid move target.")
@@ -77,7 +82,8 @@ class AIBattle(private val battleManager: BattleManager) {
         if (AI_verbose) println("Selected ranged target for ${troop.unitName}: ${target.unitName} at ${targetTile.position}")
 
         battleManager.execute(
-            BattleCommand.Shoot(troop.id, targetTile.toPoint())
+            BattleCommand.Shoot(troop.id, targetTile.toPoint()),
+            onApplicationEvent
         )
     }
 
@@ -94,10 +100,7 @@ class AIBattle(private val battleManager: BattleManager) {
         val attackTile = targetTile.neighbors
             .filterIsInstance<IBattleTile>()
             .firstOrNull {
-                battleManager.isTileAchievable(
-                    troop,
-                    it
-                ) && battleManager.isTileFree(it)
+                battleManager.isTileAchievable(troop, it) && battleManager.isTileFree(it)
             }
 
         if (attackTile != null)

@@ -51,6 +51,9 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import kotlin.coroutines.resume
+import com.unciv.logic.battle.execute
+import com.unciv.pure.application.battle.BattleCommand
+import com.unciv.pure.application.battle.BattleRejection
 
 // Now it's just copied from HeroOverviewScreen
 // All coordinates are hex, not offset
@@ -302,32 +305,17 @@ class BattleScreen private constructor(
         battleScope.launch { runBattleLoop() }
     }
 
-    /**
-     * Sends a skip-turn request to the BattleManager.
-     *
-     * This function creates a BattleActionRequest with action type SKIP using the current troop
-     * and its current position as the target. It then invokes onPlayerActionReceived to send the request.
-     */
     private fun sendSkipTurnRequest() {
         val currentTroop = manager.getCurrentTroop() ?: return
-        val currentTile = manager.getTroopTile(currentTroop)
-        if (currentTile == null)
-            return
-
-        // Create a SKIP action request using current troop and its current position
-        val skipRequest = BattleActionRequest(
-            troop = currentTroop,
-            targetPosition = currentTile,
-            actionType = ActionType.SKIP
-        )
-        // Find the TileGroup corresponding to the current troop's position
+        val currentTile = manager.getTroopTile(currentTroop) ?: return
         val targetTileGroup = daTileGroups.firstOrNull { it.tileInfo == currentTile }
         if (targetTileGroup == null) {
             println("Error: No tile group found for current troop's position.")
             return
         }
-        // Send the skip request via the player action callback
-        onPlayerActionReceived?.invoke(Pair(skipRequest, targetTileGroup))
+        onPlayerActionReceived?.invoke(
+            Pair(BattleCommand.Skip(currentTroop.id), targetTileGroup)
+        )
     }
 
     /**
@@ -353,39 +341,39 @@ class BattleScreen private constructor(
         else defenderIsPlayer
     }
 
-    /**
-     * The main battle loop. Runs until the battle ends.
-     */
     suspend fun runBattleLoop() = coroutineScope {
+        manager.onEvent = null
         while (manager.isBattleOn()) {
             val currentTroop = manager.getCurrentTroop()
             if (currentTroop == null) {
                 Gdx.app.postRunnable { shutdownScreen() }
                 return@coroutineScope
             }
-            if (verboseTurn) println("Current troop: ${currentTroop.unitName} at position ${manager.getTroopTile(currentTroop)?.position}")
+            if (verboseTurn) println(
+                "Current troop: ${currentTroop.unitName} at position ${
+                    manager.getTroopTile(
+                        currentTroop
+                    )?.position
+                }"
+            )
 
             if (isTroopPlayerControlled(currentTroop)) {
                 var success = false
                 while (!success) {
                     if (verboseTurn) println("Waiting for player action...")
-                    val (action, _) = waitForPlayerAction()
-                    if (verboseTurn) {
-                        println("Received action: ${action.actionType} targeting ${action.targetPosition}")
-                        if (action.actionType == ActionType.ATTACK)
-                            println("Tile for attack: ${action.attackTile}")
-                    }
-                    val result = manager.performTurn(action)
+                    val (command, _) = waitForPlayerAction()
+                    if (verboseTurn) println("Received command: $command")
+                    val result = manager.execute(command, ::handleApplicationEvent)
                     if (result.success) {
                         success = true
                     } else {
-                        if (verboseTurn) println("Action ${result.actionType} failed with error: ${result.errorId}")
-                        handleActionError(result.errorId)
+                        if (verboseTurn) println("Command $command failed with rejection: ${result.rejection}")
+                        handleActionError(result.rejection)
                     }
                 }
             } else {
                 if (verboseTurn) println("AI is performing action for troop: ${currentTroop.unitName}")
-                AIBattle(manager).performTurn(currentTroop)
+                AIBattle(manager, ::handleApplicationEvent).performTurn(currentTroop)
             }
 
             val currentTroopAfter = manager.getCurrentTroop()
@@ -457,15 +445,10 @@ class BattleScreen private constructor(
         return null // Not found
     }
 
-    /**
-     * Waits for the player's action input.
-     *
-     * @return A pair of BattleActionRequest and TileGroup representing the action and its target.
-     */
-    suspend fun waitForPlayerAction(): Pair<BattleActionRequest, TileGroup> {
+    suspend fun waitForPlayerAction(): Pair<BattleCommand, TileGroup> {
         return suspendCancellableCoroutine { continuation ->
-            onPlayerActionReceived = { actionAndTileGroup ->
-                continuation.resume(actionAndTileGroup) // Возвращаем кортеж
+            onPlayerActionReceived = { commandAndTileGroup ->
+                continuation.resume(commandAndTileGroup)
             }
 
             continuation.invokeOnCancellation {
@@ -474,19 +457,14 @@ class BattleScreen private constructor(
         }
     }
 
-    private var onPlayerActionReceived: ((Pair<BattleActionRequest, TileGroup>) -> Unit)? = null
+    private var onPlayerActionReceived: ((Pair<BattleCommand, TileGroup>) -> Unit)? = null
 
-    /**
-     * Handles player move action to a specified tile group.
-     *
-     * @param tileGroup The target tile group.
-     */
-    private fun handleActionError(errorId: ErrorId?) {
-        when (errorId) {
-            ErrorId.TOO_FAR -> showError("Target is too far away!")
-            ErrorId.OCCUPIED_BY_ALLY -> showError("Target tile is occupied by an ally!")
-            ErrorId.NOT_IMPLEMENTED -> showError("This action is not implemented yet!")
-            ErrorId.INVALID_TARGET -> showError("Invalid target!")
+    private fun handleActionError(rejection: BattleRejection?) {
+        when (rejection) {
+            BattleRejection.TOO_FAR -> showError("Target is too far away!")
+            BattleRejection.OCCUPIED_BY_ALLY -> showError("Target tile is occupied by an ally!")
+            BattleRejection.NOT_IMPLEMENTED -> showError("This action is not implemented yet!")
+            BattleRejection.INVALID_TARGET -> showError("Invalid target!")
             else -> showError("An unknown error occurred!")
         }
     }
@@ -718,13 +696,6 @@ class BattleScreen private constructor(
 
     }
 
-    /**
-     * Handles tile click events.
-     *
-     * @param tileGroup The clicked tile group.
-     * @param x The x-coordinate of the click within the tile group.
-     * @param y The y-coordinate of the click within the tile group.
-     */
     private fun handleTileClick(tileGroup: TileGroup, x: Float, y: Float) {
         if (onPlayerActionReceived == null) {
             println("Player action is not expected at the moment.")
@@ -739,40 +710,40 @@ class BattleScreen private constructor(
 
         val currentTroop = currentTroopView.getTroopInfo()
         val targetTile = tileGroup.tileInfo
+        val target = targetTile.toPoint()
 
-        // 1. Стрельба — приоритет выше всего
-        if (manager.canShoot(currentTroop) && manager.isTileOccupiedByEnemy(currentTroop, targetTile)) {
-            onPlayerActionReceived?.invoke(Pair(BattleActionRequest(
-                troop = currentTroop,
-                targetPosition = targetTile,
-                actionType = ActionType.SHOOT
-            ), tileGroup))
+        if (manager.canShoot(currentTroop) && manager.isTileOccupiedByEnemy(
+                    currentTroop,
+                    targetTile
+                )
+        ) {
+            onPlayerActionReceived?.invoke(
+                Pair(BattleCommand.Shoot(currentTroop.id, target), tileGroup)
+            )
             return
         }
 
-        // 2. Атака — проверяем ДО isTileAchievable
         if (manager.isTileOccupiedByEnemy(currentTroop, targetTile)) {
             val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
             val attackTile = battleField.getNeighborTile(targetTile, direction)
-            onPlayerActionReceived?.invoke(Pair(BattleActionRequest(
-                troop = currentTroop,
-                targetPosition = targetTile,
-                actionType = ActionType.ATTACK,
-                attackTile = attackTile
-            ), tileGroup))
+            onPlayerActionReceived?.invoke(
+                Pair(
+                    BattleCommand.Attack(
+                        currentTroop.id,
+                        target,
+                        attackTile?.toPoint()
+                    ),
+                    tileGroup
+                )
+            )
             return
         }
 
-        // 3. Движение — только теперь проверяем достижимость
-        if (!manager.isTileAchievable(currentTroop, targetTile)) {
-            return
-        }
+        if (!manager.isTileAchievable(currentTroop, targetTile)) return
 
-        onPlayerActionReceived?.invoke(Pair(BattleActionRequest(
-            troop = currentTroop,
-            targetPosition = targetTile,
-            actionType = ActionType.MOVE
-        ), tileGroup))
+        onPlayerActionReceived?.invoke(
+            Pair(BattleCommand.Move(currentTroop.id, target), tileGroup)
+        )
     }
 
     /**
@@ -1059,5 +1030,59 @@ class BattleScreen private constructor(
 
     private val battleScope: kotlinx.coroutines.CoroutineScope
         get() = BattleScreenScopeRegistry.scopeFor(this)
+    private fun handleApplicationEvent(event: com.unciv.pure.application.battle.BattleEvent) {
+        when (event) {
+            is com.unciv.pure.application.battle.BattleEvent.TroopMoved -> Gdx.app.postRunnable {
+                val troop = manager.getTroopById(event.troopId) ?: return@postRunnable
+                val troopView = getTroopViewFor(troop) ?: return@postRunnable
+                val newTile = daTileGroups.firstOrNull {
+                    it.tileInfo.position.x.toInt() == event.to.x &&
+                            it.tileInfo.position.y.toInt() == event.to.y
+                }
+                troopView.updatePosition(newTile)
+                refreshTroopViews()
+                if (event.isMorale && manager.isBattleOn()) showMoraleBird(troopView)
+            }
+
+            is com.unciv.pure.application.battle.BattleEvent.TroopAttacked -> Gdx.app.postRunnable {
+                val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
+                val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
+                if (event.isLuck) showLuckRainbow(attackerView)
+                attackerView.updatePosition(daTileGroups.firstOrNull {
+                    it.tileInfo == manager.getTroopTile(attacker)
+                })
+                refreshTroopViews()
+                if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
+            }
+
+            is com.unciv.pure.application.battle.BattleEvent.TroopShot -> Gdx.app.postRunnable {
+                val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
+                val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
+                if (event.isLuck) showLuckRainbow(attackerView)
+                refreshTroopViews()
+                if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
+            }
+
+            is com.unciv.pure.application.battle.BattleEvent.TurnAdvanced ->
+                println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
+
+            is com.unciv.pure.application.battle.BattleEvent.BattleEnded -> Gdx.app.postRunnable {
+                shutdownScreen()
+                manager.finishBattle()
+                val battleResult = manager.getBattleResult()
+                if (battleResult == null) {
+                    println("Bug with battle result.")
+                } else {
+                    if (verboseTurn)
+                        println("Army of ${battleResult.winningArmy.civInfo.nation.name} won.")
+                    com.unciv.logic.battle.BattleWorldOutcomeHandler(attacker, defender)
+                        .apply(attackerArmy == battleResult.winningArmy)
+                }
+            }
+
+            com.unciv.pure.application.battle.BattleEvent.TurnSkipped ->
+                println("[EVENT] TurnSkipped")
+        }
+    }
 }
 
