@@ -19,7 +19,7 @@ fun BattleManager.execute(
 
     fun resolve(point: Point): IBattleTile? {
         val fieldTile =
-            battleField.getTileAt(Vector2(point.x.toFloat(), point.y.toFloat())) as? IBattleTile
+                battleField.getTileAt(Vector2(point.x.toFloat(), point.y.toFloat())) as? IBattleTile
         if (fieldTile != null) return fieldTile
 
         val occupiedTiles = (getAttackerArmy().getAllTroops() + getDefenderArmy().getAllTroops())
@@ -61,8 +61,17 @@ fun BattleManager.execute(
         }
     }
 
+    if (command is BattleCommand.Skip) {
+        getTroopTile(troop)
+            ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
+        return executeWithApplicationEvents {
+            performSkipCommand(troop)
+        }
+    }
+
     val request = when (command) {
         is BattleCommand.Move -> error("MOVE command is handled before legacy request mapping")
+        is BattleCommand.Skip -> error("SKIP command is handled before legacy request mapping")
 
         is BattleCommand.Attack -> BattleActionRequest(
             troop = troop,
@@ -77,13 +86,6 @@ fun BattleManager.execute(
             targetPosition = resolve(command.target)
                 ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET),
             actionType = ActionType.SHOOT
-        )
-
-        is BattleCommand.Skip -> BattleActionRequest(
-            troop = troop,
-            targetPosition = getTroopTile(troop)
-                ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET),
-            actionType = ActionType.SKIP
         )
     }
 

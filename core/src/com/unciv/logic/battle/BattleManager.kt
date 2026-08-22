@@ -214,16 +214,7 @@ open class BattleManager(
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
 
         when (actionRequest.actionType) {
-            ActionType.SKIP -> {
-                onEvent?.invoke(BattleEvent.TurnSkipped)
-                if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
-                return BattleActionResult(
-                    actionType = ActionType.SKIP,
-                    success = true,
-                    isMorale = false,
-                    battleEnded = !isBattleOn()
-                )
-            }
+            ActionType.SKIP -> return performSkipAction()
 
             ActionType.MOVE -> return performMoveAction(
                 troop,
@@ -685,5 +676,20 @@ open class BattleManager(
         val isMorale = isMoraleTriggered(troop)
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
         return performMoveAction(troop, targetPosition, isMorale)
+    }
+    private fun performSkipAction(): BattleActionResult {
+        onEvent?.invoke(BattleEvent.TurnSkipped)
+        if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
+        return BattleActionResult(
+            actionType = ActionType.SKIP,
+            success = true,
+            isMorale = false,
+            battleEnded = !isBattleOn()
+        )
+    }
+    internal fun performSkipCommand(troop: Troop): BattleActionResult {
+        val isMorale = isMoraleTriggered(troop)
+        if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
+        return performSkipAction()
     }
 }

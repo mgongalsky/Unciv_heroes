@@ -218,4 +218,64 @@ class BattleManagerCommandFacadeTest {
         assertSame(start, resolvingManager.getTroopTile(attacker))
         assertSame(attacker, start.getTroop())
     }
+
+    @Test
+    fun `SKIP consumes morale randomness emits event and keeps current troop`() {
+        var randomCalls = 0
+        val countingRandom = object : com.unciv.pure.domain.battle.IBattleRandom {
+            override fun nextDouble(): Double {
+                randomCalls++
+                return 0.0
+            }
+        }
+        val skipManager = TestableBattleManager(
+            attackerArmy,
+            defenderArmy,
+            FakeBattleField(listOf(start, target)),
+            countingRandom
+        )
+        skipManager.initializeTurnQueue()
+        val attacker = attackerArmy.getAllTroops().filterNotNull().first()
+        skipManager.placeTroop(attacker, start)
+        val currentBefore = skipManager.getCurrentTroop()
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
+
+        val result = skipManager.execute(BattleCommand.Skip(attacker.id)) { events.add(it) }
+
+        assertTrue(result.success)
+        assertFalse(result.isMorale)
+        assertFalse(result.battleEnded)
+        assertEquals(1, randomCalls)
+        assertSame(currentBefore, skipManager.getCurrentTroop())
+        assertEquals(
+            listOf(com.unciv.pure.application.battle.BattleEvent.TurnSkipped),
+            events
+        )
+    }
+
+    @Test
+    fun `SKIP for unplaced troop is rejected before randomness`() {
+        var randomCalls = 0
+        val countingRandom = object : com.unciv.pure.domain.battle.IBattleRandom {
+            override fun nextDouble(): Double {
+                randomCalls++
+                return 0.0
+            }
+        }
+        val unplacedManager = TestableBattleManager(
+            attackerArmy,
+            defenderArmy,
+            FakeBattleField(listOf(start, target)),
+            countingRandom
+        )
+        unplacedManager.initializeTurnQueue()
+        val attacker = attackerArmy.getAllTroops().filterNotNull().first()
+
+        val result = unplacedManager.execute(BattleCommand.Skip(attacker.id))
+
+        assertFalse(result.success)
+        assertEquals(BattleRejection.INVALID_TARGET, result.rejection)
+        assertEquals(0, randomCalls)
+        assertSame(attacker, unplacedManager.getCurrentTroop())
+    }
 }
