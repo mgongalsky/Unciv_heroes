@@ -1,18 +1,15 @@
 package com.unciv.logic.battle
 
-import BattleActionResult
-import ErrorId
 import com.badlogic.gdx.math.Vector2
 import com.unciv.pure.application.battle.BattleCommand
 import com.unciv.pure.application.battle.BattleCommandResult
+import com.unciv.pure.application.battle.BattleEvent
 import com.unciv.pure.application.battle.BattleRejection
 import com.unciv.pure.domain.battle.Point
-import com.unciv.ui.battlescreen.ActionType
-import com.unciv.ui.battlescreen.BattleActionRequest
 
 fun BattleManager.execute(
     command: BattleCommand,
-    onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+    onApplicationEvent: ((BattleEvent) -> Unit)? = null
 ): BattleCommandResult {
     val troop = getTroopById(command.troopId)
         ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
@@ -38,87 +35,30 @@ fun BattleManager.execute(
             .firstOrNull { it.toPoint() == point }
     }
 
-    fun executeWithApplicationEvents(action: () -> BattleActionResult): BattleCommandResult {
-        if (onApplicationEvent == null) return action().toCommandResult()
-
-        val legacyHandler = onEvent
-        onEvent = { event ->
-            legacyHandler?.invoke(event)
-            onApplicationEvent(event.toApplicationEvent())
-        }
-        return try {
-            action().toCommandResult()
-        } finally {
-            onEvent = legacyHandler
-        }
-    }
-
     return when (command) {
         is BattleCommand.Move -> {
             val target = resolve(command.target)
                 ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
-            executeWithApplicationEvents { performMoveCommand(troop, target) }
+            performMoveCommand(troop, target, onApplicationEvent)
         }
 
         is BattleCommand.Skip -> {
             getTroopTile(troop)
                 ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
-            executeWithApplicationEvents { performSkipCommand(troop) }
+            performSkipCommand(troop, onApplicationEvent)
         }
 
         is BattleCommand.Attack -> {
             val target = resolve(command.target)
                 ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
             val attackTile = command.attackFrom?.let(::resolve)
-            executeWithApplicationEvents { performAttackCommand(troop, target, attackTile) }
+            performAttackCommand(troop, target, attackTile, onApplicationEvent)
         }
 
         is BattleCommand.Shoot -> {
             val target = resolve(command.target)
                 ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
-            executeWithApplicationEvents { performShootCommand(troop, target) }
+            performShootCommand(troop, target, onApplicationEvent)
         }
     }
 }
-
-private fun BattleActionResult.toCommandResult() = BattleCommandResult(
-    success = success,
-    movedFrom = movedFrom?.toPoint(),
-    movedTo = movedTo?.toPoint(),
-    rejection = errorId?.toRejection(),
-    isLuck = isLuck,
-    isMorale = isMorale,
-    battleEnded = battleEnded
-)
-
-private fun ErrorId.toRejection() = BattleRejection.valueOf(name)
-
-private fun com.unciv.pure.domain.battle.BattleEvent.toApplicationEvent(): com.unciv.pure.application.battle.BattleEvent =
-        when (this) {
-            is com.unciv.pure.domain.battle.BattleEvent.TroopMoved ->
-                com.unciv.pure.application.battle.BattleEvent.TroopMoved(
-                    troopId,
-                    from,
-                    to,
-                    isMorale
-                )
-
-            is com.unciv.pure.domain.battle.BattleEvent.TroopAttacked ->
-                com.unciv.pure.application.battle.BattleEvent.TroopAttacked(
-                    attackerId, defenderId, defenderRemainingAmount, isLuck, isMorale, defenderDied
-                )
-
-            is com.unciv.pure.domain.battle.BattleEvent.TroopShot ->
-                com.unciv.pure.application.battle.BattleEvent.TroopShot(
-                    attackerId, defenderId, defenderRemainingAmount, isLuck, isMorale, defenderDied
-                )
-
-            is com.unciv.pure.domain.battle.BattleEvent.TurnAdvanced ->
-                com.unciv.pure.application.battle.BattleEvent.TurnAdvanced(nextTroopId)
-
-            is com.unciv.pure.domain.battle.BattleEvent.BattleEnded ->
-                com.unciv.pure.application.battle.BattleEvent.BattleEnded(winnerIsAttacker)
-
-            com.unciv.pure.domain.battle.BattleEvent.TurnSkipped ->
-                com.unciv.pure.application.battle.BattleEvent.TurnSkipped
-        }

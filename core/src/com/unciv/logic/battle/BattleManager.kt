@@ -214,16 +214,16 @@ open class BattleManager(
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
 
         return when (actionRequest.actionType) {
-            ActionType.SKIP -> performSkipAction()
-            ActionType.MOVE -> performMoveAction(troop, actionRequest.targetPosition, isMorale)
-            ActionType.ATTACK -> performAttackAction(
+            ActionType.SKIP -> performLegacySkip()
+            ActionType.MOVE -> performLegacyMove(troop, actionRequest.targetPosition, isMorale)
+            ActionType.ATTACK -> performLegacyAttack(
                 troop,
                 actionRequest.targetPosition,
                 actionRequest.attackTile,
                 isMorale
             )
 
-            ActionType.SHOOT -> performShootAction(troop, actionRequest.targetPosition, isMorale)
+            ActionType.SHOOT -> performLegacyShoot(troop, actionRequest.targetPosition, isMorale)
         }
     }
 
@@ -516,11 +516,13 @@ open class BattleManager(
         )
         return reachableTiles.contains(targetTile)
     }
+
     private fun performMoveAction(
         troop: Troop,
         targetPosition: IBattleTile,
-        isMorale: Boolean
-    ): BattleActionResult {
+        isMorale: Boolean,
+        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+    ): com.unciv.pure.application.battle.BattleCommandResult {
         val currentTile = getTroopCurrentTile(troop)
         val output = PerformMoveUseCase.execute(
             PerformMoveUseCase.Input(
@@ -533,53 +535,65 @@ open class BattleManager(
         )
         if (output.success) {
             moveTroop(troop, targetPosition)
-            onEvent?.invoke(
-                BattleEvent.TroopMoved(
-                    troop.id,
-                    output.movedFrom!!,
-                    output.movedTo!!,
-                    isMorale
-                )
+            publishBattleEvent(
+                BattleEvent.TroopMoved(troop.id, output.movedFrom!!, output.movedTo!!, isMorale),
+                onApplicationEvent
             )
         }
         if (verboseAttack) println("Troop moved from ${output.movedFrom} to ${output.movedTo}")
-        if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
-        return BattleActionResult(
-            ActionType.MOVE,
-            output.success,
-            if (output.success) currentTile else null,
-            if (output.success) targetPosition else null,
-            output.rejection?.let { ErrorId.valueOf(it.name) },
+        if (!isBattleOn()) {
+            publishBattleEvent(BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent)
+        }
+        return com.unciv.pure.application.battle.BattleCommandResult(
+            success = output.success,
+            movedFrom = output.movedFrom,
+            movedTo = output.movedTo,
+            rejection = output.rejection,
             isMorale = isMorale,
             battleEnded = !isBattleOn()
         )
     }
-    internal fun performMoveCommand(troop: Troop, targetPosition: IBattleTile): BattleActionResult {
+
+    internal fun performMoveCommand(
+        troop: Troop,
+        targetPosition: IBattleTile,
+        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+    ): com.unciv.pure.application.battle.BattleCommandResult {
         val isMorale = isMoraleTriggered(troop)
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
-        return performMoveAction(troop, targetPosition, isMorale)
+        return performMoveAction(troop, targetPosition, isMorale, onApplicationEvent)
     }
-    private fun performSkipAction(): BattleActionResult {
-        onEvent?.invoke(BattleEvent.TurnSkipped)
-        if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
-        return BattleActionResult(
-            actionType = ActionType.SKIP,
+
+    private fun performSkipAction(
+        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+    ): com.unciv.pure.application.battle.BattleCommandResult {
+        publishBattleEvent(BattleEvent.TurnSkipped, onApplicationEvent)
+        if (!isBattleOn()) {
+            publishBattleEvent(BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent)
+        }
+        return com.unciv.pure.application.battle.BattleCommandResult(
             success = true,
             isMorale = false,
             battleEnded = !isBattleOn()
         )
     }
-    internal fun performSkipCommand(troop: Troop): BattleActionResult {
+
+    internal fun performSkipCommand(
+        troop: Troop,
+        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+    ): com.unciv.pure.application.battle.BattleCommandResult {
         val isMorale = isMoraleTriggered(troop)
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
-        return performSkipAction()
+        return performSkipAction(onApplicationEvent)
     }
+
     private fun performAttackAction(
         troop: Troop,
         targetPosition: IBattleTile,
         attackTile: IBattleTile?,
-        isMorale: Boolean
-    ): BattleActionResult {
+        isMorale: Boolean,
+        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+    ): com.unciv.pure.application.battle.BattleCommandResult {
         val defender = getTroopOnTile(targetPosition)
         val currentTile = getTroopCurrentTile(troop)
         val targetIsEnemy = defender != null && isTileOccupiedByEnemy(troop, targetPosition)
@@ -617,7 +631,7 @@ open class BattleManager(
             )
         )
         if (output.success) {
-            onEvent?.invoke(
+            publishBattleEvent(
                 BattleEvent.TroopAttacked(
                     troop.id,
                     defender!!.id,
@@ -625,35 +639,41 @@ open class BattleManager(
                     output.isLuck,
                     output.isMorale,
                     died
-                )
+                ),
+                onApplicationEvent
             )
         }
-        if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
-        return BattleActionResult(
-            actionType = ActionType.ATTACK,
+        if (!isBattleOn()) {
+            publishBattleEvent(BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent)
+        }
+        return com.unciv.pure.application.battle.BattleCommandResult(
             success = output.success,
-            movedFrom = if (output.success) currentTile else null,
-            movedTo = if (output.success) attackTile else null,
-            errorId = output.rejection?.let { ErrorId.valueOf(it.name) },
+            movedFrom = output.movedFrom,
+            movedTo = output.movedTo,
+            rejection = output.rejection,
             isLuck = output.isLuck,
             isMorale = output.isMorale,
             battleEnded = !isBattleOn()
         )
     }
+
     internal fun performAttackCommand(
         troop: Troop,
         targetPosition: IBattleTile,
-        attackTile: IBattleTile?
-    ): BattleActionResult {
+        attackTile: IBattleTile?,
+        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+    ): com.unciv.pure.application.battle.BattleCommandResult {
         val isMorale = isMoraleTriggered(troop)
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
-        return performAttackAction(troop, targetPosition, attackTile, isMorale)
+        return performAttackAction(troop, targetPosition, attackTile, isMorale, onApplicationEvent)
     }
+
     private fun performShootAction(
         troop: Troop,
         targetPosition: IBattleTile,
-        isMorale: Boolean
-    ): BattleActionResult {
+        isMorale: Boolean,
+        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+    ): com.unciv.pure.application.battle.BattleCommandResult {
         val defender = getTroopOnTile(targetPosition)
         val canShoot = canShoot(troop)
         val targetIsEnemy = defender != null && isTileOccupiedByEnemy(troop, targetPosition)
@@ -683,7 +703,7 @@ open class BattleManager(
             )
         )
         if (output.success) {
-            onEvent?.invoke(
+            publishBattleEvent(
                 BattleEvent.TroopShot(
                     troop.id,
                     defender!!.id,
@@ -691,25 +711,130 @@ open class BattleManager(
                     output.isLuck,
                     output.isMorale,
                     died
-                )
+                ),
+                onApplicationEvent
             )
         }
-        if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
-        return BattleActionResult(
-            actionType = ActionType.SHOOT,
+        if (!isBattleOn()) {
+            publishBattleEvent(BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent)
+        }
+        return com.unciv.pure.application.battle.BattleCommandResult(
             success = output.success,
-            errorId = output.rejection?.let { ErrorId.valueOf(it.name) },
+            rejection = output.rejection,
             isLuck = output.isLuck,
             isMorale = output.isMorale,
             battleEnded = !isBattleOn()
         )
     }
+
     internal fun performShootCommand(
         troop: Troop,
-        targetPosition: IBattleTile
-    ): BattleActionResult {
+        targetPosition: IBattleTile,
+        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+    ): com.unciv.pure.application.battle.BattleCommandResult {
         val isMorale = isMoraleTriggered(troop)
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
-        return performShootAction(troop, targetPosition, isMorale)
+        return performShootAction(troop, targetPosition, isMorale, onApplicationEvent)
+    }
+    private fun performLegacyMove(
+        troop: Troop,
+        targetPosition: IBattleTile,
+        isMorale: Boolean
+    ): BattleActionResult {
+        val currentTile = getTroopCurrentTile(troop)
+        val result = performMoveAction(troop, targetPosition, isMorale)
+        return BattleActionResult(
+            actionType = ActionType.MOVE,
+            success = result.success,
+            movedFrom = if (result.success) currentTile else null,
+            movedTo = if (result.success) targetPosition else null,
+            errorId = result.rejection?.let { ErrorId.valueOf(it.name) },
+            isMorale = result.isMorale,
+            battleEnded = result.battleEnded
+        )
+    }
+    private fun performLegacySkip(): BattleActionResult {
+        val result = performSkipAction()
+        return BattleActionResult(
+            actionType = ActionType.SKIP,
+            success = result.success,
+            isMorale = result.isMorale,
+            battleEnded = result.battleEnded
+        )
+    }
+    private fun performLegacyAttack(
+        troop: Troop,
+        targetPosition: IBattleTile,
+        attackTile: IBattleTile?,
+        isMorale: Boolean
+    ): BattleActionResult {
+        val currentTile = getTroopCurrentTile(troop)
+        val result = performAttackAction(troop, targetPosition, attackTile, isMorale)
+        return BattleActionResult(
+            actionType = ActionType.ATTACK,
+            success = result.success,
+            movedFrom = if (result.success) currentTile else null,
+            movedTo = if (result.success) attackTile else null,
+            errorId = result.rejection?.let { ErrorId.valueOf(it.name) },
+            isLuck = result.isLuck,
+            isMorale = result.isMorale,
+            battleEnded = result.battleEnded
+        )
+    }
+    private fun performLegacyShoot(
+        troop: Troop,
+        targetPosition: IBattleTile,
+        isMorale: Boolean
+    ): BattleActionResult {
+        val result = performShootAction(troop, targetPosition, isMorale)
+        return BattleActionResult(
+            actionType = ActionType.SHOOT,
+            success = result.success,
+            errorId = result.rejection?.let { ErrorId.valueOf(it.name) },
+            isLuck = result.isLuck,
+            isMorale = result.isMorale,
+            battleEnded = result.battleEnded
+        )
+    }
+    private fun publishBattleEvent(
+        event: BattleEvent,
+        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+    ) {
+        onEvent?.invoke(event)
+        val applicationEvent = when (event) {
+            is BattleEvent.TroopMoved -> com.unciv.pure.application.battle.BattleEvent.TroopMoved(
+                event.troopId,
+                event.from,
+                event.to,
+                event.isMorale
+            )
+
+            is BattleEvent.TroopAttacked -> com.unciv.pure.application.battle.BattleEvent.TroopAttacked(
+                event.attackerId,
+                event.defenderId,
+                event.defenderRemainingAmount,
+                event.isLuck,
+                event.isMorale,
+                event.defenderDied
+            )
+
+            is BattleEvent.TroopShot -> com.unciv.pure.application.battle.BattleEvent.TroopShot(
+                event.attackerId,
+                event.defenderId,
+                event.defenderRemainingAmount,
+                event.isLuck,
+                event.isMorale,
+                event.defenderDied
+            )
+
+            is BattleEvent.TurnAdvanced ->
+                com.unciv.pure.application.battle.BattleEvent.TurnAdvanced(event.nextTroopId)
+
+            is BattleEvent.BattleEnded ->
+                com.unciv.pure.application.battle.BattleEvent.BattleEnded(event.winnerIsAttacker)
+
+            BattleEvent.TurnSkipped -> com.unciv.pure.application.battle.BattleEvent.TurnSkipped
+        }
+        onApplicationEvent?.invoke(applicationEvent)
     }
 }
