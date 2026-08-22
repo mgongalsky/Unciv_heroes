@@ -87,32 +87,30 @@ class BattleEventCharTest {
 
     @Test
     fun `characterize events on SKIP`() {
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
         manager.performTurn(
             BattleActionRequest(
                 manager.getCurrentTroop()!!,
                 attackerTile,
                 ActionType.SKIP
             )
-        )
+        ) { events.add(it) }
         assertEquals(1, events.size)
-        assertTrue(events[0] is BattleEvent.TurnSkipped)
+        assertTrue(events[0] is com.unciv.pure.application.battle.BattleEvent.TurnSkipped)
     }
 
     @Test
     fun `characterize events on MOVE to empty tile`() {
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
         manager.performTurn(
             BattleActionRequest(
                 manager.getCurrentTroop()!!,
                 emptyTile,
                 ActionType.MOVE
             )
-        )
+        ) { events.add(it) }
         assertEquals(1, events.size)
-        val event = events[0] as BattleEvent.TroopMoved
+        val event = events[0] as com.unciv.pure.application.battle.BattleEvent.TroopMoved
         assertEquals(Point(0, 0), event.from)
         assertEquals(Point(2, 0), event.to)
         assertFalse(event.isMorale)
@@ -120,22 +118,20 @@ class BattleEventCharTest {
 
     @Test
     fun `characterize events on MOVE to occupied tile`() {
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
         manager.performTurn(
             BattleActionRequest(
                 manager.getCurrentTroop()!!,
                 defenderTile,
                 ActionType.MOVE
             )
-        )
+        ) { events.add(it) }
         assertTrue(events.isEmpty())
     }
 
     @Test
     fun `characterize events on ATTACK`() {
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
         manager.performTurn(
             BattleActionRequest(
                 manager.getCurrentTroop()!!,
@@ -143,9 +139,9 @@ class BattleEventCharTest {
                 ActionType.ATTACK,
                 attackerTile
             )
-        )
+        ) { events.add(it) }
         assertEquals(1, events.size)
-        val event = events[0] as BattleEvent.TroopAttacked
+        val event = events[0] as com.unciv.pure.application.battle.BattleEvent.TroopAttacked
         assertFalse(event.isLuck)
         assertFalse(event.isMorale)
         assertFalse(event.defenderDied)
@@ -153,27 +149,8 @@ class BattleEventCharTest {
     }
 
     @Test
-    fun `characterize events on advanceTurn`() {
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
-        manager.advanceTurn()
-        assertTrue(events.isEmpty())
-    }
-
-    @Test
-    fun `characterize BattleEnded event via direct attack`() {
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
-        val lastDefender = defenderArmy.getAllTroops().filterNotNull().first()
-        val attacker = attackerArmy.getAllTroops().filterNotNull().first()
-        manager.attack(lastDefender, attacker)
-        assertTrue(events.isEmpty())
-    }
-
-    @Test
     fun `SKIP succeeds without advancing current troop and emits TurnSkipped`() {
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
         val currentBefore = manager.getCurrentTroop()?.id
         val result = manager.performTurn(
             BattleActionRequest(
@@ -181,24 +158,24 @@ class BattleEventCharTest {
                 attackerTile,
                 ActionType.SKIP
             )
-        )
+        ) { events.add(it) }
         assertTrue(result.success)
         assertFalse(result.battleEnded)
         assertEquals(currentBefore, manager.getCurrentTroop()?.id)
         assertEquals(1, events.size)
-        assertTrue(events.single() is BattleEvent.TurnSkipped)
+        assertTrue(events.single() is com.unciv.pure.application.battle.BattleEvent.TurnSkipped)
     }
 
     @Test
     fun `rejected MOVE preserves field state and emits no events`() {
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
         val attacker = attackerArmy.getAllTroops().filterNotNull().first()
         val defender = defenderArmy.getAllTroops().filterNotNull().first()
         val attackerPositionBefore = manager.getTroopTile(attacker)?.position
         val defenderOnTargetBefore = manager.getTroopOnTile(defenderTile)?.id
-        val result =
-                manager.performTurn(BattleActionRequest(attacker, defenderTile, ActionType.MOVE))
+        val result = manager.performTurn(
+            BattleActionRequest(attacker, defenderTile, ActionType.MOVE)
+        ) { events.add(it) }
         assertFalse(result.success)
         assertEquals(ErrorId.HEX_OCCUPIED, result.errorId)
         assertEquals(attackerPositionBefore, manager.getTroopTile(attacker)?.position)
@@ -209,8 +186,7 @@ class BattleEventCharTest {
 
     @Test
     fun `lethal ATTACK removes defender and emits attack before battle end`() {
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
         val attacker = attackerArmy.getAllTroops().filterNotNull().first()
         val defender = defenderArmy.getAllTroops().filterNotNull().first()
         defender.currentAmount = 1
@@ -221,7 +197,7 @@ class BattleEventCharTest {
                 ActionType.ATTACK,
                 attackerTile
             )
-        )
+        ) { events.add(it) }
         assertTrue(result.success)
         assertTrue(result.battleEnded)
         assertEquals(0, defender.currentAmount)
@@ -229,5 +205,23 @@ class BattleEventCharTest {
         assertNull(manager.getTroopTile(defender))
         assertFalse(manager.getTurnQueue().contains(defender))
         assertEquals(listOf("TroopAttacked", "BattleEnded"), events.map { it.javaClass.simpleName })
+    }
+
+    @Test
+    fun `legacy request can publish application event without mutable manager listener`() {
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
+
+        manager.performTurn(
+            BattleActionRequest(
+                manager.getCurrentTroop()!!,
+                attackerTile,
+                ActionType.SKIP
+            )
+        ) { events.add(it) }
+
+        assertEquals(
+            listOf(com.unciv.pure.application.battle.BattleEvent.TurnSkipped),
+            events
+        )
     }
 }

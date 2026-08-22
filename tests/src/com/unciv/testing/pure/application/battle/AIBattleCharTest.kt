@@ -105,14 +105,13 @@ class AIBattleCharTest {
 
     @Test
     fun `characterize melee AI attacks adjacent enemy`() {
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
-
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
         val troop = attackerArmy.getAllTroops().filterNotNull().first()
-        AIBattle(manager).performTurn(troop)
+
+        AIBattle(manager) { events.add(it) }.performTurn(troop)
 
         assertEquals(1, events.size)
-        val event = events[0] as BattleEvent.TroopAttacked
+        val event = events[0] as com.unciv.pure.application.battle.BattleEvent.TroopAttacked
         assertEquals(8, event.defenderRemainingAmount)
         assertFalse(event.isLuck)
         assertFalse(event.isMorale)
@@ -124,25 +123,21 @@ class AIBattleCharTest {
         val farTile = FakeBattleTile(Vector2(5f, 0f))
         val troop = attackerArmy.getAllTroops().filterNotNull().first()
         manager.placeTroop(troop, farTile)
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
 
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
-
-        AIBattle(manager).performTurn(troop)
+        AIBattle(manager) { events.add(it) }.performTurn(troop)
 
         assertEquals(1, events.size)
-        assertTrue(events[0] is BattleEvent.TroopAttacked)
+        assertTrue(events[0] is com.unciv.pure.application.battle.BattleEvent.TroopAttacked)
     }
 
     @Test
     fun `characterize melee AI when no enemies`() {
         defenderArmy.getAllTroops().filterNotNull().forEach { manager.removeTroop(it) }
-
-        val events = mutableListOf<BattleEvent>()
-        manager.onEvent = { events.add(it) }
-
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
         val troop = attackerArmy.getAllTroops().filterNotNull().first()
-        AIBattle(manager).performTurn(troop)
+
+        AIBattle(manager) { events.add(it) }.performTurn(troop)
 
         assertTrue(events.isEmpty())
     }
@@ -151,8 +146,7 @@ class AIBattleCharTest {
     fun `characterize ranged AI shoots enemy`() {
         val civInfo = FakeCivilizationInfo()
         val archerArmy = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Archer", 10) }
-        val spearArmy  = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Spearman", 10) }
-
+        val spearArmy = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Spearman", 10) }
         val archerManager = TestableBattleManager(
             attackerArmy = archerArmy,
             defenderArmy = spearArmy,
@@ -160,20 +154,17 @@ class AIBattleCharTest {
             random = FakeBattleRandom(List(100) { 0.0 }),
             allTilesReachable = true
         )
-
         val archer = archerArmy.getAllTroops().filterNotNull().first()
-        val spear  = spearArmy.getAllTroops().filterNotNull().first()
+        val spear = spearArmy.getAllTroops().filterNotNull().first()
         archerManager.placeTroop(archer, attackerTile)
         archerManager.placeTroop(spear, defenderTile)
         archerManager.initializeTurnQueue()
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
 
-        val events = mutableListOf<BattleEvent>()
-        archerManager.onEvent = { events.add(it) }
-
-        AIBattle(archerManager).performTurn(archer)
+        AIBattle(archerManager) { events.add(it) }.performTurn(archer)
 
         assertEquals(1, events.size)
-        val event = events[0] as BattleEvent.TroopShot
+        val event = events[0] as com.unciv.pure.application.battle.BattleEvent.TroopShot
         assertEquals(9, event.defenderRemainingAmount)
         assertFalse(event.isLuck)
         assertFalse(event.defenderDied)
@@ -182,12 +173,11 @@ class AIBattleCharTest {
     @Test
     fun `characterize ranged AI target priority ranged over melee`() {
         val civInfo = FakeCivilizationInfo()
-        val archerArmy   = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Archer", 10) }
+        val archerArmy = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Archer", 10) }
         val mixedDefArmy = ArmyInfo(civInfo, maxSlots = 5).apply {
             addUnits("Spearman", 5)
             addUnits("Archer", 5)
         }
-
         val archerManager = TestableBattleManager(
             attackerArmy = archerArmy,
             defenderArmy = mixedDefArmy,
@@ -195,36 +185,23 @@ class AIBattleCharTest {
             random = FakeBattleRandom(List(100) { 0.0 }),
             allTilesReachable = true
         )
-
         val shooter = archerArmy.getAllTroops().filterNotNull().first()
         mixedDefArmy.getAllTroops().filterNotNull().forEachIndexed { i, troop ->
             archerManager.placeTroop(troop, FakeBattleTile(Vector2(i.toFloat() + 1f, 0f)))
         }
         archerManager.placeTroop(shooter, attackerTile)
         archerManager.initializeTurnQueue()
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
 
-        val events = mutableListOf<BattleEvent>()
-        archerManager.onEvent = { events.add(it) }
+        AIBattle(archerManager) { events.add(it) }.performTurn(shooter)
 
-        AIBattle(archerManager).performTurn(shooter)
-
-        val shot = events.filterIsInstance<BattleEvent.TroopShot>().first()
-        // AI стреляет в лучника (ranged приоритет), не в копейщика
-        val targetTroop = mixedDefArmy.getAllTroops().filterNotNull().find { it.id == shot.defenderId }
+        val shot =
+                events.filterIsInstance<com.unciv.pure.application.battle.BattleEvent.TroopShot>()
+                    .first()
+        val targetTroop =
+                mixedDefArmy.getAllTroops().filterNotNull().find { it.id == shot.defenderId }
         assertNotNull(targetTroop)
         assertTrue(targetTroop!!.isRanged)
     }
 
-    @Test
-    fun `AI forwards application events while preserving legacy events`() {
-        val legacyEvents = mutableListOf<BattleEvent>()
-        val applicationEvents = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
-        manager.onEvent = { legacyEvents.add(it) }
-        val troop = attackerArmy.getAllTroops().filterNotNull().first()
-
-        AIBattle(manager) { applicationEvents.add(it) }.performTurn(troop)
-
-        assertEquals(listOf("TroopAttacked"), legacyEvents.map { it.javaClass.simpleName })
-        assertEquals(listOf("TroopAttacked"), applicationEvents.map { it.javaClass.simpleName })
-    }
 }

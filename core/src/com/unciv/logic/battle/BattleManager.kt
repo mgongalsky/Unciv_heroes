@@ -742,7 +742,6 @@ open class BattleManager(
         event: com.unciv.pure.application.battle.BattleEvent,
         onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
     ) {
-        onEvent?.invoke(LegacyBattleEventAdapter.map(event))
         onApplicationEvent?.invoke(event)
     }
 }
