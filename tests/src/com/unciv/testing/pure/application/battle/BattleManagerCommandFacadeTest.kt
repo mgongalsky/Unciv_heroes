@@ -278,4 +278,82 @@ class BattleManagerCommandFacadeTest {
         assertEquals(0, randomCalls)
         assertSame(attacker, unplacedManager.getCurrentTroop())
     }
+
+    @Test
+    fun `lethal ATTACK command consumes morale then luck and publishes attack before battle end`() {
+        var randomCalls = 0
+        val countingRandom = object : com.unciv.pure.domain.battle.IBattleRandom {
+            override fun nextDouble(): Double {
+                randomCalls++
+                return 0.0
+            }
+        }
+        val attackManager = TestableBattleManager(
+            attackerArmy,
+            defenderArmy,
+            FakeBattleField(listOf(start, target)),
+            countingRandom
+        )
+        attackManager.initializeTurnQueue()
+        val attacker = attackerArmy.getAllTroops().filterNotNull().first()
+        val defender = defenderArmy.getAllTroops().filterNotNull().first()
+        defender.currentAmount = 1
+        attackManager.placeTroop(attacker, start)
+        attackManager.placeTroop(defender, target)
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
+
+        val result = attackManager.execute(
+            BattleCommand.Attack(attacker.id, Point(1, 0), Point(0, 0))
+        ) { events.add(it) }
+
+        assertTrue(result.success)
+        assertTrue(result.battleEnded)
+        assertEquals(2, randomCalls)
+        assertEquals(0, defender.currentAmount)
+        assertFalse(defenderArmy.contains(defender))
+        assertFalse(attackManager.getTurnQueue().contains(defender))
+        assertNull(attackManager.getTroopTile(defender))
+        assertSame(start, attackManager.getTroopTile(attacker))
+        assertEquals(
+            listOf("TroopAttacked", "BattleEnded"),
+            events.map { it.javaClass.simpleName }
+        )
+    }
+
+    @Test
+    fun `rejected ATTACK consumes only morale and preserves field damage and events`() {
+        var randomCalls = 0
+        val countingRandom = object : com.unciv.pure.domain.battle.IBattleRandom {
+            override fun nextDouble(): Double {
+                randomCalls++
+                return 0.0
+            }
+        }
+        val rejectingManager = TestableBattleManager(
+            attackerArmy,
+            defenderArmy,
+            FakeBattleField(listOf(start, target)),
+            countingRandom,
+            allTilesReachable = false
+        )
+        rejectingManager.initializeTurnQueue()
+        val attacker = attackerArmy.getAllTroops().filterNotNull().first()
+        val defender = defenderArmy.getAllTroops().filterNotNull().first()
+        rejectingManager.placeTroop(attacker, start)
+        rejectingManager.placeTroop(defender, target)
+        val defenderAmountBefore = defender.currentAmount
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
+
+        val result = rejectingManager.execute(
+            BattleCommand.Attack(attacker.id, Point(1, 0), Point(0, 0))
+        ) { events.add(it) }
+
+        assertFalse(result.success)
+        assertEquals(BattleRejection.INVALID_TARGET, result.rejection)
+        assertEquals(1, randomCalls)
+        assertEquals(defenderAmountBefore, defender.currentAmount)
+        assertSame(start, rejectingManager.getTroopTile(attacker))
+        assertSame(target, rejectingManager.getTroopTile(defender))
+        assertTrue(events.isEmpty())
+    }
 }

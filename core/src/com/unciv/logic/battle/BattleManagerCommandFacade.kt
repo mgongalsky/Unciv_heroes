@@ -53,43 +53,45 @@ fun BattleManager.execute(
         }
     }
 
-    if (command is BattleCommand.Move) {
-        val target = resolve(command.target)
-            ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
-        return executeWithApplicationEvents {
-            performMoveCommand(troop, target)
+    when (command) {
+        is BattleCommand.Move -> {
+            val target = resolve(command.target)
+                ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
+            return executeWithApplicationEvents {
+                performMoveCommand(troop, target)
+            }
+        }
+
+        is BattleCommand.Skip -> {
+            getTroopTile(troop)
+                ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
+            return executeWithApplicationEvents {
+                performSkipCommand(troop)
+            }
+        }
+
+        is BattleCommand.Attack -> {
+            val target = resolve(command.target)
+                ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
+            val attackTile = command.attackFrom?.let(::resolve)
+            return executeWithApplicationEvents {
+                performAttackCommand(troop, target, attackTile)
+            }
+        }
+
+        is BattleCommand.Shoot -> {
+            val request = BattleActionRequest(
+                troop = troop,
+                targetPosition = resolve(command.target)
+                    ?: return BattleCommandResult(
+                        false,
+                        rejection = BattleRejection.INVALID_TARGET
+                    ),
+                actionType = ActionType.SHOOT
+            )
+            return executeWithApplicationEvents { performTurn(request) }
         }
     }
-
-    if (command is BattleCommand.Skip) {
-        getTroopTile(troop)
-            ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
-        return executeWithApplicationEvents {
-            performSkipCommand(troop)
-        }
-    }
-
-    val request = when (command) {
-        is BattleCommand.Move -> error("MOVE command is handled before legacy request mapping")
-        is BattleCommand.Skip -> error("SKIP command is handled before legacy request mapping")
-
-        is BattleCommand.Attack -> BattleActionRequest(
-            troop = troop,
-            targetPosition = resolve(command.target)
-                ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET),
-            actionType = ActionType.ATTACK,
-            attackTile = command.attackFrom?.let(::resolve)
-        )
-
-        is BattleCommand.Shoot -> BattleActionRequest(
-            troop = troop,
-            targetPosition = resolve(command.target)
-                ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET),
-            actionType = ActionType.SHOOT
-        )
-    }
-
-    return executeWithApplicationEvents { performTurn(request) }
 }
 
 private fun BattleActionResult.toCommandResult() = BattleCommandResult(
