@@ -54,6 +54,7 @@ import kotlin.coroutines.resume
 import com.unciv.logic.battle.execute
 import com.unciv.pure.application.battle.BattleCommand
 import com.unciv.pure.application.battle.BattleRejection
+import com.unciv.pure.application.battle.BattleScreenCommandMapper
 
 // Now it's just copied from HeroOverviewScreen
 // All coordinates are hex, not offset
@@ -710,40 +711,30 @@ class BattleScreen private constructor(
 
         val currentTroop = currentTroopView.getTroopInfo()
         val targetTile = tileGroup.tileInfo
-        val target = targetTile.toPoint()
-
-        if (manager.canShoot(currentTroop) && manager.isTileOccupiedByEnemy(
-                    currentTroop,
-                    targetTile
-                )
-        ) {
-            onPlayerActionReceived?.invoke(
-                Pair(BattleCommand.Shoot(currentTroop.id, target), tileGroup)
-            )
-            return
-        }
-
-        if (manager.isTileOccupiedByEnemy(currentTroop, targetTile)) {
+        val canShoot = manager.canShoot(currentTroop)
+        val targetIsEnemy = manager.isTileOccupiedByEnemy(currentTroop, targetTile)
+        val attackFrom = if (targetIsEnemy && !canShoot) {
             val direction = pixelToDirection(x, y, tileGroup.baseLayerGroup.width)
-            val attackTile = battleField.getNeighborTile(targetTile, direction)
-            onPlayerActionReceived?.invoke(
-                Pair(
-                    BattleCommand.Attack(
-                        currentTroop.id,
-                        target,
-                        attackTile?.toPoint()
-                    ),
-                    tileGroup
-                )
-            )
-            return
+            battleField.getNeighborTile(targetTile, direction)?.toPoint()
+        } else null
+        val targetIsReachable = if (targetIsEnemy) {
+            false
+        } else {
+            manager.isTileAchievable(currentTroop, targetTile)
         }
 
-        if (!manager.isTileAchievable(currentTroop, targetTile)) return
+        val command = BattleScreenCommandMapper.map(
+            BattleScreenCommandMapper.Input(
+                troopId = currentTroop.id,
+                target = targetTile.toPoint(),
+                canShoot = canShoot,
+                targetIsEnemy = targetIsEnemy,
+                targetIsReachable = targetIsReachable,
+                attackFrom = attackFrom
+            )
+        ) ?: return
 
-        onPlayerActionReceived?.invoke(
-            Pair(BattleCommand.Move(currentTroop.id, target), tileGroup)
-        )
+        onPlayerActionReceived?.invoke(Pair(command, tileGroup))
     }
 
     /**
