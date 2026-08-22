@@ -516,14 +516,22 @@ open class BattleManager(
         )
         if (output.success) {
             moveTroop(troop, targetPosition)
-            publishBattleEvent(
-                BattleEvent.TroopMoved(troop.id, output.movedFrom!!, output.movedTo!!, isMorale),
+            publishApplicationEvent(
+                com.unciv.pure.application.battle.BattleEvent.TroopMoved(
+                    troop.id,
+                    output.movedFrom!!,
+                    output.movedTo!!,
+                    isMorale
+                ),
                 onApplicationEvent
             )
         }
         if (verboseAttack) println("Troop moved from ${output.movedFrom} to ${output.movedTo}")
         if (!isBattleOn()) {
-            publishBattleEvent(BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent)
+            publishApplicationEvent(
+                com.unciv.pure.application.battle.BattleEvent.BattleEnded(isAttackerWinner()),
+                onApplicationEvent
+            )
         }
         return com.unciv.pure.application.battle.BattleCommandResult(
             success = output.success,
@@ -548,9 +556,15 @@ open class BattleManager(
     private fun performSkipAction(
         onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
     ): com.unciv.pure.application.battle.BattleCommandResult {
-        publishBattleEvent(BattleEvent.TurnSkipped, onApplicationEvent)
+        publishApplicationEvent(
+            com.unciv.pure.application.battle.BattleEvent.TurnSkipped,
+            onApplicationEvent
+        )
         if (!isBattleOn()) {
-            publishBattleEvent(BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent)
+            publishApplicationEvent(
+                com.unciv.pure.application.battle.BattleEvent.BattleEnded(isAttackerWinner()),
+                onApplicationEvent
+            )
         }
         return com.unciv.pure.application.battle.BattleCommandResult(
             success = true,
@@ -612,8 +626,8 @@ open class BattleManager(
             )
         )
         if (output.success) {
-            publishBattleEvent(
-                BattleEvent.TroopAttacked(
+            publishApplicationEvent(
+                com.unciv.pure.application.battle.BattleEvent.TroopAttacked(
                     troop.id,
                     defender!!.id,
                     remaining,
@@ -625,7 +639,10 @@ open class BattleManager(
             )
         }
         if (!isBattleOn()) {
-            publishBattleEvent(BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent)
+            publishApplicationEvent(
+                com.unciv.pure.application.battle.BattleEvent.BattleEnded(isAttackerWinner()),
+                onApplicationEvent
+            )
         }
         return com.unciv.pure.application.battle.BattleCommandResult(
             success = output.success,
@@ -684,8 +701,8 @@ open class BattleManager(
             )
         )
         if (output.success) {
-            publishBattleEvent(
-                BattleEvent.TroopShot(
+            publishApplicationEvent(
+                com.unciv.pure.application.battle.BattleEvent.TroopShot(
                     troop.id,
                     defender!!.id,
                     remaining,
@@ -697,7 +714,10 @@ open class BattleManager(
             )
         }
         if (!isBattleOn()) {
-            publishBattleEvent(BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent)
+            publishApplicationEvent(
+                com.unciv.pure.application.battle.BattleEvent.BattleEnded(isAttackerWinner()),
+                onApplicationEvent
+            )
         }
         return com.unciv.pure.application.battle.BattleCommandResult(
             success = output.success,
@@ -718,45 +738,11 @@ open class BattleManager(
         return performShootAction(troop, targetPosition, isMorale, onApplicationEvent)
     }
 
-    private fun publishBattleEvent(
-        event: BattleEvent,
+    private fun publishApplicationEvent(
+        event: com.unciv.pure.application.battle.BattleEvent,
         onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
     ) {
-        onEvent?.invoke(event)
-        val applicationEvent = when (event) {
-            is BattleEvent.TroopMoved -> com.unciv.pure.application.battle.BattleEvent.TroopMoved(
-                event.troopId,
-                event.from,
-                event.to,
-                event.isMorale
-            )
-
-            is BattleEvent.TroopAttacked -> com.unciv.pure.application.battle.BattleEvent.TroopAttacked(
-                event.attackerId,
-                event.defenderId,
-                event.defenderRemainingAmount,
-                event.isLuck,
-                event.isMorale,
-                event.defenderDied
-            )
-
-            is BattleEvent.TroopShot -> com.unciv.pure.application.battle.BattleEvent.TroopShot(
-                event.attackerId,
-                event.defenderId,
-                event.defenderRemainingAmount,
-                event.isLuck,
-                event.isMorale,
-                event.defenderDied
-            )
-
-            is BattleEvent.TurnAdvanced ->
-                com.unciv.pure.application.battle.BattleEvent.TurnAdvanced(event.nextTroopId)
-
-            is BattleEvent.BattleEnded ->
-                com.unciv.pure.application.battle.BattleEvent.BattleEnded(event.winnerIsAttacker)
-
-            BattleEvent.TurnSkipped -> com.unciv.pure.application.battle.BattleEvent.TurnSkipped
-        }
-        onApplicationEvent?.invoke(applicationEvent)
+        onEvent?.invoke(LegacyBattleEventAdapter.map(event))
+        onApplicationEvent?.invoke(event)
     }
 }
