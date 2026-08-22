@@ -5,8 +5,9 @@ import com.unciv.logic.Direction
 import com.unciv.pure.domain.battle.IBattleField
 import com.unciv.pure.domain.pathfinding.INavigableTile
 
-class FakeBattleField : IBattleField {
-    override fun contains(tile: INavigableTile) = true
+class FakeBattleField(private val tiles: Iterable<FakeBattleTile> = emptyList()) : IBattleField {
+    override fun contains(tile: INavigableTile) = tiles.none() || tile in tiles
     override fun getNeighborTile(tile: INavigableTile, direction: Direction): INavigableTile? = null
-    override fun getTileAt(position: Vector2): INavigableTile? = null
+    override fun getTileAt(position: Vector2): INavigableTile? =
+            tiles.firstOrNull { it.position == position }
 }

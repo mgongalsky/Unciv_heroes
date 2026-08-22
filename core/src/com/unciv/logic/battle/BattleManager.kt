@@ -208,18 +208,9 @@ open class BattleManager(
 
     private val verboseAttack = true // Флаг для включения/выключения вербозинга атак
 
-    /**
-     * Processes a turn for the current troop based on the given action request.
-     *
-     * @param actionRequest The requested action to perform.
-     * @return The result of the action as a [BattleActionResult].
-     */
     fun performTurn(actionRequest: BattleActionRequest): BattleActionResult {
         val troop = actionRequest.troop
-        //val targetPosition = actionRequest.targetPosition
-
-        // TODO: remove +1 when actual morale bonus for the same castle is introduced
-        val isMorale = isMoraleTriggered(troop) // Add here +1 to morale just because all troops are from the same castle now )
+        val isMorale = isMoraleTriggered(troop)
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
 
         when (actionRequest.actionType) {
@@ -229,42 +220,40 @@ open class BattleManager(
                 return BattleActionResult(
                     actionType = ActionType.SKIP,
                     success = true,
-                    movedFrom = null,
-                    movedTo = null,
                     isMorale = false,
                     battleEnded = !isBattleOn()
                 )
             }
+
             ActionType.MOVE -> {
+                val currentTile = getTroopCurrentTile(troop)
                 val output = PerformMoveUseCase.execute(
                     PerformMoveUseCase.Input(
-                        troop = troop,
-                        targetTile = actionRequest.targetPosition,
-                        currentTile = getTroopCurrentTile(troop),
-                        isTileAchievable = isTileAchievable(troop, actionRequest.targetPosition),
-                        isTileOccupiedByAlly = isTileOccupiedByAlly(troop, actionRequest.targetPosition),
-                        isTileFree = isTileFree(actionRequest.targetPosition)
+                        actionRequest.targetPosition.toPoint(), currentTile?.toPoint(),
+                        isTileAchievable(troop, actionRequest.targetPosition),
+                        isTileOccupiedByAlly(troop, actionRequest.targetPosition),
+                        isTileFree(actionRequest.targetPosition)
                     )
                 )
                 if (output.success) {
-                    moveTroop(troop, actionRequest.targetPosition) // ← это потерялось
-                    onEvent?.invoke(BattleEvent.TroopMoved(
-                        troopId = troop.id,
-                        from = output.movedFrom!!.toPoint(),
-                        to = output.movedTo!!.toPoint(),
-                        isMorale = isMorale
-                    ))
+                    moveTroop(troop, actionRequest.targetPosition)
+                    onEvent?.invoke(
+                        BattleEvent.TroopMoved(
+                            troop.id,
+                            output.movedFrom!!,
+                            output.movedTo!!,
+                            isMorale
+                        )
+                    )
                 }
                 if (verboseAttack) println("Troop moved from ${output.movedFrom} to ${output.movedTo}")
                 if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
                 return BattleActionResult(
-                    actionType = ActionType.MOVE,
-                    success = output.success,
-                    errorId = output.errorId,
-                    movedFrom = output.movedFrom,
-                    movedTo = output.movedTo,
-                    isMorale = isMorale,
-                    battleEnded = !isBattleOn()
+                    ActionType.MOVE, output.success,
+                    if (output.success) currentTile else null,
+                    if (output.success) actionRequest.targetPosition else null,
+                    output.rejection?.let { ErrorId.valueOf(it.name) },
+                    isMorale = isMorale, battleEnded = !isBattleOn()
                 )
             }
 
@@ -272,126 +261,101 @@ open class BattleManager(
                 val defender = getTroopOnTile(actionRequest.targetPosition)
                 val attackTile = actionRequest.attackTile
                 val currentTile = getTroopCurrentTile(troop)
-
-                // все флаги вычисляем ДО moveTroop
-                val isTargetOccupiedByEnemy = defender != null &&
-                        isTileOccupiedByEnemy(troop, actionRequest.targetPosition)
-                val isAttackTileAchievable = attackTile != null &&
-                        isTileAchievable(troop, attackTile)
-                val isAttackTileFree = attackTile != null &&
-                        isTileFree(attackTile)
-
-                val canAttack = defender != null &&
-                        attackTile != null &&
-                        isTargetOccupiedByEnemy &&
-                        isAttackTileAchievable &&
-                        (isAttackTileFree || currentTile == attackTile)
-
+                val targetIsEnemy = defender != null && isTileOccupiedByEnemy(
+                    troop,
+                    actionRequest.targetPosition
+                )
+                val attackFromAchievable = attackTile != null && isTileAchievable(troop, attackTile)
+                val attackFromFree = attackTile != null && isTileFree(attackTile)
+                val canAttack =
+                        defender != null && attackTile != null && targetIsEnemy && attackFromAchievable &&
+                                (attackFromFree || currentTile == attackTile)
                 val isLuck: Boolean
-                val defenderRemainingAmount: Int
-                val defenderDied: Boolean
-
+                val remaining: Int
+                val died: Boolean
                 if (canAttack) {
                     moveTroop(troop, attackTile!!)
                     isLuck = attack(defender!!, troop)
-                    defenderRemainingAmount = defender.currentAmount
-                    defenderDied = defender.currentAmount <= 0
+                    remaining = defender.currentAmount
+                    died = defender.currentAmount <= 0
                 } else {
                     isLuck = false
-                    defenderRemainingAmount = 0
-                    defenderDied = false
+                    remaining = 0
+                    died = false
                 }
-
                 val output = PerformAttackUseCase.execute(
                     PerformAttackUseCase.Input(
-                        attacker = troop,
-                        defender = defender,
-                        attackTile = attackTile,
-                        currentTile = currentTile,
-                        isTargetOccupiedByEnemy = isTargetOccupiedByEnemy,
-                        isAttackTileAchievable = isAttackTileAchievable,
-                        isAttackTileFree = isAttackTileFree,
-                        isLuck = isLuck,
-                        isMorale = isMorale,
-                        defenderRemainingAmount = defenderRemainingAmount,
-                        defenderDied = defenderDied
+                        troop.id, defender?.id, attackTile?.toPoint(), currentTile?.toPoint(),
+                        targetIsEnemy, attackFromAchievable, attackFromFree,
+                        isLuck, isMorale, remaining, died
                     )
                 )
                 if (output.success) {
-                    onEvent?.invoke(BattleEvent.TroopAttacked(
-                        attackerId = troop.id,
-                        defenderId = defender!!.id,
-                        defenderRemainingAmount = defenderRemainingAmount,
-                        isLuck = output.isLuck,
-                        isMorale = output.isMorale,
-                        defenderDied = defenderDied
-                    ))
+                    onEvent?.invoke(
+                        BattleEvent.TroopAttacked(
+                            troop.id,
+                            defender!!.id,
+                            remaining,
+                            output.isLuck,
+                            output.isMorale,
+                            died
+                        )
+                    )
                 }
                 if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
                 return BattleActionResult(
-                    actionType = ActionType.ATTACK,
-                    success = output.success,
-                    errorId = output.errorId,
-                    movedFrom = output.movedFrom,
-                    movedTo = output.movedTo,
-                    isLuck = output.isLuck,
-                    isMorale = output.isMorale,
+                    actionType = ActionType.ATTACK, success = output.success,
+                    movedFrom = if (output.success) currentTile else null,
+                    movedTo = if (output.success) attackTile else null,
+                    errorId = output.rejection?.let { ErrorId.valueOf(it.name) },
+                    isLuck = output.isLuck, isMorale = output.isMorale,
                     battleEnded = !isBattleOn()
                 )
             }
 
             ActionType.SHOOT -> {
                 val defender = getTroopOnTile(actionRequest.targetPosition)
-                val currentTile = getTroopCurrentTile(troop)
-
                 val canShoot = canShoot(troop)
-                val isTargetOccupiedByEnemy = defender != null &&
-                        isTileOccupiedByEnemy(troop, actionRequest.targetPosition)
-
+                val targetIsEnemy = defender != null && isTileOccupiedByEnemy(
+                    troop,
+                    actionRequest.targetPosition
+                )
                 val isLuck: Boolean
-                val defenderRemainingAmount: Int
-                val defenderDied: Boolean
-
-                if (defender != null && canShoot && isTargetOccupiedByEnemy) {
+                val remaining: Int
+                val died: Boolean
+                if (defender != null && canShoot && targetIsEnemy) {
                     isLuck = attack(defender, troop)
-                    defenderRemainingAmount = defender.currentAmount
-                    defenderDied = defender.currentAmount <= 0
-                    if (defenderDied) removeTroop(defender)
+                    remaining = defender.currentAmount
+                    died = defender.currentAmount <= 0
+                    if (died) removeTroop(defender)
                 } else {
                     isLuck = false
-                    defenderRemainingAmount = 0
-                    defenderDied = false
+                    remaining = 0
+                    died = false
                 }
-
                 val output = PerformShootUseCase.execute(
                     PerformShootUseCase.Input(
-                        attacker = troop,
-                        defender = defender,
-                        canShoot = canShoot,
-                        isTargetOccupiedByEnemy = isTargetOccupiedByEnemy,
-                        isLuck = isLuck,
-                        isMorale = isMorale,
-                        defenderRemainingAmount = defenderRemainingAmount,
-                        defenderDied = defenderDied
+                        troop.id, defender?.id, canShoot, targetIsEnemy,
+                        isLuck, isMorale, remaining, died
                     )
                 )
                 if (output.success) {
-                    onEvent?.invoke(BattleEvent.TroopShot(
-                        attackerId = troop.id,
-                        defenderId = defender!!.id,
-                        defenderRemainingAmount = defenderRemainingAmount,
-                        isLuck = output.isLuck,
-                        isMorale = output.isMorale,
-                        defenderDied = defenderDied
-                    ))
+                    onEvent?.invoke(
+                        BattleEvent.TroopShot(
+                            troop.id,
+                            defender!!.id,
+                            remaining,
+                            output.isLuck,
+                            output.isMorale,
+                            died
+                        )
+                    )
                 }
                 if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
                 return BattleActionResult(
                     actionType = ActionType.SHOOT,
                     success = output.success,
-                    errorId = output.errorId,
-                    movedFrom = null,
-                    movedTo = null,
+                    errorId = output.rejection?.let { ErrorId.valueOf(it.name) },
                     isLuck = output.isLuck,
                     isMorale = output.isMorale,
                     battleEnded = !isBattleOn()

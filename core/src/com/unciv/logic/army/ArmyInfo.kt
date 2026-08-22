@@ -12,33 +12,26 @@ import com.unciv.pure.application.army.DismissByMostMaintenanceUseCase
 import com.unciv.pure.application.army.FillArmyUseCase
 import com.unciv.pure.domain.army.Army
 import com.unciv.pure.domain.army.IArmy
-import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
 import com.unciv.pure.domain.troop.ITroopDefinitionSource
 import com.unciv.pure.domain.troop.Troop
 import com.unciv.pure.domain.troop.TroopFactory
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-/**
- * Represents an army consisting of a fixed number of slots,
- * where each slot can hold a [TroopInfo] or be empty (null).
- *
- * An optional hero (leader) reference is maintained and passed to all troops.
- */
 open class ArmyInfo(
-    @Transient
-    var civInfo: CivilizationInfo = CivilizationInfo(),
+    @Transient var civInfo: CivilizationInfo = CivilizationInfo(),
     val maxSlots: Int = _defaultMaxSlots ?: GameConstants.armySize,
 ) : IsPartOfGameInfoSerialization, Json.Serializable, IArmy, KoinComponent {
 
-
     companion object {
-        // Seam: testing instance
         private var _defaultMaxSlots: Int? = null
+        fun setTestingMaxSlots(slots: Int) {
+            _defaultMaxSlots = slots
+        }
 
-        fun setTestingMaxSlots(slots: Int) { _defaultMaxSlots = slots }
-        fun resetTestingMaxSlots() { _defaultMaxSlots = null }
-        // End of Seam
+        fun resetTestingMaxSlots() {
+            _defaultMaxSlots = null
+        }
     }
 
     private val army = Army(maxSlots)
@@ -46,73 +39,40 @@ open class ArmyInfo(
     @delegate:Transient
     private val troopSource: ITroopDefinitionSource by inject()
 
-    // Array to hold troop slots (null means the slot is empty)
-    //private val troops: Array<TroopInfo?> = Array(maxSlots) { null }
     private val troops get() = army.getAllTroops()
 
-    /**
-     * Optional reference to the hero (MapUnit) leading this army.
-     * This reference will be passed to all troops via setTransients.
-     */
     @Transient
-    var hero: com.unciv.logic.map.MapUnit? = null
-    constructor(civInfo: CivilizationInfo, vararg troops: Pair<String, Int>) : this(civInfo, maxSlots = maxOf(_defaultMaxSlots ?: GameConstants.armySize, troops.size)) {
+    var hero: MapUnit? = null
+
+    constructor(civInfo: CivilizationInfo, vararg troops: Pair<String, Int>) :
+            this(civInfo, maxOf(_defaultMaxSlots ?: GameConstants.armySize, troops.size)) {
         initializeTroops(troops)
     }
 
-    constructor() : this(CivilizationInfo(), _defaultMaxSlots ?: GameConstants.armySize)
+    /** Side-effect-free constructor used by GDX Json; real ownership is restored by setTransients. */
+    constructor() : this(MapUnit.monsterCivInfo, _defaultMaxSlots ?: GameConstants.armySize)
 
-    /**
-     * Sets transient properties for the army and passes the hero reference to all troops.
-     *
-     * @param civInfo0 The civilization info to be set.
-     */
-    fun setTransients(civInfo0: CivilizationInfo, hero0: MapUnit?) {
-        civInfo = civInfo0
-        hero = hero0
-        //troops.forEach { troop ->
-        //    troop?.setTransients(civInfo, hero0)
-        //}
-    }
-
-    /** Initializes troops in slots from a list of pairs (name, count) */
-    private fun initializeTroops(troops: Array<out Pair<String, Int>>) {
-        for ((index, troop) in troops.withIndex()) {
-            if (index >= maxSlots) break
-            val (name, count) = troop
-            // Create troop without hero; hero will be set later via setTransients.
-            this.troops[index] = TroopFactory.create(name, count, troopSource)
-            //this.troops[index] = TroopInfo(name, count, civInfo, hero)
-        }
-        // Fill remaining slots with null if the number of troops is less than maxSlots
-        for (index in troops.size until maxSlots) {
-            this.troops[index] = null // Explicitly mark the slot as empty
-        }
-    }
-
-    /** Convenience constructor to initialize army with a list of troops */
-    constructor(civInfo: CivilizationInfo, unitName: String, totalCount: Int) : this(civInfo, maxSlots = GameConstants.armySize) {
+    constructor(civInfo: CivilizationInfo, unitName: String, totalCount: Int) :
+            this(civInfo, GameConstants.armySize) {
         fillArmy(unitName, totalCount)
     }
 
-    /**
-     * Fills the army slots with troops of the given name and total count.
-     * Distributes the total count evenly across all slots, with differences of at most 1.
-     *
-     * @param unitName The name of the troop unit to fill the army with.
-     * @param totalCount The total number of troops to distribute across all slots.
-     */
+    fun setTransients(civInfo0: CivilizationInfo, hero0: MapUnit?) {
+        civInfo = civInfo0
+        hero = hero0
+    }
+
+    private fun initializeTroops(initialTroops: Array<out Pair<String, Int>>) {
+        for ((index, troop) in initialTroops.withIndex()) {
+            if (index >= maxSlots) break
+            troops[index] = TroopFactory.create(troop.first, troop.second, troopSource)
+        }
+        for (index in initialTroops.size until maxSlots) troops[index] = null
+    }
+
     fun fillArmy(unitName: String, totalCount: Int) =
             FillArmyUseCase.execute(this, unitName, totalCount, troopSource)
 
-    /**
-     * Adds units to the army. If a unit of the same type exists, it increases its count.
-     * If no such unit exists, it attempts to place the units in an empty slot.
-     *
-     * @param unitName The name of the unit to add.
-     * @param amount The number of units to add.
-     * @return True if the units were added successfully, false if no slot was available.
-     */
     fun addUnits(unitName: String, amount: Int): Boolean =
             AddUnitsUseCase.execute(this, unitName, amount, troopSource)
 
@@ -121,104 +81,56 @@ open class ArmyInfo(
 
     fun dismissByMostMaintenance() = DismissByMostMaintenanceUseCase.execute(this)
 
-    /** Returns the troop at the given index or null if the slot is empty. */
-    fun getTroopAt(index: Int): Troop? {
-        return troops.getOrNull(index)
-    }
-
-    /**
-     * Checks if the given troop is part of this army.
-     *
-     * @param troop The troop to check.
-     * @return True if the troop belongs to this army, false otherwise.
-     */
-    //fun contains(troop: TroopInfo): Boolean {
-    //    return troops.any { it?.troop?.id == troop.troop.id }
-    //}
-
+    fun getTroopAt(index: Int): Troop? = troops.getOrNull(index)
     fun contains(troop: Troop): Boolean = army.contains(troop)
-
     override fun getAllTroops(): Array<Troop?> = army.getAllTroops()
-
-    /**
-     * Removes the specified troop from the army.
-     *
-     * @param troop The troop to remove.
-     * @return True if the troop was successfully removed, false if not found.
-     */
     override fun removeTroop(troop: Troop): Boolean = army.removeTroop(troop)
-
-    //fun removeTroop(troop: Troop): Boolean {
-    //    val troopInfo = troops.firstOrNull { it?.troop?.id == troop.id } ?: return false
-   //     return removeTroop(troopInfo)
-    //}
-
-    /** Sets a troop at the given index. */
     override fun setTroopAt(index: Int, troop: Troop?) = army.setTroopAt(index, troop)
 
-    /** Removes a troop from the given index and returns it. */
     internal fun removeTroopAt(index: Int): Troop? {
-        if (index in troops.indices) {
-            val removedTroop = troops[index]
-            troops[index] = null
-            return removedTroop
-        }
-        return null
+        if (index !in troops.indices) return null
+        val removedTroop = troops[index]
+        troops[index] = null
+        return removedTroop
     }
 
-    /** Adds a troop to the first available slot. Returns true if successful, false if full. */
     fun addTroop(troop: Troop): Boolean = army.addTroop(troop)
 
-    /** Swaps two troops in the array by their indices. */
     internal fun swapTroops(index1: Int, index2: Int) {
-        if (index1 in troops.indices && index2 in troops.indices) {
-            val temp = troops[index1]
-            troops[index1] = troops[index2]
-            troops[index2] = temp
-        }
+        if (index1 !in troops.indices || index2 !in troops.indices) return
+        val temporary = troops[index1]
+        troops[index1] = troops[index2]
+        troops[index2] = temporary
     }
-    // ===== Serialization Methods =====
 
     override fun write(json: Json) {
         json.writeArrayStart("slots")
-        for (troop in troops) {
-            json.writeValue(troop)
-        }
+        for (troop in troops) json.writeValue(troop)
         json.writeArrayEnd()
     }
 
     override fun read(json: Json, jsonData: JsonValue) {
-        val slotArray = jsonData.get("slots")
+        val slotArray = jsonData.get("slots") ?: return
         for (i in 0 until maxSlots) {
-            val troopData = slotArray.get(i)
-            troops[i] = if (troopData != null && troopData.has("amount")) {
-                json.readValue(Troop::class.java, troopData)
-            } else {
-                null
+            val troopData = if (i < slotArray.size) slotArray.get(i) else null
+            troops[i] = when {
+                troopData == null || !troopData.has("amount") -> null
+                troopData.has("speed") -> json.readValue(Troop::class.java, troopData)
+                else -> {
+                    val unitName = troopData.getString("unitName", "Spearman")
+                    val amount = troopData.getInt("amount", 0)
+                    TroopFactory.create(unitName, amount, troopSource)
+                }
             }
         }
     }
 
-    fun finishBattle() {
-    //    troops.forEach { it?.finishBattle() }
-    }
-
-    /**
-     * Creates a deep copy of the current slots array.
-     * Each [TroopInfo] object is also deeply copied.
-     *
-     * @return A new array with the copied troop slots.
-     */
-    fun copySlots(): Array<Troop?> {
-        return troops
-        //return troops.map { troop ->
-        //    troop?.copy()
-       // }.toTypedArray()
-    }
+    fun finishBattle() = Unit
+    fun copySlots(): Array<Troop?> = troops
 
     fun clone(): ArmyInfo {
-        val toReturn = ArmyInfo(civInfo)
-        toReturn.copySlots()
-        return toReturn
+        val copy = ArmyInfo(civInfo, maxSlots)
+        for (index in troops.indices) copy.setTroopAt(index, troops[index])
+        return copy
     }
 }

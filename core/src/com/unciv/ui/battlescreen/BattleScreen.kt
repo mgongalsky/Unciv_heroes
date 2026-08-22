@@ -202,30 +202,19 @@ class BattleScreen private constructor(
     /** Container for the battlefield UI elements. Could be reworked in the future */
     private val tabbedPager: TabbedPager
 
-    /** What to do if battlefield window is closing */
     override fun dispose() {
+        battleScope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
         tabbedPager.selectPage(-1)
         super.dispose()
     }
 
     init {
         manager.initializeBattle()
-
-
         attackerArmy.getAllTroops()?.forEachIndexed { index, troop ->
-            if (troop != null) {
-                //troop.enterBattle(attackerIsPlayer, index, attacker = true, battleField)
-                val troopView = TroopBattleView(troop, this)
-                attackerTroopViewsArray[index] = troopView
-            }
+            if (troop != null) attackerTroopViewsArray[index] = TroopBattleView(troop, this)
         }
-
         defenderArmy.getAllTroops()?.forEachIndexed { index, troop ->
-            if (troop != null) {
-                //troop.enterBattle(defenderIsPlayer, index, attacker = false, battleField)
-                val troopView = TroopBattleView(troop, this)
-                defenderTroopViewsArray[index] = troopView
-            }
+            if (troop != null) defenderTroopViewsArray[index] = TroopBattleView(troop, this)
         }
 
         cursorMove = loadCursor("BattleMoveCursor128.png", 32, 64)
@@ -238,127 +227,79 @@ class BattleScreen private constructor(
         cursorAttack.add(loadCursor("BattleAttackCursor4.png", 64, 16))
         cursorAttack.add(loadCursor("BattleAttackCursor5.png", 64, 64))
 
-        // Shortcut for exiting the battle screen
         globalShortcuts.add(KeyCharAndCode.BACK) { shutdownScreen() }
-        // Instead of directly calling skipTurn(), send a SKIP action request to the manager
         globalShortcuts.add(KeyCharAndCode.SPACE) { sendSkipTurnRequest() }
-
         val tileSetStrings = TileSetStrings()
         daTileGroups = battleField.values.map { TileGroup(it, tileSetStrings) }
-
-        val pointerString = "TileSets/FantasyHex/Highlight"
-        pointerImages = ImageGetter.getLayeredImageColored(pointerString, Color.valueOf("#00AAFF77"))
-
+        pointerImages = ImageGetter.getLayeredImageColored(
+            "TileSets/FantasyHex/Highlight", Color.valueOf("#00AAFF77")
+        )
         tabbedPager = TabbedPager(
-            stage.width, stage.width,
-            centerAreaHeight, centerAreaHeight,
+            stage.width, stage.width, centerAreaHeight, centerAreaHeight,
             separatorColor = Color.WHITE
         )
-
         tabbedPager.addClosePage { shutdownScreen() }
-
         addTiles()
-
         stage.addActor(tabbedPager)
-
-        val index = tabbedPager.addPage(
-            caption = "Battle",
-            content = tileGroupMap
-        )
+        val index = tabbedPager.addPage(caption = "Battle", content = tileGroupMap)
         tabbedPager.selectPage(index)
-
         tabbedPager.setFillParent(true)
         updateTilesShadowing()
 
         manager.onEvent = { event ->
             when (event) {
-                is BattleEvent.TroopMoved -> {
-                    Gdx.app.postRunnable {
-                        val troop = manager.getTroopById(event.troopId) ?: return@postRunnable
-                        val troopView = getTroopViewFor(troop) ?: return@postRunnable
-                        val newTile = daTileGroups.firstOrNull {
-                            it.tileInfo.position.x.toInt() == event.to.x &&
-                                    it.tileInfo.position.y.toInt() == event.to.y
-                        }
-                        troopView.updatePosition(newTile)
-                        refreshTroopViews()
-                        if (event.isMorale && manager.isBattleOn()) showMoraleBird(troopView)
+                is BattleEvent.TroopMoved -> Gdx.app.postRunnable {
+                    val troop = manager.getTroopById(event.troopId) ?: return@postRunnable
+                    val troopView = getTroopViewFor(troop) ?: return@postRunnable
+                    val newTile = daTileGroups.firstOrNull {
+                        it.tileInfo.position.x.toInt() == event.to.x &&
+                                it.tileInfo.position.y.toInt() == event.to.y
+                    }
+                    troopView.updatePosition(newTile)
+                    refreshTroopViews()
+                    if (event.isMorale && manager.isBattleOn()) showMoraleBird(troopView)
+                }
+
+                is BattleEvent.TroopAttacked -> Gdx.app.postRunnable {
+                    val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
+                    val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
+                    if (event.isLuck) showLuckRainbow(attackerView)
+                    attackerView.updatePosition(daTileGroups.firstOrNull {
+                        it.tileInfo == manager.getTroopTile(attacker)
+                    })
+                    refreshTroopViews()
+                    if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
+                }
+
+                is BattleEvent.TroopShot -> Gdx.app.postRunnable {
+                    val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
+                    val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
+                    if (event.isLuck) showLuckRainbow(attackerView)
+                    refreshTroopViews()
+                    if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
+                }
+
+                is BattleEvent.TurnAdvanced ->
+                    println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
+
+                is BattleEvent.BattleEnded -> Gdx.app.postRunnable {
+                    shutdownScreen()
+                    manager.finishBattle()
+                    val battleResult = manager.getBattleResult()
+                    if (battleResult == null) {
+                        println("Bug with battle result.")
+                    } else {
+                        if (verboseTurn)
+                            println("Army of ${battleResult.winningArmy.civInfo.nation.name} won.")
+                        com.unciv.logic.battle.BattleWorldOutcomeHandler(attacker, defender)
+                            .apply(attackerArmy == battleResult.winningArmy)
                     }
                 }
 
-                is BattleEvent.TroopAttacked -> {
-                    Gdx.app.postRunnable {
-                        val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
-                        val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
-
-                        if (event.isLuck) showLuckRainbow(attackerView)
-
-                        val attackTileGroup = daTileGroups.firstOrNull {
-                            it.tileInfo == manager.getTroopTile(attacker)
-                        }
-                        attackerView.updatePosition(attackTileGroup)
-
-                        refreshTroopViews()
-
-                        if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
-                    }
-                }
-
-                is BattleEvent.TroopShot -> {
-                    Gdx.app.postRunnable {
-                        val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
-                        val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
-
-                        if (event.isLuck) showLuckRainbow(attackerView)
-
-                        refreshTroopViews()
-
-                        if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
-                    }
-                }
-
-                is BattleEvent.TurnAdvanced  -> println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
-                is BattleEvent.BattleEnded -> {
-                    Gdx.app.postRunnable {
-                        shutdownScreen()
-                        manager.finishBattle()
-                        val battleResult = manager.getBattleResult()
-                        if (battleResult == null) {
-                            println("Bug with battle result.")
-                        } else {
-                            if (verboseTurn) println("Army of ${battleResult.winningArmy.civInfo.nation.name} won.")
-                            if (attackerArmy == battleResult.winningArmy) {
-                                val d = defender
-                                if (d is MapUnitCombatant) {
-                                    d.unit.removeFromTile()
-                                    d.unit.civInfo.removeUnit(d.unit)
-                                    d.unit.civInfo.updateViewableTiles()
-                                }
-                                if (d is CityCombatant) {
-                                    val aCiv = attacker?.getCivInfo() ?: return@postRunnable
-                                    d.city.moveToCiv(aCiv)
-                                }
-                            }
-                            if (defenderArmy == battleResult.winningArmy) {
-                                val a = attacker
-                                if (a is MapUnitCombatant) {
-                                    a.unit.removeFromTile()
-                                    a.unit.civInfo.removeUnit(a.unit)
-                                    a.unit.civInfo.updateViewableTiles()
-                                }
-                            }
-                        }
-                    }
-                }
-
-                is BattleEvent.TurnSkipped   -> println("[EVENT] TurnSkipped")
+                is BattleEvent.TurnSkipped -> println("[EVENT] TurnSkipped")
             }
         }
-
-
-        GlobalScope.launch {
-            runBattleLoop()
-        }
+        battleScope.launch { runBattleLoop() }
     }
 
     /**
@@ -1115,5 +1056,8 @@ class BattleScreen private constructor(
         game.popScreen()
 
     }
+
+    private val battleScope: kotlinx.coroutines.CoroutineScope
+        get() = BattleScreenScopeRegistry.scopeFor(this)
 }
 

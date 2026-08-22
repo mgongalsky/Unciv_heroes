@@ -6,15 +6,6 @@ import com.unciv.logic.HexMath.getNumberOfTilesInHexagon
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.models.metadata.BaseRuleset
 
-
-/* Predefined Map Sizes - ours are a little lighter than the original values. For reference those are:
-    Civ5Duel(40,24,17),
-    Civ5Tiny(56,36,25),
-    Civ5Small(66,42,30),
-    Civ5Medium(80,52,37),
-    Civ5Large(104,64,47),
-    Civ5Huge(128,80,58),
- */
 enum class MapSize(val radius: Int, val width: Int, val height: Int) {
     Tiny(10, 23, 15),
     Small(15, 33, 21),
@@ -23,9 +14,6 @@ enum class MapSize(val radius: Int, val width: Int, val height: Int) {
     Huge(40, 87, 57);
 
     companion object {
-        /** Not a predefined [MapSize] enum value, but a String
-         * used in [MapParameters.mapSize] to indicate user-defined dimensions.
-         * Do not mistake for [MapType.custom]. */
         const val custom = "Custom"
     }
 }
@@ -36,7 +24,6 @@ class MapSizeNew : IsPartOfGameInfoSerialization {
     var height = 0
     var name = ""
 
-    /** Needed for Json parsing */
     @Suppress("unused")
     constructor()
 
@@ -68,7 +55,7 @@ class MapSizeNew : IsPartOfGameInfoSerialization {
         name = MapSize.custom
         this.width = width
         this.height = height
-        this.radius = getEquivalentHexagonalRadius(width, height)
+        radius = getEquivalentHexagonalRadius(width, height)
     }
 
     fun clone() = MapSizeNew().also {
@@ -78,36 +65,24 @@ class MapSizeNew : IsPartOfGameInfoSerialization {
         it.height = height
     }
 
-    /** Check custom dimensions, fix if too extreme
-     * @param worldWrap whether world wrap is on
-     * @return null if size was acceptable, otherwise untranslated reason message
-     */
     fun fixUndesiredSizes(worldWrap: Boolean): String? {
-        if (name != MapSize.custom) return null  // predefined sizes are OK
-        // world-wrap mas must always have an even width, so round down silently
-        if (worldWrap && width % 2 != 0 ) width--
-        // check for any bad condition and bail if none of them
+        if (name != MapSize.custom) return null
+        if (worldWrap && width % 2 != 0) width--
         val message = when {
-            worldWrap && width < 32 ->    // otherwise horizontal scrolling will show edges, empirical
-                "World wrap requires a minimum width of 32 tiles"
-            width < 3 || height < 3 || radius < 2 ->
-                "The provided map dimensions were too small"
-            radius > 500 ->
-                "The provided map dimensions were too big"
-            height * 16 < width || width * 16 < height ->    // aspect ratio > 16:1
-                "The provided map dimensions had an unacceptable aspect ratio"
+            worldWrap && width < 32 -> "World wrap requires a minimum width of 32 tiles"
+            width < 3 || height < 3 || radius < 2 -> "The provided map dimensions were too small"
+            radius > 500 -> "The provided map dimensions were too big"
+            height * 16 < width || width * 16 < height -> "The provided map dimensions had an unacceptable aspect ratio"
             else -> null
         } ?: return null
-
-        // fix the size - not knowing whether hexagonal or rectangular is used
-        setNewRadius(when {
-            radius < 2 -> 2
-            radius > 500 -> 500
-            worldWrap && radius < 15 -> 15    // minimum for hexagonal but more than required for rectangular
-            else -> radius
-        })
-
-        // tell the caller that map dimensions have changed and why
+        setNewRadius(
+            when {
+                radius < 2 -> 2
+                radius > 500 -> 500
+                worldWrap && radius < 15 -> 15
+                else -> radius
+            }
+        )
         return message
     }
 
@@ -118,8 +93,7 @@ class MapSizeNew : IsPartOfGameInfoSerialization {
         height = size.y.toInt()
     }
 
-    // For debugging and MapGenerator console output
-    override fun toString() = if (name == MapSize.custom) "${width}x${height}" else name
+    override fun toString() = if (name == MapSize.custom) "${width}x$height" else name
 }
 
 object MapShape : IsPartOfGameInfoSerialization {
@@ -137,14 +111,8 @@ object MapType : IsPartOfGameInfoSerialization {
     const val fourCorners = "Four Corners"
     const val archipelago = "Archipelago"
     const val innerSea = "Inner Sea"
-
-    // Cellular automata style
     const val smoothedRandom = "Smoothed Random"
-
-    // Non-generated maps
     const val custom = "Custom"
-
-    // All ocean tiles
     const val empty = "Empty"
 }
 
@@ -157,6 +125,8 @@ object MapResources {
 }
 
 class MapParameters : IsPartOfGameInfoSerialization {
+    /** Serialization contract version, independent from the game release version. */
+    var mapFormatVersion = 0
     var name = ""
     var type = MapType.pangaea
     var shape = MapShape.hexagonal
@@ -165,14 +135,9 @@ class MapParameters : IsPartOfGameInfoSerialization {
     var noRuins = false
     var noNaturalWonders = false
     var worldWrap = false
-
-    /** This is used mainly for the map editor, so you can continue editing a map under the same ruleset you started with */
     var mods = LinkedHashSet<String>()
-    var baseRuleset = BaseRuleset.Civ_V_GnK.fullName // Hardcoded as the RulesetCache is not yet initialized when starting up
-
-    /** Unciv Version of creation for support cases */
+    var baseRuleset = BaseRuleset.Civ_V_GnK.fullName
     var createdWithVersion = ""
-
     var seed: Long = System.currentTimeMillis()
     var tilesPerBiomeArea = 6
     var maxCoastExtension = 2
@@ -182,11 +147,10 @@ class MapParameters : IsPartOfGameInfoSerialization {
     var rareFeaturesRichness = 0.05f
     var resourceRichness = 0.1f
     var waterThreshold = 0.0f
-
-    /** Shifts temperature (after random, latitude and temperatureExtremeness).*/
     var temperatureShift = 0f
 
     fun clone() = MapParameters().also {
+        it.mapFormatVersion = mapFormatVersion
         it.name = name
         it.type = type
         it.shape = shape
@@ -220,39 +184,38 @@ class MapParameters : IsPartOfGameInfoSerialization {
         maxCoastExtension = 2
         elevationExponent = 0.7f
         temperatureExtremeness = 0.6f
-        temperatureShift = 0.0f
+        temperatureShift = 0f
         vegetationRichness = 0.4f
         rareFeaturesRichness = 0.05f
         resourceRichness = 0.1f
-        waterThreshold = if (type == MapType.smoothedRandom)
-            -0.05f // make world about 55% land
-        else
-            0f
+        waterThreshold = if (type == MapType.smoothedRandom) -0.05f else 0f
     }
 
     fun getArea() = when {
-        shape == MapShape.hexagonal || shape == MapShape.flatEarth -> getNumberOfTilesInHexagon(mapSize.radius)
+        shape == MapShape.hexagonal || shape == MapShape.flatEarth -> getNumberOfTilesInHexagon(
+            mapSize.radius
+        )
+
         worldWrap && mapSize.width % 2 != 0 -> (mapSize.width - 1) * mapSize.height
         else -> mapSize.width * mapSize.height
     }
+
     fun displayMapDimensions() = mapSize.run {
         (if (shape == MapShape.hexagonal || shape == MapShape.flatEarth) "R$radius" else "${width}x$height") +
-        (if (worldWrap) "w" else "")
+                (if (worldWrap) "w" else "")
     }
 
-    // Human readable float representation akin to .net "0.###" - round to N digits but without redundant trailing zeroes
     private fun Float.niceToString(maxPrecision: Int) =
-        "%.${maxPrecision}f".format(this).trimEnd('0').trimEnd('.')
+            "%.${maxPrecision}f".format(this).trimEnd('0').trimEnd('.')
 
-    // For debugging and MapGenerator console output
     override fun toString() = sequence {
         if (name.isNotEmpty()) yield("\"$name\" ")
         yield("(")
         if (mapSize.name != MapSize.custom) yield("{${mapSize.name}} ")
         if (worldWrap) yield("{World Wrap} ")
-        yield("{$shape}")
+        yield("{$shape")
         yield(" " + displayMapDimensions() + ")")
-        if(mapResources != MapResources.default) yield(" {Resource Setting}: {$mapResources}")
+        if (mapResources != MapResources.default) yield(" {Resource Setting}: {$mapResources")
         if (name.isEmpty()) return@sequence
         yield("\n")
         if (type != MapType.custom && type != MapType.empty) yield("{Map Generation Type}: {$type}, ")
@@ -267,10 +230,7 @@ class MapParameters : IsPartOfGameInfoSerialization {
         yield(", {Water level}=" + waterThreshold.niceToString(2))
     }.joinToString("")
 
-    fun numberOfTiles() =
-        if (shape == MapShape.hexagonal || shape == MapShape.flatEarth) {
-            1 + 3 * mapSize.radius * (mapSize.radius - 1)
-        } else {
-            mapSize.width * mapSize.height
-        }
+    fun numberOfTiles() = if (shape == MapShape.hexagonal || shape == MapShape.flatEarth)
+        1 + 3 * mapSize.radius * (mapSize.radius - 1)
+    else mapSize.width * mapSize.height
 }

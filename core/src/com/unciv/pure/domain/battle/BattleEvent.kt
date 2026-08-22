@@ -1,7 +1,6 @@
-package com.unciv.pure.application.battle
+package com.unciv.pure.domain.battle
 
-import com.unciv.pure.domain.battle.Point
-
+@Deprecated("Legacy event contract; migrate consumers to com.unciv.pure.application.battle.BattleEvent")
 sealed class BattleEvent {
     data class TroopMoved(val troopId: Int, val from: Point, val to: Point, val isMorale: Boolean) :
         BattleEvent()

@@ -18,7 +18,9 @@ class AndroidLogBackend : LogBackend {
     }
 
     override fun isRelease(): Boolean {
-        return !BuildConfig.DEBUG
+        val androidApplication =
+                com.badlogic.gdx.Gdx.app as com.badlogic.gdx.backends.android.AndroidApplication
+        return androidApplication.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE == 0
     }
 }
 

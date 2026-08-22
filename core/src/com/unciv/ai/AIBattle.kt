@@ -4,10 +4,9 @@ import com.unciv.logic.Direction
 import com.unciv.logic.HexMath
 import com.unciv.logic.battle.BattleManager
 import com.unciv.logic.battle.IBattleTile
-import com.unciv.pure.domain.pathfinding.INavigableTile
+import com.unciv.logic.battle.execute
+import com.unciv.pure.application.battle.BattleCommand
 import com.unciv.pure.domain.troop.Troop
-import com.unciv.ui.battlescreen.ActionType
-import com.unciv.ui.battlescreen.BattleActionRequest
 
 class AIBattle(private val battleManager: BattleManager) {
 
@@ -41,21 +40,20 @@ class AIBattle(private val battleManager: BattleManager) {
 
         val attackTile = findAttackTile(troop, closestEnemyTile)
         if (attackTile != null) {
-            battleManager.performTurn(BattleActionRequest(
-                troop = troop,
-                targetPosition = closestEnemyTile,
-                actionType = ActionType.ATTACK,
-                attackTile = attackTile
-            ))
+            battleManager.execute(
+                BattleCommand.Attack(
+                    troopId = troop.id,
+                    target = closestEnemyTile.toPoint(),
+                    attackFrom = attackTile.toPoint()
+                )
+            )
         } else {
             val moveTarget = findBestMoveTarget(troop, closestEnemyTile)
             if (moveTarget != null) {
                 if (AI_verbose) println("${troop.unitName} moving to ${moveTarget.position}")
-                battleManager.performTurn(BattleActionRequest(
-                    troop = troop,
-                    targetPosition = moveTarget,
-                    actionType = ActionType.MOVE
-                ))
+                battleManager.execute(
+                    BattleCommand.Move(troop.id, moveTarget.toPoint())
+                )
             } else {
                 if (AI_verbose) println("${troop.unitName} cannot find a valid move target.")
             }
@@ -78,11 +76,9 @@ class AIBattle(private val battleManager: BattleManager) {
         val targetTile = battleManager.getTroopTile(target) ?: return
         if (AI_verbose) println("Selected ranged target for ${troop.unitName}: ${target.unitName} at ${targetTile.position}")
 
-        battleManager.performTurn(BattleActionRequest(
-            troop = troop,
-            targetPosition = targetTile,
-            actionType = ActionType.SHOOT
-        ))
+        battleManager.execute(
+            BattleCommand.Shoot(troop.id, targetTile.toPoint())
+        )
     }
 
     private fun findAttackTile(troop: Troop, targetTile: IBattleTile): IBattleTile? {
@@ -97,19 +93,30 @@ class AIBattle(private val battleManager: BattleManager) {
 
         val attackTile = targetTile.neighbors
             .filterIsInstance<IBattleTile>()
-            .firstOrNull { battleManager.isTileAchievable(troop, it) && battleManager.isTileFree(it) }
+            .firstOrNull {
+                battleManager.isTileAchievable(
+                    troop,
+                    it
+                ) && battleManager.isTileFree(it)
+            }
 
         if (attackTile != null)
             if (AI_verbose) println("Found attack tile: ${attackTile.position}")
-            else
-                if (AI_verbose) println("No valid attack tile found for ${troop.unitName}")
+            else if (AI_verbose) println("No valid attack tile found for ${troop.unitName}")
 
         return attackTile
     }
 
-    private fun isDirectionValid(troop: Troop, targetTile: IBattleTile, direction: Direction): Boolean {
-        val attackTile = battleManager.battleField.getNeighborTile(targetTile, direction) ?: return false
-        return battleManager.isTileAchievable(troop, attackTile) && battleManager.isTileFree(attackTile)
+    private fun isDirectionValid(
+        troop: Troop,
+        targetTile: IBattleTile,
+        direction: Direction
+    ): Boolean {
+        val attackTile =
+                battleManager.battleField.getNeighborTile(targetTile, direction) ?: return false
+        return battleManager.isTileAchievable(troop, attackTile) && battleManager.isTileFree(
+            attackTile
+        )
     }
 
     private fun findBestMoveTarget(troop: Troop, targetTile: IBattleTile): IBattleTile? {

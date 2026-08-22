@@ -1,21 +1,16 @@
-// com/unciv/pure/application/battle/PerformAttackUseCase.kt
 package com.unciv.pure.application.battle
 
-import ErrorId
-import com.unciv.logic.battle.IBattleTile
-import com.unciv.pure.domain.troop.Troop
-import com.unciv.ui.battlescreen.ActionType
+import com.unciv.pure.domain.battle.Point
 
 object PerformAttackUseCase {
-
     data class Input(
-        val attacker: Troop,
-        val defender: Troop?,
-        val attackTile: IBattleTile?,
-        val currentTile: IBattleTile?,
+        val attackerId: Int,
+        val defenderId: Int?,
+        val attackFrom: Point?,
+        val current: Point?,
         val isTargetOccupiedByEnemy: Boolean,
-        val isAttackTileAchievable: Boolean,
-        val isAttackTileFree: Boolean,
+        val isAttackFromAchievable: Boolean,
+        val isAttackFromFree: Boolean,
         val isLuck: Boolean,
         val isMorale: Boolean,
         val defenderRemainingAmount: Int,
@@ -24,9 +19,9 @@ object PerformAttackUseCase {
 
     data class Output(
         val success: Boolean,
-        val errorId: ErrorId? = null,
-        val movedFrom: IBattleTile? = null,
-        val movedTo: IBattleTile? = null,
+        val rejection: BattleRejection? = null,
+        val movedFrom: Point? = null,
+        val movedTo: Point? = null,
         val isLuck: Boolean = false,
         val isMorale: Boolean = false,
         val defenderRemainingAmount: Int = 0,
@@ -34,24 +29,16 @@ object PerformAttackUseCase {
     )
 
     fun execute(input: Input): Output {
-        if (input.defender == null) {
-            return Output(success = false, errorId = ErrorId.INVALID_TARGET)
+        if (input.defenderId == null || !input.isTargetOccupiedByEnemy || input.attackFrom == null) {
+            return Output(success = false, rejection = BattleRejection.INVALID_TARGET)
         }
-        if (!input.isTargetOccupiedByEnemy) {
-            return Output(success = false, errorId = ErrorId.INVALID_TARGET)
-        }
-        if (input.attackTile == null) {
-            return Output(success = false, errorId = ErrorId.INVALID_TARGET)
-        }
-        if (!input.isAttackTileAchievable ||
-                (!input.isAttackTileFree && input.currentTile != input.attackTile)
-        ) {
-            return Output(success = false, errorId = ErrorId.INVALID_TARGET)
+        if (!input.isAttackFromAchievable || (!input.isAttackFromFree && input.current != input.attackFrom)) {
+            return Output(success = false, rejection = BattleRejection.INVALID_TARGET)
         }
         return Output(
             success = true,
-            movedFrom = input.currentTile,
-            movedTo = input.attackTile,
+            movedFrom = input.current,
+            movedTo = input.attackFrom,
             isLuck = input.isLuck,
             isMorale = input.isMorale,
             defenderRemainingAmount = input.defenderRemainingAmount,

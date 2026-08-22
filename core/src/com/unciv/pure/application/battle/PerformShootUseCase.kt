@@ -1,15 +1,9 @@
-// com/unciv/pure/application/battle/PerformShootUseCase.kt
 package com.unciv.pure.application.battle
 
-import ErrorId
-import com.unciv.logic.battle.IBattleTile
-import com.unciv.pure.domain.troop.Troop
-
 object PerformShootUseCase {
-
     data class Input(
-        val attacker: Troop,
-        val defender: Troop?,
+        val attackerId: Int,
+        val defenderId: Int?,
         val canShoot: Boolean,
         val isTargetOccupiedByEnemy: Boolean,
         val isLuck: Boolean,
@@ -20,7 +14,7 @@ object PerformShootUseCase {
 
     data class Output(
         val success: Boolean,
-        val errorId: ErrorId? = null,
+        val rejection: BattleRejection? = null,
         val isLuck: Boolean = false,
         val isMorale: Boolean = false,
         val defenderRemainingAmount: Int = 0,
@@ -28,14 +22,14 @@ object PerformShootUseCase {
     )
 
     fun execute(input: Input): Output {
-        if (input.defender == null) {
-            return Output(success = false, errorId = ErrorId.INVALID_TARGET)
+        if (input.defenderId == null) {
+            return Output(success = false, rejection = BattleRejection.INVALID_TARGET)
         }
         if (!input.canShoot) {
-            return Output(success = false, errorId = ErrorId.NOT_IMPLEMENTED)
+            return Output(success = false, rejection = BattleRejection.NOT_IMPLEMENTED)
         }
         if (!input.isTargetOccupiedByEnemy) {
-            return Output(success = false, errorId = ErrorId.INVALID_TARGET)
+            return Output(success = false, rejection = BattleRejection.INVALID_TARGET)
         }
         return Output(
             success = true,

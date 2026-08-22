@@ -1,132 +1,69 @@
 package com.unciv.testing.pure.application.battle
 
+import com.unciv.pure.application.battle.BattleRejection
 import com.unciv.pure.application.battle.PerformShootUseCase
-import com.unciv.pure.domain.troop.HardcodedTroopDefinitionSource
-import com.unciv.pure.domain.troop.Troop
-import com.unciv.pure.domain.troop.TroopFactory
-import org.junit.Assert.*
-import org.junit.Before
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import ErrorId
 
 class PerformShootUseCaseUnitTest {
-
-    private val source = HardcodedTroopDefinitionSource(speed = 5, damage = 10, maxHealth = 100, rangedStrength = 10)
-    private lateinit var attacker: Troop
-    private lateinit var defender: Troop
-
-    @Before
-    fun setUp() {
-        TroopFactory.resetIdCounter()
-        attacker = TroopFactory.create("Archer", 10, source)
-        defender = TroopFactory.create("Spearman", 10, source)
-    }
-
     private fun input(
-        defenderTroop: Troop? = defender,
+        defenderId: Int? = 2,
         canShoot: Boolean = true,
-        isTargetOccupiedByEnemy: Boolean = true,
-        isLuck: Boolean = false,
-        isMorale: Boolean = false,
-        defenderRemainingAmount: Int = 7,
-        defenderDied: Boolean = false
-    ) = PerformShootUseCase.Input(
-        attacker = attacker,
-        defender = defenderTroop,
-        canShoot = canShoot,
-        isTargetOccupiedByEnemy = isTargetOccupiedByEnemy,
-        isLuck = isLuck,
-        isMorale = isMorale,
-        defenderRemainingAmount = defenderRemainingAmount,
-        defenderDied = defenderDied
-    )
-
-    // --- success ---
+        enemy: Boolean = true,
+        luck: Boolean = false,
+        morale: Boolean = false,
+        remaining: Int = 7,
+        died: Boolean = false
+    ) = PerformShootUseCase.Input(1, defenderId, canShoot, enemy, luck, morale, remaining, died)
 
     @Test
-    fun `successful shoot returns success`() {
-        assertTrue(PerformShootUseCase.execute(input()).success)
-    }
-
-    @Test
-    fun `successful shoot has no errorId`() {
-        assertNull(PerformShootUseCase.execute(input()).errorId)
-    }
-
-    @Test
-    fun `successful shoot has no movedFrom or movedTo`() {
-        val result = PerformShootUseCase.execute(input())
-        // shoot не двигает атакующего — полей movedFrom/movedTo в Output нет
+    fun `successful shot returns outcome without movement`() {
+        val result = PerformShootUseCase.execute(
+            input(
+                luck = true,
+                morale = true,
+                remaining = 3,
+                died = true
+            )
+        )
         assertTrue(result.success)
+        assertNull(result.rejection)
+        assertTrue(result.isLuck)
+        assertTrue(result.isMorale)
+        assertEquals(3, result.defenderRemainingAmount)
+        assertTrue(result.defenderDied)
     }
 
     @Test
-    fun `successful shoot passes through isLuck`() {
-        assertTrue(PerformShootUseCase.execute(input(isLuck = true)).isLuck)
+    fun `missing defender is rejected first`() {
+        val result =
+            PerformShootUseCase.execute(input(defenderId = null, canShoot = false, enemy = false))
+        assertFalse(result.success)
+        assertEquals(BattleRejection.INVALID_TARGET, result.rejection)
     }
 
     @Test
-    fun `successful shoot passes through isMorale`() {
-        assertTrue(PerformShootUseCase.execute(input(isMorale = true)).isMorale)
+    fun `incapable shooter returns legacy NOT_IMPLEMENTED rejection`() {
+        val result = PerformShootUseCase.execute(input(canShoot = false))
+        assertFalse(result.success)
+        assertEquals(BattleRejection.NOT_IMPLEMENTED, result.rejection)
     }
 
     @Test
-    fun `successful shoot passes through defenderRemainingAmount`() {
-        assertEquals(7, PerformShootUseCase.execute(input(defenderRemainingAmount = 7)).defenderRemainingAmount)
+    fun `cannot shoot takes priority over non-enemy target`() {
+        assertEquals(
+            BattleRejection.NOT_IMPLEMENTED,
+            PerformShootUseCase.execute(input(canShoot = false, enemy = false)).rejection
+        )
     }
 
     @Test
-    fun `successful shoot passes through defenderDied`() {
-        assertTrue(PerformShootUseCase.execute(input(defenderDied = true)).defenderDied)
-    }
-
-    // --- ошибки ---
-
-    @Test
-    fun `null defender returns failure`() {
-        assertFalse(PerformShootUseCase.execute(input(defenderTroop = null)).success)
-    }
-
-    @Test
-    fun `null defender returns INVALID_TARGET`() {
-        assertEquals(ErrorId.INVALID_TARGET, PerformShootUseCase.execute(input(defenderTroop = null)).errorId)
-    }
-
-    @Test
-    fun `cannot shoot returns failure`() {
-        assertFalse(PerformShootUseCase.execute(input(canShoot = false)).success)
-    }
-
-    @Test
-    fun `cannot shoot returns NOT_IMPLEMENTED`() {
-        assertEquals(ErrorId.NOT_IMPLEMENTED, PerformShootUseCase.execute(input(canShoot = false)).errorId)
-    }
-
-    @Test
-    fun `target not occupied by enemy returns failure`() {
-        assertFalse(PerformShootUseCase.execute(input(isTargetOccupiedByEnemy = false)).success)
-    }
-
-    @Test
-    fun `target not occupied by enemy returns INVALID_TARGET`() {
-        assertEquals(ErrorId.INVALID_TARGET, PerformShootUseCase.execute(input(isTargetOccupiedByEnemy = false)).errorId)
-    }
-
-    // --- приоритет проверок ---
-
-    @Test
-    fun `null defender takes priority over canShoot`() {
-        assertEquals(ErrorId.INVALID_TARGET, PerformShootUseCase.execute(input(
-            defenderTroop = null,
-            canShoot = false
-        )).errorId)
-    }
-
-    @Test
-    fun `canShoot takes priority over isTargetOccupiedByEnemy`() {
-        assertEquals(ErrorId.NOT_IMPLEMENTED, PerformShootUseCase.execute(input(
-            canShoot = false,
-            isTargetOccupiedByEnemy = false
-        )).errorId)
+    fun `non-enemy target is invalid`() {
+        val result = PerformShootUseCase.execute(input(enemy = false))
+        assertFalse(result.success)
+        assertEquals(BattleRejection.INVALID_TARGET, result.rejection)
     }
 }
