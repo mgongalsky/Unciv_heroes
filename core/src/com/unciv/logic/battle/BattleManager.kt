@@ -208,25 +208,6 @@ open class BattleManager(
 
     private val verboseAttack = true // Флаг для включения/выключения вербозинга атак
 
-    fun performTurn(actionRequest: BattleActionRequest): BattleActionResult {
-        val troop = actionRequest.troop
-        val isMorale = isMoraleTriggered(troop)
-        if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
-
-        return when (actionRequest.actionType) {
-            ActionType.SKIP -> performLegacySkip()
-            ActionType.MOVE -> performLegacyMove(troop, actionRequest.targetPosition, isMorale)
-            ActionType.ATTACK -> performLegacyAttack(
-                troop,
-                actionRequest.targetPosition,
-                actionRequest.attackTile,
-                isMorale
-            )
-
-            ActionType.SHOOT -> performLegacyShoot(troop, actionRequest.targetPosition, isMorale)
-        }
-    }
-
     fun getTroopById(id: Int): Troop? =
             (attackerArmy.getAllTroops() + defenderArmy.getAllTroops())
                 .filterNotNull()
@@ -736,66 +717,7 @@ open class BattleManager(
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
         return performShootAction(troop, targetPosition, isMorale, onApplicationEvent)
     }
-    private fun performLegacyMove(
-        troop: Troop,
-        targetPosition: IBattleTile,
-        isMorale: Boolean
-    ): BattleActionResult {
-        val currentTile = getTroopCurrentTile(troop)
-        val result = performMoveAction(troop, targetPosition, isMorale)
-        return BattleActionResult(
-            actionType = ActionType.MOVE,
-            success = result.success,
-            movedFrom = if (result.success) currentTile else null,
-            movedTo = if (result.success) targetPosition else null,
-            errorId = result.rejection?.let { ErrorId.valueOf(it.name) },
-            isMorale = result.isMorale,
-            battleEnded = result.battleEnded
-        )
-    }
-    private fun performLegacySkip(): BattleActionResult {
-        val result = performSkipAction()
-        return BattleActionResult(
-            actionType = ActionType.SKIP,
-            success = result.success,
-            isMorale = result.isMorale,
-            battleEnded = result.battleEnded
-        )
-    }
-    private fun performLegacyAttack(
-        troop: Troop,
-        targetPosition: IBattleTile,
-        attackTile: IBattleTile?,
-        isMorale: Boolean
-    ): BattleActionResult {
-        val currentTile = getTroopCurrentTile(troop)
-        val result = performAttackAction(troop, targetPosition, attackTile, isMorale)
-        return BattleActionResult(
-            actionType = ActionType.ATTACK,
-            success = result.success,
-            movedFrom = if (result.success) currentTile else null,
-            movedTo = if (result.success) attackTile else null,
-            errorId = result.rejection?.let { ErrorId.valueOf(it.name) },
-            isLuck = result.isLuck,
-            isMorale = result.isMorale,
-            battleEnded = result.battleEnded
-        )
-    }
-    private fun performLegacyShoot(
-        troop: Troop,
-        targetPosition: IBattleTile,
-        isMorale: Boolean
-    ): BattleActionResult {
-        val result = performShootAction(troop, targetPosition, isMorale)
-        return BattleActionResult(
-            actionType = ActionType.SHOOT,
-            success = result.success,
-            errorId = result.rejection?.let { ErrorId.valueOf(it.name) },
-            isLuck = result.isLuck,
-            isMorale = result.isMorale,
-            battleEnded = result.battleEnded
-        )
-    }
+
     private fun publishBattleEvent(
         event: BattleEvent,
         onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null

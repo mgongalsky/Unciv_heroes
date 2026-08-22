@@ -25,6 +25,7 @@ import org.junit.Test
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
+import com.unciv.logic.battle.performTurn
 
 class BattleManagerPerformTurnCharTest {
 
