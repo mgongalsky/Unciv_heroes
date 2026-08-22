@@ -213,76 +213,17 @@ open class BattleManager(
         val isMorale = isMoraleTriggered(troop)
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
 
-        when (actionRequest.actionType) {
-            ActionType.SKIP -> return performSkipAction()
-
-            ActionType.MOVE -> return performMoveAction(
-                troop,
-                actionRequest.targetPosition,
-                isMorale
-            )
-
-            ActionType.ATTACK -> return performAttackAction(
+        return when (actionRequest.actionType) {
+            ActionType.SKIP -> performSkipAction()
+            ActionType.MOVE -> performMoveAction(troop, actionRequest.targetPosition, isMorale)
+            ActionType.ATTACK -> performAttackAction(
                 troop,
                 actionRequest.targetPosition,
                 actionRequest.attackTile,
                 isMorale
             )
 
-            ActionType.SHOOT -> {
-                val defender = getTroopOnTile(actionRequest.targetPosition)
-                val canShoot = canShoot(troop)
-                val targetIsEnemy = defender != null && isTileOccupiedByEnemy(
-                    troop,
-                    actionRequest.targetPosition
-                )
-                val isLuck: Boolean
-                val remaining: Int
-                val died: Boolean
-                if (defender != null && canShoot && targetIsEnemy) {
-                    isLuck = attack(defender, troop)
-                    remaining = defender.currentAmount
-                    died = defender.currentAmount <= 0
-                    if (died) removeTroop(defender)
-                } else {
-                    isLuck = false
-                    remaining = 0
-                    died = false
-                }
-                val output = PerformShootUseCase.execute(
-                    PerformShootUseCase.Input(
-                        troop.id,
-                        defender?.id,
-                        canShoot,
-                        targetIsEnemy,
-                        isLuck,
-                        isMorale,
-                        remaining,
-                        died
-                    )
-                )
-                if (output.success) {
-                    onEvent?.invoke(
-                        BattleEvent.TroopShot(
-                            troop.id,
-                            defender!!.id,
-                            remaining,
-                            output.isLuck,
-                            output.isMorale,
-                            died
-                        )
-                    )
-                }
-                if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
-                return BattleActionResult(
-                    actionType = ActionType.SHOOT,
-                    success = output.success,
-                    errorId = output.rejection?.let { ErrorId.valueOf(it.name) },
-                    isLuck = output.isLuck,
-                    isMorale = output.isMorale,
-                    battleEnded = !isBattleOn()
-                )
-            }
+            ActionType.SHOOT -> performShootAction(troop, actionRequest.targetPosition, isMorale)
         }
     }
 
@@ -707,5 +648,68 @@ open class BattleManager(
         val isMorale = isMoraleTriggered(troop)
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
         return performAttackAction(troop, targetPosition, attackTile, isMorale)
+    }
+    private fun performShootAction(
+        troop: Troop,
+        targetPosition: IBattleTile,
+        isMorale: Boolean
+    ): BattleActionResult {
+        val defender = getTroopOnTile(targetPosition)
+        val canShoot = canShoot(troop)
+        val targetIsEnemy = defender != null && isTileOccupiedByEnemy(troop, targetPosition)
+        val isLuck: Boolean
+        val remaining: Int
+        val died: Boolean
+        if (defender != null && canShoot && targetIsEnemy) {
+            isLuck = attack(defender, troop)
+            remaining = defender.currentAmount
+            died = defender.currentAmount <= 0
+            if (died) removeTroop(defender)
+        } else {
+            isLuck = false
+            remaining = 0
+            died = false
+        }
+        val output = PerformShootUseCase.execute(
+            PerformShootUseCase.Input(
+                troop.id,
+                defender?.id,
+                canShoot,
+                targetIsEnemy,
+                isLuck,
+                isMorale,
+                remaining,
+                died
+            )
+        )
+        if (output.success) {
+            onEvent?.invoke(
+                BattleEvent.TroopShot(
+                    troop.id,
+                    defender!!.id,
+                    remaining,
+                    output.isLuck,
+                    output.isMorale,
+                    died
+                )
+            )
+        }
+        if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
+        return BattleActionResult(
+            actionType = ActionType.SHOOT,
+            success = output.success,
+            errorId = output.rejection?.let { ErrorId.valueOf(it.name) },
+            isLuck = output.isLuck,
+            isMorale = output.isMorale,
+            battleEnded = !isBattleOn()
+        )
+    }
+    internal fun performShootCommand(
+        troop: Troop,
+        targetPosition: IBattleTile
+    ): BattleActionResult {
+        val isMorale = isMoraleTriggered(troop)
+        if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
+        return performShootAction(troop, targetPosition, isMorale)
     }
 }

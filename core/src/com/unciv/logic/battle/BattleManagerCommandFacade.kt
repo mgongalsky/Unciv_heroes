@@ -53,43 +53,30 @@ fun BattleManager.execute(
         }
     }
 
-    when (command) {
+    return when (command) {
         is BattleCommand.Move -> {
             val target = resolve(command.target)
                 ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
-            return executeWithApplicationEvents {
-                performMoveCommand(troop, target)
-            }
+            executeWithApplicationEvents { performMoveCommand(troop, target) }
         }
 
         is BattleCommand.Skip -> {
             getTroopTile(troop)
                 ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
-            return executeWithApplicationEvents {
-                performSkipCommand(troop)
-            }
+            executeWithApplicationEvents { performSkipCommand(troop) }
         }
 
         is BattleCommand.Attack -> {
             val target = resolve(command.target)
                 ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
             val attackTile = command.attackFrom?.let(::resolve)
-            return executeWithApplicationEvents {
-                performAttackCommand(troop, target, attackTile)
-            }
+            executeWithApplicationEvents { performAttackCommand(troop, target, attackTile) }
         }
 
         is BattleCommand.Shoot -> {
-            val request = BattleActionRequest(
-                troop = troop,
-                targetPosition = resolve(command.target)
-                    ?: return BattleCommandResult(
-                        false,
-                        rejection = BattleRejection.INVALID_TARGET
-                    ),
-                actionType = ActionType.SHOOT
-            )
-            return executeWithApplicationEvents { performTurn(request) }
+            val target = resolve(command.target)
+                ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
+            executeWithApplicationEvents { performShootCommand(troop, target) }
         }
     }
 }

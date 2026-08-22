@@ -43,12 +43,21 @@ class BattleManagerCommandFacadeTest {
         )
         val ruleset = Ruleset().apply {
             unitTypes["Melee"] = UnitType().apply { name = "Melee" }
+            unitTypes["Archery"] = UnitType().apply { name = "Archery" }
             units["Spearman"] = BaseUnit().apply {
                 name = "Spearman"
                 unitType = "Melee"
                 damage = 10
                 health = 100
                 speed = 5
+            }
+            units["Archer"] = BaseUnit().apply {
+                name = "Archer"
+                unitType = "Archery"
+                damage = 8
+                health = 80
+                speed = 4
+                rangedStrength = 10
             }
         }
         startKoin { allowOverride(true); modules(module { single { ruleset } }, testModule) }
@@ -354,6 +363,86 @@ class BattleManagerCommandFacadeTest {
         assertEquals(defenderAmountBefore, defender.currentAmount)
         assertSame(start, rejectingManager.getTroopTile(attacker))
         assertSame(target, rejectingManager.getTroopTile(defender))
+        assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun `lethal SHOOT command consumes morale then luck and publishes shot before battle end`() {
+        var randomCalls = 0
+        val countingRandom = object : com.unciv.pure.domain.battle.IBattleRandom {
+            override fun nextDouble(): Double {
+                randomCalls++
+                return 0.0
+            }
+        }
+        val archerArmy = ArmyInfo(FakeCivilizationInfo(), 5).apply { addUnits("Archer", 100) }
+        val shootManager = TestableBattleManager(
+            archerArmy,
+            defenderArmy,
+            FakeBattleField(listOf(start, target)),
+            countingRandom
+        )
+        shootManager.initializeTurnQueue()
+        val archer = archerArmy.getAllTroops().filterNotNull().first()
+        val defender = defenderArmy.getAllTroops().filterNotNull().first()
+        defender.currentAmount = 1
+        shootManager.placeTroop(archer, start)
+        shootManager.placeTroop(defender, target)
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
+
+        val result = shootManager.execute(BattleCommand.Shoot(archer.id, Point(1, 0))) {
+            events.add(it)
+        }
+
+        assertTrue(result.success)
+        assertTrue(result.battleEnded)
+        assertEquals(2, randomCalls)
+        assertEquals(0, defender.currentAmount)
+        assertFalse(defenderArmy.contains(defender))
+        assertFalse(shootManager.getTurnQueue().contains(defender))
+        assertNull(shootManager.getTroopTile(defender))
+        assertSame(start, shootManager.getTroopTile(archer))
+        assertEquals(
+            listOf("TroopShot", "BattleEnded"),
+            events.map { it.javaClass.simpleName }
+        )
+    }
+
+    @Test
+    fun `rejected melee SHOOT consumes only morale and preserves damage and events`() {
+        var randomCalls = 0
+        val countingRandom = object : com.unciv.pure.domain.battle.IBattleRandom {
+            override fun nextDouble(): Double {
+                randomCalls++
+                return 0.0
+            }
+        }
+        val shootManager = TestableBattleManager(
+            attackerArmy,
+            defenderArmy,
+            FakeBattleField(listOf(start, target)),
+            countingRandom
+        )
+        shootManager.initializeTurnQueue()
+        val attacker = attackerArmy.getAllTroops().filterNotNull().first()
+        val defender = defenderArmy.getAllTroops().filterNotNull().first()
+        shootManager.placeTroop(attacker, start)
+        shootManager.placeTroop(defender, target)
+        val amountBefore = defender.currentAmount
+        val healthBefore = defender.currentHealth
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
+
+        val result = shootManager.execute(BattleCommand.Shoot(attacker.id, Point(1, 0))) {
+            events.add(it)
+        }
+
+        assertFalse(result.success)
+        assertEquals(BattleRejection.NOT_IMPLEMENTED, result.rejection)
+        assertEquals(1, randomCalls)
+        assertEquals(amountBefore, defender.currentAmount)
+        assertEquals(healthBefore, defender.currentHealth)
+        assertSame(start, shootManager.getTroopTile(attacker))
+        assertSame(target, shootManager.getTroopTile(defender))
         assertTrue(events.isEmpty())
     }
 }
