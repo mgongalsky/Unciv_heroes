@@ -130,4 +130,92 @@ class BattleManagerCommandFacadeTest {
         assertFalse(result.success)
         assertEquals(BattleRejection.NOT_IMPLEMENTED, result.rejection)
     }
+
+    @Test
+    fun `MOVE command publishes application event after field mutation`() {
+        val attacker = attackerArmy.getAllTroops().filterNotNull().first()
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
+        var targetWasOccupiedWhenEventArrived = false
+
+        val result = manager.execute(BattleCommand.Move(attacker.id, Point(1, 0))) { event ->
+            targetWasOccupiedWhenEventArrived = manager.getTroopTile(attacker) === target
+            events.add(event)
+        }
+
+        assertTrue(result.success)
+        assertTrue(targetWasOccupiedWhenEventArrived)
+        assertEquals(
+            listOf(
+                com.unciv.pure.application.battle.BattleEvent.TroopMoved(
+                    attacker.id,
+                    Point(0, 0),
+                    Point(1, 0),
+                    false
+                )
+            ),
+            events
+        )
+    }
+
+    @Test
+    fun `rejected MOVE consumes morale randomness without mutating or publishing`() {
+        var randomCalls = 0
+        val countingRandom = object : com.unciv.pure.domain.battle.IBattleRandom {
+            override fun nextDouble(): Double {
+                randomCalls++
+                return 0.0
+            }
+        }
+        val rejectingManager = TestableBattleManager(
+            attackerArmy,
+            defenderArmy,
+            FakeBattleField(listOf(start, target)),
+            countingRandom,
+            allTilesReachable = false
+        )
+        rejectingManager.initializeTurnQueue()
+        val attacker = attackerArmy.getAllTroops().filterNotNull().first()
+        rejectingManager.placeTroop(attacker, start)
+        val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
+
+        val result = rejectingManager.execute(BattleCommand.Move(attacker.id, Point(1, 0))) {
+            events.add(it)
+        }
+
+        assertFalse(result.success)
+        assertEquals(BattleRejection.TOO_FAR, result.rejection)
+        assertEquals(1, randomCalls)
+        assertSame(start, rejectingManager.getTroopTile(attacker))
+        assertSame(attacker, start.getTroop())
+        assertNull(target.getTroop())
+        assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun `MOVE to unresolved coordinate is rejected before randomness and mutation`() {
+        var randomCalls = 0
+        val countingRandom = object : com.unciv.pure.domain.battle.IBattleRandom {
+            override fun nextDouble(): Double {
+                randomCalls++
+                return 0.0
+            }
+        }
+        val resolvingManager = TestableBattleManager(
+            attackerArmy,
+            defenderArmy,
+            FakeBattleField(listOf(start, target)),
+            countingRandom
+        )
+        resolvingManager.initializeTurnQueue()
+        val attacker = attackerArmy.getAllTroops().filterNotNull().first()
+        resolvingManager.placeTroop(attacker, start)
+
+        val result = resolvingManager.execute(BattleCommand.Move(attacker.id, Point(99, 99)))
+
+        assertFalse(result.success)
+        assertEquals(BattleRejection.INVALID_TARGET, result.rejection)
+        assertEquals(0, randomCalls)
+        assertSame(start, resolvingManager.getTroopTile(attacker))
+        assertSame(attacker, start.getTroop())
+    }
 }

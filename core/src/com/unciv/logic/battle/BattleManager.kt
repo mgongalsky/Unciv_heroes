@@ -225,37 +225,11 @@ open class BattleManager(
                 )
             }
 
-            ActionType.MOVE -> {
-                val currentTile = getTroopCurrentTile(troop)
-                val output = PerformMoveUseCase.execute(
-                    PerformMoveUseCase.Input(
-                        actionRequest.targetPosition.toPoint(), currentTile?.toPoint(),
-                        isTileAchievable(troop, actionRequest.targetPosition),
-                        isTileOccupiedByAlly(troop, actionRequest.targetPosition),
-                        isTileFree(actionRequest.targetPosition)
-                    )
-                )
-                if (output.success) {
-                    moveTroop(troop, actionRequest.targetPosition)
-                    onEvent?.invoke(
-                        BattleEvent.TroopMoved(
-                            troop.id,
-                            output.movedFrom!!,
-                            output.movedTo!!,
-                            isMorale
-                        )
-                    )
-                }
-                if (verboseAttack) println("Troop moved from ${output.movedFrom} to ${output.movedTo}")
-                if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
-                return BattleActionResult(
-                    ActionType.MOVE, output.success,
-                    if (output.success) currentTile else null,
-                    if (output.success) actionRequest.targetPosition else null,
-                    output.rejection?.let { ErrorId.valueOf(it.name) },
-                    isMorale = isMorale, battleEnded = !isBattleOn()
-                )
-            }
+            ActionType.MOVE -> return performMoveAction(
+                troop,
+                actionRequest.targetPosition,
+                isMorale
+            )
 
             ActionType.ATTACK -> {
                 val defender = getTroopOnTile(actionRequest.targetPosition)
@@ -285,9 +259,17 @@ open class BattleManager(
                 }
                 val output = PerformAttackUseCase.execute(
                     PerformAttackUseCase.Input(
-                        troop.id, defender?.id, attackTile?.toPoint(), currentTile?.toPoint(),
-                        targetIsEnemy, attackFromAchievable, attackFromFree,
-                        isLuck, isMorale, remaining, died
+                        troop.id,
+                        defender?.id,
+                        attackTile?.toPoint(),
+                        currentTile?.toPoint(),
+                        targetIsEnemy,
+                        attackFromAchievable,
+                        attackFromFree,
+                        isLuck,
+                        isMorale,
+                        remaining,
+                        died
                     )
                 )
                 if (output.success) {
@@ -304,11 +286,13 @@ open class BattleManager(
                 }
                 if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
                 return BattleActionResult(
-                    actionType = ActionType.ATTACK, success = output.success,
+                    actionType = ActionType.ATTACK,
+                    success = output.success,
                     movedFrom = if (output.success) currentTile else null,
                     movedTo = if (output.success) attackTile else null,
                     errorId = output.rejection?.let { ErrorId.valueOf(it.name) },
-                    isLuck = output.isLuck, isMorale = output.isMorale,
+                    isLuck = output.isLuck,
+                    isMorale = output.isMorale,
                     battleEnded = !isBattleOn()
                 )
             }
@@ -335,8 +319,14 @@ open class BattleManager(
                 }
                 val output = PerformShootUseCase.execute(
                     PerformShootUseCase.Input(
-                        troop.id, defender?.id, canShoot, targetIsEnemy,
-                        isLuck, isMorale, remaining, died
+                        troop.id,
+                        defender?.id,
+                        canShoot,
+                        targetIsEnemy,
+                        isLuck,
+                        isMorale,
+                        remaining,
+                        died
                     )
                 )
                 if (output.success) {
@@ -652,5 +642,48 @@ open class BattleManager(
             targetTile = targetTile as TileInfo
         )
         return reachableTiles.contains(targetTile)
+    }
+    private fun performMoveAction(
+        troop: Troop,
+        targetPosition: IBattleTile,
+        isMorale: Boolean
+    ): BattleActionResult {
+        val currentTile = getTroopCurrentTile(troop)
+        val output = PerformMoveUseCase.execute(
+            PerformMoveUseCase.Input(
+                targetPosition.toPoint(),
+                currentTile?.toPoint(),
+                isTileAchievable(troop, targetPosition),
+                isTileOccupiedByAlly(troop, targetPosition),
+                isTileFree(targetPosition)
+            )
+        )
+        if (output.success) {
+            moveTroop(troop, targetPosition)
+            onEvent?.invoke(
+                BattleEvent.TroopMoved(
+                    troop.id,
+                    output.movedFrom!!,
+                    output.movedTo!!,
+                    isMorale
+                )
+            )
+        }
+        if (verboseAttack) println("Troop moved from ${output.movedFrom} to ${output.movedTo}")
+        if (!isBattleOn()) onEvent?.invoke(BattleEvent.BattleEnded(isAttackerWinner()))
+        return BattleActionResult(
+            ActionType.MOVE,
+            output.success,
+            if (output.success) currentTile else null,
+            if (output.success) targetPosition else null,
+            output.rejection?.let { ErrorId.valueOf(it.name) },
+            isMorale = isMorale,
+            battleEnded = !isBattleOn()
+        )
+    }
+    internal fun performMoveCommand(troop: Troop, targetPosition: IBattleTile): BattleActionResult {
+        val isMorale = isMoraleTriggered(troop)
+        if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
+        return performMoveAction(troop, targetPosition, isMorale)
     }
 }

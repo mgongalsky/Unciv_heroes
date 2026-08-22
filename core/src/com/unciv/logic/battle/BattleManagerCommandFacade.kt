@@ -19,7 +19,7 @@ fun BattleManager.execute(
 
     fun resolve(point: Point): IBattleTile? {
         val fieldTile =
-                battleField.getTileAt(Vector2(point.x.toFloat(), point.y.toFloat())) as? IBattleTile
+            battleField.getTileAt(Vector2(point.x.toFloat(), point.y.toFloat())) as? IBattleTile
         if (fieldTile != null) return fieldTile
 
         val occupiedTiles = (getAttackerArmy().getAllTroops() + getDefenderArmy().getAllTroops())
@@ -38,13 +38,31 @@ fun BattleManager.execute(
             .firstOrNull { it.toPoint() == point }
     }
 
+    fun executeWithApplicationEvents(action: () -> BattleActionResult): BattleCommandResult {
+        if (onApplicationEvent == null) return action().toCommandResult()
+
+        val legacyHandler = onEvent
+        onEvent = { event ->
+            legacyHandler?.invoke(event)
+            onApplicationEvent(event.toApplicationEvent())
+        }
+        return try {
+            action().toCommandResult()
+        } finally {
+            onEvent = legacyHandler
+        }
+    }
+
+    if (command is BattleCommand.Move) {
+        val target = resolve(command.target)
+            ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET)
+        return executeWithApplicationEvents {
+            performMoveCommand(troop, target)
+        }
+    }
+
     val request = when (command) {
-        is BattleCommand.Move -> BattleActionRequest(
-            troop = troop,
-            targetPosition = resolve(command.target)
-                ?: return BattleCommandResult(false, rejection = BattleRejection.INVALID_TARGET),
-            actionType = ActionType.MOVE
-        )
+        is BattleCommand.Move -> error("MOVE command is handled before legacy request mapping")
 
         is BattleCommand.Attack -> BattleActionRequest(
             troop = troop,
@@ -69,18 +87,7 @@ fun BattleManager.execute(
         )
     }
 
-    if (onApplicationEvent == null) return performTurn(request).toCommandResult()
-
-    val legacyHandler = onEvent
-    onEvent = { event ->
-        legacyHandler?.invoke(event)
-        onApplicationEvent(event.toApplicationEvent())
-    }
-    return try {
-        performTurn(request).toCommandResult()
-    } finally {
-        onEvent = legacyHandler
-    }
+    return executeWithApplicationEvents { performTurn(request) }
 }
 
 private fun BattleActionResult.toCommandResult() = BattleCommandResult(
