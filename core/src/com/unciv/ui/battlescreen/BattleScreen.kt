@@ -1,7 +1,5 @@
 package com.unciv.ui.battlescreen
 
-import BattleActionResult
-import ErrorId
 import com.unciv.logic.battle.BattleManager
 
 import com.badlogic.gdx.Gdx
@@ -250,59 +248,6 @@ class BattleScreen private constructor(
         tabbedPager.setFillParent(true)
         updateTilesShadowing()
 
-        manager.onEvent = { event ->
-            when (event) {
-                is BattleEvent.TroopMoved -> Gdx.app.postRunnable {
-                    val troop = manager.getTroopById(event.troopId) ?: return@postRunnable
-                    val troopView = getTroopViewFor(troop) ?: return@postRunnable
-                    val newTile = daTileGroups.firstOrNull {
-                        it.tileInfo.position.x.toInt() == event.to.x &&
-                                it.tileInfo.position.y.toInt() == event.to.y
-                    }
-                    troopView.updatePosition(newTile)
-                    refreshTroopViews()
-                    if (event.isMorale && manager.isBattleOn()) showMoraleBird(troopView)
-                }
-
-                is BattleEvent.TroopAttacked -> Gdx.app.postRunnable {
-                    val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
-                    val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
-                    if (event.isLuck) showLuckRainbow(attackerView)
-                    attackerView.updatePosition(daTileGroups.firstOrNull {
-                        it.tileInfo == manager.getTroopTile(attacker)
-                    })
-                    refreshTroopViews()
-                    if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
-                }
-
-                is BattleEvent.TroopShot -> Gdx.app.postRunnable {
-                    val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
-                    val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
-                    if (event.isLuck) showLuckRainbow(attackerView)
-                    refreshTroopViews()
-                    if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
-                }
-
-                is BattleEvent.TurnAdvanced ->
-                    println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
-
-                is BattleEvent.BattleEnded -> Gdx.app.postRunnable {
-                    shutdownScreen()
-                    manager.finishBattle()
-                    val battleResult = manager.getBattleResult()
-                    if (battleResult == null) {
-                        println("Bug with battle result.")
-                    } else {
-                        if (verboseTurn)
-                            println("Army of ${battleResult.winningArmy.civInfo.nation.name} won.")
-                        com.unciv.logic.battle.BattleWorldOutcomeHandler(attacker, defender)
-                            .apply(attackerArmy == battleResult.winningArmy)
-                    }
-                }
-
-                is BattleEvent.TurnSkipped -> println("[EVENT] TurnSkipped")
-            }
-        }
         battleScope.launch { runBattleLoop() }
     }
 
@@ -343,7 +288,6 @@ class BattleScreen private constructor(
     }
 
     suspend fun runBattleLoop() = coroutineScope {
-        manager.onEvent = null
         while (manager.isBattleOn()) {
             val currentTroop = manager.getCurrentTroop()
             if (currentTroop == null) {

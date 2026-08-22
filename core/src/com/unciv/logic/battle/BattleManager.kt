@@ -20,7 +20,6 @@ import com.unciv.pure.application.battle.PerformMoveUseCase
 import com.unciv.pure.application.battle.PerformShootUseCase
 import com.unciv.pure.application.pathfinding.TroopMovementAdapter
 import com.unciv.pure.application.pathfinding.TroopMovementContext
-import com.unciv.pure.domain.battle.BattleEvent
 import com.unciv.pure.domain.battle.IBattleField
 import com.unciv.pure.domain.battle.IBattleRandom
 import com.unciv.pure.domain.battle.TurnQueue
@@ -45,8 +44,6 @@ open class BattleManager(
 ) {
     protected val troopPositions = mutableMapOf<Troop, IBattleTile>()
     private val turnQueue = TurnQueue()
-
-    var onEvent: ((BattleEvent) -> Unit)? = null
 
     private fun makeAdapter(troop: Troop, tile: TileInfo): TroopMovementAdapter {
         val armyCivInfo = getArmyOf(troop)?.civInfo ?: CivilizationInfo()
