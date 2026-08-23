@@ -453,16 +453,13 @@ open class BattleManager(
         }
     }
 
-    /**
-     * Advances the turn to the next troop in the queue.
-     * If the end of the queue is reached, it loops back to the start.
-     */
     fun advanceTurn() {
         if (turnQueue.isEmpty()) {
             finishBattle()
             return
         }
         turnQueue.advance()
+        turnQueue.current()?.let { remainingRetaliationDamageByTroopId.remove(it.id) }
     }
 
     /**
@@ -614,9 +611,11 @@ open class BattleManager(
                     defender.maxHealth
                 ),
                 attackerIsLuck = attackerIsLuck,
-                defenderIsLuck = defenderIsLuck
+                defenderIsLuck = defenderIsLuck,
+                defenderRetaliationDamage = remainingRetaliationDamageByTroopId[defender.id]
             )
 
+            remainingRetaliationDamageByTroopId[defender.id] = exchange.remainingRetaliationDamage
             troop.currentAmount = exchange.damageToAttacker.remainingAmount
             troop.currentHealth = exchange.damageToAttacker.remainingHealth
             defender.currentAmount = exchange.damageToDefender.remainingAmount
@@ -769,3 +768,4 @@ open class BattleManager(
     }
 }
 
+private val remainingRetaliationDamageByTroopId = mutableMapOf<Int, Int>()

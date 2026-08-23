@@ -977,6 +977,25 @@ class BattleScreen private constructor(
         get() = BattleScreenScopeRegistry.scopeFor(this)
 
     private fun handleApplicationEvent(event: com.unciv.pure.application.battle.BattleEvent) {
+        fun removeView(troopId: Int) {
+            for (i in attackerTroopViewsArray.indices) {
+                val view = attackerTroopViewsArray[i]
+                if (view?.getTroopInfo()?.id == troopId) {
+                    view.perish()
+                    attackerTroopViewsArray[i] = null
+                    return
+                }
+            }
+            for (i in defenderTroopViewsArray.indices) {
+                val view = defenderTroopViewsArray[i]
+                if (view?.getTroopInfo()?.id == troopId) {
+                    view.perish()
+                    defenderTroopViewsArray[i] = null
+                    return
+                }
+            }
+        }
+
         when (event) {
             is com.unciv.pure.application.battle.BattleEvent.TroopMoved -> Gdx.app.postRunnable {
                 val troop = manager.getTroopById(event.troopId) ?: return@postRunnable
@@ -991,9 +1010,10 @@ class BattleScreen private constructor(
             }
 
             is com.unciv.pure.application.battle.BattleEvent.TroopAttacked -> Gdx.app.postRunnable {
-                // The simultaneous counterattack may already have removed the attacker from the manager.
-                // Refresh first so a perished attacker's stale actor is removed even when lookup fails.
+                if (event.defenderDied) removeView(event.defenderId)
+                if (manager.getTroopById(event.attackerId) == null) removeView(event.attackerId)
                 refreshTroopViews()
+
                 val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
                 val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
                 if (event.isLuck) showLuckRainbow(attackerView)
@@ -1004,6 +1024,7 @@ class BattleScreen private constructor(
             }
 
             is com.unciv.pure.application.battle.BattleEvent.TroopShot -> Gdx.app.postRunnable {
+                if (event.defenderDied) removeView(event.defenderId)
                 val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
                 val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
                 if (event.isLuck) showLuckRainbow(attackerView)

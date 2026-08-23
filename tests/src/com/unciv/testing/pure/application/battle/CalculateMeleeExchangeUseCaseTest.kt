@@ -84,4 +84,67 @@ class CalculateMeleeExchangeUseCaseTest {
         assertEquals(10, result.damageToAttacker.remainingHealth)
         assertEquals(95, result.damageToDefender.remainingHealth)
     }
+
+    @Test
+    fun `fully used retaliation leaves no damage for the next attacker`() {
+        val first = CalculateMeleeExchangeUseCase.execute(
+            attacker = troop(amount = 1),
+            defender = troop(amount = 3),
+            attackerIsLuck = false,
+            defenderIsLuck = false
+        )
+
+        assertEquals(1, first.damageToAttacker.remainingAmount)
+        assertEquals(70, first.damageToAttacker.remainingHealth)
+        assertEquals(0, first.remainingRetaliationDamage)
+
+        val second = CalculateMeleeExchangeUseCase.execute(
+            attacker = troop(amount = 5),
+            defender = troop(amount = 3),
+            attackerIsLuck = false,
+            defenderIsLuck = false,
+            defenderRetaliationDamage = first.remainingRetaliationDamage
+        )
+
+        assertEquals(5, second.damageToAttacker.remainingAmount)
+        assertEquals(100, second.damageToAttacker.remainingHealth)
+    }
+
+    @Test
+    fun `unused lethal overkill remains available for the next attacker`() {
+        val first = CalculateMeleeExchangeUseCase.execute(
+            attacker = troop(amount = 1, health = 20),
+            defender = troop(amount = 10),
+            attackerIsLuck = false,
+            defenderIsLuck = false
+        )
+
+        assertEquals(0, first.damageToAttacker.remainingAmount)
+        assertEquals(80, first.remainingRetaliationDamage)
+
+        val second = CalculateMeleeExchangeUseCase.execute(
+            attacker = troop(amount = 2),
+            defender = troop(amount = 10),
+            attackerIsLuck = false,
+            defenderIsLuck = false,
+            defenderRetaliationDamage = first.remainingRetaliationDamage
+        )
+
+        assertEquals(2, second.damageToAttacker.remainingAmount)
+        assertEquals(20, second.damageToAttacker.remainingHealth)
+        assertEquals(0, second.remainingRetaliationDamage)
+    }
+
+    @Test
+    fun `wounded attacker consumes only its actual remaining total health`() {
+        val result = CalculateMeleeExchangeUseCase.execute(
+            attacker = troop(amount = 2, health = 25),
+            defender = troop(amount = 20),
+            attackerIsLuck = false,
+            defenderIsLuck = false
+        )
+
+        assertEquals(0, result.damageToAttacker.remainingAmount)
+        assertEquals(75, result.remainingRetaliationDamage)
+    }
 }
