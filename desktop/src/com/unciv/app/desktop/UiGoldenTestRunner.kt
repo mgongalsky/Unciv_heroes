@@ -20,6 +20,7 @@ import com.unciv.ui.playground.openBattleTroopPreview
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.Fonts
 import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
 import java.io.File
 import kotlin.system.exitProcess
 
@@ -36,12 +37,25 @@ object UiGoldenTestRunner {
     @JvmStatic
     fun main(args: Array<String>) {
         val update = args.contains("--update")
+        val requestedScenarios = args
+            .filter { it.startsWith("--scenario=") }
+            .map { it.substringAfter('=') }
+            .toSet()
         val projectRoot = File(System.getProperty("golden.projectRoot") ?: "../..").canonicalFile
-        val result = GoldenResult()
+        val allScenarios = scenarios()
+        val selectedScenarios = if (requestedScenarios.isEmpty()) allScenarios
+        else allScenarios.filter { it.name in requestedScenarios }
+        val unknownScenarios = requestedScenarios - allScenarios.map { it.name }.toSet()
+        if (unknownScenarios.isNotEmpty()) {
+            System.err.println("Unknown UI golden scenario(s): ${unknownScenarios.joinToString()}")
+            exitProcess(2)
+        }
 
+        val result = GoldenResult()
         System.setProperty("org.lwjgl.opengl.Display.allowSoftwareOpenGL", "true")
         System.setProperty("org.lwjgl.system.stackSize", "384")
         ImagePacker.packImages(false)
+        stopKoin()
         startKoin {
             allowOverride(true)
             modules(gameModule)
@@ -56,42 +70,46 @@ object UiGoldenTestRunner {
             setIdleFPS(60)
             disableAudio(true)
         }
-        Lwjgl3Application(GoldenApplication(projectRoot, update, result), config)
+        Lwjgl3Application(GoldenApplication(projectRoot, update, selectedScenarios, result), config)
+        stopKoin()
         if (!result.passed) exitProcess(1)
     }
+
+    private fun scenarios() = listOf(
+        Scenario("battle-troops") { screen ->
+            openBattleTroopPreview(screen)
+        },
+        Scenario("battle-result-attacker-victory") { screen ->
+            BattleResultPopup(
+                screen,
+                BattleReport(
+                    winner = BattleSide.ATTACKER,
+                    attackerLosses = listOf(
+                        BattleLoss(1, "Peasant", 13),
+                        BattleLoss(2, "Spearman", 8),
+                        BattleLoss(3, "Archer", 6)
+                    ),
+                    defenderLosses = listOf(
+                        BattleLoss(4, "Swordsman", 13),
+                        BattleLoss(5, "Horseman", 12),
+                        BattleLoss(6, "Crossbowman", 7)
+                    )
+                )
+            ) {}.open(force = true)
+        }
+    )
 
     private class GoldenApplication(
         private val projectRoot: File,
         private val update: Boolean,
+        private val scenarios: List<Scenario>,
         private val result: GoldenResult
     ) : ApplicationAdapter() {
         private lateinit var game: UncivGame
-        private val scenarios = listOf(
-            Scenario("battle-troops") { screen ->
-                openBattleTroopPreview(screen)
-            },
-            Scenario("battle-result-attacker-victory") { screen ->
-                BattleResultPopup(
-                    screen,
-                    BattleReport(
-                        winner = BattleSide.ATTACKER,
-                        attackerLosses = listOf(
-                            BattleLoss(1, "Peasant", 13),
-                            BattleLoss(2, "Spearman", 8),
-                            BattleLoss(3, "Archer", 6)
-                        ),
-                        defenderLosses = listOf(
-                            BattleLoss(4, "Swordsman", 13),
-                            BattleLoss(5, "Horseman", 12),
-                            BattleLoss(6, "Crossbowman", 7)
-                        )
-                    )
-                ) {}.open(force = true)
-            }
-        )
         private var scenarioIndex = 0
         private var stableFrames = 0
         private var allPassed = true
+        private val startedAt = System.currentTimeMillis()
 
         override fun create() {
             Gdx.graphics.isContinuousRendering = true
@@ -245,5 +263,3 @@ object UiGoldenTestRunner {
         PixmapIO.writePNG(Gdx.files.absolute(file.absolutePath), pixmap)
     }
 }
-
-private val startedAt = System.currentTimeMillis()

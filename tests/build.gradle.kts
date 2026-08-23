@@ -10,19 +10,22 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
+dependencies {
+    testImplementation(project(":desktop"))
+}
+
 tasks {
     test {
         workingDir = file("../android/assets")
+        systemProperty("golden.projectRoot", rootDir.absolutePath)
         testLogging.lifecycle {
             events(
-                    TestLogEvent.FAILED,
-                    TestLogEvent.STANDARD_ERROR,
-                    TestLogEvent.STANDARD_OUT
+                TestLogEvent.FAILED,
+                TestLogEvent.STANDARD_ERROR,
+                TestLogEvent.STANDARD_OUT
             )
-
             exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         }
-
     }
 
     compileJava {

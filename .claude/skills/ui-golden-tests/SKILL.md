@@ -1,79 +1,83 @@
 ---
-name: ui - golden - tests
-description: Run, diagnose, and update deterministic UI golden screenshot tests in Unciv_heroes.Use when changing Scene2D layout, popups, skins, fonts, sprites, tiles, battle presentation, UI Playground scenarios, or when investigating visual regressions .
+name: ui-golden-tests
+description: Run, diagnose, and update deterministic UI golden screenshot tests in Unciv_heroes. Use when changing Scene2D layout, popups, skins, fonts, sprites, tiles, battle presentation, UI Playground scenarios, or when investigating visual regressions.
 ---
 
 # UI Golden Tests
 
-Use this workflow for visual changes in `Unciv_heroes` that are covered by deterministic screenshot scenarios.The golden runner creates a hidden LWJGL3 OpenGL context at 1280×800, waits for the real scenario screen to finish loading, captures the framebuffer, and compares every pixel with a committed platform -specific PNG . It is visually headless, but the machine must still be able to create an OpenGL context .
+Use this workflow for visual changes covered by deterministic screenshot scenarios. The runner
+creates a hidden LWJGL3 OpenGL context at 1280×800, waits for the real scenario screen, captures the
+framebuffer, and compares every pixel with a platform-specific baseline.
 
-## Verify existing baselines
+## Prefer the narrowest relevant scenario
 
-Run:
+Current scenario names and IDE scopes:
+
+- `battle-troops` → `com.unciv.testing.UiGoldenTest#battleTroops`
+- `battle-result-attacker-victory` → `com.unciv.testing.UiGoldenTest#battleResultAttackerVictory`
+
+When a change affects one screen, run only its method. Run the entire class
+`com.unciv.testing.UiGoldenTest` for cross-cutting changes to skins, fonts, atlases, shared popup
+layout, rendering infrastructure, or before merging a broad UI change.
+
+From Gradle, run all scenarios with:
 
 `./gradlew desktop:goldenTest`
 
-Expected successful output contains one green `PASS` line per scenario and ends with `BUILD SUCCESSFUL` .
+Run one scenario with:
 
-Current scenarios :
-
--`battle-troops` — swordsman and crossbowman on the real grass hex field;
--`battle-result-attacker-victory` — the deterministic attacker - victory result popup.Do not treat compilation alone as a golden -test pass . The custom `desktop:goldenTest` task must render and compare the PNG files .
-
-## Diagnose a failure
-
-A failed comparison prints the number of changed pixels and writes artifacts under:
-
-`tests/golden/results/<platform>/`
-
-Inspect:
-
--`<scenario>-actual.png` — newly rendered output;
--`<scenario>-diff.png` — exact changed pixels shown in red;
--`tests/golden/baseline/<platform>/<scenario>.png` — committed expectation .
-
-Determine whether the difference is:
-
-1.an intended visual change;
-2.an unintended layout, sprite, skin, font, viewport, or rendering regression;
-3.a platform difference caused by font rasterization or the OpenGL driver;
-4.an incomplete or unstable scenario.Never update a baseline merely to make the task green . Review the actual image and diff first .
+`./gradlew desktop:goldenTest --args="--scenario=battle-troops"`
 
 ## Update approved baselines
 
-After confirming that every visual difference is intentional, run:
+Never update a baseline merely to make verification green. Review the actual and diff first.
+
+IDE-native targeted update scopes:
+
+- `com.unciv.testing.UiGoldenUpdateTest#battleTroops`
+- `com.unciv.testing.UiGoldenUpdateTest#battleResultAttackerVictory`
+
+Run the whole `UiGoldenUpdateTest` class only when every baseline change is intentional.
+
+From Gradle, update all scenarios with:
 
 `./gradlew desktop:goldenUpdate`
 
-This replaces the baselines for the current operating - system platform and removes stale actual / diff artifacts.Then immediately run:
+Update one scenario with:
 
-`./gradlew desktop:goldenTest`
+`./gradlew desktop:goldenUpdate --args="--scenario=battle-troops"`
 
-Require all scenarios to print `PASS` . Commit the approved PNG files under `tests/golden/baseline/<platform>/` together with the UI change that required them .
+After every update, immediately run the matching verification method and require PASS.
+
+## Diagnose a failure
+
+Failure artifacts are written under `tests/golden/results/<platform>/`:
+
+- `<scenario>-actual.png` — newly rendered output;
+- `<scenario>-diff.png` — exact changed pixels in red;
+- `tests/golden/baseline/<platform>/<scenario>.png` — committed expectation.
+
+Classify the difference as an intended visual change, a regression, a platform-specific font/driver
+difference, or an unstable scenario. Commit approved baseline PNGs with the UI change; never commit
+generated results.
 
 ## Add a scenario
 
-Add deterministic scenario setup to `UiGoldenTestRunner` . Prefer reusing the same public scene or popup factory used by UI Playground so manual preview and golden capture exercise identical production UI .
+Add deterministic setup to `UiGoldenTestRunner`, preferably reusing the same public factory as UI
+Playground. Give it a stable filename-safe name, fixed input data, no network/save/random
+dependency, no uncontrolled animation, and a layout that fits 1280×800.
 
-A scenario must:
-
--use fixed data with no time, random, save - game, network, or user -input dependency;
--open only after Unciv resources and the real test screen are ready;
--have a stable name suitable for a PNG filename;
--render within the fixed 1280×800 viewport;
--avoid animations unless the runner explicitly waits for a deterministic final state;
--cleanly finish within the runner watchdog timeout.After adding it, generate and inspect its baseline, rerun verification, and commit the approved platform PNG .
-
-## MaxVibes limitation
-
-        MaxVibes IDE -native `TESTS` checks accept test classes, methods, packages, or files; they do not accept a custom Gradle task name.Do not disguise `desktop:goldenTest` as a normal JUnit scope.When the custom task cannot be launched by the active plugin channel, ask the user to run the Gradle task and use its complete output plus generated PNG artifacts as evidence.
+Add matching methods to both `UiGoldenTest` and `UiGoldenUpdateTest`. Document their method scopes
+in this skill. Generate and inspect the new baseline, then verify it through the narrow method
+scope.
 
 ## Completion checklist
 
-        -[] The affected UI has a deterministic golden scenario.
--[] `desktop:goldenTest` ran rather than only compiling.
--[] Every scenario printed `PASS`.
--[] Any failed actual / diff images were reviewed.
--[] Baselines were updated only for intentional changes .
--[] Approved platform - specific PNG files are committed.
--[] Generated files under `tests/golden/results/` remain uncommitted.
+- [ ] The affected UI has a deterministic scenario.
+- [ ] The narrowest relevant scenario method was run.
+- [ ] Broad shared changes ran the entire verification class.
+- [ ] Every requested scenario printed PASS.
+- [ ] Failed actual/diff images were reviewed.
+- [ ] Baselines were updated only for intentional changes.
+- [ ] Every updated scenario was verified immediately afterward.
+- [ ] Approved platform PNGs are committed and generated results are not.
