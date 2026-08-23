@@ -2,6 +2,7 @@ package com.unciv.pure.application.battle
 
 enum class BattleTermination {
     VICTORY,
+    MUTUAL_DEFEAT,
     STALEMATE,
     MAX_TURNS,
     NO_CURRENT_TROOP

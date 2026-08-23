@@ -18,13 +18,13 @@ import com.unciv.testing.pure.fakes.TestableBattleManager
 import com.unciv.testing.pure.testModule
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
+import org.junit.Assert.assertNull
 
 class BattleSimulationAIIntegrationTest {
     @Before
@@ -48,7 +48,7 @@ class BattleSimulationAIIntegrationTest {
     }
 
     @Test
-    fun `AI versus AI completes headlessly`() {
+    fun `symmetric AI battle completes headlessly with mutual defeat`() {
         val attackerTile = FakeBattleTile(Vector2(0f, 0f))
         val defenderTile = FakeBattleTile(Vector2(1f, 0f))
         attackerTile.addNeighbor(defenderTile)
@@ -76,8 +76,8 @@ class BattleSimulationAIIntegrationTest {
             seed = 123L
         ).run()
 
-        assertEquals(BattleTermination.VICTORY, result.termination)
-        assertNotNull(result.winnerIsAttacker)
+        assertEquals(BattleTermination.MUTUAL_DEFEAT, result.termination)
+        assertNull(result.winnerIsAttacker)
         assertTrue(result.turns in 1..100)
         assertTrue(result.events.any { it is com.unciv.pure.application.battle.BattleEvent.BattleEnded })
         assertEquals(123L, result.seed)

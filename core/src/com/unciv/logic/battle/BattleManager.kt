@@ -26,6 +26,7 @@ import com.unciv.pure.domain.battle.TurnQueue
 import com.unciv.pure.domain.pathfinding.INavigableTile
 import com.unciv.pure.domain.troop.Troop
 import kotlin.random.Random
+import com.unciv.pure.application.battle.CalculateMeleeExchangeUseCase
 
 /**
  * Handles the logical part of a battle between two armies.
@@ -169,21 +170,32 @@ open class BattleManager(
         defenderArmy.finishBattle()
     }
 
-    private fun isAttackerWinner(): Boolean =
-            attackerArmy.getAllTroops().any { (it?.currentAmount ?: 0) > 0 }
+    private fun isAttackerWinner(): Boolean? {
+        val attackerAlive = attackerArmy.getAllTroops().any { (it?.currentAmount ?: 0) > 0 }
+        val defenderAlive = defenderArmy.getAllTroops().any { (it?.currentAmount ?: 0) > 0 }
+        return when {
+            attackerAlive && !defenderAlive -> true
+            defenderAlive && !attackerAlive -> false
+            else -> null
+        }
+    }
 
-    /**
-     * Determines the result of the battle.
-     *
-     * @return A [BattleTotalResult] indicating the winning army or `null` if the battle is ongoing.
-     */
     fun getBattleResult(): BattleTotalResult? {
-        val remainingAttackers = attackerArmy.getAllTroops().filterNotNull().filter { it.currentAmount > 0 }
-        val remainingDefenders = defenderArmy.getAllTroops().filterNotNull().filter { it.currentAmount > 0 }
+        val remainingAttackers =
+                attackerArmy.getAllTroops().filterNotNull().filter { it.currentAmount > 0 }
+        val remainingDefenders =
+                defenderArmy.getAllTroops().filterNotNull().filter { it.currentAmount > 0 }
 
         return when {
-            remainingAttackers.isNotEmpty() && remainingDefenders.isEmpty() -> BattleTotalResult(attackerArmy)
-            remainingDefenders.isNotEmpty() && remainingAttackers.isEmpty() -> BattleTotalResult(defenderArmy)
+            remainingAttackers.isNotEmpty() && remainingDefenders.isEmpty() -> BattleTotalResult(
+                attackerArmy
+            )
+
+            remainingDefenders.isNotEmpty() && remainingAttackers.isEmpty() -> BattleTotalResult(
+                defenderArmy
+            )
+
+            remainingAttackers.isEmpty() && remainingDefenders.isEmpty() -> BattleTotalResult(null)
             else -> null
         }
     }
@@ -436,23 +448,15 @@ open class BattleManager(
         println("Troop ${troop.unitName} has perished.")
     }
 
-    /**
-     * Removes a troop from the battle.
-     *
-     * This function removes the troop from the turn queue and updates the currentTurnIndex accordingly.
-     *
-     * @param troop The troop to remove.
-     */
     fun removeTroop(troop: Troop) {
-        turnQueue.remove(troop)  // queue-логика
+        turnQueue.remove(troop)
+        val occupiedTile = troopPositions.remove(troop)
+        occupiedTile?.clearTroop()
 
-        // остаётся в BattleManager
         if (attackerArmy.contains(troop)) {
             attackerArmy.removeTroop(troop)
-            troopPositions.remove(troop)
         } else if (defenderArmy.contains(troop)) {
             defenderArmy.removeTroop(troop)
-            troopPositions.remove(troop)
         }
     }
 
@@ -594,19 +598,48 @@ open class BattleManager(
         val canAttack =
                 defender != null && attackTile != null && targetIsEnemy && attackFromAchievable &&
                         (attackFromFree || currentTile == attackTile)
-        val isLuck: Boolean
+        val attackerIsLuck: Boolean
+        val defenderIsLuck: Boolean
         val remaining: Int
         val died: Boolean
+
         if (canAttack) {
             moveTroop(troop, attackTile!!)
-            isLuck = attack(defender!!, troop)
+            attackerIsLuck = isLuckTriggered(troop)
+            defenderIsLuck = isLuckTriggered(defender!!)
+            val exchange = CalculateMeleeExchangeUseCase.execute(
+                attacker = CalculateMeleeExchangeUseCase.TroopSnapshot(
+                    troop.currentAmount,
+                    troop.damage,
+                    troop.currentHealth,
+                    troop.maxHealth
+                ),
+                defender = CalculateMeleeExchangeUseCase.TroopSnapshot(
+                    defender.currentAmount,
+                    defender.damage,
+                    defender.currentHealth,
+                    defender.maxHealth
+                ),
+                attackerIsLuck = attackerIsLuck,
+                defenderIsLuck = defenderIsLuck
+            )
+
+            troop.currentAmount = exchange.damageToAttacker.remainingAmount
+            troop.currentHealth = exchange.damageToAttacker.remainingHealth
+            defender.currentAmount = exchange.damageToDefender.remainingAmount
+            defender.currentHealth = exchange.damageToDefender.remainingHealth
             remaining = defender.currentAmount
             died = defender.currentAmount <= 0
+
+            if (troop.currentAmount <= 0) perishTroop(troop)
+            if (defender.currentAmount <= 0) perishTroop(defender)
         } else {
-            isLuck = false
+            attackerIsLuck = false
+            defenderIsLuck = false
             remaining = 0
             died = false
         }
+
         val output = PerformAttackUseCase.execute(
             PerformAttackUseCase.Input(
                 troop.id,
@@ -616,7 +649,7 @@ open class BattleManager(
                 targetIsEnemy,
                 attackFromAchievable,
                 attackFromFree,
-                isLuck,
+                attackerIsLuck,
                 isMorale,
                 remaining,
                 died

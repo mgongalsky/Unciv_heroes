@@ -4,7 +4,12 @@ class BattleWorldOutcomeHandler(
     private val attacker: ICombatant?,
     private val defender: ICombatant?
 ) {
-    fun apply(winnerIsAttacker: Boolean) {
+    fun apply(winnerIsAttacker: Boolean?) {
+        if (winnerIsAttacker == null) {
+            if (attacker is MapUnitCombatant) removeUnit(attacker)
+            if (defender is MapUnitCombatant) removeUnit(defender)
+            return
+        }
         if (winnerIsAttacker) {
             when (val defeated = defender) {
                 is MapUnitCombatant -> removeUnit(defeated)

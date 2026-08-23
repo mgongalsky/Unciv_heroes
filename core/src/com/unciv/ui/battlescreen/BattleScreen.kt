@@ -965,6 +965,7 @@ class BattleScreen private constructor(
 
     private val battleScope: kotlinx.coroutines.CoroutineScope
         get() = BattleScreenScopeRegistry.scopeFor(this)
+
     private fun handleApplicationEvent(event: com.unciv.pure.application.battle.BattleEvent) {
         when (event) {
             is com.unciv.pure.application.battle.BattleEvent.TroopMoved -> Gdx.app.postRunnable {
@@ -980,13 +981,15 @@ class BattleScreen private constructor(
             }
 
             is com.unciv.pure.application.battle.BattleEvent.TroopAttacked -> Gdx.app.postRunnable {
+                // The simultaneous counterattack may already have removed the attacker from the manager.
+                // Refresh first so a perished attacker's stale actor is removed even when lookup fails.
+                refreshTroopViews()
                 val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
                 val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
                 if (event.isLuck) showLuckRainbow(attackerView)
                 attackerView.updatePosition(daTileGroups.firstOrNull {
                     it.tileInfo == manager.getTroopTile(attacker)
                 })
-                refreshTroopViews()
                 if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
             }
 
@@ -1008,10 +1011,13 @@ class BattleScreen private constructor(
                 if (battleResult == null) {
                     println("Bug with battle result.")
                 } else {
-                    if (verboseTurn)
-                        println("Army of ${battleResult.winningArmy.civInfo.nation.name} won.")
+                    val winningArmy = battleResult.winningArmy
+                    if (verboseTurn) {
+                        if (winningArmy == null) println("Both armies were defeated.")
+                        else println("Army of ${winningArmy.civInfo.nation.name} won.")
+                    }
                     com.unciv.logic.battle.BattleWorldOutcomeHandler(attacker, defender)
-                        .apply(attackerArmy == battleResult.winningArmy)
+                        .apply(winningArmy?.let { attackerArmy == it })
                 }
             }
 

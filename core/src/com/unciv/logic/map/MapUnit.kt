@@ -1169,13 +1169,13 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
         currentTile.removeUnit(this)
     }
 
-    /** Triggers visit function of specific [tile], if it has [Visitable]*/
+    /** Triggers visit function of specific [tile], if it has [Visitable]. */
     fun visitPlace(tile: TileInfo) {
-        if (civInfo.isMajorCiv() && tile.improvement != null) {
-            tile.visitable!!.visit(this)
-            // Ensure UI is prompted to update so the animation system can pick up the new flags
-            onVisitPlace()
-        }
+        if (!civInfo.isMajorCiv() || tile.improvement == null) return
+        val visitable = tile.visitable ?: return
+        visitable.visit(this)
+        // Ensure UI is prompted to update so the animation system can pick up the new flags
+        onVisitPlace()
     }
 
     override fun moveThroughTile(tile: TileInfo) {

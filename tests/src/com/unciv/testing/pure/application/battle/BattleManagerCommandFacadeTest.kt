@@ -289,7 +289,7 @@ class BattleManagerCommandFacadeTest {
     }
 
     @Test
-    fun `lethal ATTACK command consumes morale then luck and publishes attack before battle end`() {
+    fun `lethal ATTACK command consumes morale then both luck rolls and publishes attack before battle end`() {
         var randomCalls = 0
         val countingRandom = object : com.unciv.pure.domain.battle.IBattleRandom {
             override fun nextDouble(): Double {
@@ -317,7 +317,7 @@ class BattleManagerCommandFacadeTest {
 
         assertTrue(result.success)
         assertTrue(result.battleEnded)
-        assertEquals(2, randomCalls)
+        assertEquals(3, randomCalls)
         assertEquals(0, defender.currentAmount)
         assertFalse(defenderArmy.contains(defender))
         assertFalse(attackManager.getTurnQueue().contains(defender))
@@ -446,3 +446,4 @@ class BattleManagerCommandFacadeTest {
         assertTrue(events.isEmpty())
     }
 }
+

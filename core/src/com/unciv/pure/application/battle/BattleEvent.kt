@@ -25,6 +25,6 @@ sealed class BattleEvent {
     ) : BattleEvent()
 
     data class TurnAdvanced(val nextTroopId: Int) : BattleEvent()
-    data class BattleEnded(val winnerIsAttacker: Boolean) : BattleEvent()
+    data class BattleEnded(val winnerIsAttacker: Boolean?) : BattleEvent()
     object TurnSkipped : BattleEvent()
 }

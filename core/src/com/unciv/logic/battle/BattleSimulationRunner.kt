@@ -52,7 +52,9 @@ class BattleSimulationRunner(
             if (manager.getTurnQueue().isNotEmpty()) manager.advanceTurn()
         }
 
+        val battleResult = manager.getBattleResult()
         val termination = when {
+            battleResult?.winningArmy == null && !manager.isBattleOn() -> BattleTermination.MUTUAL_DEFEAT
             !manager.isBattleOn() -> BattleTermination.VICTORY
             turns >= maxTurns -> BattleTermination.MAX_TURNS
             else -> BattleTermination.STALEMATE
@@ -69,8 +71,8 @@ class BattleSimulationRunner(
         val battleResult = manager.getBattleResult()
         return BattleSimulationResult(
             termination = termination,
-            winnerIsAttacker = battleResult?.let {
-                it.winningArmy == manager.getAttackerArmy()
+            winnerIsAttacker = battleResult?.winningArmy?.let {
+                it == manager.getAttackerArmy()
             },
             turns = turns,
             commands = commands.toList(),
