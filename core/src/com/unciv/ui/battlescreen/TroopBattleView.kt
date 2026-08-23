@@ -95,28 +95,15 @@ class TroopBattleView(
     }
 
     fun draw(tileGroup: TileGroup, attacker: Boolean) {
-        // Создаем или обновляем Label для отображения количества юнитов
-        val amountLabel = Label(troop.currentAmount.toString(), BaseScreen.skin).apply {
-            name = "amountLabel" // Устанавливаем имя для последующего поиска
-            setPosition(tileGroup.width * 0.5f, 0f) // Позиция внутри группы
-        }
-
-        // Устанавливаем изображение отряда
-        for (troopImage in troopImages) {
-            troopImage.setScale(if (attacker) -0.25f else 0.25f, 0.25f)
-            // TODO: those numbers are magical, we need to apply normal object hierarchy
-
-            troopImage.setPosition(
-                if (attacker) tileGroup.width * 1.3f else tileGroup.width * -0.3f,
-                tileGroup.height * 0.15f
-            )
-            troopImage.setOrigin(tileGroup.originX, tileGroup.originY)
-            troopImage.name = "troopImage"
-            troopGroup.addActor(troopImage)
-        }
-
-        // Добавляем Label и всю группу отряда в текущий TileGroup
-        troopGroup.addActor(amountLabel)
+        populateBattleTroopGroup(
+            target = troopGroup,
+            troop = troop,
+            attacker = attacker,
+            parentWidth = tileGroup.width,
+            parentHeight = tileGroup.height,
+            originX = tileGroup.originX,
+            originY = tileGroup.originY
+        )
         tileGroup.addActor(troopGroup)
     }
 
