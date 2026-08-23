@@ -11,6 +11,11 @@ class UiGoldenUpdateTest {
     }
 
     @Test
+    fun battleThreatPreview() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=battle-threat-preview"))
+    }
+
+    @Test
     fun battleResultAttackerVictory() {
         UiGoldenTestRunner.main(arrayOf("--update", "--scenario=battle-result-attacker-victory"))
     }

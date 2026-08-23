@@ -23,6 +23,7 @@ import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import java.io.File
 import kotlin.system.exitProcess
+import com.unciv.ui.playground.openBattleThreatPreview
 
 object UiGoldenTestRunner {
     private const val WIDTH = 1280
@@ -78,6 +79,9 @@ object UiGoldenTestRunner {
     private fun scenarios() = listOf(
         Scenario("battle-troops") { screen ->
             openBattleTroopPreview(screen)
+        },
+        Scenario("battle-threat-preview") { screen ->
+            openBattleThreatPreview(screen)
         },
         Scenario("battle-result-attacker-victory") { screen ->
             BattleResultPopup(

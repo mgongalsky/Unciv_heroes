@@ -91,3 +91,32 @@ private fun createBattleFieldPreview(): Group {
     )
     return fieldView
 }
+
+fun openBattleThreatPreview(screen: BaseScreen) {
+    val source = HardcodedTroopDefinitionSource(
+        speed = 3,
+        damage = 10,
+        maxHealth = 100,
+        rangedStrength = 2
+    )
+    val attacker = listOf(
+        TroopFactory.create("Swordsman", 18, source),
+        TroopFactory.create("Archer", 12, source)
+    )
+    val defender = listOf(
+        TroopFactory.create("Archer", 5, source),
+        TroopFactory.create("Archer", 7, source),
+        TroopFactory.create("Spearman", 15, source),
+        TroopFactory.create("Crossbowman", 10, source)
+    )
+    val popup = Popup(screen.stage, scrollable = false)
+    popup.defaults().pad(10f)
+    popup.add("Battle reconnaissance".toLabel(fontSize = 24)).padTop(22f).row()
+    popup.add(
+        com.unciv.ui.worldscreen.bottombar.buildBattleThreatPreview(
+            com.unciv.ui.worldscreen.bottombar.BattleThreatArmyPreview(5, 5, attacker),
+            com.unciv.ui.worldscreen.bottombar.BattleThreatArmyPreview(5, 5, defender)
+        )
+    ).width(560f).pad(20f)
+    popup.open(force = true)
+}
