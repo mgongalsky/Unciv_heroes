@@ -27,6 +27,8 @@ import com.unciv.pure.domain.pathfinding.INavigableTile
 import com.unciv.pure.domain.troop.Troop
 import kotlin.random.Random
 import com.unciv.pure.application.battle.CalculateMeleeExchangeUseCase
+import com.unciv.pure.application.battle.ApplyFormationDamageUseCase
+import com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase
 
 internal fun configureEffectProbabilities(
     luckProbability: Double?,
@@ -402,27 +404,24 @@ open class BattleManager(
     fun getAttackerArmy() =  attackerArmy
     fun getDefenderArmy() =  defenderArmy
 
-    /**
-     * Executes an attack by one troop on another troop.
-     *
-     * @param defender The defending troop.
-     * @param attacker The attacking troop. Defaults to the current troop.
-     * @return True if luck influenced the attack (damage doubled), false otherwise.
-     */
     fun attack(defender: Troop, attacker: Troop? = getCurrentTroop()): Boolean {
         if (attacker == null) return false
 
         val isLuck = isLuckTriggered(attacker)
-
+        val incomingDamage = attacker.currentAmount * attacker.damage * if (isLuck) 2 else 1
+        val formationDamage = ApplyFormationDamageUseCase.execute(
+            ApplyFormationDamageUseCase.Input(incomingDamage, defender.formation.current)
+        )
         val result = CalculateDamageUseCase.execute(
-            attackerAmount = attacker.currentAmount,
-            attackerDamage = attacker.damage,
+            attackerAmount = 1,
+            attackerDamage = formationDamage.damageToSoldiers,
             defenderAmount = defender.currentAmount,
             defenderHealth = defender.currentHealth,
             defenderMaxHealth = defender.maxHealth,
-            isLuck = isLuck
-        )
+            isLuck = false
+        ).copy(isLuck = isLuck)
 
+        defender.formation.current = formationDamage.remainingFormation
         defender.currentAmount = result.remainingAmount
         defender.currentHealth = result.remainingHealth
 
@@ -597,18 +596,20 @@ open class BattleManager(
             moveTroop(troop, attackTile!!)
             attackerIsLuck = isLuckTriggered(troop)
             defenderIsLuck = isLuckTriggered(defender!!)
-            val exchange = CalculateMeleeExchangeUseCase.execute(
-                attacker = CalculateMeleeExchangeUseCase.TroopSnapshot(
+            val exchange = CalculateFormationMeleeExchangeUseCase.execute(
+                attacker = CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
                     troop.currentAmount,
                     troop.damage,
                     troop.currentHealth,
-                    troop.maxHealth
+                    troop.maxHealth,
+                    troop.formation.current
                 ),
-                defender = CalculateMeleeExchangeUseCase.TroopSnapshot(
+                defender = CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
                     defender.currentAmount,
                     defender.damage,
                     defender.currentHealth,
-                    defender.maxHealth
+                    defender.maxHealth,
+                    defender.formation.current
                 ),
                 attackerIsLuck = attackerIsLuck,
                 defenderIsLuck = defenderIsLuck,
@@ -616,6 +617,8 @@ open class BattleManager(
             )
 
             remainingRetaliationDamageByTroopId[defender.id] = exchange.remainingRetaliationDamage
+            troop.formation.current = exchange.attackerRemainingFormation
+            defender.formation.current = exchange.defenderRemainingFormation
             troop.currentAmount = exchange.damageToAttacker.remainingAmount
             troop.currentHealth = exchange.damageToAttacker.remainingHealth
             defender.currentAmount = exchange.damageToDefender.remainingAmount

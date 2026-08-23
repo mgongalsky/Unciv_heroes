@@ -65,8 +65,12 @@ private fun createBattleFieldPreview(): Group {
         maxHealth = 100,
         rangedStrength = 0
     )
-    val attacker = TroopFactory.create("Swordsman", 18, source)
-    val defender = TroopFactory.create("Crossbowman", 12, source)
+    val attacker = TroopFactory.create("Swordsman", 18, source).apply {
+        formation.current = formation.maximum / 2
+    }
+    val defender = TroopFactory.create("Crossbowman", 12, source).apply {
+        formation.current = 0
+    }
     val middleRow = tileGroups
         .groupBy { it.y.roundToInt() }
         .minBy { (rowY, _) -> abs(rowY - fieldView.height / 2f) }

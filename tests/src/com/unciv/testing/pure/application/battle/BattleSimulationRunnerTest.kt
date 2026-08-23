@@ -86,13 +86,16 @@ class BattleSimulationRunnerTest {
 
         assertEquals(BattleTermination.VICTORY, result.termination)
         assertEquals(true, result.winnerIsAttacker)
-        assertEquals(1, result.turns)
-        assertEquals(attacker.id, result.commands.single().troopId)
+        assertEquals(3, result.turns)
+        assertEquals(2, result.commands.size)
+        assertTrue(result.commands.all { it.troopId == attacker.id })
         assertEquals(
-            listOf("TroopAttacked", "BattleEnded"),
+            listOf("TroopAttacked", "TroopAttacked", "BattleEnded"),
             result.events.map { it.javaClass.simpleName }
         )
-        assertTrue((result.events.first() as BattleEvent.TroopAttacked).defenderDied)
+        val attacks = result.events.filterIsInstance<BattleEvent.TroopAttacked>()
+        assertFalse(attacks.first().defenderDied)
+        assertTrue(attacks.last().defenderDied)
     }
 
     @Test

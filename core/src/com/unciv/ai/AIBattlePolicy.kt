@@ -21,30 +21,37 @@ class AIBattlePolicy(
         val currentTile = battleManager.getTroopTile(troop) ?: return null
         if (enemies.isEmpty()) return null
 
-        val closestEnemy = enemies.minByOrNull {
-            battleManager.getTroopTile(it)?.let { tile ->
-                HexMath.getDistance(currentTile.position, tile.position)
-            } ?: Int.MAX_VALUE
-        } ?: return null
-        val closestEnemyTile = battleManager.getTroopTile(closestEnemy) ?: return null
+        val preferredEnemy = enemies.minWithOrNull(
+            compareBy<Troop> { if (it.formation.isBroken) 0 else 1 }
+                .thenBy {
+                    battleManager.getTroopTile(it)?.let { tile ->
+                        HexMath.getDistance(currentTile.position, tile.position)
+                    } ?: Int.MAX_VALUE
+                }
+        ) ?: return null
+        val preferredEnemyTile = battleManager.getTroopTile(preferredEnemy) ?: return null
 
-        val attackTile = findAttackTile(troop, closestEnemyTile)
+        val attackTile = findAttackTile(troop, preferredEnemyTile)
         if (attackTile != null) {
             return BattleCommand.Attack(
                 troopId = troop.id,
-                target = closestEnemyTile.toPoint(),
+                target = preferredEnemyTile.toPoint(),
                 attackFrom = attackTile.toPoint()
             )
         }
 
-        val moveTarget = findBestMoveTarget(troop, closestEnemyTile) ?: return null
+        val moveTarget = findBestMoveTarget(troop, preferredEnemyTile) ?: return null
         return BattleCommand.Move(troop.id, moveTarget.toPoint())
     }
 
     private fun chooseRangedCommand(troop: Troop): BattleCommand? {
         if (battleManager.getTroopTile(troop) == null) return null
         val target = battleManager.getEnemies(troop)
-            .sortedWith(compareByDescending<Troop> { it.isRanged }.thenByDescending { it.speed })
+            .sortedWith(
+                compareByDescending<Troop> { it.formation.isBroken }
+                    .thenByDescending { it.isRanged }
+                    .thenByDescending { it.speed }
+            )
             .firstOrNull() ?: return null
         val targetTile = battleManager.getTroopTile(target) ?: return null
         return BattleCommand.Shoot(troop.id, targetTile.toPoint())

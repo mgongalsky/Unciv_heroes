@@ -307,6 +307,7 @@ class BattleManagerCommandFacadeTest {
         val attacker = attackerArmy.getAllTroops().filterNotNull().first()
         val defender = defenderArmy.getAllTroops().filterNotNull().first()
         defender.currentAmount = 1
+        defender.formation.current = 0
         attackManager.placeTroop(attacker, start)
         attackManager.placeTroop(defender, target)
         val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()

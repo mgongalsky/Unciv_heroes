@@ -125,3 +125,33 @@ class AIBattlePolicyTest {
         assertNull(AIBattlePolicy(manager).chooseCommand(attacker.id))
     }
 }
+
+@Test
+fun `ranged policy focuses enemy with broken formation without mutating it`() {
+    val civ = FakeCivilizationInfo()
+    val archerArmy = ArmyInfo(civ, 5).apply { addUnits("Archer", 10) }
+    val mixedArmy = ArmyInfo(civ, 5).apply {
+        addUnits("Archer", 5)
+        addUnits("Spearman", 5)
+    }
+    val shooterTile = FakeBattleTile(Vector2(0f, 0f))
+    val intactRangedTile = FakeBattleTile(Vector2(1f, 0f))
+    val brokenMeleeTile = FakeBattleTile(Vector2(2f, 0f))
+    val rangedManager = TestableBattleManager(
+        archerArmy,
+        mixedArmy,
+        FakeBattleField(listOf(shooterTile, intactRangedTile, brokenMeleeTile)),
+        FakeBattleRandom(List(100) { 0.0 })
+    )
+    val shooter = archerArmy.getAllTroops().filterNotNull().first()
+    val enemies = mixedArmy.getAllTroops().filterNotNull()
+    val brokenEnemy = enemies.first { !it.isRanged }.apply { formation.current = 0 }
+    rangedManager.placeTroop(shooter, shooterTile)
+    rangedManager.placeTroop(enemies.first { it.isRanged }, intactRangedTile)
+    rangedManager.placeTroop(brokenEnemy, brokenMeleeTile)
+
+    val command = AIBattlePolicy(rangedManager).chooseCommand(shooter.id)
+
+    assertEquals(BattleCommand.Shoot(shooter.id, Point(2, 0)), command)
+    assertEquals(0, brokenEnemy.formation.current)
+}

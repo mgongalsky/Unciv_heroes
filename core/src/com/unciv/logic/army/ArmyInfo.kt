@@ -115,7 +115,10 @@ open class ArmyInfo(
             val troopData = if (i < slotArray.size) slotArray.get(i) else null
             troops[i] = when {
                 troopData == null || !troopData.has("amount") -> null
-                troopData.has("speed") -> json.readValue(Troop::class.java, troopData)
+                troopData.has("speed") -> json.readValue(Troop::class.java, troopData).also {
+                    it.restoreFormationIfMissing()
+                }
+
                 else -> {
                     val unitName = troopData.getString("unitName", "Spearman")
                     val amount = troopData.getInt("amount", 0)
