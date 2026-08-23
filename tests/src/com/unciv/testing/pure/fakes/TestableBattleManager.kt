@@ -15,11 +15,16 @@ class TestableBattleManager(
     battleField: IBattleField,
     random: IBattleRandom,
     private val allTilesReachable: Boolean = true,
-    private val useRealMovement: Boolean = false
+    private val useRealMovement: Boolean = false,
+    moraleProbability: Double = 0.0,
+    luckProbability: Double = 0.0
 ) : BattleManager(
-    attackerArmy, defenderArmy, battleField, random,
-    moraleProbability = 0.0,
-    luckProbability = 0.0
+    attackerArmy,
+    defenderArmy,
+    battleField,
+    random,
+    moraleProbability = moraleProbability,
+    luckProbability = luckProbability
 ) {
 
     fun placeTroop(troop: Troop, tile: FakeBattleTile) {
