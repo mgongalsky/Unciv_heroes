@@ -138,16 +138,7 @@ class UiPlaygroundScreen : BaseScreen() {
             title = "Battle troops — grass field",
             description = "Attacker and defender on a real 5 × 3 grass hex field."
         ) { screen ->
-            val popup = Popup(screen.stage, scrollable = false)
-            popup.defaults().pad(10f)
-            popup.add("Swordsman attacks Crossbowman".toLabel(fontSize = 24))
-                .padTop(28f)
-                .padBottom(62f)
-            popup.row()
-            popup.add(battleFieldPreview()).padLeft(24f).padRight(24f).padBottom(28f)
-            popup.row()
-            popup.add(fantasyCloseButton(popup)).width(190f).height(58f).padBottom(18f)
-            popup.open(force = true)
+            openBattleTroopPreview(screen)
         }
 
         fun battleFieldPreview(): Group {
