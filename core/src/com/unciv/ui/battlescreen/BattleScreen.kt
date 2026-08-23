@@ -53,6 +53,7 @@ import com.unciv.logic.battle.execute
 import com.unciv.pure.application.battle.BattleCommand
 import com.unciv.pure.application.battle.BattleRejection
 import com.unciv.pure.application.battle.BattleScreenCommandMapper
+import com.unciv.pure.application.battle.ShouldAdvanceTurnUseCase
 
 // Now it's just copied from HeroOverviewScreen
 // All coordinates are hex, not offset
@@ -302,29 +303,31 @@ class BattleScreen private constructor(
                 }"
             )
 
-            if (isTroopPlayerControlled(currentTroop)) {
-                var success = false
-                while (!success) {
+            val actionResult = if (isTroopPlayerControlled(currentTroop)) {
+                var result: com.unciv.pure.application.battle.BattleCommandResult
+                while (true) {
                     if (verboseTurn) println("Waiting for player action...")
                     val (command, _) = waitForPlayerAction()
                     if (verboseTurn) println("Received command: $command")
-                    val result = manager.execute(command, ::handleApplicationEvent)
-                    if (result.success) {
-                        success = true
-                    } else {
-                        if (verboseTurn) println("Command $command failed with rejection: ${result.rejection}")
-                        handleActionError(result.rejection)
-                    }
+                    result = manager.execute(command, ::handleApplicationEvent)
+                    if (result.success) break
+                    if (verboseTurn) println("Command $command failed with rejection: ${result.rejection}")
+                    handleActionError(result.rejection)
                 }
+                result
             } else {
                 if (verboseTurn) println("AI is performing action for troop: ${currentTroop.unitName}")
                 AIBattle(manager, ::handleApplicationEvent).performTurn(currentTroop)
             }
 
             val currentTroopAfter = manager.getCurrentTroop()
-            if (currentTroopAfter != null && !manager.getTurnQueue().isEmpty()) {
+            if (ShouldAdvanceTurnUseCase.execute(actionResult) && currentTroopAfter != null && manager.getTurnQueue()
+                        .isNotEmpty()
+            ) {
                 manager.advanceTurn()
                 if (verboseTurn) println("Turn advanced to next troop")
+            } else if (actionResult?.isMorale == true && verboseTurn) {
+                println("Morale triggered: ${currentTroop.unitName} keeps the turn")
             }
 
             movePointerToNextTroop()
