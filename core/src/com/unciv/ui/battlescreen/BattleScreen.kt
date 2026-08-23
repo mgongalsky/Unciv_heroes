@@ -55,6 +55,8 @@ import com.unciv.pure.application.battle.BattleRejection
 import com.unciv.pure.application.battle.BattleScreenCommandMapper
 import com.unciv.pure.application.battle.ShouldAdvanceTurnUseCase
 import com.unciv.logic.battle.configureEffectProbabilities
+import com.unciv.pure.application.battle.CreateBattleReportUseCase
+import com.unciv.logic.battle.BattleWorldOutcomeHandler
 
 // Now it's just copied from HeroOverviewScreen
 // All coordinates are hex, not offset
@@ -256,7 +258,8 @@ class BattleScreen private constructor(
         tabbedPager.setFillParent(true)
         updateTilesShadowing()
 
-        battleScope.launch { runBattleLoop() }
+        val initialBattleState = CreateBattleReportUseCase.capture(attackerArmy, defenderArmy)
+        battleScope.launch { runBattleLoop(initialBattleState) }
     }
 
     private fun sendSkipTurnRequest() {
@@ -295,54 +298,59 @@ class BattleScreen private constructor(
         else defenderIsPlayer
     }
 
-    suspend fun runBattleLoop() = coroutineScope {
-        while (manager.isBattleOn()) {
-            val currentTroop = manager.getCurrentTroop()
-            if (currentTroop == null) {
-                Gdx.app.postRunnable { shutdownScreen() }
-                return@coroutineScope
-            }
-            if (verboseTurn) println(
-                "Current troop: ${currentTroop.unitName} at position ${
-                    manager.getTroopTile(
-                        currentTroop
-                    )?.position
-                }"
-            )
+    suspend fun runBattleLoop(initialBattleState: CreateBattleReportUseCase.InitialState) =
+            coroutineScope {
+                while (manager.isBattleOn()) {
+                    val currentTroop = manager.getCurrentTroop()
+                    if (currentTroop == null) {
+                        Gdx.app.postRunnable { shutdownScreen() }
+                        return@coroutineScope
+                    }
+                    if (verboseTurn) println(
+                        "Current troop: ${currentTroop.unitName} at position ${
+                            manager.getTroopTile(
+                                currentTroop
+                            )?.position
+                        }"
+                    )
 
-            val actionResult = if (isTroopPlayerControlled(currentTroop)) {
-                var result: com.unciv.pure.application.battle.BattleCommandResult
-                while (true) {
-                    if (verboseTurn) println("Waiting for player action...")
-                    val (command, _) = waitForPlayerAction()
-                    if (verboseTurn) println("Received command: $command")
-                    result = manager.execute(command, ::handleApplicationEvent)
-                    if (result.success) break
-                    if (verboseTurn) println("Command $command failed with rejection: ${result.rejection}")
-                    handleActionError(result.rejection)
+                    val actionResult = if (isTroopPlayerControlled(currentTroop)) {
+                        var result: com.unciv.pure.application.battle.BattleCommandResult
+                        while (true) {
+                            if (verboseTurn) println("Waiting for player action...")
+                            val (command, _) = waitForPlayerAction()
+                            if (verboseTurn) println("Received command: $command")
+                            result = manager.execute(command) { event ->
+                                handleApplicationEvent(event, initialBattleState)
+                            }
+                            if (result.success) break
+                            if (verboseTurn) println("Command $command failed with rejection: ${result.rejection}")
+                            handleActionError(result.rejection)
+                        }
+                        result
+                    } else {
+                        if (verboseTurn) println("AI is performing action for troop: ${currentTroop.unitName}")
+                        AIBattle(manager) { event ->
+                            handleApplicationEvent(event, initialBattleState)
+                        }.performTurn(currentTroop)
+                    }
+
+                    val currentTroopAfter = manager.getCurrentTroop()
+                    if (ShouldAdvanceTurnUseCase.execute(actionResult) && currentTroopAfter != null &&
+                            manager.getTurnQueue().isNotEmpty()
+                    ) {
+                        manager.advanceTurn()
+                        if (verboseTurn) println("Turn advanced to next troop")
+                    } else if (actionResult?.isMorale == true && verboseTurn) {
+                        println("Morale triggered: ${currentTroop.unitName} keeps the turn")
+                    }
+
+                    movePointerToNextTroop()
+                    updateTilesShadowing()
                 }
-                result
-            } else {
-                if (verboseTurn) println("AI is performing action for troop: ${currentTroop.unitName}")
-                AIBattle(manager, ::handleApplicationEvent).performTurn(currentTroop)
+                manager.finishBattle()
+                println("Battle has ended!")
             }
-
-            val currentTroopAfter = manager.getCurrentTroop()
-            if (ShouldAdvanceTurnUseCase.execute(actionResult) && currentTroopAfter != null && manager.getTurnQueue()
-                        .isNotEmpty()
-            ) {
-                manager.advanceTurn()
-                if (verboseTurn) println("Turn advanced to next troop")
-            } else if (actionResult?.isMorale == true && verboseTurn) {
-                println("Morale triggered: ${currentTroop.unitName} keeps the turn")
-            }
-
-            movePointerToNextTroop()
-            updateTilesShadowing()
-        }
-        manager.finishBattle()
-        println("Battle has ended!")
-    }
 
     /**
      * Refreshes the arrays of troop views for both attackers and defenders
@@ -976,7 +984,10 @@ class BattleScreen private constructor(
     private val battleScope: kotlinx.coroutines.CoroutineScope
         get() = BattleScreenScopeRegistry.scopeFor(this)
 
-    private fun handleApplicationEvent(event: com.unciv.pure.application.battle.BattleEvent) {
+    private fun handleApplicationEvent(
+        event: com.unciv.pure.application.battle.BattleEvent,
+        initialBattleState: CreateBattleReportUseCase.InitialState
+    ) {
         fun removeView(troopId: Int) {
             for (i in attackerTroopViewsArray.indices) {
                 val view = attackerTroopViewsArray[i]
@@ -1013,20 +1024,19 @@ class BattleScreen private constructor(
                 if (event.defenderDied) removeView(event.defenderId)
                 if (manager.getTroopById(event.attackerId) == null) removeView(event.attackerId)
                 refreshTroopViews()
-
-                val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
-                val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
+                val attackingTroop = manager.getTroopById(event.attackerId) ?: return@postRunnable
+                val attackerView = getTroopViewFor(attackingTroop) ?: return@postRunnable
                 if (event.isLuck) showLuckRainbow(attackerView)
                 attackerView.updatePosition(daTileGroups.firstOrNull {
-                    it.tileInfo == manager.getTroopTile(attacker)
+                    it.tileInfo == manager.getTroopTile(attackingTroop)
                 })
                 if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
             }
 
             is com.unciv.pure.application.battle.BattleEvent.TroopShot -> Gdx.app.postRunnable {
                 if (event.defenderDied) removeView(event.defenderId)
-                val attacker = manager.getTroopById(event.attackerId) ?: return@postRunnable
-                val attackerView = getTroopViewFor(attacker) ?: return@postRunnable
+                val attackingTroop = manager.getTroopById(event.attackerId) ?: return@postRunnable
+                val attackerView = getTroopViewFor(attackingTroop) ?: return@postRunnable
                 if (event.isLuck) showLuckRainbow(attackerView)
                 refreshTroopViews()
                 if (event.isMorale && manager.isBattleOn()) showMoraleBird(attackerView)
@@ -1036,20 +1046,15 @@ class BattleScreen private constructor(
                 println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
 
             is com.unciv.pure.application.battle.BattleEvent.BattleEnded -> Gdx.app.postRunnable {
-                shutdownScreen()
+                val report = CreateBattleReportUseCase.execute(
+                    initialState = initialBattleState,
+                    attackerArmy = manager.getAttackerArmy(),
+                    defenderArmy = manager.getDefenderArmy(),
+                    winnerIsAttacker = event.winnerIsAttacker
+                )
                 manager.finishBattle()
-                val battleResult = manager.getBattleResult()
-                if (battleResult == null) {
-                    println("Bug with battle result.")
-                } else {
-                    val winningArmy = battleResult.winningArmy
-                    if (verboseTurn) {
-                        if (winningArmy == null) println("Both armies were defeated.")
-                        else println("Army of ${winningArmy.civInfo.nation.name} won.")
-                    }
-                    com.unciv.logic.battle.BattleWorldOutcomeHandler(attacker, defender)
-                        .apply(winningArmy?.let { attackerArmy == it })
-                }
+                BattleWorldOutcomeHandler(attacker, defender).apply(event.winnerIsAttacker)
+                BattleResultPopup(this, report, ::shutdownScreen).open(force = true)
             }
 
             com.unciv.pure.application.battle.BattleEvent.TurnSkipped ->
