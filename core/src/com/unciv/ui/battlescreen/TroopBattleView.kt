@@ -94,7 +94,6 @@ class TroopBattleView(
         //if (DEBUG_LOGS_ENABLED) println("Troop logical position updated to: ${troopInfo.position}")
     }
 
-    /** Draw the troop on the battle field. */
     fun draw(tileGroup: TileGroup, attacker: Boolean) {
         // Создаем или обновляем Label для отображения количества юнитов
         val amountLabel = Label(troop.currentAmount.toString(), BaseScreen.skin).apply {

@@ -6,12 +6,11 @@ import com.badlogic.gdx.graphics.glutils.HdpiMode
 import com.unciv.UncivGame
 import com.unciv.UncivGameParameters
 import com.unciv.di.gameModule
-import com.unciv.logic.army.ArmyInfo
-import com.unciv.ui.battlescreen.BattleScreen
+import com.unciv.logic.UncivFiles
+import com.unciv.ui.battlescreen.BattleSandboxScreen
+import com.unciv.ui.utils.Fonts
 import com.unciv.utils.Log
 import org.koin.core.context.startKoin
-import com.unciv.logic.UncivFiles
-import com.unciv.ui.utils.Fonts
 
 internal object DesktopLauncherBattle {
     @JvmStatic
@@ -41,23 +40,8 @@ internal object DesktopLauncherBattle {
                 (Fonts.ORIGINAL_FONT_SIZE * settings.fontSizeMultiplier).toInt(),
                 settings.fontFamily
             ),
-            initialScreenFactory = {
-                BattleScreen.forTesting(
-                    attackerArmy = buildTestArmy(isAttacker = true),
-                    defenderArmy = buildTestArmy(isAttacker = false)
-                )
-            }
+            initialScreenFactory = { BattleSandboxScreen() }
         )
         Lwjgl3Application(UncivGame(desktopParameters), config)
-    }
-
-    private fun buildTestArmy(isAttacker: Boolean): ArmyInfo {
-        val army = ArmyInfo()
-        if (isAttacker) {
-            army.fillArmy("Spearman", 50)
-        } else {
-            army.fillArmy("Archer", 40)
-        }
-        return army
     }
 }

@@ -1,0 +1,30 @@
+{
+    "scenarios": [
+        {
+            "id": "spearmen-vs-archers",
+            "title": "Spearmen vs Archers",
+            "description": "The original sandbox battle: command 50 spearmen against 40 archers.",
+            "attacker": {
+                "unitName": "Spearman",
+                "totalCount": 50
+            },
+            "defender": {
+                "unitName": "Archer",
+                "totalCount": 40
+            }
+        },
+        {
+            "id": "spearmen-vs-spearmen",
+            "title": "Spearmen vs Spearmen",
+            "description": "A symmetric melee scenario for comparing equal spearman armies.",
+            "attacker": {
+                "unitName": "Spearman",
+                "totalCount": 50
+            },
+            "defender": {
+                "unitName": "Spearman",
+                "totalCount": 50
+            }
+        }
+    ]
+}
