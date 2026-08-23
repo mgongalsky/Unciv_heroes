@@ -772,3 +772,5 @@ open class BattleManager(
 }
 
 private val remainingRetaliationDamageByTroopId = mutableMapOf<Int, Int>()
+fun hasRetaliationRemaining(troop: Troop): Boolean =
+        remainingRetaliationDamageByTroopId[troop.id] != 0

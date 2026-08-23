@@ -3,12 +3,14 @@ package com.unciv.ai
 import com.unciv.logic.HexMath
 import com.unciv.logic.battle.BattleManager
 import com.unciv.logic.battle.IBattleTile
+import com.unciv.logic.battle.hasRetaliationRemaining
 import com.unciv.pure.application.battle.BattleCommand
 import com.unciv.pure.application.battle.BattlePolicy
 import com.unciv.pure.domain.troop.Troop
 
 class AIBattlePolicy(
-    private val battleManager: BattleManager
+    private val battleManager: BattleManager,
+    private val targetHasRetaliationRemaining: (Troop) -> Boolean = ::hasRetaliationRemaining
 ) : BattlePolicy {
     override fun chooseCommand(troopId: Int): BattleCommand? {
         val troop = battleManager.getTroopById(troopId) ?: return null
@@ -28,6 +30,7 @@ class AIBattlePolicy(
                         HexMath.getDistance(currentTile.position, tile.position)
                     } ?: Int.MAX_VALUE
                 }
+                .thenBy { if (targetHasRetaliationRemaining(it)) 1 else 0 }
         ) ?: return null
         val preferredEnemyTile = battleManager.getTroopTile(preferredEnemy) ?: return null
 
@@ -69,7 +72,7 @@ class AIBattlePolicy(
     }
 
     private fun findBestMoveTarget(troop: Troop, targetTile: IBattleTile): IBattleTile? =
-        battleManager.getReachableTiles(troop)
-            .minByOrNull { HexMath.getDistance(it.position, targetTile.position) }
-                as? IBattleTile
+            battleManager.getReachableTiles(troop)
+                .minByOrNull { HexMath.getDistance(it.position, targetTile.position) }
+                    as? IBattleTile
 }
