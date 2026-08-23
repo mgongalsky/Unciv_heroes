@@ -54,6 +54,7 @@ import com.unciv.pure.application.battle.BattleCommand
 import com.unciv.pure.application.battle.BattleRejection
 import com.unciv.pure.application.battle.BattleScreenCommandMapper
 import com.unciv.pure.application.battle.ShouldAdvanceTurnUseCase
+import com.unciv.logic.battle.configureEffectProbabilities
 
 // Now it's just copied from HeroOverviewScreen
 // All coordinates are hex, not offset
@@ -117,15 +118,21 @@ class BattleScreen private constructor(
         fun forTesting(
             attackerArmy: ArmyInfo,
             defenderArmy: ArmyInfo,
-            climate: ClimateParameters = ClimateParameters(0.3, 0.5, 0.6)
-        ): BattleScreen = BattleScreen(
-            attackerArmy = attackerArmy,
-            defenderArmy = defenderArmy,
-            attackerIsPlayer = true,
-            defenderIsPlayer = false,
-            attackerClimate = climate,
-            defenderClimate = climate,
-        )
+            climate: ClimateParameters = ClimateParameters(0.3, 0.5, 0.6),
+            luckProbability: Double? = null,
+            moraleProbability: Double? = null
+        ): BattleScreen {
+            val screen = BattleScreen(
+                attackerArmy = attackerArmy,
+                defenderArmy = defenderArmy,
+                attackerIsPlayer = true,
+                defenderIsPlayer = false,
+                attackerClimate = climate,
+                defenderClimate = climate,
+            )
+            screen.manager.configureEffectProbabilities(luckProbability, moraleProbability)
+            return screen
+        }
     }
 
     /*

@@ -1,21 +1,34 @@
 package com.unciv.ui.battlescreen
 
-import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.json.fromJsonFile
 import com.unciv.json.json
 import com.unciv.logic.army.ArmyInfo
+import com.unciv.logic.map.MapUnit
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toTextButton
 
+class BattleSandboxEffects {
+    var luck: Int = 1
+    var morale: Int = 0
+    var luckProbability: Double? = null
+    var moraleProbability: Double? = null
+}
+
 class BattleSandboxArmy {
     var unitName: String = ""
     var totalCount: Int = 0
 
-    fun createArmy(): ArmyInfo = ArmyInfo().apply {
+    fun createArmy(effects: BattleSandboxEffects?): ArmyInfo = ArmyInfo().apply {
         fillArmy(unitName, totalCount)
+        if (effects != null) {
+            hero = MapUnit().apply {
+                luck = effects.luck
+                morale = effects.morale
+            }
+        }
     }
 }
 
@@ -25,6 +38,7 @@ class BattleSandboxScenario {
     var description: String = ""
     var attacker: BattleSandboxArmy = BattleSandboxArmy()
     var defender: BattleSandboxArmy = BattleSandboxArmy()
+    var effects: BattleSandboxEffects? = null
 }
 
 class BattleSandboxCatalog {
@@ -51,8 +65,10 @@ class BattleSandboxScreen(
                 val launchButton = "Start battle".toTextButton().onClick {
                     game.pushScreen(
                         BattleScreen.forTesting(
-                            attackerArmy = scenario.attacker.createArmy(),
-                            defenderArmy = scenario.defender.createArmy()
+                            attackerArmy = scenario.attacker.createArmy(scenario.effects),
+                            defenderArmy = scenario.defender.createArmy(scenario.effects),
+                            luckProbability = scenario.effects?.luckProbability,
+                            moraleProbability = scenario.effects?.moraleProbability
                         )
                     )
                 }
@@ -75,6 +91,6 @@ class BattleSandboxScreen(
         private const val CatalogPath = "jsons/BattleScenarios.json"
 
         fun loadCatalog(): BattleSandboxCatalog =
-            json().fromJsonFile(BattleSandboxCatalog::class.java, CatalogPath)
+                json().fromJsonFile(BattleSandboxCatalog::class.java, CatalogPath)
     }
 }

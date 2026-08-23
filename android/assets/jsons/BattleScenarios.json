@@ -25,6 +25,44 @@
                 "unitName": "Spearman",
                 "totalCount": 50
             }
+        },
+        {
+            "id": "maximum-luck",
+            "title": "Maximum Luck",
+            "description": "Luck is guaranteed and doubles damage on every valid attack. Morale is disabled.",
+            "attacker": {
+                "unitName": "Spearman",
+                "totalCount": 50
+            },
+            "defender": {
+                "unitName": "Spearman",
+                "totalCount": 50
+            },
+            "effects": {
+                "luck": 3,
+                "morale": 0,
+                "luckProbability": 1.0,
+                "moraleProbability": 0.0
+            }
+        },
+        {
+            "id": "maximum-morale",
+            "title": "Maximum Morale",
+            "description": "Morale is guaranteed on every action. Luck is disabled.",
+            "attacker": {
+                "unitName": "Spearman",
+                "totalCount": 50
+            },
+            "defender": {
+                "unitName": "Spearman",
+                "totalCount": 50
+            },
+            "effects": {
+                "luck": 0,
+                "morale": 3,
+                "luckProbability": 0.0,
+                "moraleProbability": 1.0
+            }
         }
     ]
 }

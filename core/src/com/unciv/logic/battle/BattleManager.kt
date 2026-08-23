@@ -28,6 +28,19 @@ import com.unciv.pure.domain.troop.Troop
 import kotlin.random.Random
 import com.unciv.pure.application.battle.CalculateMeleeExchangeUseCase
 
+internal fun configureEffectProbabilities(
+    luckProbability: Double?,
+    moraleProbability: Double?
+) {
+    require(luckProbability == null || luckProbability in 0.0..1.0)
+    require(moraleProbability == null || moraleProbability in 0.0..1.0)
+    luckProbabilityOverride = luckProbability
+    moraleProbabilityOverride = moraleProbability
+}
+
+private var moraleProbabilityOverride: Double? = null
+private var luckProbabilityOverride: Double? = null
+
 /**
  * Handles the logical part of a battle between two armies.
  * Does not include visual representation or UI logic.
@@ -116,40 +129,20 @@ open class BattleManager(
         }
     }
 
-    /**
-     * Determines whether the morale bonus is triggered for a troop.
-     *
-     * Rule:
-     * - If troopMorale is less than or equal to 3, the effective probability is calculated as:
-     *      (GameConstants.moraleProbability / 3) * troopMorale
-     * - If troopMorale is greater than 3, the effective probability is set to GameConstants.moraleProbability.
-     *
-     * @param troopMorale The morale value of the troop.
-     * @return True if the morale bonus is triggered, false otherwise.
-     */
     private fun isMoraleTriggered(troop: Troop) =
-            IsMoraleTriggeredUseCase.execute(getArmyOf(troop)?.hero?.morale ?: 0, random, moraleProbability)
+            IsMoraleTriggeredUseCase.execute(
+                moraleValue = getArmyOf(troop)?.hero?.morale ?: 0,
+                random = random,
+                moraleProbability = configuredMoraleProbability(moraleProbability)
+            )
 
-    /**
-     * Determines whether the luck bonus is triggered for a troop.
-     * Luck bonus doubles the damage.
-     *
-     * Rule:
-     * - If hero's luck (troopLuck) is less than or equal to 3, effective probability = (GameConstants.luckProbability / 3) * troopLuck.
-     * - Otherwise, effective probability = GameConstants.luckProbability.
-     *
-     * Verbose logging outputs unit name, amount, hero presence, hero luck, and effective probability.
-     *
-     * @param troop The troop to check.
-     * @return True if the luck bonus is triggered, false otherwise.
-     */
     private fun isLuckTriggered(troop: Troop): Boolean {
-        // Assume hero's luck value is stored in hero.luck; if no hero, default to 1.
         val troopLuck = getArmyOf(troop)?.hero?.luck ?: 1
+        val configuredProbability = configuredLuckProbability(luckProbability)
         val effectiveProbability = if (troopLuck <= 3) {
-            (luckProbability / 3.0) * troopLuck
+            (configuredProbability / 3.0) * troopLuck
         } else {
-            luckProbability
+            configuredProbability
         }
         println(
             "Unit: ${troop.unitName}, Amount: ${troop.amount}, " +
@@ -775,3 +768,4 @@ open class BattleManager(
         onApplicationEvent?.invoke(event)
     }
 }
+

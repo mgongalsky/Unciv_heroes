@@ -11,18 +11,60 @@ class IsMoraleTriggeredUseCaseTest {
     @Test
     fun `returns true when random is below effective probability`() {
         val random = FakeBattleRandom(listOf(0.0))
-        assertTrue(IsMoraleTriggeredUseCase.execute(moraleValue = 3, random = random, moraleProbability = 0.3))
+        assertTrue(
+            IsMoraleTriggeredUseCase.execute(
+                moraleValue = 3,
+                random = random,
+                moraleProbability = 0.3
+            )
+        )
     }
 
     @Test
     fun `returns false when random is above effective probability`() {
         val random = FakeBattleRandom(listOf(1.0))
-        assertFalse(IsMoraleTriggeredUseCase.execute(moraleValue = 3, random = random, moraleProbability = 0.3))
+        assertFalse(
+            IsMoraleTriggeredUseCase.execute(
+                moraleValue = 3,
+                random = random,
+                moraleProbability = 0.3
+            )
+        )
     }
 
     @Test
     fun `returns false when moraleValue is zero`() {
         val random = FakeBattleRandom(listOf(0.0))
-        assertFalse(IsMoraleTriggeredUseCase.execute(moraleValue = 0, random = random, moraleProbability = 0.3))
+        assertFalse(
+            IsMoraleTriggeredUseCase.execute(
+                moraleValue = 0,
+                random = random,
+                moraleProbability = 0.3
+            )
+        )
+    }
+
+    @Test
+    fun `maximum morale scenario guarantees morale`() {
+        val random = FakeBattleRandom(listOf(0.999999))
+        assertTrue(
+            IsMoraleTriggeredUseCase.execute(
+                moraleValue = 3,
+                random = random,
+                moraleProbability = 1.0
+            )
+        )
+    }
+
+    @Test
+    fun `disabled morale never triggers`() {
+        val random = FakeBattleRandom(listOf(0.0))
+        assertFalse(
+            IsMoraleTriggeredUseCase.execute(
+                moraleValue = 3,
+                random = random,
+                moraleProbability = 0.0
+            )
+        )
     }
 }
