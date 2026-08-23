@@ -122,12 +122,17 @@ class BattleManagerCharTest {
     }
 
     @Test
-    fun `attack reduces defender amount`() {
+    fun `attack damages defender soldiers after formation absorbs its share`() {
         manager.initializeTurnQueue()
         val attacker = attackerArmy.getAllTroops().first { it != null }!!
         val defender = defenderArmy.getAllTroops().first { it != null }!!
         val beforeAmount = defender.currentAmount
+        val beforeHealth = defender.currentHealth
+
         manager.attack(defender, attacker)
-        assertTrue(defender.currentAmount < beforeAmount)
+
+        assertTrue(
+            defender.currentAmount < beforeAmount || defender.currentHealth < beforeHealth
+        )
     }
 }

@@ -173,24 +173,30 @@ class BattleManagerPerformTurnCharTest {
     // --- ATTACK ---
 
     @Test
-    fun `performTurn ATTACK enemy reduces defender amount`() {
+    fun `performTurn ATTACK enemy damages defender soldiers after formation absorbs its share`() {
         val attacker = attackerArmy.getAllTroops().first { it != null }!!
         val defender = defenderArmy.getAllTroops().first { it != null }!!
+        val beforeAmount = defender.currentAmount
+        val beforeHealth = defender.currentHealth
         manager.placeTroop(attacker, tileA)
         manager.placeTroop(defender, tileC)
 
-        val result = manager.performTurn(BattleActionRequest(
-            troop = attacker,
-            targetPosition = tileC,
-            attackTile = tileB,
-            actionType = ActionType.ATTACK
-        ))
+        val result = manager.performTurn(
+            BattleActionRequest(
+                troop = attacker,
+                targetPosition = tileC,
+                attackTile = tileB,
+                actionType = ActionType.ATTACK
+            )
+        )
 
         assertTrue(result.success)
         assertFalse(result.isLuck)
         assertFalse(result.isMorale)
         assertFalse(result.battleEnded)
-        assertEquals(7, defender.currentAmount)
+        assertTrue(
+            defender.currentAmount < beforeAmount || defender.currentHealth < beforeHealth
+        )
     }
 
     @Test

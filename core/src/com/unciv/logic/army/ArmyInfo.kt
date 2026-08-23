@@ -17,6 +17,7 @@ import com.unciv.pure.domain.troop.Troop
 import com.unciv.pure.domain.troop.TroopFactory
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import com.unciv.pure.domain.troop.Formation
 
 open class ArmyInfo(
     @Transient var civInfo: CivilizationInfo = CivilizationInfo(),
@@ -128,7 +129,19 @@ open class ArmyInfo(
         }
     }
 
-    fun finishBattle() = Unit
+    fun finishBattle() {
+        for (index in troops.indices) {
+            val troop = troops[index] ?: continue
+            if (troop.currentAmount <= 0) {
+                troops[index] = null
+                continue
+            }
+
+            troop.amount = troop.currentAmount
+            troop.currentHealth = troop.maxHealth
+            troop.formation = Formation.forSoldiers(troop.currentAmount)
+        }
+    }
     fun copySlots(): Array<Troop?> = troops
 
     fun clone(): ArmyInfo {
