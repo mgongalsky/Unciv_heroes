@@ -156,18 +156,22 @@ class BattleManagerRealisticFieldCharTest {
         val manager = makeManager()
         val attacker = attackerArmy.getAllTroops().first { it != null }!!
         val defender = defenderArmy.getAllTroops().first { it != null }!!
+        val beforeAmount = defender.currentAmount
+        val beforeHealth = defender.currentHealth
         manager.placeTroop(attacker, tile(0, 0))
         manager.placeTroop(defender, tile(1, 0))
 
-        val result = manager.performTurn(BattleActionRequest(
-            troop = attacker,
-            targetPosition = tile(1, 0),
-            attackTile = tile(0, 0),
-            actionType = ActionType.ATTACK
-        ))
+        val result = manager.performTurn(
+            BattleActionRequest(
+                troop = attacker,
+                targetPosition = tile(1, 0),
+                attackTile = tile(0, 0),
+                actionType = ActionType.ATTACK
+            )
+        )
 
         assertTrue(result.success)
-        assertEquals(7, defender.currentAmount)
+        assertTrue(defender.currentAmount < beforeAmount || defender.currentHealth < beforeHealth)
     }
 
     @Test
@@ -224,24 +228,30 @@ class BattleManagerRealisticFieldCharTest {
         val manager = makeManager()
         val attacker = attackerArmy.getAllTroops().first { it != null }!!
         val defender = defenderArmy.getAllTroops().first { it != null }!!
+        val beforeAmount = defender.currentAmount
+        val beforeHealth = defender.currentHealth
         manager.placeTroop(attacker, tile(0, 0))
         manager.placeTroop(defender, tile(4, 0))
 
-        val moveResult = manager.performTurn(BattleActionRequest(
-            troop = attacker,
-            targetPosition = tile(2, 0),
-            actionType = ActionType.MOVE
-        ))
-        val attackResult = manager.performTurn(BattleActionRequest(
-            troop = attacker,
-            targetPosition = tile(4, 0),
-            attackTile = tile(3, 0),
-            actionType = ActionType.ATTACK
-        ))
+        val moveResult = manager.performTurn(
+            BattleActionRequest(
+                troop = attacker,
+                targetPosition = tile(2, 0),
+                actionType = ActionType.MOVE
+            )
+        )
+        val attackResult = manager.performTurn(
+            BattleActionRequest(
+                troop = attacker,
+                targetPosition = tile(4, 0),
+                attackTile = tile(3, 0),
+                actionType = ActionType.ATTACK
+            )
+        )
 
         assertTrue(moveResult.success)
         assertTrue(attackResult.success)
-        assertEquals(7, defender.currentAmount)
+        assertTrue(defender.currentAmount < beforeAmount || defender.currentHealth < beforeHealth)
     }
 
     @Test

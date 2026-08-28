@@ -13,7 +13,8 @@ object MovementRangeUseCase {
         unitMovement: Float,
         context: IMovementContext,
         tilesToIgnore: HashSet<T>? = null,
-        targetTile: T? = null
+        targetTile: T? = null,
+        considerZoneOfControl: Boolean = true
     ): PathsToTilesWithinTurn<T> {
         val distanceToTiles = PathsToTilesWithinTurn<T>()
         if (unitMovement == 0f) return distanceToTiles
@@ -23,18 +24,23 @@ object MovementRangeUseCase {
 
         while (tilesToCheck.isNotEmpty()) {
             val updatedTiles = ArrayList<T>()
-            for (tileToCheck in tilesToCheck)
+            for (tileToCheck in tilesToCheck) {
+                val enteredZoneOfControl =
+                        tileToCheck != startTile && !context.canLeaveTile(tileToCheck)
+                if (considerZoneOfControl && enteredZoneOfControl) continue
                 for (neighbor in tileToCheck.neighbors) {
                     @Suppress("UNCHECKED_CAST")
                     neighbor as T
                     if (tilesToIgnore?.contains(neighbor) == true) continue
                     if (context.shouldSkipTile(neighbor, targetTile)) continue
-                    var totalDistanceToTile: Float = when {
+                    val totalDistanceToTile: Float = when {
                         !context.hasExplored(neighbor) ->
                             distanceToTiles[tileToCheck]!!.totalDistance + 1f
+
                         !context.canPassThrough(neighbor) -> unitMovement
                         else -> {
-                            val distanceBetweenTiles = context.getMovementCost(tileToCheck, neighbor)
+                            val distanceBetweenTiles =
+                                    context.getMovementCost(tileToCheck, neighbor)
                             distanceToTiles[tileToCheck]!!.totalDistance + distanceBetweenTiles
                         }
                     }
@@ -42,9 +48,11 @@ object MovementRangeUseCase {
                     if (!distanceToTiles.containsKey(neighbor) || distanceToTiles[neighbor]!!.totalDistance > totalDistanceToTile) {
                         if (totalDistanceToTile < unitMovement)
                             updatedTiles += neighbor
-                        distanceToTiles[neighbor] = ParentTileAndTotalDistance(tileToCheck, totalDistanceToTile)
+                        distanceToTiles[neighbor] =
+                                ParentTileAndTotalDistance(tileToCheck, totalDistanceToTile)
                     }
                 }
+            }
 
             tilesToCheck = updatedTiles
         }

@@ -359,7 +359,7 @@ open class BattleManager(
         val currentTile = getTroopTile(troop) as? TileInfo ?: return emptyList()
         val movement = UnitMovementAlgorithms(makeAdapter(troop, currentTile))
         return movement.getReachableTilesInCurrentTurn(
-            context = TroopMovementContext(troop)
+            context = TroopMovementContext(troop, enemyChecker(troop))
         ).toList()
     }
 
@@ -482,7 +482,7 @@ open class BattleManager(
         val currentTile = getTroopTile(troop) as? TileInfo ?: return false
         val movement = UnitMovementAlgorithms(makeAdapter(troop, currentTile))
         val reachableTiles = movement.getReachableTilesInCurrentTurn(
-            context = TroopMovementContext(troop),
+            context = TroopMovementContext(troop, enemyChecker(troop)),
             targetTile = targetTile as TileInfo
         )
         return reachableTiles.contains(targetTile)

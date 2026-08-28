@@ -167,10 +167,6 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         else currentUnitTile.tileMap[origin]
     }
 
-    /**
-     * Does not consider if tiles can actually be entered, use canMoveTo for that.
-     * If a tile can be reached within the turn, but it cannot be passed through, the total distance to it is set to unitMovement
-     */
     fun getDistanceToTilesWithinTurn(
         origin: Vector2,
         unitMovement: Float,
@@ -184,7 +180,8 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             unitMovement = unitMovement,
             context = context,
             tilesToIgnore = tilesToIgnore,
-            targetTile = targetTile
+            targetTile = targetTile,
+            considerZoneOfControl = considerZoneOfControl
         )
     }
 
