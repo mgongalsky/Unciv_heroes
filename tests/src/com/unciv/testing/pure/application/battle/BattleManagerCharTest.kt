@@ -82,6 +82,7 @@ class BattleManagerCharTest {
         GameConstants.clearTestingInstance()
         stopKoin()
     }
+
     @Test
     fun `isBattleOn initial state`() {
         assertTrue(manager.isBattleOn())
@@ -104,6 +105,21 @@ class BattleManagerCharTest {
         assertNotNull(first)
         assertNotNull(second)
         assertNotSame(first, second)
+    }
+
+    @Test
+    fun `advanceTurn restores quarter of maximum formation for next troop`() {
+        manager.initializeTurnQueue()
+        val first = manager.getCurrentTroop()!!
+        val next = manager.getTurnQueue().first { it !== first }
+        next.formation.current = 20
+        val maximum = next.formation.maximum
+
+        manager.advanceTurn()
+
+        assertEquals(next, manager.getCurrentTroop())
+        assertEquals(20 + maximum / 4, next.formation.current)
+        assertEquals(maximum, first.formation.current)
     }
 
     @Test

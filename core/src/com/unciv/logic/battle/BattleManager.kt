@@ -29,6 +29,7 @@ import kotlin.random.Random
 import com.unciv.pure.application.battle.CalculateMeleeExchangeUseCase
 import com.unciv.pure.application.battle.ApplyFormationDamageUseCase
 import com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase
+import com.unciv.pure.application.battle.RestoreFormationUseCase
 
 internal fun configureEffectProbabilities(
     luckProbability: Double?,
@@ -458,7 +459,15 @@ open class BattleManager(
             return
         }
         turnQueue.advance()
-        turnQueue.current()?.let { remainingRetaliationDamageByTroopId.remove(it.id) }
+        turnQueue.current()?.let { troop ->
+            remainingRetaliationDamageByTroopId.remove(troop.id)
+            troop.formation.current = RestoreFormationUseCase.execute(
+                RestoreFormationUseCase.Input(
+                    currentFormation = troop.formation.current,
+                    maximumFormation = troop.formation.maximum
+                )
+            )
+        }
     }
 
     /**
