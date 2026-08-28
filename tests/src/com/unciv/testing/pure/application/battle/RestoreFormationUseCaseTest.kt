@@ -41,8 +41,8 @@ class RestoreFormationUseCaseTest {
     }
 
     @Test
-    fun `broken formation does not recover`() {
-        assertEquals(0, restore(current = 0, maximum = 100))
+    fun `fully depleted formation restores quarter of maximum`() {
+        assertEquals(25, restore(current = 0, maximum = 100))
     }
 
     @Test

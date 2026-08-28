@@ -108,18 +108,17 @@ class BattleManagerCharTest {
     }
 
     @Test
-    fun `advanceTurn restores quarter of maximum formation for next troop`() {
+    fun `advanceTurn does not restore formation`() {
         manager.initializeTurnQueue()
         val first = manager.getCurrentTroop()!!
         val next = manager.getTurnQueue().first { it !== first }
         next.formation.current = 20
-        val maximum = next.formation.maximum
 
         manager.advanceTurn()
 
         assertEquals(next, manager.getCurrentTroop())
-        assertEquals(20 + maximum / 4, next.formation.current)
-        assertEquals(maximum, first.formation.current)
+        assertEquals(20, next.formation.current)
+        assertEquals(first.formation.maximum, first.formation.current)
     }
 
     @Test

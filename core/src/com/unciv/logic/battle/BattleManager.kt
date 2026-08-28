@@ -30,6 +30,8 @@ import com.unciv.pure.application.battle.CalculateMeleeExchangeUseCase
 import com.unciv.pure.application.battle.ApplyFormationDamageUseCase
 import com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase
 import com.unciv.pure.application.battle.RestoreFormationUseCase
+import com.unciv.pure.application.battle.ApplyMovementFormationPenaltyUseCase
+import com.unciv.pure.application.battle.UpdateFormationAfterMoveUseCase
 
 internal fun configureEffectProbabilities(
     luckProbability: Double?,
@@ -459,15 +461,7 @@ open class BattleManager(
             return
         }
         turnQueue.advance()
-        turnQueue.current()?.let { troop ->
-            remainingRetaliationDamageByTroopId.remove(troop.id)
-            troop.formation.current = RestoreFormationUseCase.execute(
-                RestoreFormationUseCase.Input(
-                    currentFormation = troop.formation.current,
-                    maximumFormation = troop.formation.maximum
-                )
-            )
-        }
+        turnQueue.current()?.let { remainingRetaliationDamageByTroopId.remove(it.id) }
     }
 
     /**
@@ -514,6 +508,18 @@ open class BattleManager(
             )
         )
         if (output.success) {
+            val movementDistance =
+                    HexMath.getDistance(currentTile!!.position, targetPosition.position)
+            val formation = UpdateFormationAfterMoveUseCase.execute(
+                UpdateFormationAfterMoveUseCase.Input(
+                    currentFormation = troop.formation.current,
+                    maximumFormation = troop.formation.maximum,
+                    movementDistance = movementDistance,
+                    maximumMovement = troop.speed,
+                    turnEndsWithoutAttack = !isMorale
+                )
+            )
+            troop.formation.current = formation.remainingFormation
             moveTroop(troop, targetPosition)
             publishApplicationEvent(
                 com.unciv.pure.application.battle.BattleEvent.TroopMoved(
@@ -553,8 +559,15 @@ open class BattleManager(
     }
 
     private fun performSkipAction(
+        troop: Troop,
         onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
     ): com.unciv.pure.application.battle.BattleCommandResult {
+        troop.formation.current = RestoreFormationUseCase.execute(
+            RestoreFormationUseCase.Input(
+                currentFormation = troop.formation.current,
+                maximumFormation = troop.formation.maximum
+            )
+        )
         publishApplicationEvent(
             com.unciv.pure.application.battle.BattleEvent.TurnSkipped,
             onApplicationEvent
@@ -578,7 +591,7 @@ open class BattleManager(
     ): com.unciv.pure.application.battle.BattleCommandResult {
         val isMorale = isMoraleTriggered(troop)
         if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
-        return performSkipAction(onApplicationEvent)
+        return performSkipAction(troop, onApplicationEvent)
     }
 
     private fun performAttackAction(

@@ -1,6 +1,6 @@
 package com.unciv.pure.application.battle
 
-/** Restores part of a surviving formation when its troop enters a new turn. */
+/** Restores part of a formation, including one whose cohesion is fully depleted. */
 object RestoreFormationUseCase {
     data class Input(
         val currentFormation: Int,
@@ -18,7 +18,7 @@ object RestoreFormationUseCase {
         require(input.recoveryNumerator >= 0) { "recoveryNumerator must not be negative" }
         require(input.recoveryDenominator > 0) { "recoveryDenominator must be positive" }
 
-        if (input.currentFormation == 0 || input.currentFormation == input.maximumFormation) {
+        if (input.currentFormation == input.maximumFormation) {
             return input.currentFormation
         }
 
