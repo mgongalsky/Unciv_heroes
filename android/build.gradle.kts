@@ -31,14 +31,11 @@ android {
         targetSdk = 32
         versionCode = BuildConfig.appCodeNumber
         versionName = BuildConfig.appVersion
-
         base.archivesName.set("Unciv")
     }
-
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_1_8.toString()
     }
-
     signingConfigs {
         getByName("debug") {
             storeFile = rootProject.file("debug.keystore")
@@ -47,7 +44,6 @@ android {
             storePassword = "android"
         }
     }
-
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
@@ -69,17 +65,21 @@ android {
 }
 
 fun registerImagePackingTask(taskName: String, force: Boolean, taskDescription: String) =
-    tasks.register(taskName) {
-        group = "graphics"
-        description = taskDescription
-        doLast {
-            AndroidImagePacker.packImages(
-                workingPath = projectDir.path,
-                force = force,
-                atlasName = providers.gradleProperty("atlas").orNull
-            )
+        tasks.register(taskName) {
+            group = "graphics"
+            description = taskDescription
+            doLast {
+                AndroidImagePacker.packImages(
+                    workingPath = projectDir.path,
+                    force = force,
+                    atlasName = providers.gradleProperty("atlas").orNull,
+                    allowIncompleteSources = providers.gradleProperty("allowIncompleteSources")
+                        .orNull
+                        ?.toBooleanStrictOrNull()
+                        ?: false
+                )
+            }
         }
-    }
 
 val packImages by registerImagePackingTask(
     taskName = "packImages",
@@ -101,7 +101,6 @@ tasks.register("texturePacker") {
 
 task("copyAndroidNatives") {
     val natives: Configuration by configurations
-
     doFirst {
         val rx = Regex(""".*natives-([^.]+)\.jar$""")
         natives.forEach { jar ->
@@ -120,6 +119,9 @@ task("copyAndroidNatives") {
 }
 
 tasks.whenTaskAdded {
+    if (name.startsWith("merge") && name.endsWith("Assets")) {
+        dependsOn(packImages)
+    }
     if ("package" in name || "assemble" in name || "bundleRelease" in name) {
         dependsOn("copyAndroidNatives")
     }
@@ -134,9 +136,7 @@ tasks.register<JavaExec>("run") {
     } else {
         System.getenv("ANDROID_HOME")
     }
-
     val adb = "$path/platform-tools/adb"
-
     doFirst {
         project.exec {
             commandLine(adb, "shell", "am", "start", "-n", "com.unciv.app/AndroidLauncher")
