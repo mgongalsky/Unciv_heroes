@@ -1,68 +1,94 @@
 {
-    "scenarios": [
-        {
-            "id": "spearmen-vs-archers",
-            "title": "Spearmen vs Archers",
-            "description": "The original sandbox battle: command 50 spearmen against 40 archers.",
-            "attacker": {
-                "unitName": "Spearman",
-                "totalCount": 50
-            },
-            "defender": {
-                "unitName": "Archer",
-                "totalCount": 40
-            }
-        },
-        {
-            "id": "spearmen-vs-spearmen",
-            "title": "Spearmen vs Spearmen",
-            "description": "A symmetric melee scenario for comparing equal spearman armies.",
-            "attacker": {
-                "unitName": "Spearman",
-                "totalCount": 50
-            },
-            "defender": {
-                "unitName": "Spearman",
-                "totalCount": 50
-            }
-        },
-        {
-            "id": "maximum-luck",
-            "title": "Maximum Luck",
-            "description": "Luck is guaranteed and doubles damage on every valid attack. Morale is disabled.",
-            "attacker": {
-                "unitName": "Spearman",
-                "totalCount": 50
-            },
-            "defender": {
-                "unitName": "Spearman",
-                "totalCount": 50
-            },
-            "effects": {
-                "luck": 3,
-                "morale": 0,
-                "luckProbability": 1.0,
-                "moraleProbability": 0.0
-            }
-        },
-        {
-            "id": "maximum-morale",
-            "title": "Maximum Morale",
-            "description": "Morale is guaranteed on every action. Luck is disabled.",
-            "attacker": {
-                "unitName": "Spearman",
-                "totalCount": 50
-            },
-            "defender": {
-                "unitName": "Spearman",
-                "totalCount": 50
-            },
-            "effects": {
-                "luck": 0,
-                "morale": 3,
-                "luckProbability": 0.0,
-                "moraleProbability": 1.0
-            }
-        }
-    ]
+  "scenarios": [
+    {
+      "id": "spearmen-vs-archers",
+      "title": "Spearmen vs Archers",
+      "description": "Close the distance with 50 spearmen against 40 ranged archers.",
+      "attacker": {
+        "unitName": "Spearman",
+        "totalCount": 50
+      },
+      "defender": {
+        "unitName": "Archer",
+        "totalCount": 40
+      }
+    },
+    {
+      "id": "swordsmen-vs-crossbowmen",
+      "title": "Swordsmen vs Crossbowmen",
+      "description": "Heavy swordsmen assault a disciplined crossbow line.",
+      "attacker": {
+        "unitName": "Swordsman",
+        "totalCount": 45
+      },
+      "defender": {
+        "unitName": "Crossbowman",
+        "totalCount": 36
+      }
+    },
+    {
+      "id": "horsemen-vs-spearmen",
+      "title": "Horsemen vs Spearmen",
+      "description": "Fast cavalry challenges a larger defensive spear formation.",
+      "attacker": {
+        "unitName": "Horseman",
+        "totalCount": 32
+      },
+      "defender": {
+        "unitName": "Spearman",
+        "totalCount": 48
+      }
+    },
+    {
+      "id": "archers-vs-horsemen",
+      "title": "Archers vs Horsemen",
+      "description": "Archers must exploit range before enemy horsemen reach them.",
+      "attacker": {
+        "unitName": "Archer",
+        "totalCount": 42
+      },
+      "defender": {
+        "unitName": "Horseman",
+        "totalCount": 30
+      }
+    },
+    {
+      "id": "maximum-luck",
+      "title": "Maximum Luck",
+      "description": "Luck is guaranteed for swordsmen attacking crossbowmen. Morale is disabled.",
+      "attacker": {
+        "unitName": "Swordsman",
+        "totalCount": 40
+      },
+      "defender": {
+        "unitName": "Crossbowman",
+        "totalCount": 40
+      },
+      "effects": {
+        "luck": 3,
+        "morale": 0,
+        "luckProbability": 1.0,
+        "moraleProbability": 0.0
+      }
+    },
+    {
+      "id": "maximum-morale",
+      "title": "Maximum Morale",
+      "description": "Morale is guaranteed for horsemen facing spearmen. Luck is disabled.",
+      "attacker": {
+        "unitName": "Horseman",
+        "totalCount": 35
+      },
+      "defender": {
+        "unitName": "Spearman",
+        "totalCount": 45
+      },
+      "effects": {
+        "luck": 0,
+        "morale": 3,
+        "luckProbability": 0.0,
+        "moraleProbability": 1.0
+      }
+    }
+  ]
 }

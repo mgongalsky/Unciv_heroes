@@ -868,26 +868,23 @@ class BattleScreen private constructor(
 
     }
 
-    /**
-     * Selects the appropriate crosshair cursor based on the tile state.
-     *
-     * @param tileGroup The tile group the pointer is hovering over.
-     * @param x The x-coordinate of the pointer relative to the tile.
-     * @param y The y-coordinate of the pointer relative to the tile.
-     * @param width The width of the hexagon tile.
-     */
     fun chooseCrosshair(tileGroup: TileGroup, x: Float, y: Float, width: Float) {
         val targetTile = tileGroup.tileInfo
         val currentTroop = getCurrentTroopView() ?: return
+        val hoveredEnemy = manager.getTroopOnTile(targetTile)
+            ?.takeIf { !isTroopPlayerControlled(it) }
+        setHoveredTroop(hoveredEnemy)
 
         if (manager.canShoot(currentTroop.getTroopInfo()) &&
-                manager.isTileOccupiedByEnemy(currentTroop.getTroopInfo(), targetTile)) {
+                manager.isTileOccupiedByEnemy(currentTroop.getTroopInfo(), targetTile)
+        ) {
             Gdx.graphics.setCursor(cursorShoot)
             return
         }
 
         if (!manager.getReachableTiles(currentTroop.getTroopInfo()).contains(tileGroup.tileInfo)
-                && manager.isTileFree(targetTile)) {
+                && manager.isTileFree(targetTile)
+        ) {
             Gdx.graphics.setCursor(cursorCancel)
         } else {
             if (manager.isTileOccupiedByAlly(currentTroop.getTroopInfo(), tileGroup.tileInfo)) {
@@ -901,16 +898,20 @@ class BattleScreen private constructor(
 
                 if (manager.getReachableTiles(currentTroop.getTroopInfo()).contains(tileToMove)
                         && (tileToMove != null && manager.isTileFree(tileToMove)
-                                || tileToMove == manager.getTroopTile(currentTroop.getTroopInfo())))
+                                || tileToMove == manager.getTroopTile(currentTroop.getTroopInfo()))
+                ) {
                     Gdx.graphics.setCursor(cursorAttack[direction.num])
-                else
+                } else {
                     Gdx.graphics.setCursor(cursorCancel)
+                }
                 return
             }
 
             Gdx.graphics.setCursor(cursorMove)
         }
-    }    /**
+    }
+
+    /**
      * Determines the direction of the attack based on the mouse pointer position.
      *
      * @param x The x-coordinate of the pointer relative to the tile.
@@ -1098,8 +1099,13 @@ class BattleScreen private constructor(
         val troopToPreview = troopUnderPointer?.takeIf { shiftHeld }
         if (troopToPreview != previewedTroop) updateEnemyMovementPreview(troopToPreview)
     }
+
     internal fun setHoveredTroop(troop: Troop?) {
+        hoveredTroop?.let { getTroopViewFor(it)?.setHoveredEnemy(false) }
         hoveredTroop = troop
+        if (troop != null && !isTroopPlayerControlled(troop)) {
+            getTroopViewFor(troop)?.setHoveredEnemy(true)
+        }
     }
     private fun updateEnemyMovementPreview(troop: Troop?) {
         previewedTroop = troop

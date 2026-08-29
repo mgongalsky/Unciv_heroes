@@ -54,10 +54,12 @@ fun createActiveTroopOutline(
     parentHeight: Float,
     originX: Float,
     originY: Float,
-    animated: Boolean = true
+    animated: Boolean = true,
+    outlineColor: Color = Color.valueOf("FFD65AFF"),
+    outlineName: String = "activeTroopOutline"
 ): Group {
     val outline = Group().apply {
-        name = "activeTroopOutline"
+        name = outlineName
         touchable = Touchable.disabled
     }
     val supportedTroops = setOf(
@@ -71,7 +73,7 @@ fun createActiveTroopOutline(
 
     outline.addActor(
         ImageGetter.getExternalImage("BattleOutline-${troop.unitName}.png").apply {
-            color = Color.valueOf("FFD65AFF")
+            color = outlineColor
             setScale(if (attacker) -0.25f else 0.25f, 0.25f)
             setPosition(
                 if (attacker) parentWidth * 1.3f else parentWidth * -0.3f,

@@ -103,11 +103,28 @@ private fun createBattleFieldPreview(): Group {
     )
     attackerTile.addActor(attackerGroup)
 
+    val defenderGroup = Group()
     populateBattleTroopGroup(
-        defenderTile, defender, false,
+        defenderGroup, defender, false,
         defenderTile.width, defenderTile.height,
         defenderTile.originX, defenderTile.originY
     )
+    defenderGroup.addActorAt(
+        0,
+        createActiveTroopOutline(
+            defender,
+            false,
+            defenderTile.width,
+            defenderTile.height,
+            defenderTile.originX,
+            defenderTile.originY,
+            animated = false,
+            outlineColor = com.badlogic.gdx.graphics.Color.valueOf("6675FFFF"),
+            outlineName = "hoveredEnemyOutline"
+        )
+    )
+    defenderTile.addActor(defenderGroup)
+
     middleRow.drop(1).dropLast(1).forEachIndexed { index, tileGroup ->
         createBattleMovementRangeOverlay(tileGroup).showBattleMovementStyle(
             if (index == 0) TileStyle.SAFE else TileStyle.FORMATION_PENALTY

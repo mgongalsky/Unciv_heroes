@@ -21,6 +21,7 @@ class TroopBattleView(
     private val troopGroup = Group()
     private var troopImages: ArrayList<Image>
     private var activeOutline: Group? = null
+    private var hoveredOutline: Group? = null
 
     /** Initialize the troop's battle appearance. */
     @Deprecated("To be removed")
@@ -99,11 +100,28 @@ class TroopBattleView(
             outline.isVisible = battleScreen.getCurrentTroopView()?.getTroopInfo() === troop
             troopGroup.addActorAt(0, outline)
         }
+        hoveredOutline = createActiveTroopOutline(
+            troop = troop,
+            attacker = attacker,
+            parentWidth = tileGroup.width,
+            parentHeight = tileGroup.height,
+            originX = tileGroup.originX,
+            originY = tileGroup.originY,
+            outlineColor = Color.valueOf("6675FFFF"),
+            outlineName = "hoveredEnemyOutline"
+        ).also { outline ->
+            outline.isVisible = false
+            troopGroup.addActorAt(1, outline)
+        }
         tileGroup.addActor(troopGroup)
     }
 
     fun setActive(active: Boolean) {
         activeOutline?.isVisible = active
+    }
+
+    fun setHoveredEnemy(hovered: Boolean) {
+        hoveredOutline?.isVisible = hovered
     }
 
     /** Show morale animation (e.g., after gaining morale). */
