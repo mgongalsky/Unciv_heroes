@@ -61,17 +61,12 @@ class AIBattleCharTest {
 
         startKoin {
             allowOverride(true)
-            modules(
-                module { single { fakeRuleset } },
-                testModule
-            )
+            modules(module { single { fakeRuleset } }, testModule)
         }
 
-        // три тайла в ряд: attacker -- middle -- defender
         attackerTile = FakeBattleTile(Vector2(0f, 0f))
-        middleTile   = FakeBattleTile(Vector2(1f, 0f))
+        middleTile = FakeBattleTile(Vector2(1f, 0f))
         defenderTile = FakeBattleTile(Vector2(2f, 0f))
-
         attackerTile.addNeighbor(middleTile)
         middleTile.addNeighbor(attackerTile)
         middleTile.addNeighbor(defenderTile)
@@ -80,7 +75,6 @@ class AIBattleCharTest {
         val civInfo = FakeCivilizationInfo()
         attackerArmy = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Spearman", 10) }
         defenderArmy = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Spearman", 10) }
-
         manager = TestableBattleManager(
             attackerArmy = attackerArmy,
             defenderArmy = defenderArmy,
@@ -89,8 +83,12 @@ class AIBattleCharTest {
             allTilesReachable = true
         )
 
-        val attacker = attackerArmy.getAllTroops().filterNotNull().first()
-        val defender = defenderArmy.getAllTroops().filterNotNull().first()
+        val attacker = attackerArmy.getAllTroops().filterNotNull().first().apply {
+            formation.current = 0
+        }
+        val defender = defenderArmy.getAllTroops().filterNotNull().first().apply {
+            formation.current = 0
+        }
         manager.placeTroop(attacker, attackerTile)
         manager.placeTroop(defender, defenderTile)
         manager.initializeTurnQueue()
@@ -155,7 +153,9 @@ class AIBattleCharTest {
             allTilesReachable = true
         )
         val archer = archerArmy.getAllTroops().filterNotNull().first()
-        val spear = spearArmy.getAllTroops().filterNotNull().first()
+        val spear = spearArmy.getAllTroops().filterNotNull().first().apply {
+            formation.current = 0
+        }
         archerManager.placeTroop(archer, attackerTile)
         archerManager.placeTroop(spear, defenderTile)
         archerManager.initializeTurnQueue()

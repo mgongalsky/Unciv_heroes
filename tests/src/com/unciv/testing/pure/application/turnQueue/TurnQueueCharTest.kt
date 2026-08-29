@@ -29,35 +29,28 @@ class TurnQueueCharTest {
     @Before
     fun setUp() {
         GameConstants.setTestingInstance(
-            GameConstantsData(
-                luckProbability = 0.0,
-                moraleProbability = 0.0,
-                armySize = 5
-            )
+            GameConstantsData(luckProbability = 0.0, moraleProbability = 0.0, armySize = 5)
         )
-
         val fakeRuleset = Ruleset().apply {
             val unitTypeObj = UnitType().apply { name = "Melee" }
             unitTypes["Melee"] = unitTypeObj
             units["Fast"] = BaseUnit().apply {
-                name = "Fast"; unitType = "Melee"
-                damage = 10; health = 100; speed = 10
+                name = "Fast"; unitType = "Melee"; damage = 10; health = 100; speed = 10
             }
             units["Slow"] = BaseUnit().apply {
-                name = "Slow"; unitType = "Melee"
-                damage = 10; health = 100; speed = 3
+                name = "Slow"; unitType = "Melee"; damage = 10; health = 100; speed = 3
             }
             units["Medium"] = BaseUnit().apply {
-                name = "Medium"; unitType = "Melee"
-                damage = 10; health = 100; speed = 5
+                name = "Medium"; unitType = "Melee"; damage = 10; health = 100; speed = 5
+            }
+            units["Medium B"] = BaseUnit().apply {
+                name = "Medium B"; unitType = "Melee"; damage = 10; health = 100; speed = 5
             }
         }
-
         startKoin {
             allowOverride(true)
             modules(module { single { fakeRuleset } }, testModule)
         }
-
         civInfo = FakeCivilizationInfo()
     }
 
@@ -67,16 +60,15 @@ class TurnQueueCharTest {
         stopKoin()
     }
 
-    private fun makeManager(
-        attackerArmy: ArmyInfo,
-        defenderArmy: ArmyInfo
-    ): BattleManager = BattleManager(
-        attackerArmy, defenderArmy,
-        FakeBattleField(),
-        FakeBattleRandom(List(100) { 0.0 }),
-        moraleProbability = 0.0,
-        luckProbability = 0.0
-    )
+    private fun makeManager(attackerArmy: ArmyInfo, defenderArmy: ArmyInfo): BattleManager =
+            BattleManager(
+                attackerArmy,
+                defenderArmy,
+                FakeBattleField(),
+                FakeBattleRandom(List(100) { 0.0 }),
+                moraleProbability = 0.0,
+                luckProbability = 0.0
+            )
 
     @Test
     fun `faster troop goes before slower troop`() {
@@ -84,7 +76,6 @@ class TurnQueueCharTest {
         val defender = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Slow", 10) }
         val manager = makeManager(attacker, defender)
         manager.initializeTurnQueue()
-
         assertEquals("Fast", manager.getCurrentTroop()?.unitName)
     }
 
@@ -94,8 +85,27 @@ class TurnQueueCharTest {
         val defender = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Medium", 8) }
         val manager = makeManager(attacker, defender)
         manager.initializeTurnQueue()
-
         assertTrue(attacker.contains(manager.getTurnQueue()[0]))
+    }
+
+    @Test
+    fun `manager alternates armies when several troops have equal speed`() {
+        val attacker = ArmyInfo(civInfo, maxSlots = 5).apply {
+            addUnits("Medium", 10)
+            addUnits("Medium B", 9)
+        }
+        val defender = ArmyInfo(civInfo, maxSlots = 5).apply {
+            addUnits("Medium", 8)
+            addUnits("Medium B", 7)
+        }
+        val manager = makeManager(attacker, defender)
+        manager.initializeTurnQueue()
+        val queue = manager.getTurnQueue()
+        assertEquals(4, queue.size)
+        assertTrue(attacker.contains(queue[0]))
+        assertTrue(defender.contains(queue[1]))
+        assertTrue(attacker.contains(queue[2]))
+        assertTrue(defender.contains(queue[3]))
     }
 
     @Test
@@ -107,7 +117,6 @@ class TurnQueueCharTest {
         val defender = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Medium", 8) }
         val manager = makeManager(attacker, defender)
         manager.initializeTurnQueue()
-
         assertEquals(3, manager.getTurnQueue().size)
     }
 
@@ -117,12 +126,9 @@ class TurnQueueCharTest {
         val defender = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Slow", 8) }
         val manager = makeManager(attacker, defender)
         manager.initializeTurnQueue()
-
         val first = manager.getCurrentTroop()
         manager.advanceTurn()
-        val second = manager.getCurrentTroop()
-
-        assertNotSame(first, second)
+        assertNotSame(first, manager.getCurrentTroop())
     }
 
     @Test
@@ -131,11 +137,9 @@ class TurnQueueCharTest {
         val defender = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Slow", 8) }
         val manager = makeManager(attacker, defender)
         manager.initializeTurnQueue()
-
         val first = manager.getCurrentTroop()
         manager.advanceTurn()
         manager.advanceTurn()
-
         assertEquals(first, manager.getCurrentTroop())
     }
 
@@ -145,11 +149,8 @@ class TurnQueueCharTest {
         val defender = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Slow", 8) }
         val manager = makeManager(attacker, defender)
         manager.initializeTurnQueue()
-
         val current = manager.getCurrentTroop()
-        val next = manager.getTurnQueue()[1]
-        manager.removeTroop(next)
-
+        manager.removeTroop(manager.getTurnQueue()[1])
         assertEquals(current, manager.getCurrentTroop())
     }
 
@@ -159,12 +160,9 @@ class TurnQueueCharTest {
         val defender = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Slow", 8) }
         val manager = makeManager(attacker, defender)
         manager.initializeTurnQueue()
-
         manager.advanceTurn()
         val current = manager.getCurrentTroop()
-        val before = manager.getTurnQueue()[0]
-        manager.removeTroop(before)
-
+        manager.removeTroop(manager.getTurnQueue().last())
         assertEquals(current, manager.getCurrentTroop())
     }
 
@@ -174,10 +172,7 @@ class TurnQueueCharTest {
         val defender = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Slow", 8) }
         val manager = makeManager(attacker, defender)
         manager.initializeTurnQueue()
-
-        val all = manager.getTurnQueue().toList()
-        all.forEach { manager.removeTroop(it) }
-
+        manager.getTurnQueue().toList().forEach { manager.removeTroop(it) }
         assertTrue(manager.getTurnQueue().isEmpty())
         assertNull(manager.getCurrentTroop())
     }

@@ -119,8 +119,12 @@ class SimultaneousMeleeCommandTest {
             FakeBattleField(listOf(start, target)),
             random
         )
-        val attacker = attackerArmy.getAllTroops().filterNotNull().first()
-        val defender = defenderArmy.getAllTroops().filterNotNull().first()
+        val attacker = attackerArmy.getAllTroops().filterNotNull().first().apply {
+            formation.current = 0
+        }
+        val defender = defenderArmy.getAllTroops().filterNotNull().first().apply {
+            formation.current = 0
+        }
         manager.initializeTurnQueue()
         manager.placeTroop(attacker, start)
         manager.placeTroop(defender, target)

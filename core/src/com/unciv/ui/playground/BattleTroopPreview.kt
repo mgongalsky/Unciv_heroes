@@ -161,3 +161,32 @@ fun openBattleThreatPreview(screen: BaseScreen) {
     ).width(560f).pad(20f)
     popup.open(force = true)
 }
+
+fun openBattleTurnQueuePreview(screen: BaseScreen) {
+    val source = HardcodedTroopDefinitionSource(
+        speed = 5,
+        damage = 10,
+        maxHealth = 100,
+        rangedStrength = 0
+    )
+    val attackers = listOf(
+        TroopFactory.create("Swordsman", 18, source),
+        TroopFactory.create("Archer", 11, source)
+    )
+    val defenders = listOf(
+        TroopFactory.create("Crossbowman", 14, source),
+        TroopFactory.create("Spearman", 9, source)
+    )
+    val queue = listOf(attackers[0], defenders[0], attackers[1], defenders[1])
+    val bar = com.unciv.ui.battlescreen.BattleTurnBar(
+        queueProvider = { queue },
+        isAttacker = { it in attackers },
+        onSkip = {},
+        onExit = {},
+        onHover = {}
+    ).apply {
+        setSize(screen.stage.width, com.unciv.ui.battlescreen.BattleTurnBar.HEIGHT)
+        setPosition(0f, 0f)
+    }
+    screen.stage.addActor(bar)
+}

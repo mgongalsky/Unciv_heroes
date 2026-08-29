@@ -8,17 +8,25 @@ class TurnQueue {
     private var currentIndex: Int = 0
 
     fun initialize(attackerTroops: List<Troop>, defenderTroops: List<Troop>) {
-        val allTroops = mutableListOf<Troop>()
-        allTroops.addAll(attackerTroops)
-        allTroops.addAll(defenderTroops)
+        val attackers = attackerTroops.toSet()
+        val defenders = defenderTroops.toSet()
+        val troopsBySpeed = (attackerTroops + defenderTroops)
+            .groupBy { it.speed }
+            .toSortedMap(compareByDescending { it })
 
         queue.clear()
-        queue.addAll(
-            allTroops.sortedWith(
-                compareByDescending<Troop> { it.speed }
-                    .thenByDescending { attackerTroops.contains(it) }
-            )
-        )
+        troopsBySpeed.values.forEach { sameSpeedTroops ->
+            val sameSpeedAttackers = sameSpeedTroops.filter { it in attackers }
+            val sameSpeedDefenders = sameSpeedTroops.filter { it in defenders }
+            val pairedCount = minOf(sameSpeedAttackers.size, sameSpeedDefenders.size)
+
+            repeat(pairedCount) { index ->
+                queue += sameSpeedAttackers[index]
+                queue += sameSpeedDefenders[index]
+            }
+            queue += sameSpeedAttackers.drop(pairedCount)
+            queue += sameSpeedDefenders.drop(pairedCount)
+        }
 
         currentIndex = 0
     }
@@ -43,7 +51,10 @@ class TurnQueue {
         }
     }
 
-    fun getAll(): List<Troop> = queue.toList()
+    fun getAll(): List<Troop> {
+        if (queue.isEmpty()) return emptyList()
+        return queue.drop(currentIndex) + queue.take(currentIndex)
+    }
 
     fun isEmpty(): Boolean = queue.isEmpty()
 }

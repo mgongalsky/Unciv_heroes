@@ -41,7 +41,6 @@ import com.unciv.ui.tilegroups.TileSetStrings
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
-import com.unciv.ui.utils.TabbedPager
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -214,12 +213,10 @@ class BattleScreen private constructor(
     val luckRainbowImage = ImageGetter.getExternalImage("LuckRainbow.png")
     val moraleImage = ImageGetter.getExternalImage("MoraleBird.png")
 
-    /** Container for the battlefield UI elements. Could be reworked in the future */
-    private val tabbedPager: TabbedPager
+    private val bottomBar: BattleTurnBar
 
     override fun dispose() {
         battleScope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
-        tabbedPager.selectPage(-1)
         super.dispose()
     }
 
@@ -249,16 +246,22 @@ class BattleScreen private constructor(
         pointerImages = ImageGetter.getLayeredImageColored(
             "TileSets/FantasyHex/Highlight", Color.valueOf("#00AAFF77")
         )
-        tabbedPager = TabbedPager(
-            stage.width, stage.width, centerAreaHeight, centerAreaHeight,
-            separatorColor = Color.WHITE
-        )
-        tabbedPager.addClosePage { shutdownScreen() }
+
         addTiles()
-        stage.addActor(tabbedPager)
-        val index = tabbedPager.addPage(caption = "Battle", content = tileGroupMap)
-        tabbedPager.selectPage(index)
-        tabbedPager.setFillParent(true)
+        tileGroupMap.setSize(stage.width, stage.height - BattleTurnBar.HEIGHT - 24f)
+        tileGroupMap.setPosition(0f, BattleTurnBar.HEIGHT)
+
+        bottomBar = BattleTurnBar(
+            queueProvider = manager::getTurnQueue,
+            isAttacker = { troop -> manager.getAttackerArmy().contains(troop) },
+            onSkip = ::sendSkipTurnRequest,
+            onExit = ::shutdownScreen,
+            onHover = ::setQueueHoveredTroop
+        ).apply {
+            setSize(this@BattleScreen.stage.width, BattleTurnBar.HEIGHT)
+            setPosition(0f, 0f)
+        }
+        stage.addActor(bottomBar)
         updateTilesShadowing()
 
         val initialBattleState = CreateBattleReportUseCase.capture(attackerArmy, defenderArmy)
@@ -355,13 +358,8 @@ class BattleScreen private constructor(
                 println("Battle has ended!")
             }
 
-    /**
-     * Refreshes the arrays of troop views for both attackers and defenders
-     * based on the current state of the armies in the manager.
-     */
     fun refreshTroopViews() {
         Gdx.app.postRunnable {
-            // Убедитесь, что операции обновления происходят в графическом потоке
             for (i in attackerTroopViewsArray.indices) {
                 val troop = manager.getAttackerArmy().getTroopAt(i)
                 if (troop == null) {
@@ -383,8 +381,8 @@ class BattleScreen private constructor(
                     }
                 }
             }
+            bottomBar.refresh()
         }
-
     }
 
     /**
@@ -749,6 +747,7 @@ class BattleScreen private constructor(
         defenderTroopViewsArray.forEach { troopView ->
             troopView?.setActive(troopView.getTroopInfo() === currentTroop)
         }
+        bottomBar.refresh()
         if (currentTroop != null) {
             val currentTile = manager.getTroopTile(currentTroop)
                 ?: throw IllegalStateException("Current troop has no tile: $currentTroop")
@@ -977,8 +976,19 @@ class BattleScreen private constructor(
     }
 
     override fun resize(width: Int, height: Int) {
-        // BattleScreen не пересоздаётся при ресайзе — это вызывает бесконечную рекурсию
         stage.viewport.update(width, height, true)
+        val availableBattlefieldHeight = stage.height - BattleTurnBar.HEIGHT - 48f
+        val battlefieldScale = availableBattlefieldHeight / stage.height
+        val scaledBattlefieldWidth = stage.width * battlefieldScale
+
+        tileGroupMap.setSize(stage.width, stage.height)
+        tileGroupMap.setOrigin(0f, 0f)
+        tileGroupMap.setScale(battlefieldScale)
+        tileGroupMap.setPosition(
+            (stage.width - scaledBattlefieldWidth) / 2f,
+            BattleTurnBar.HEIGHT
+        )
+        bottomBar.setSize(stage.width, BattleTurnBar.HEIGHT)
     }
 
     fun resizePage(tab: EmpireOverviewTab) {
@@ -1085,14 +1095,26 @@ class BattleScreen private constructor(
         val stagePosition = stage.screenToStageCoordinates(
             Vector2(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
         )
-        var actorUnderPointer: Actor? = stage.hit(stagePosition.x, stagePosition.y, true)
-        while (actorUnderPointer != null && actorUnderPointer !is TileGroup) {
-            actorUnderPointer = actorUnderPointer.parent
+        val hitActor = stage.hit(stagePosition.x, stagePosition.y, true)
+
+        var ancestor = hitActor
+        var pointerOverBottomBar = false
+        var tileUnderPointer: TileGroup? = null
+        while (ancestor != null) {
+            if (ancestor === bottomBar) pointerOverBottomBar = true
+            if (ancestor is TileGroup) {
+                tileUnderPointer = ancestor
+                break
+            }
+            ancestor = ancestor.parent
         }
-        val troopUnderPointer = (actorUnderPointer as? TileGroup)
+
+        val troopUnderPointer = tileUnderPointer
             ?.tileInfo
             ?.let(manager::getTroopOnTile)
-        hoveredTroop = troopUnderPointer
+        if (!pointerOverBottomBar && troopUnderPointer !== hoveredTroop) {
+            setHoveredTroop(troopUnderPointer)
+        }
 
         val shiftHeld = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) ||
                 Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)
@@ -1103,9 +1125,7 @@ class BattleScreen private constructor(
     internal fun setHoveredTroop(troop: Troop?) {
         hoveredTroop?.let { getTroopViewFor(it)?.setHoveredEnemy(false) }
         hoveredTroop = troop
-        if (troop != null && !isTroopPlayerControlled(troop)) {
-            getTroopViewFor(troop)?.setHoveredEnemy(true)
-        }
+        if (troop != null) getTroopViewFor(troop)?.setHoveredEnemy(true)
     }
     private fun updateEnemyMovementPreview(troop: Troop?) {
         previewedTroop = troop
@@ -1132,3 +1152,6 @@ class BattleScreen private constructor(
     }
 }
 
+private fun BattleScreen.setQueueHoveredTroop(troop: Troop?) {
+    setHoveredTroop(troop)
+}

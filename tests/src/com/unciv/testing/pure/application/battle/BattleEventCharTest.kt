@@ -37,11 +37,7 @@ class BattleEventCharTest {
     @Before
     fun setUp() {
         GameConstants.setTestingInstance(
-            GameConstantsData(
-                luckProbability = 0.0,
-                moraleProbability = 0.0,
-                armySize = 5
-            )
+            GameConstantsData(luckProbability = 0.0, moraleProbability = 0.0, armySize = 5)
         )
         val fakeRuleset = Ruleset().apply {
             unitTypes["Melee"] = UnitType().apply { name = "Melee" }
@@ -67,6 +63,12 @@ class BattleEventCharTest {
         val civInfo = FakeCivilizationInfo()
         attackerArmy = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Spearman", 10) }
         defenderArmy = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Spearman", 8) }
+        val attacker = attackerArmy.getAllTroops().filterNotNull().first().apply {
+            formation.current = 0
+        }
+        val defender = defenderArmy.getAllTroops().filterNotNull().first().apply {
+            formation.current = 0
+        }
         manager = TestableBattleManager(
             attackerArmy = attackerArmy,
             defenderArmy = defenderArmy,
@@ -75,8 +77,8 @@ class BattleEventCharTest {
             allTilesReachable = true
         )
         manager.initializeTurnQueue()
-        manager.placeTroop(attackerArmy.getAllTroops().filterNotNull().first(), attackerTile)
-        manager.placeTroop(defenderArmy.getAllTroops().filterNotNull().first(), defenderTile)
+        manager.placeTroop(attacker, attackerTile)
+        manager.placeTroop(defender, defenderTile)
     }
 
     @After
