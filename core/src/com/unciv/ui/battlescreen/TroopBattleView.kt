@@ -14,6 +14,8 @@ import com.unciv.ui.utils.BaseScreen
 import com.unciv.logic.army.TroopInfo
 import com.unciv.logic.map.TileInfo
 import com.unciv.pure.domain.troop.Troop
+import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 
 /**
  * Represents the view of a troop in battles.
@@ -36,8 +38,29 @@ class TroopBattleView(
         val unitImagePath = "TileSets/AbsoluteUnits/Units/${troop.unitName}"
         troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, null, null)
         troopGroup.name = "troopGroup"
+        troopGroup.addListener(object : ClickListener() {
+            override fun enter(
+                event: InputEvent?,
+                x: Float,
+                y: Float,
+                pointer: Int,
+                fromActor: com.badlogic.gdx.scenes.scene2d.Actor?
+            ) {
+                battleScreen.setHoveredTroop(troop)
+                super.enter(event, x, y, pointer, fromActor)
+            }
 
-
+            override fun exit(
+                event: InputEvent?,
+                x: Float,
+                y: Float,
+                pointer: Int,
+                toActor: com.badlogic.gdx.scenes.scene2d.Actor?
+            ) {
+                battleScreen.setHoveredTroop(null)
+                super.exit(event, x, y, pointer, toActor)
+            }
+        })
     }
 
    // fun getBattlefieldPosition(): Vector2 {

@@ -58,6 +58,8 @@ import com.unciv.logic.battle.configureEffectProbabilities
 import com.unciv.pure.application.battle.CreateBattleReportUseCase
 import com.unciv.logic.battle.BattleWorldOutcomeHandler
 import com.unciv.pure.application.battle.ApplyMovementFormationPenaltyUseCase
+import com.badlogic.gdx.Input
+import com.unciv.pure.application.battle.BattleMovementPreviewUseCase
 
 // Now it's just copied from HeroOverviewScreen
 // All coordinates are hex, not offset
@@ -1067,6 +1069,55 @@ class BattleScreen private constructor(
 
             com.unciv.pure.application.battle.BattleEvent.TurnSkipped ->
                 println("[EVENT] TurnSkipped")
+        }
+    }
+    private val movementRangeOverlays = HashMap<TileGroup, Image>()
+    private var hoveredTroop: Troop? = null
+    private var previewedTroop: Troop? = null
+    override fun render(delta: Float) {
+        super.render(delta)
+
+        val stagePosition = stage.screenToStageCoordinates(
+            Vector2(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
+        )
+        var actorUnderPointer: Actor? = stage.hit(stagePosition.x, stagePosition.y, true)
+        while (actorUnderPointer != null && actorUnderPointer !is TileGroup) {
+            actorUnderPointer = actorUnderPointer.parent
+        }
+        val troopUnderPointer = (actorUnderPointer as? TileGroup)
+            ?.tileInfo
+            ?.let(manager::getTroopOnTile)
+        hoveredTroop = troopUnderPointer
+
+        val shiftHeld = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) ||
+                Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)
+        val troopToPreview = troopUnderPointer?.takeIf { shiftHeld }
+        if (troopToPreview != previewedTroop) updateEnemyMovementPreview(troopToPreview)
+    }
+    internal fun setHoveredTroop(troop: Troop?) {
+        hoveredTroop = troop
+    }
+    private fun updateEnemyMovementPreview(troop: Troop?) {
+        previewedTroop = troop
+        movementRangeOverlays.values.forEach { it.isVisible = false }
+
+        val currentTroop = manager.getCurrentTroop() ?: return
+        val enemy = troop?.takeIf { it in manager.getEnemies(currentTroop) } ?: return
+        val currentTile = manager.getTroopTile(enemy) ?: return
+        val reachableTiles = manager.getReachableTiles(enemy).toSet()
+
+        daTileGroups.forEach { tileGroup ->
+            val distance = HexMath.getDistance(currentTile.position, tileGroup.tileInfo.position)
+            val style = BattleMovementPreviewUseCase.execute(
+                isReachable = tileGroup.tileInfo in reachableTiles,
+                movementDistance = distance,
+                maximumMovement = enemy.speed
+            )
+            if (style == BattleMovementPreviewUseCase.TileStyle.HIDDEN) return@forEach
+            val overlay = movementRangeOverlays.getOrPut(tileGroup) {
+                createBattleMovementRangeOverlay(tileGroup)
+            }
+            overlay.showBattleMovementStyle(style)
         }
     }
 }

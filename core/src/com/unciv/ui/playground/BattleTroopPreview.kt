@@ -19,6 +19,9 @@ import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toTextButton
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import com.unciv.pure.application.battle.BattleMovementPreviewUseCase.TileStyle
+import com.unciv.ui.battlescreen.createBattleMovementRangeOverlay
+import com.unciv.ui.battlescreen.showBattleMovementStyle
 
 /** Opens the deterministic battle-troop scene shared by the playground and golden tests. */
 fun openBattleTroopPreview(screen: BaseScreen) {
@@ -89,6 +92,11 @@ private fun createBattleFieldPreview(): Group {
         defenderTile.width, defenderTile.height,
         defenderTile.originX, defenderTile.originY
     )
+    middleRow.drop(1).dropLast(1).forEachIndexed { index, tileGroup ->
+        createBattleMovementRangeOverlay(tileGroup).showBattleMovementStyle(
+            if (index == 0) TileStyle.SAFE else TileStyle.FORMATION_PENALTY
+        )
+    }
     return fieldView
 }
 
