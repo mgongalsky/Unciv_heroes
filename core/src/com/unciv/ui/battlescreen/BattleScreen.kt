@@ -741,18 +741,22 @@ class BattleScreen private constructor(
         }
     }
 
-    /**
-     * Moves the pointer to the next troop in the turn queue.
-     */
     fun movePointerToNextTroop() {
         val currentTroop = manager.getCurrentTroop()
-        if (currentTroop != null){
+        attackerTroopViewsArray.forEach { troopView ->
+            troopView?.setActive(troopView.getTroopInfo() === currentTroop)
+        }
+        defenderTroopViewsArray.forEach { troopView ->
+            troopView?.setActive(troopView.getTroopInfo() === currentTroop)
+        }
+        if (currentTroop != null) {
             val currentTile = manager.getTroopTile(currentTroop)
                 ?: throw IllegalStateException("Current troop has no tile: $currentTroop")
             pointerPosition = currentTile.position
             draw_pointer()
-        } else
+        } else {
             println("Queue is empty, nowhere to put pointer")
+        }
     }
 
     /**

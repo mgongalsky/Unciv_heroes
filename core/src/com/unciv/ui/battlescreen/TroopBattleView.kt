@@ -2,33 +2,28 @@ package com.unciv.ui.battlescreen
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
-import com.badlogic.gdx.scenes.scene2d.actions.Actions
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
+import com.unciv.pure.domain.troop.Troop
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.tilegroups.TileGroup
-import com.unciv.ui.utils.BaseScreen
-import com.unciv.logic.army.TroopInfo
-import com.unciv.logic.map.TileInfo
-import com.unciv.pure.domain.troop.Troop
-import com.badlogic.gdx.scenes.scene2d.InputEvent
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 
-/**
- * Represents the view of a troop in battles.
- */
+/** Represents the view of a troop in battles. */
 class TroopBattleView(
     private val troop: Troop,
     private val battleScreen: BattleScreen
-    ) {
+) {
     private val troopGroup = Group()
     private var troopImages: ArrayList<Image>
+    private var activeOutline: Group? = null
 
     /** Initialize the troop's battle appearance. */
-    // Deprecated. To be removed
+    @Deprecated("To be removed")
     fun initialize(civColor: Color) {
         val unitImagePath = "TileSets/AbsoluteUnits/Units/${troop.unitName}"
         troopImages = ImageGetter.getLayeredImageColored(unitImagePath, null, civColor, civColor)
@@ -63,58 +58,24 @@ class TroopBattleView(
         })
     }
 
-   // fun getBattlefieldPosition(): Vector2 {
-  //      return troop.currentTile.position
-   // }
-
-   // fun getBattlefieldTile(): TileInfo {
-  //      return troop.currentTile
-  //  }
-
-
-    fun getTroopInfo(): Troop{
-        return troop
-    }
+    fun getTroopInfo(): Troop = troop
 
     /** Returns the current group of the troop for rendering. */
-    fun getCurrentGroup(): Group {
-        return troopGroup
-    }
+    fun getCurrentGroup(): Group = troopGroup
 
-
-    // Глобальный флаг для управления логами (можно сделать локальным, если логика более узкая)
     private val DEBUG_LOGS_ENABLED = true
 
-
-    /**
-     * Updates the position of the troop in the view.
-     * This moves the visual representation of the troop to the new position on the battlefield.
-     *
-     * @param tileGroups The list of tile groups for finding the target tile.
-     */
     fun updatePosition(targetTileGroup: TileGroup?) {
         if (targetTileGroup == null) {
             if (DEBUG_LOGS_ENABLED) println("Error: Target tile group is null!")
             return
         }
-
-        // Удаляем текущую привязку troopGroup к старому тайлу
         troopGroup.remove()
         if (DEBUG_LOGS_ENABLED) println("Troop removed from previous tile.")
-
-        // Перемещаем troopGroup в новый тайл
-        //troopGroup.setPosition(targetTileGroup.x, targetTileGroup.y)
         if (DEBUG_LOGS_ENABLED) println("Troop moved to new tile at position: (${targetTileGroup.x}, ${targetTileGroup.y})")
-
-        // Добавляем troopGroup как дочерний элемент нового тайла
         targetTileGroup.addActor(troopGroup)
         targetTileGroup.update()
         if (DEBUG_LOGS_ENABLED) println("Troop added to target tile group.")
-
-
-        // Обновляем логическую позицию troopInfo, чтобы соответствовать новому тайлу
-        //troopInfo.position = targetTileGroup.tileInfo.position
-        //if (DEBUG_LOGS_ENABLED) println("Troop logical position updated to: ${troopInfo.position}")
     }
 
     fun draw(tileGroup: TileGroup, attacker: Boolean) {
@@ -127,7 +88,22 @@ class TroopBattleView(
             originX = tileGroup.originX,
             originY = tileGroup.originY
         )
+        activeOutline = createActiveTroopOutline(
+            troop = troop,
+            attacker = attacker,
+            parentWidth = tileGroup.width,
+            parentHeight = tileGroup.height,
+            originX = tileGroup.originX,
+            originY = tileGroup.originY
+        ).also { outline ->
+            outline.isVisible = battleScreen.getCurrentTroopView()?.getTroopInfo() === troop
+            troopGroup.addActorAt(0, outline)
+        }
         tileGroup.addActor(troopGroup)
+    }
+
+    fun setActive(active: Boolean) {
+        activeOutline?.isVisible = active
     }
 
     /** Show morale animation (e.g., after gaining morale). */
@@ -138,7 +114,6 @@ class TroopBattleView(
             touchable = Touchable.disabled
             color = Color.WHITE.cpy().apply { a = 0f }
         }
-
         moraleImage.addAction(
             Actions.sequence(
                 Actions.alpha(1f, 0.5f),
@@ -146,7 +121,6 @@ class TroopBattleView(
                 Actions.alpha(0f, 0.5f)
             )
         )
-
         troopGroup.addActor(moraleImage)
     }
 
@@ -166,10 +140,8 @@ class TroopBattleView(
         }
     }
 
-
     /** Remove the troop's group from the stage when it perishes. */
     fun perish() {
-        //getBattlefieldTile().troopUnit = null
         troopGroup.remove()
     }
 }

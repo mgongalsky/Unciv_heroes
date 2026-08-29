@@ -2,6 +2,8 @@ package com.unciv.ui.battlescreen
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.unciv.pure.domain.troop.Troop
@@ -43,6 +45,56 @@ fun populateBattleTroopGroup(
     }
     target.addActor(amountLabel)
     target.addActor(createFormationBar(troop, parentWidth))
+}
+
+fun createActiveTroopOutline(
+    troop: Troop,
+    attacker: Boolean,
+    parentWidth: Float,
+    parentHeight: Float,
+    originX: Float,
+    originY: Float,
+    animated: Boolean = true
+): Group {
+    val outline = Group().apply {
+        name = "activeTroopOutline"
+        touchable = Touchable.disabled
+    }
+    val supportedTroops = setOf(
+        "Swordsman",
+        "Archer",
+        "Spearman",
+        "Horseman",
+        "Crossbowman"
+    )
+    if (troop.unitName !in supportedTroops) return outline
+
+    outline.addActor(
+        ImageGetter.getExternalImage("BattleOutline-${troop.unitName}.png").apply {
+            color = Color.valueOf("FFD65AFF")
+            setScale(if (attacker) -0.25f else 0.25f, 0.25f)
+            setPosition(
+                if (attacker) parentWidth * 1.3f else parentWidth * -0.3f,
+                parentHeight * 0.15f
+            )
+            setOrigin(originX, originY)
+            touchable = Touchable.disabled
+        }
+    )
+    if (animated) {
+        outline.color.a = 0.25f
+        outline.addAction(
+            Actions.forever(
+                Actions.sequence(
+                    Actions.alpha(1f, 0.75f),
+                    Actions.alpha(0.25f, 0.75f)
+                )
+            )
+        )
+    } else {
+        outline.color.a = 0.8f
+    }
+    return outline
 }
 
 fun updateFormationBar(target: Group, troop: Troop) {

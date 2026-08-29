@@ -22,6 +22,7 @@ import kotlin.math.roundToInt
 import com.unciv.pure.application.battle.BattleMovementPreviewUseCase.TileStyle
 import com.unciv.ui.battlescreen.createBattleMovementRangeOverlay
 import com.unciv.ui.battlescreen.showBattleMovementStyle
+import com.unciv.ui.battlescreen.createActiveTroopOutline
 
 /** Opens the deterministic battle-troop scene shared by the playground and golden tests. */
 fun openBattleTroopPreview(screen: BaseScreen) {
@@ -82,11 +83,26 @@ private fun createBattleFieldPreview(): Group {
     val attackerTile = middleRow.first()
     val defenderTile = middleRow.last()
 
+    val attackerGroup = Group()
     populateBattleTroopGroup(
-        attackerTile, attacker, true,
+        attackerGroup, attacker, true,
         attackerTile.width, attackerTile.height,
         attackerTile.originX, attackerTile.originY
     )
+    attackerGroup.addActorAt(
+        0,
+        createActiveTroopOutline(
+            attacker,
+            true,
+            attackerTile.width,
+            attackerTile.height,
+            attackerTile.originX,
+            attackerTile.originY,
+            animated = false
+        )
+    )
+    attackerTile.addActor(attackerGroup)
+
     populateBattleTroopGroup(
         defenderTile, defender, false,
         defenderTile.width, defenderTile.height,
