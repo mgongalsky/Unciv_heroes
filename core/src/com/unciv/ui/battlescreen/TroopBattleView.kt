@@ -2,6 +2,7 @@ package com.unciv.ui.battlescreen
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Touchable
@@ -22,8 +23,9 @@ class TroopBattleView(
     private var troopImages: ArrayList<Image>
     private var activeOutline: Group? = null
     private var hoveredOutline: Group? = null
+    private var infoPanel: BattleTroopInfoPanel? = null
+    private var attacker = false
 
-    /** Initialize the troop's battle appearance. */
     @Deprecated("To be removed")
     fun initialize(civColor: Color) {
         val unitImagePath = "TileSets/AbsoluteUnits/Units/${troop.unitName}"
@@ -36,22 +38,14 @@ class TroopBattleView(
         troopGroup.name = "troopGroup"
         troopGroup.addListener(object : ClickListener() {
             override fun enter(
-                event: InputEvent?,
-                x: Float,
-                y: Float,
-                pointer: Int,
-                fromActor: com.badlogic.gdx.scenes.scene2d.Actor?
+                event: InputEvent?, x: Float, y: Float, pointer: Int, fromActor: Actor?
             ) {
                 battleScreen.setHoveredTroop(troop)
                 super.enter(event, x, y, pointer, fromActor)
             }
 
             override fun exit(
-                event: InputEvent?,
-                x: Float,
-                y: Float,
-                pointer: Int,
-                toActor: com.badlogic.gdx.scenes.scene2d.Actor?
+                event: InputEvent?, x: Float, y: Float, pointer: Int, toActor: Actor?
             ) {
                 battleScreen.setHoveredTroop(null)
                 super.exit(event, x, y, pointer, toActor)
@@ -60,9 +54,19 @@ class TroopBattleView(
     }
 
     fun getTroopInfo(): Troop = troop
-
-    /** Returns the current group of the troop for rendering. */
     fun getCurrentGroup(): Group = troopGroup
+
+    fun showInfo(anchor: Actor) {
+        infoPanel?.remove()
+        infoPanel = BattleTroopInfoPanel(troop, attacker).also { panel ->
+            panel.showNextTo(battleScreen.stage, anchor)
+        }
+    }
+
+    fun hideInfo() {
+        infoPanel?.remove()
+        infoPanel = null
+    }
 
     private val DEBUG_LOGS_ENABLED = true
 
@@ -71,6 +75,7 @@ class TroopBattleView(
             if (DEBUG_LOGS_ENABLED) println("Error: Target tile group is null!")
             return
         }
+        hideInfo()
         troopGroup.remove()
         if (DEBUG_LOGS_ENABLED) println("Troop removed from previous tile.")
         if (DEBUG_LOGS_ENABLED) println("Troop moved to new tile at position: (${targetTileGroup.x}, ${targetTileGroup.y})")
@@ -80,6 +85,7 @@ class TroopBattleView(
     }
 
     fun draw(tileGroup: TileGroup, attacker: Boolean) {
+        this.attacker = attacker
         populateBattleTroopGroup(
             target = troopGroup,
             troop = troop,
@@ -124,7 +130,6 @@ class TroopBattleView(
         hoveredOutline?.isVisible = hovered
     }
 
-    /** Show morale animation (e.g., after gaining morale). */
     fun showMoraleBird() {
         val moraleImage = ImageGetter.getExternalImage("MoraleBird.png").apply {
             setScale(0.075f)
@@ -145,11 +150,8 @@ class TroopBattleView(
     fun updateStats() {
         Gdx.app.postRunnable {
             val amountLabel = troopGroup.findActor<Label>("amountLabel")
-            if (amountLabel != null) {
-                amountLabel.setText(troop.currentAmount.toString())
-            } else {
-                println("Amount Label not found")
-            }
+            if (amountLabel != null) amountLabel.setText(troop.currentAmount.toString())
+            else println("Amount Label not found")
             updateFormationBar(troopGroup, troop)
             println(
                 "Troop stats updated: ${troop.unitName}, Amount: ${troop.currentAmount}, " +
@@ -158,8 +160,8 @@ class TroopBattleView(
         }
     }
 
-    /** Remove the troop's group from the stage when it perishes. */
     fun perish() {
+        hideInfo()
         troopGroup.remove()
     }
 }

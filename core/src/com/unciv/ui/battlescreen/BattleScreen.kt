@@ -1116,6 +1116,17 @@ class BattleScreen private constructor(
             setHoveredTroop(troopUnderPointer)
         }
 
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
+            attackerTroopViewsArray.forEach { it?.hideInfo() }
+            defenderTroopViewsArray.forEach { it?.hideInfo() }
+            if (troopUnderPointer != null && tileUnderPointer != null) {
+                getTroopViewFor(troopUnderPointer)?.showInfo(tileUnderPointer)
+            }
+        } else if (!Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
+            attackerTroopViewsArray.forEach { it?.hideInfo() }
+            defenderTroopViewsArray.forEach { it?.hideInfo() }
+        }
+
         val shiftHeld = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) ||
                 Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)
         val troopToPreview = troopUnderPointer?.takeIf { shiftHeld }

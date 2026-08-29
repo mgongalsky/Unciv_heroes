@@ -190,3 +190,23 @@ fun openBattleTurnQueuePreview(screen: BaseScreen) {
     }
     screen.stage.addActor(bar)
 }
+
+fun openBattleTroopInfoPreview(screen: BaseScreen) {
+    val source = HardcodedTroopDefinitionSource(
+        speed = 4,
+        damage = 8,
+        maxHealth = 60,
+        rangedStrength = 7
+    )
+    val troop = TroopFactory.create("Archer", 12, source).apply {
+        currentHealth = 37
+        formation.current = formation.maximum / 2
+    }
+    val anchor = Group().apply {
+        setSize(120f, 120f)
+        setPosition(screen.stage.width / 2f - 60f, screen.stage.height / 2f - 60f)
+    }
+    screen.stage.addActor(anchor)
+    com.unciv.ui.battlescreen.BattleTroopInfoPanel(troop, attacker = true)
+        .showNextTo(screen.stage, anchor)
+}

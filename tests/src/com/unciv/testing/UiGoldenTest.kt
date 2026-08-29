@@ -15,6 +15,11 @@ class UiGoldenTest {
     }
 
     @Test
+    fun battleTroopInfo() {
+        UiGoldenTestRunner.main(arrayOf("--scenario=battle-troop-info"))
+    }
+
+    @Test
     fun battleThreatPreview() {
         UiGoldenTestRunner.main(arrayOf("--scenario=battle-threat-preview"))
     }

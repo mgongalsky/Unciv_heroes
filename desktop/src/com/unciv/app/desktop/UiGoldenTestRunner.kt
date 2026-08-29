@@ -25,6 +25,7 @@ import java.io.File
 import kotlin.system.exitProcess
 import com.unciv.ui.playground.openBattleThreatPreview
 import com.unciv.ui.playground.openBattleTurnQueuePreview
+import com.unciv.ui.playground.openBattleTroopInfoPreview
 
 object UiGoldenTestRunner {
     private const val WIDTH = 1280
@@ -83,6 +84,9 @@ object UiGoldenTestRunner {
         },
         Scenario("battle-turn-queue") { screen ->
             openBattleTurnQueuePreview(screen)
+        },
+        Scenario("battle-troop-info") { screen ->
+            openBattleTroopInfoPreview(screen)
         },
         Scenario("battle-threat-preview") { screen ->
             openBattleThreatPreview(screen)
