@@ -16,18 +16,22 @@ object ApplyMovementFormationPenaltyUseCase {
         val penaltyApplied: Boolean
     )
 
+    fun wouldApplyPenalty(movementDistance: Int, maximumMovement: Int): Boolean {
+        require(movementDistance >= 0) { "movementDistance must not be negative" }
+        require(maximumMovement >= 0) { "maximumMovement must not be negative" }
+        return movementDistance.toLong() * 2L > maximumMovement.toLong()
+    }
+
     fun execute(input: Input): Output {
         require(input.currentFormation >= 0) { "currentFormation must not be negative" }
         require(input.maximumFormation >= 0) { "maximumFormation must not be negative" }
         require(input.currentFormation <= input.maximumFormation) {
             "currentFormation must not exceed maximumFormation"
         }
-        require(input.movementDistance >= 0) { "movementDistance must not be negative" }
-        require(input.maximumMovement >= 0) { "maximumMovement must not be negative" }
         require(input.penaltyNumerator >= 0) { "penaltyNumerator must not be negative" }
         require(input.penaltyDenominator > 0) { "penaltyDenominator must be positive" }
 
-        if (input.movementDistance.toLong() * 2L <= input.maximumMovement.toLong()) {
+        if (!wouldApplyPenalty(input.movementDistance, input.maximumMovement)) {
             return Output(input.currentFormation, penaltyApplied = false)
         }
 

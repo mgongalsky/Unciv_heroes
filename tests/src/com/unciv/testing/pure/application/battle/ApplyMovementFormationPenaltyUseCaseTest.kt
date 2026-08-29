@@ -23,17 +23,19 @@ class ApplyMovementFormationPenaltyUseCaseTest {
     )
 
     @Test
-    fun `three cells with speed five removes quarter of maximum formation`() {
+    fun `three cells with speed five spends formation`() {
         val result = apply(distance = 3)
 
+        assertTrue(ApplyMovementFormationPenaltyUseCase.wouldApplyPenalty(3, 5))
         assertTrue(result.penaltyApplied)
         assertEquals(75, result.remainingFormation)
     }
 
     @Test
-    fun `two cells with speed five has no penalty`() {
+    fun `two cells with speed five is formation safe`() {
         val result = apply(distance = 2)
 
+        assertFalse(ApplyMovementFormationPenaltyUseCase.wouldApplyPenalty(2, 5))
         assertFalse(result.penaltyApplied)
         assertEquals(100, result.remainingFormation)
     }

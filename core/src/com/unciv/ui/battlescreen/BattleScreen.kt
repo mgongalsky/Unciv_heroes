@@ -57,6 +57,7 @@ import com.unciv.pure.application.battle.ShouldAdvanceTurnUseCase
 import com.unciv.logic.battle.configureEffectProbabilities
 import com.unciv.pure.application.battle.CreateBattleReportUseCase
 import com.unciv.logic.battle.BattleWorldOutcomeHandler
+import com.unciv.pure.application.battle.ApplyMovementFormationPenaltyUseCase
 
 // Now it's just copied from HeroOverviewScreen
 // All coordinates are hex, not offset
@@ -710,24 +711,31 @@ class BattleScreen private constructor(
             ?: defenderTroopViewsArray.find { it?.getTroopInfo() == currentTroop }
     }
 
-    /**
-     * Updates tile shadowing based on the achievable positions for the current troop.
-     */
-    private fun updateTilesShadowing(){
-        //val currentTroop = getCurrentTroopView() ?: return
+    private fun updateTilesShadowing() {
         val currentTroop = manager.getCurrentTroop()
+        val currentTile = currentTroop?.let(manager::getTroopTile)
+        val reachableTiles = currentTroop
+            ?.let(manager::getReachableTiles)
+            ?.toSet()
+            .orEmpty()
 
+        daTileGroups.forEach { tileGroup ->
+            val isReachable = currentTroop != null && tileGroup.tileInfo in reachableTiles
+            val movementDistance = if (currentTile == null) 0 else
+                HexMath.getDistance(currentTile.position, tileGroup.tileInfo.position)
+            val isSafeDestination =
+                    isReachable && movementDistance > 0 &&
+                            !ApplyMovementFormationPenaltyUseCase.wouldApplyPenalty(
+                                movementDistance = movementDistance,
+                                maximumMovement = currentTroop!!.speed
+                            )
 
-        // TODO: Principally it works, but we need to fix coordinates conversions and distances. UPD maybe fixed
-        daTileGroups.forEach {
-            if (currentTroop != null && manager.getReachableTiles(currentTroop).contains(it.tileInfo))
-
-            //if (manager.isHexAchievable(currentTroop.getTroopInfo(), it.tileInfo.position))
-                it.baseLayerGroup.color = Color(1f,1f,1f,0.7f)
-            else
-                it.baseLayerGroup.color = Color(1f,1f,1f,1f)
-
-
+            val alpha = when {
+                isSafeDestination -> 0.5f
+                isReachable -> 0.7f
+                else -> 1f
+            }
+            tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, alpha)
         }
     }
 
