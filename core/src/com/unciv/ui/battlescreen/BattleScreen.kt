@@ -80,6 +80,7 @@ class BattleScreen private constructor(
     private val attacker: ICombatant? = null,
     private val defender: ICombatant? = null,
 ) : BaseScreen(), RecreateOnResize, KoinComponent {
+    private val tileHighlightRenderer = BattleTileHighlightRenderer()
 
     private val ruleset: Ruleset by inject()
 
@@ -514,81 +515,45 @@ class BattleScreen private constructor(
         //  }
     }
 
-    /**
-     * Adds tiles to create a rectangular array of battlefield tiles.
-     */
-    fun addTiles(){
-
+    fun addTiles() {
         tileGroupMap = TileGroupMap(daTileGroups)
-
-        // Draw attacking troops
         attackerTroopViewsArray.forEach { troopView ->
             if (troopView != null) {
                 val troopTile = manager.getTroopTile(troopView.getTroopInfo())
-                val troopTileGroup = daTileGroups.firstOrNull {
-                    it.tileInfo == troopTile
-                }
-                if (troopTileGroup != null)
-                    troopView.draw(troopTileGroup, attacker = true)
-                else
-                    println("Warning: no tile group found for troop ${troopView.getTroopInfo().unitName}")
+                val tileGroup = daTileGroups.firstOrNull { it.tileInfo == troopTile }
+                if (tileGroup != null) troopView.draw(tileGroup, attacker = true)
+                else println("Warning: no tile group found for troop ${troopView.getTroopInfo().unitName}")
             }
         }
-
-// Draw defending troops
         defenderTroopViewsArray.forEach { troopView ->
             if (troopView != null) {
                 val troopTile = manager.getTroopTile(troopView.getTroopInfo())
-                val troopTileGroup = daTileGroups.firstOrNull { it.tileInfo == troopTile }
-                if (troopTileGroup != null)
-                    troopView.draw(troopTileGroup, attacker = false)
-                else
-                    println("Warning: no tile group found for troop ${troopView.getTroopInfo().unitName}")
+                val tileGroup = daTileGroups.firstOrNull { it.tileInfo == troopTile }
+                if (tileGroup != null) troopView.draw(tileGroup, attacker = false)
+                else println("Warning: no tile group found for troop ${troopView.getTroopInfo().unitName}")
             }
         }
-
-
-
-        // Set pointer to first troop
         val currentTroop = manager.getCurrentTroop()
         if (currentTroop == null) {
-            println("No troops in both armies at the beggining of the battle")
             shutdownScreen()
             return
         }
         val currentTile = manager.getTroopTile(currentTroop)
             ?: throw IllegalStateException("Current troop has no tile: $currentTroop")
-
-        // TODO: switch to tile
         pointerPosition = currentTile.position
         draw_pointer()
 
-        // Add various mouse listeners to each tile
-        for (tileGroup in daTileGroups)
-        {
-            // Right mouse click listener
+        for (tileGroup in daTileGroups) {
+            tileHighlightRenderer.bind(tileGroup)
             tileGroup.addListener(object : ClickListener() {
                 override fun mouseMoved(event: InputEvent?, x: Float, y: Float): Boolean {
-                    if(manager.isBattleOn()) {
-                        // TODO: it is better to use width directly from Hexagon actor rather than baseLayerGroup actors
+                    if (manager.isBattleOn())
                         chooseCrosshair(tileGroup, x, y, tileGroup.baseLayerGroup.width)
-                    }
-                        return super.mouseMoved(event, x, y)
+                    return super.mouseMoved(event, x, y)
                 }
 
                 override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                    if(manager.isBattleOn()) {
-                        // Выводим координаты тайла в консоль
-                        println("Tile clicked: position=${tileGroup.tileInfo.position}")
-
-                        // Или через логгирование GDX
-                        Gdx.app.log(
-                            "TileClick",
-                            "Tile clicked at position=${tileGroup.tileInfo.position}"
-                        )
-
-                        handleTileClick(tileGroup, x, y) // Обрабатываем клик на тайл
-                    }
+                    if (manager.isBattleOn()) handleTileClick(tileGroup, x, y)
                 }
 
                 override fun enter(
@@ -598,66 +563,20 @@ class BattleScreen private constructor(
                     pointer: Int,
                     fromActor: Actor?
                 ) {
-                    if(manager.isBattleOn()) {
-                        // Highlight a tile as currently targeted by mouse pointer
-                        tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, 0.5f)
-
-                        // Choose apropriate crosshair
-                        if (fromActor != null) {
-                            val width = fromActor.width
-                            chooseCrosshair(tileGroup, x, y, width)
-                        }
-
-                        super.enter(event, x, y, pointer, fromActor)
-                    }
-                }
-
-                // Restore the tile after mouse pointer exited it
-                override fun exit(
-                    event: InputEvent?,
-                    x: Float,
-                    y: Float,
-                    pointer: Int,
-                    toActor: Actor?
-                ) {
-                    // TODO: This must be rewritten to avoid code doubling
-                    if(manager.isBattleOn()) {
-                        val currentTroopNew = manager.getCurrentTroop()
-
-                        val currentTroopOnTile = getCurrentTroopView() ?: return
-                        if (currentTroopNew != null && manager.getReachableTiles(currentTroopNew).contains(tileGroup.tileInfo))                        /*
-                        if (manager.isHexAchievable(
-                                    currentTroopOnTile.getTroopInfo(),
-                                    tileGroup.tileInfo.position
-                                )
-                        )
-
-                         */
-                            tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, 0.7f)
-                        else
-                            tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, 1f)
-
-                        super.exit(event, x, y, pointer, toActor)
-                    }
-
-
+                    if (pointer == -1 && manager.isBattleOn())
+                        chooseCrosshair(tileGroup, x, y, tileGroup.baseLayerGroup.width)
+                    super.enter(event, x, y, pointer, fromActor)
                 }
             })
-
             allTileGroups.add(tileGroup)
-
             tileGroups[tileGroup.tileInfo] = listOf(tileGroup)
         }
-
         for (tileGroup in allTileGroups) {
-
             tileGroup.showEntireMap = true
             tileGroup.update()
         }
-
         tileGroupMap.setSize(stage.width, stage.height)
         stage.addActor(tileGroupMap)
-
     }
 
     private fun handleTileClick(tileGroup: TileGroup, x: Float, y: Float) {
@@ -712,31 +631,31 @@ class BattleScreen private constructor(
     }
 
     private fun updateTilesShadowing() {
-        val currentTroop = manager.getCurrentTroop()
+        val currentTroop = manager.getCurrentTroop()?.takeIf { manager.isBattleOn() }
         val currentTile = currentTroop?.let(manager::getTroopTile)
-        val reachableTiles = currentTroop
-            ?.let(manager::getReachableTiles)
-            ?.toSet()
-            .orEmpty()
-
-        daTileGroups.forEach { tileGroup ->
-            val isReachable = currentTroop != null && tileGroup.tileInfo in reachableTiles
-            val movementDistance = if (currentTile == null) 0 else
-                HexMath.getDistance(currentTile.position, tileGroup.tileInfo.position)
-            val isSafeDestination =
-                    isReachable && movementDistance > 0 &&
-                            !ApplyMovementFormationPenaltyUseCase.wouldApplyPenalty(
-                                movementDistance = movementDistance,
-                                maximumMovement = currentTroop!!.speed
-                            )
-
-            val alpha = when {
-                isSafeDestination -> 0.5f
-                isReachable -> 0.7f
-                else -> 1f
-            }
-            tileGroup.baseLayerGroup.color = Color(1f, 1f, 1f, alpha)
+        val reachableTiles = currentTroop?.let(manager::getReachableTiles)?.toSet().orEmpty()
+        val enemies = currentTroop?.let(manager::getEnemies)?.toSet().orEmpty()
+        val movementContext = currentTroop?.let { troop ->
+            TroopMovementContext(troop) { it in enemies }
         }
+        daTileGroups.forEach { tileGroup ->
+            val tile = tileGroup.tileInfo
+            val appearance = com.unciv.pure.application.battle.BattleTileAppearanceUseCase.execute(
+                isReachable = tile in reachableTiles,
+                movementDistance = if (currentTile == null) 0 else HexMath.getDistance(
+                    currentTile.position,
+                    tile.position
+                ),
+                maximumMovement = currentTroop?.speed ?: 0,
+                control = movementContext?.controlStrength(tile)
+                    ?: com.unciv.pure.domain.battle.ZoneOfControlTransition.Strength.NONE,
+                canDisplayControl = manager.isTileFree(tile) || tile == currentTile
+            )
+            tileHighlightRenderer.update(tileGroup, appearance)
+        }
+        // Also refresh when the hovered enemy is unchanged but troops moved or the active side changed.
+        // Posting keeps initialization safe: the preview maps are declared after the screen's init block.
+        Gdx.app.postRunnable { updateEnemyMovementPreview(previewedTroop) }
     }
 
     fun movePointerToNextTroop() {
@@ -1138,28 +1057,32 @@ class BattleScreen private constructor(
         hoveredTroop = troop
         if (troop != null) getTroopViewFor(troop)?.setHoveredEnemy(true)
     }
+
     private fun updateEnemyMovementPreview(troop: Troop?) {
         previewedTroop = troop
         movementRangeOverlays.values.forEach { it.isVisible = false }
-
-        val currentTroop = manager.getCurrentTroop() ?: return
-        val enemy = troop?.takeIf { it in manager.getEnemies(currentTroop) } ?: return
-        val currentTile = manager.getTroopTile(enemy) ?: return
-        val reachableTiles = manager.getReachableTiles(enemy).toSet()
-
-        daTileGroups.forEach { tileGroup ->
-            val distance = HexMath.getDistance(currentTile.position, tileGroup.tileInfo.position)
-            val style = BattleMovementPreviewUseCase.execute(
-                isReachable = tileGroup.tileInfo in reachableTiles,
-                movementDistance = distance,
-                maximumMovement = enemy.speed
-            )
-            if (style == BattleMovementPreviewUseCase.TileStyle.HIDDEN) return@forEach
-            val overlay = movementRangeOverlays.getOrPut(tileGroup) {
-                createBattleMovementRangeOverlay(tileGroup)
+        val currentTroop = manager.getCurrentTroop()?.takeIf { manager.isBattleOn() }
+        val enemy = troop?.takeIf { currentTroop != null && it in manager.getEnemies(currentTroop) }
+        val currentTile = enemy?.let(manager::getTroopTile)
+        if (enemy != null && currentTile != null) {
+            val reachableTiles = manager.getReachableTiles(enemy).toSet()
+            daTileGroups.forEach { tileGroup ->
+                val style = BattleMovementPreviewUseCase.execute(
+                    isReachable = tileGroup.tileInfo in reachableTiles,
+                    movementDistance = HexMath.getDistance(
+                        currentTile.position,
+                        tileGroup.tileInfo.position
+                    ),
+                    maximumMovement = enemy.speed
+                )
+                if (style != BattleMovementPreviewUseCase.TileStyle.HIDDEN) {
+                    movementRangeOverlays.getOrPut(tileGroup) {
+                        createBattleMovementRangeOverlay(tileGroup)
+                    }.showBattleMovementStyle(style)
+                }
             }
-            overlay.showBattleMovementStyle(style)
         }
+        tileHighlightRenderer.restoreAll()
     }
 }
 

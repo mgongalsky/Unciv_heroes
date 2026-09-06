@@ -15,6 +15,10 @@ Current scenario names and IDE scopes:
 
 - `battle-troops` → `com.unciv.testing.UiGoldenTest#battleTroops`
 - `battle-result-attacker-victory` → `com.unciv.testing.UiGoldenTest#battleResultAttackerVictory`
+- `battle-tile-highlights` → `com.unciv.testing.UiGoldenTest#battleTileHighlights`
+
+The tile-highlights scenario covers both movement shading levels, normal and reinforced control
+markers, pointer exit, appearance changes during hover, and removal of stale markers.
 
 When a change affects one screen, run only its method. Run the entire class
 `com.unciv.testing.UiGoldenTest` for cross-cutting changes to skins, fonts, atlases, shared popup
@@ -36,6 +40,7 @@ IDE-native targeted update scopes:
 
 - `com.unciv.testing.UiGoldenUpdateTest#battleTroops`
 - `com.unciv.testing.UiGoldenUpdateTest#battleResultAttackerVictory`
+- `com.unciv.testing.UiGoldenUpdateTest#battleTileHighlights`
 
 Run the whole `UiGoldenUpdateTest` class only when every baseline change is intentional.
 

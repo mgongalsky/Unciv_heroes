@@ -79,17 +79,12 @@ object UiGoldenTestRunner {
     }
 
     private fun scenarios() = listOf(
-        Scenario("battle-troops") { screen ->
-            openBattleTroopPreview(screen)
-        },
-        Scenario("battle-turn-queue") { screen ->
-            openBattleTurnQueuePreview(screen)
-        },
-        Scenario("battle-troop-info") { screen ->
-            openBattleTroopInfoPreview(screen)
-        },
-        Scenario("battle-threat-preview") { screen ->
-            openBattleThreatPreview(screen)
+        Scenario("battle-troops") { screen -> openBattleTroopPreview(screen) },
+        Scenario("battle-turn-queue") { screen -> openBattleTurnQueuePreview(screen) },
+        Scenario("battle-troop-info") { screen -> openBattleTroopInfoPreview(screen) },
+        Scenario("battle-threat-preview") { screen -> openBattleThreatPreview(screen) },
+        Scenario("battle-tile-highlights") { screen ->
+            com.unciv.ui.playground.openBattleTileHighlightPreview(screen)
         },
         Scenario("battle-result-attacker-victory") { screen ->
             BattleResultPopup(

@@ -29,4 +29,9 @@ class UiGoldenUpdateTest {
     fun battleResultAttackerVictory() {
         UiGoldenTestRunner.main(arrayOf("--update", "--scenario=battle-result-attacker-victory"))
     }
+
+    @Test
+    fun battleTileHighlights() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=battle-tile-highlights"))
+    }
 }
