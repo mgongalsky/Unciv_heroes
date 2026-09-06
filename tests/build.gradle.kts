@@ -42,6 +42,25 @@ sourceSets {
     }
 }
 
+tasks.register<JavaExec>("runBattleBalance") {
+    group = "application"
+    description = "Launch the battle balance GUI with an isolated headless worker."
+    dependsOn(tasks.named("testClasses"))
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.unciv.testing.simulations.BattleBalanceWindow")
+    workingDir = rootProject.projectDir
+}
+
+tasks.register<JavaExec>("runBattleBalanceCli") {
+    group = "application"
+    description =
+        "Run a headless balance experiment; supply source, battles, max amount, seed and report directory via --args."
+    dependsOn(tasks.named("testClasses"))
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.unciv.testing.simulations.BattleBalanceCli")
+    workingDir = rootProject.projectDir
+}
+
 eclipse.project {
     name = "${BuildConfig.appName}-tests"
 }

@@ -97,37 +97,15 @@ class BattleSimulationSimTest {
         attackerAmount: Int,
         defender: Archetype,
         defenderAmount: Int
-    ): BattleBatchResult = BattleBatchSimulator.run(seeds) { seed ->
-        val grid = FakeBattleFieldBuilder.buildGrid(14, 8)
-        val manager = TestableBattleManager(
-            attackerArmy = ArmyInfo(FakeCivilizationInfo(), maxSlots = 1).apply {
-                addUnits(attacker.name, attackerAmount)
-            },
-            defenderArmy = ArmyInfo(FakeCivilizationInfo(), maxSlots = 1).apply {
-                addUnits(defender.name, defenderAmount)
-            },
-            battleField = FakeGridBattleField(grid),
-            random = SeededBattleRandom(seed),
-            allTilesReachable = true,
-            useRealMovement = false,
-            moraleProbability = GameConstants.moraleProbability,
-            luckProbability = GameConstants.luckProbability
-        )
-        val attackerTroop = manager.getAttackerArmy().getAllTroops().filterNotNull().single()
-        val defenderTroop = manager.getDefenderArmy().getAllTroops().filterNotNull().single()
-        manager.placeTroop(attackerTroop, grid[0][0])
-        manager.placeTroop(defenderTroop, grid[0][13])
-        manager.initializeTurnQueue()
-        val policy = AIBattlePolicy(manager)
-        BattleSimulationRunner(
-            manager = manager,
-            attackerPolicy = policy,
-            defenderPolicy = policy,
-            maxTurns = 300,
-            maxTurnsWithoutProgress = 30,
-            seed = seed
-        ).run()
-    }
+    ): BattleBatchResult = BattleBalanceSimulation.simulateBatch(
+        attacker = attacker.name,
+        attackerAmount = attackerAmount,
+        defender = defender.name,
+        defenderAmount = defenderAmount,
+        seeds = seeds,
+        luckProbability = GameConstants.luckProbability,
+        moraleProbability = GameConstants.moraleProbability
+    )
 
     @Test
     fun `generate seeded mirror balance matrices for identical troops`() {
