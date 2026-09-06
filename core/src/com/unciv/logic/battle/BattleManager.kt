@@ -149,7 +149,7 @@ open class BattleManager(
         } else {
             configuredProbability
         }
-        println(
+        if (verboseAttack) println(
             "Unit: ${troop.unitName}, Amount: ${troop.amount}, " +
                     "Hero present: ${getArmyOf(troop)?.hero != null}, Hero luck: $troopLuck, " +
                     "Effective luck probability: $effectiveProbability"
@@ -213,7 +213,7 @@ open class BattleManager(
     }
 
 
-    private val verboseAttack = true // Флаг для включения/выключения вербозинга атак
+    private val verboseAttack = java.lang.Boolean.getBoolean("battle.verbose")
 
     fun getTroopById(id: Int): Troop? =
             (attackerArmy.getAllTroops() + defenderArmy.getAllTroops())
@@ -433,14 +433,10 @@ open class BattleManager(
         return result.isLuck
     }
 
-    /**
-     * Handles the removal of a perished troop.
-     *
-     * @param troop The troop to remove.
-     */
+    /** Removes a perished troop from its army, tile and turn queue. */
     fun perishTroop(troop: Troop) {
         removeTroop(troop)
-        println("Troop ${troop.unitName} has perished.")
+        if (verboseAttack) println("Troop ${troop.unitName} has perished.")
     }
 
     fun removeTroop(troop: Troop) {

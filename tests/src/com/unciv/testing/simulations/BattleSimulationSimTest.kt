@@ -89,70 +89,7 @@ class BattleSimulationSimTest {
 
     @Test
     fun `generate seeded twenty by twenty balance matrices for all troop matchups`() {
-        val maxAmount = 20
-        val report = mutableListOf<String>()
-        fun record(line: String = "") {
-            report += line
-            println(line)
-        }
-
-        record("Legend: each cell is attacker decisive win rate; S=stalemate, M=max turns")
-        record("Grid: 1..$maxAmount vs 1..$maxAmount; seeds per cell: ${seeds.size}; luck=5%; morale=10%; maxTurns=300")
-
-        val summary = mutableListOf<String>()
-        archetypes.forEachIndexed { attackerIndex, attacker ->
-            archetypes.drop(attackerIndex + 1).forEach { defender ->
-                val points = mutableListOf<BalancePoint>()
-                record()
-                record("=== ${attacker.name} (rows) vs ${defender.name} (columns) ===")
-                record("A\\D | " + (1..maxAmount).joinToString(" | ") { "%3d".format(it) })
-                for (attackerAmount in 1..maxAmount) {
-                    val row = (1..maxAmount).map { defenderAmount ->
-                        val batch =
-                                simulateBatch(attacker, attackerAmount, defender, defenderAmount)
-                        assertEquals(seeds.size, batch.simulations)
-                        val point = BalancePoint(attackerAmount, defenderAmount, batch)
-                        points += point
-                        val suffix = when {
-                            batch.maxTurnTerminations > 0 -> "M"
-                            batch.stalemates > 0 -> "S"
-                            else -> ""
-                        }
-                        "%3.0f%s".format(point.attackerDecisiveWinRate * 100.0, suffix)
-                    }
-                    record(" %2d | %s".format(attackerAmount, row.joinToString(" | ")))
-                }
-
-                val boundary = points.minWithOrNull(
-                    compareBy<BalancePoint> { it.distanceFromEven }
-                        .thenBy { it.attackerAmount + it.defenderAmount }
-                        .thenBy { it.attackerAmount }
-                )!!
-                val predictedRatio = defender.nominalForce / attacker.nominalForce
-                summary += "%s vs %s: measured A:D=%d:%d (ratio %.3f:1, A wins %.0f%% decisive), nominal A:D=%.2f:1, stalemates=%d, maxTurns=%d".format(
-                    attacker.name,
-                    defender.name,
-                    boundary.attackerAmount,
-                    boundary.defenderAmount,
-                    boundary.attackerAmount.toDouble() / boundary.defenderAmount,
-                    boundary.attackerDecisiveWinRate * 100.0,
-                    predictedRatio,
-                    boundary.batch.stalemates,
-                    boundary.batch.maxTurnTerminations
-                )
-            }
-        }
-
-        record()
-        record("=== MEASURED EQUILIBRIUM SUMMARY ===")
-        summary.forEach(::record)
-
-        val projectRoot =
-                generateSequence(java.io.File(System.getProperty("user.dir"))) { it.parentFile }
-                    .first { java.io.File(it, "settings.gradle.kts").isFile }
-        val reportFile = java.io.File(projectRoot, "troop-balance-report.txt")
-        reportFile.writeText(report.joinToString(System.lineSeparator()))
-        record("Report written to ${reportFile.absolutePath}")
+        generateBalanceMatrices(mirror = false)
     }
 
     private fun simulateBatch(
@@ -194,28 +131,83 @@ class BattleSimulationSimTest {
 
     @Test
     fun `generate seeded mirror balance matrices for identical troops`() {
+        generateBalanceMatrices(mirror = true)
+    }
+    private fun generateBalanceMatrices(mirror: Boolean) {
         val maxAmount = 20
+        val matchups = if (mirror) {
+            archetypes.map { it to it }
+        } else {
+            archetypes.flatMapIndexed { index, attacker ->
+                archetypes.drop(index + 1).map { defender -> attacker to defender }
+            }
+        }
+        val label = if (mirror) "Mirror" else "Balance"
+        val totalBatches = matchups.size * maxAmount * maxAmount
+        val totalSimulations = totalBatches * seeds.size
+        val startedAt = System.nanoTime()
+        var lastProgressAt = startedAt
+        var completedBatches = 0
+        var completedSimulations = 0
+        val outcomes = mutableMapOf<BattleTermination, Int>()
         val report = mutableListOf<String>()
+        val summary = mutableListOf<String>()
+        val summaryTitle =
+                if (mirror) "=== MIRROR SUMMARY ===" else "=== MEASURED EQUILIBRIUM SUMMARY ==="
+        val projectRoot =
+                generateSequence(java.io.File(System.getProperty("user.dir"))) { it.parentFile }
+                    .first { java.io.File(it, "settings.gradle.kts").isFile }
+        val reportFile = java.io.File(
+            projectRoot,
+            if (mirror) "troop-mirror-balance-report.txt" else "troop-balance-report.txt"
+        )
+
+        fun elapsed(): String = "%.1fs".format((System.nanoTime() - startedAt) / 1_000_000_000.0)
         fun record(line: String = "") {
             report += line
-            println(line)
         }
 
-        record("Identical troop mirror matches")
+        println("[$label] Planned: ${matchups.size} matchups, $totalBatches cells, $totalSimulations simulations (${seeds.size} seeds/cell).")
+        println("[$label] Grid: 1..$maxAmount vs 1..$maxAmount; luck=5%; morale=10%; maxTurns=300.")
+        println("[$label] Completed: 0/$totalSimulations (0%); elapsed ${elapsed()}")
+        println("[$label] Report destination: ${reportFile.absolutePath}")
+        if (mirror) record("Identical troop mirror matches")
+        record("Legend: each cell is attacker decisive win rate; S=stalemate, M=max turns")
         record("Grid: 1..$maxAmount vs 1..$maxAmount; seeds per cell: ${seeds.size}; luck=5%; morale=10%; maxTurns=300")
-        val summary = mutableListOf<String>()
 
-        archetypes.forEach { archetype ->
+        matchups.forEachIndexed { matchupIndex, (attacker, defender) ->
+            val matchup = "${attacker.name} vs ${defender.name}"
+            println("[$label] Matchup ${matchupIndex + 1}/${matchups.size}: $matchup")
             val points = mutableListOf<BalancePoint>()
             record()
-            record("=== ${archetype.name} attacker (rows) vs ${archetype.name} defender (columns) ===")
+            record("=== ${attacker.name} (rows) vs ${defender.name} (columns) ===")
             record("A\\D | " + (1..maxAmount).joinToString(" | ") { "%3d".format(it) })
             for (attackerAmount in 1..maxAmount) {
                 val row = (1..maxAmount).map { defenderAmount ->
-                    val batch = simulateBatch(archetype, attackerAmount, archetype, defenderAmount)
+                    val batch = simulateBatch(attacker, attackerAmount, defender, defenderAmount)
                     assertEquals(seeds.size, batch.simulations)
+                    completedBatches++
+                    completedSimulations += batch.simulations
+                    batch.results.forEach { result ->
+                        outcomes[result.termination] = (outcomes[result.termination] ?: 0) + 1
+                    }
                     val point = BalancePoint(attackerAmount, defenderAmount, batch)
                     points += point
+                    val now = System.nanoTime()
+                    val matchupFinished = attackerAmount == maxAmount && defenderAmount == maxAmount
+                    if (completedBatches % (maxAmount * 5) == 0 ||
+                            now - lastProgressAt >= 2_000_000_000L || matchupFinished
+                    ) {
+                        println(
+                            "[$label] Completed: $completedSimulations/$totalSimulations " +
+                                    "(%.1f%%); cells $completedBatches/$totalBatches; %s; elapsed %s".format(
+                                        completedSimulations * 100.0 / totalSimulations,
+                                        matchup,
+                                        elapsed()
+                                    )
+                        )
+                        lastProgressAt = now
+                    }
                     val suffix = when {
                         batch.maxTurnTerminations > 0 -> "M"
                         batch.stalemates > 0 -> "S"
@@ -226,33 +218,44 @@ class BattleSimulationSimTest {
                 record(" %2d | %s".format(attackerAmount, row.joinToString(" | ")))
             }
 
-            val equalAmountResults = points.filter { it.attackerAmount == it.defenderAmount }
-            val equalAverage = equalAmountResults.map { it.attackerDecisiveWinRate }.average()
-            val closest = points.minWithOrNull(
+            val boundary = points.minWithOrNull(
                 compareBy<BalancePoint> { it.distanceFromEven }
                     .thenBy { it.attackerAmount + it.defenderAmount }
                     .thenBy { it.attackerAmount }
             )!!
-            summary += "%s: equal-count attacker average=%.1f%%; closest measured A:D=%d:%d (%.1f%% attacker wins); stalemates=%d; maxTurns=%d".format(
-                archetype.name,
-                equalAverage * 100.0,
-                closest.attackerAmount,
-                closest.defenderAmount,
-                closest.attackerDecisiveWinRate * 100.0,
-                closest.batch.stalemates,
-                closest.batch.maxTurnTerminations
-            )
+            summary += if (mirror) {
+                val equalAverage = points.filter { it.attackerAmount == it.defenderAmount }
+                    .map { it.attackerDecisiveWinRate }.average()
+                "%s: equal-count attacker average=%.1f%%; closest measured A:D=%d:%d (%.1f%% attacker wins); stalemates=%d; maxTurns=%d".format(
+                    attacker.name, equalAverage * 100.0,
+                    boundary.attackerAmount, boundary.defenderAmount,
+                    boundary.attackerDecisiveWinRate * 100.0,
+                    boundary.batch.stalemates, boundary.batch.maxTurnTerminations
+                )
+            } else {
+                "%s vs %s: measured A:D=%d:%d (ratio %.3f:1, A wins %.0f%% decisive), nominal A:D=%.2f:1, stalemates=%d, maxTurns=%d".format(
+                    attacker.name, defender.name,
+                    boundary.attackerAmount, boundary.defenderAmount,
+                    boundary.attackerAmount.toDouble() / boundary.defenderAmount,
+                    boundary.attackerDecisiveWinRate * 100.0,
+                    defender.nominalForce / attacker.nominalForce,
+                    boundary.batch.stalemates, boundary.batch.maxTurnTerminations
+                )
+            }
         }
 
         record()
-        record("=== MIRROR SUMMARY ===")
+        record(summaryTitle)
         summary.forEach(::record)
-
-        val projectRoot =
-                generateSequence(java.io.File(System.getProperty("user.dir"))) { it.parentFile }
-                    .first { java.io.File(it, "settings.gradle.kts").isFile }
-        java.io.File(projectRoot, "troop-mirror-balance-report.txt")
-            .writeText(report.joinToString(System.lineSeparator()))
+        val totals = "[$label] Outcomes (all $completedSimulations simulations): " +
+                BattleTermination.values().joinToString(", ") { "$it=${outcomes[it] ?: 0}" }
+        record(totals)
+        reportFile.writeText(report.joinToString(System.lineSeparator()))
+        println(summaryTitle)
+        summary.forEach { println(it) }
+        println(totals)
+        println("[$label] Finished: $completedSimulations/$totalSimulations simulations; elapsed ${elapsed()}")
+        println("[$label] Report written to ${reportFile.absolutePath}")
     }
 }
 
