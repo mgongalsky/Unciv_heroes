@@ -21,14 +21,15 @@ class ZoneOfControlMovementTest {
             FakeBattleFieldBuilder.tileAt(grid, x, y)
 
     @Test
-    fun `enemy in a corridor stops movement at the edge of its zone`() {
+    fun `enemy occupies the corridor but ordinary control does not block approach`() {
         val grid = FakeBattleFieldBuilder.buildGrid(10, 1)
         tile(grid, 5, 0).setTroop(enemy)
-
         val reachable = MovementRangeUseCase.execute(tile(grid, 0, 0), 8f, context)
-
-        assertEquals(5, reachable.size)
+        assertEquals(6, reachable.size)
+        assertEquals(5, reachable.keys.count { it.getTroop() == null })
         assertTrue(reachable.containsKey(tile(grid, 4, 0)))
+        // Occupied targets remain candidates for typed command rejection, never for traversal.
+        assertTrue(reachable.containsKey(tile(grid, 5, 0)))
         assertFalse(reachable.containsKey(tile(grid, 6, 0)))
     }
 

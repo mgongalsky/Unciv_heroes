@@ -32,7 +32,7 @@ class BattleSimulationRunner(
                 if (manager.getAttackerArmy().contains(troop)) attackerPolicy else defenderPolicy
             val command = policy.chooseCommand(troop.id)
             turns++
-
+            var advanceTurn = true
             val madeProgress = if (command == null || command.troopId != troop.id) {
                 false
             } else {
@@ -40,18 +40,19 @@ class BattleSimulationRunner(
                 val actionEvents = mutableListOf<BattleEvent>()
                 val actionResult = manager.execute(command) { actionEvents.add(it) }
                 events.addAll(actionEvents)
+                advanceTurn = !actionResult.success ||
+                        com.unciv.pure.application.battle.ShouldAdvanceTurnUseCase.execute(
+                            actionResult
+                        )
                 actionResult.success && command !is BattleCommand.Skip
             }
-
             turnsWithoutProgress = if (madeProgress) 0 else turnsWithoutProgress + 1
             if (!manager.isBattleOn()) break
             if (turnsWithoutProgress >= maxTurnsWithoutProgress) {
                 return result(BattleTermination.STALEMATE, turns, commands, events)
             }
-
-            if (manager.getTurnQueue().isNotEmpty()) manager.advanceTurn()
+            if (advanceTurn && manager.getTurnQueue().isNotEmpty()) manager.advanceTurn()
         }
-
         val battleResult = manager.getBattleResult()
         val termination = when {
             battleResult?.winningArmy == null && !manager.isBattleOn() -> BattleTermination.MUTUAL_DEFEAT
