@@ -1,11 +1,14 @@
 import com.unciv.build.BuildConfig
 import java.util.*
 import com.unciv.build.AndroidImagePacker
+import com.unciv.build.GraphicsBackupPlugin
 
 plugins {
     id("com.android.application")
     id("kotlin-android")
 }
+
+apply<GraphicsBackupPlugin>()
 
 android {
     namespace = "com.unciv.app"
@@ -65,21 +68,21 @@ android {
 }
 
 fun registerImagePackingTask(taskName: String, force: Boolean, taskDescription: String) =
-        tasks.register(taskName) {
-            group = "graphics"
-            description = taskDescription
-            doLast {
-                AndroidImagePacker.packImages(
-                    workingPath = projectDir.path,
-                    force = force,
-                    atlasName = providers.gradleProperty("atlas").orNull,
-                    allowIncompleteSources = providers.gradleProperty("allowIncompleteSources")
-                        .orNull
-                        ?.toBooleanStrictOrNull()
-                        ?: false
-                )
-            }
+    tasks.register(taskName) {
+        group = "graphics"
+        description = taskDescription
+        doLast {
+            AndroidImagePacker.packImages(
+                workingPath = projectDir.path,
+                force = force,
+                atlasName = providers.gradleProperty("atlas").orNull,
+                allowIncompleteSources = providers.gradleProperty("allowIncompleteSources")
+                    .orNull
+                    ?.toBooleanStrictOrNull()
+                    ?: false
+            )
         }
+    }
 
 val packImages by registerImagePackingTask(
     taskName = "packImages",
