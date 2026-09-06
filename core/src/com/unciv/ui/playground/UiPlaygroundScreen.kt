@@ -37,7 +37,7 @@ class UiPlaygroundScreen : BaseScreen() {
         val show: (BaseScreen) -> Unit
     )
 
-    private val scenarios = listOf(
+    private val scenarios = armyPopupScenarios() + listOf(
         troopBattleViewScenario(),
         battleResultScenario(
             title = "Battle result — attacker victory",
@@ -74,14 +74,8 @@ class UiPlaygroundScreen : BaseScreen() {
             description = "Both armies are destroyed, using only the supported troop sprites.",
             report = BattleReport(
                 winner = null,
-                attackerLosses = listOf(
-                    loss(1, "Swordsman", 10),
-                    loss(2, "Horseman", 15)
-                ),
-                defenderLosses = listOf(
-                    loss(3, "Crossbowman", 12),
-                    loss(4, "Peasant", 18)
-                )
+                attackerLosses = listOf(loss(1, "Swordsman", 10), loss(2, "Horseman", 15)),
+                defenderLosses = listOf(loss(3, "Crossbowman", 12), loss(4, "Peasant", 18))
             )
         )
     )
@@ -200,6 +194,30 @@ class UiPlaygroundScreen : BaseScreen() {
             return fieldView
         }
     }
+
+    private fun armyPopupScenarios() = listOf(
+        Scenario(
+            "Army — interactions",
+            "Select, split and inspect troops using the real army controls."
+        ) {
+            openArmyInteractionPreview(it)
+        },
+        Scenario(
+            "Split troop — empty slot",
+            "Distribute 35 Archers between the source and an empty slot."
+        ) {
+            openSplitTroopPreview(it)
+        },
+        Scenario(
+            "Split troop — occupied slot",
+            "Redistribute 35 and 12 Archers between two occupied slots."
+        ) {
+            openSplitTroopPreview(it, targetAmount = 12)
+        },
+        Scenario("Army — troop properties", "Persistent troop statistics with an OK button.") {
+            openArmyTroopInfoPreview(it)
+        }
+    )
 }
 
 fun fantasyCloseButton(popup: Popup) =

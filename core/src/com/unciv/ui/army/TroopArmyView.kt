@@ -190,33 +190,62 @@ class TroopArmyView(
             }
         }
     }
-    /**
-     * Sets up a click listener to toggle the selection state when the troop is clicked.
-     * Only called when isInteractive is true.
-     */
+
     private fun setupClickListener() {
-        troopGroup.touchable = Touchable.enabled // Allow interactions with the group
-        troopGroup.addListener(object : ClickListener() {
+        troopGroup.touchable = Touchable.enabled
+        troopGroup.addListener(object : ClickListener(Input.Buttons.LEFT) {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                if (troopInfo != null)
-                    logVerbose("Troop clicked: ${troopInfo.unitName}")
-                else
-                    logVerbose("Empty slot clicked")
-
-                // Double-click opens unit info popup
-                if (this.tapCount == 2 && troopInfo != null) {
-                    try {
-                        UnitInfoPopup(armyView.getScreen(), this@TroopArmyView).open()
-                        return
-                    } catch (e: Exception) {
-                        // Fallback to normal behavior if popup fails
-                    }
+                if (tapCount == 2 && troopInfo != null) {
+                    UnitInfoPopup(armyView.getScreen(), troopInfo).open(force = true)
+                    return
                 }
-
-                // Check if Shift key is pressed
-                val isShiftPressed = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)
-                // Pass the shift state to the ArmyView
+                val isShiftPressed = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) ||
+                        Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)
                 armyView.onTroopClicked(this@TroopArmyView, isShiftPressed)
+            }
+        })
+        troopGroup.addListener(object : com.badlogic.gdx.scenes.scene2d.InputListener() {
+            private var panel: com.unciv.ui.battlescreen.BattleTroopInfoPanel? = null
+
+            private fun hide() {
+                panel?.remove()
+                panel = null
+            }
+
+            override fun touchDown(
+                event: InputEvent?,
+                x: Float,
+                y: Float,
+                pointer: Int,
+                button: Int
+            ): Boolean {
+                if (button != Input.Buttons.RIGHT || troopInfo == null) return false
+                hide()
+                panel = com.unciv.ui.battlescreen.BattleTroopInfoPanel(troopInfo, null).also {
+                    it.showNextTo(armyView.getScreen().stage, this@TroopArmyView)
+                }
+                event?.stop()
+                return true
+            }
+
+            override fun touchUp(
+                event: InputEvent?,
+                x: Float,
+                y: Float,
+                pointer: Int,
+                button: Int
+            ) {
+                if (button == Input.Buttons.RIGHT) hide()
+            }
+
+            override fun exit(
+                event: InputEvent?,
+                x: Float,
+                y: Float,
+                pointer: Int,
+                toActor: com.badlogic.gdx.scenes.scene2d.Actor?
+            ) {
+                if (toActor == null || !toActor.isDescendantOf(troopGroup)) hide()
             }
         })
     }

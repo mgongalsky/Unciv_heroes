@@ -34,4 +34,19 @@ class UiGoldenUpdateTest {
     fun battleTileHighlights() {
         UiGoldenTestRunner.main(arrayOf("--update", "--scenario=battle-tile-highlights"))
     }
+
+    @Test
+    fun splitTroopEmpty() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=split-troop-empty"))
+    }
+
+    @Test
+    fun splitTroopOccupied() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=split-troop-occupied"))
+    }
+
+    @Test
+    fun armyTroopInfo() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=army-troop-info"))
+    }
 }

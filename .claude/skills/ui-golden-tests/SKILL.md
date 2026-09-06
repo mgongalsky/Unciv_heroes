@@ -16,6 +16,17 @@ Current scenario names and IDE scopes:
 - `battle-troops` → `com.unciv.testing.UiGoldenTest#battleTroops`
 - `battle-result-attacker-victory` → `com.unciv.testing.UiGoldenTest#battleResultAttackerVictory`
 - `battle-tile-highlights` → `com.unciv.testing.UiGoldenTest#battleTileHighlights`
+- `battle-turn-queue` → `com.unciv.testing.UiGoldenTest#battleTurnQueue`
+- `battle-troop-info` → `com.unciv.testing.UiGoldenTest#battleTroopInfo`
+- `battle-threat-preview` → `com.unciv.testing.UiGoldenTest#battleThreatPreview`
+- `split-troop-empty` → `com.unciv.testing.UiGoldenTest#splitTroopEmpty`
+- `split-troop-occupied` → `com.unciv.testing.UiGoldenTest#splitTroopOccupied`
+- `army-troop-info` → `com.unciv.testing.UiGoldenTest#armyTroopInfo`
+
+The split scenarios use the production dialog with 35 Archers and either an empty target or
+12 target Archers. The army-info scenario covers the persistent statistics window with OK.
+Their factories are shared with UI Playground. The Army interactions preview uses real slot
+listeners for selection, Shift-splitting, double-left-click inspection and right-button hold.
 
 The tile-highlights scenario covers both movement shading levels, normal and reinforced control
 markers, pointer exit, appearance changes during hover, and removal of stale markers.
@@ -36,11 +47,17 @@ Run one scenario with:
 
 Never update a baseline merely to make verification green. Review the actual and diff first.
 
-IDE-native targeted update scopes:
+IDE-native targeted update scopes use the same method name in `UiGoldenUpdateTest`:
 
 - `com.unciv.testing.UiGoldenUpdateTest#battleTroops`
 - `com.unciv.testing.UiGoldenUpdateTest#battleResultAttackerVictory`
 - `com.unciv.testing.UiGoldenUpdateTest#battleTileHighlights`
+- `com.unciv.testing.UiGoldenUpdateTest#battleTurnQueue`
+- `com.unciv.testing.UiGoldenUpdateTest#battleTroopInfo`
+- `com.unciv.testing.UiGoldenUpdateTest#battleThreatPreview`
+- `com.unciv.testing.UiGoldenUpdateTest#splitTroopEmpty`
+- `com.unciv.testing.UiGoldenUpdateTest#splitTroopOccupied`
+- `com.unciv.testing.UiGoldenUpdateTest#armyTroopInfo`
 
 Run the whole `UiGoldenUpdateTest` class only when every baseline change is intentional.
 

@@ -26,76 +26,66 @@ class SplitTroopPopup(
 ) : Popup(screen) {
 
     init {
-        // Check if sourceTroopView contains valid data
-        if (sourceTroopView.troopInfo == null) {
-            remove() // Close the popup if there is no troop info
-        } else {
-            val sourceCount = sourceTroopView.troopInfo.amount
-            val targetCount = if (targetTroopView.isEmptySlot()) 0 else targetTroopView.troopInfo?.amount ?: 0
+        val sourceTroop = sourceTroopView.troopInfo
+        if (sourceTroop != null) {
+            val sourceCount = sourceTroop.amount
+            val targetCount = targetTroopView.troopInfo?.amount ?: 0
             val totalCount = sourceCount + targetCount
+            val contentWidth = minOf(420f, screen.stage.width - 80f).coerceAtLeast(220f)
 
-            // Set the minimum size of the popup
-            this.setSize(400f, 300f)
+            innerTable.pad(24f).padTop(48f)
+            val portrait = TroopArmyView(sourceTroopView, true, 80f, false)
+            add(portrait).size(80f).colspan(2).padTop(8f).padBottom(12f).row()
 
-            // Create a visual component for sourceTroopView
-            val popupSourceView = TroopArmyView(sourceTroopView, true)
-            popupSourceView.deselect()
-
-            // Add the avatar of the source troop
-            add(popupSourceView).size(80f).padBottom(10f).padTop(10f).colspan(2).row()
-
-            // Add a header label
-            val troopName = sourceTroopView.troopInfo.unitName
-            val label = "Split $troopName".toLabel(fontSize = 20)
-            add(label).expandX().left().padBottom(10f).colspan(2).align(Align.center).row()
-
-            // Current values for troop distribution
-            val leftCountLabel = Label(sourceCount.toString(), BaseScreen.skin)
-            val rightCountLabel = Label(targetCount.toString(), BaseScreen.skin)
-
-            // Create a slider
-            val troopSlider = Slider(0f, totalCount.toFloat(), 1f, false, BaseScreen.skin)
-            troopSlider.value = targetCount.toFloat() // Initial position is the current targetCount
-            troopSlider.addListener { _ ->
-                val rightCount = troopSlider.value.roundToInt()
-                val leftCount = totalCount - rightCount
-
-                leftCountLabel.setText(leftCount.toString())
-                rightCountLabel.setText(rightCount.toString())
-                false
+            val title = "Split ${sourceTroop.unitName}".toLabel(fontSize = 20).apply {
+                setAlignment(Align.center)
+                setWrap(true)
             }
+            add(title).width(contentWidth).colspan(2).padBottom(16f).row()
 
-            // Table for the slider and labels
-            val sliderTable = Table()
-            sliderTable.defaults().pad(5f)
-            sliderTable.add(leftCountLabel).padRight(10f)
-            sliderTable.add(troopSlider).growX().pad(5f)
-            sliderTable.add(rightCountLabel).padLeft(10f)
-            add(sliderTable).growX().colspan(2).row()
-
-            // Add "OK" button
-            addOKButton(
-                text = "OK",
-                style = BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java),
-                validate = { true } // Always true; add validation if necessary
-            ) {
-                val rightCount = troopSlider.value.roundToInt()
-                val leftCount = totalCount - rightCount
-                onSplit(leftCount, rightCount) // Perform the split logic
-            }.apply {
-                actor.label.setFontScale(0.4f)
-                actor.label.setAlignment(Align.center)
-                actor.pad(5f, 10f, 5f, 10f)
+            val leftCountLabel = Label(sourceCount.toString(), BaseScreen.skin).apply {
+                name = "splitLeftCount"
+                setAlignment(Align.center)
             }
+            val rightCountLabel = Label(targetCount.toString(), BaseScreen.skin).apply {
+                name = "splitRightCount"
+                setAlignment(Align.center)
+            }
+            val troopSlider = Slider(0f, totalCount.toFloat(), 1f, false, BaseScreen.skin).apply {
+                name = "splitTroopSlider"
+                value = targetCount.toFloat()
+            }
+            troopSlider.addListener(object :
+                com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
+                override fun changed(
+                    event: ChangeEvent?,
+                    actor: com.badlogic.gdx.scenes.scene2d.Actor?
+                ) {
+                    val rightCount = troopSlider.value.roundToInt()
+                    leftCountLabel.setText((totalCount - rightCount).toString())
+                    rightCountLabel.setText(rightCount.toString())
+                }
+            })
 
-            // Add "Close" button
-            addCloseButton(
-                text = "Close",
-                style = BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)
-            ).apply {
-                actor.label.setFontScale(0.4f)
-                actor.label.setAlignment(Align.center)
-                actor.pad(5f, 10f, 5f, 10f)
+            val countWidth = maxOf(44f, totalCount.toString().toLabel().prefWidth + 12f)
+            val sliderTable = Table().apply {
+                add(leftCountLabel).width(countWidth).padRight(8f)
+                add(troopSlider).growX().minWidth(80f)
+                add(rightCountLabel).width(countWidth).padLeft(8f)
+            }
+            add(sliderTable).width(contentWidth).colspan(2).padBottom(18f).row()
+
+            val buttonStyle = BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)
+            val ok = addOKButton(style = buttonStyle) {
+                val rightCount = troopSlider.value.roundToInt()
+                onSplit(totalCount - rightCount, rightCount)
+            }
+            val cancel = addCloseButton(text = "Close", style = buttonStyle)
+            for (cell in listOf(ok, cancel)) {
+                cell.actor.label.setFontScale(0.4f)
+                cell.actor.label.setAlignment(Align.center)
+                cell.actor.pad(5f, 10f, 5f, 10f)
+                cell.width((contentWidth - 10f) / 2f).height(58f)
             }
         }
     }

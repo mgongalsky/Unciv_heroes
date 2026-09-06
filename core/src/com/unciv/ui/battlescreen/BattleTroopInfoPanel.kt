@@ -5,7 +5,6 @@ import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.Touchable
-import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 import com.badlogic.gdx.utils.Align
@@ -15,11 +14,11 @@ import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.toLabel
 import kotlin.math.max
 
+/** Troop statistics; a null side is used when inspecting an army outside battle. */
 class BattleTroopInfoPanel(
     private val troop: Troop,
-    private val attacker: Boolean
+    private val attacker: Boolean?
 ) : Table(BaseScreen.skin) {
-
     companion object {
         private const val EDGE_MARGIN = 12f
         private const val ANCHOR_GAP = 18f
@@ -29,7 +28,7 @@ class BattleTroopInfoPanel(
         name = "battleTroopInfoPanel"
         background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
         touchable = Touchable.disabled
-        pad(18f)
+        pad(18f).padTop(42f)
         defaults().pad(3f)
         buildContent()
         pack()
@@ -41,17 +40,16 @@ class BattleTroopInfoPanel(
                 setAlignment(Align.center)
             }
         add(title).colspan(2).expandX().fillX().padBottom(8f).row()
-
         val portrait = ImageGetter.getUnitIcon(troop.unitName, Color.WHITE)
         add(portrait).size(72f).top().padRight(14f)
-
         val stats = Table().apply {
             defaults().pad(2f, 4f, 2f, 4f)
-            statRow("Side", if (attacker) "Attacker" else "Defender")
-            statRow("Amount", troop.currentAmount.toString())
+            attacker?.let { statRow("Side", if (it) "Attacker" else "Defender") }
+            val amount = if (attacker == null) troop.amount else troop.currentAmount
+            statRow("Amount", amount.toString())
             statRow("Health", "${troop.currentHealth} / ${troop.maxHealth}")
-            val totalHealth =
-                max(0, troop.currentAmount - 1) * troop.maxHealth + troop.currentHealth
+            val totalHealth = if (amount <= 0) 0 else
+                max(0, amount - 1) * troop.maxHealth + troop.currentHealth
             statRow("Total health", totalHealth.toString())
             statRow("Damage", troop.damage.toString())
             if (troop.isRanged) statRow("Ranged", troop.rangedStrength.toString())
@@ -70,19 +68,16 @@ class BattleTroopInfoPanel(
         remove()
         stage.addActor(this)
         pack()
-
         val bottomLeft = anchor.localToStageCoordinates(Vector2(0f, 0f))
         val topRight = anchor.localToStageCoordinates(Vector2(anchor.width, anchor.height))
         val anchorLeft = minOf(bottomLeft.x, topRight.x)
         val anchorRight = maxOf(bottomLeft.x, topRight.x)
         val anchorBottom = minOf(bottomLeft.y, topRight.y)
         val anchorTop = maxOf(bottomLeft.y, topRight.y)
-
         val rightX = anchorRight + ANCHOR_GAP
         val leftX = anchorLeft - width - ANCHOR_GAP
         val targetX = if (rightX + width <= stage.width - EDGE_MARGIN) rightX else leftX
         val centeredY = (anchorBottom + anchorTop - height) / 2f
-
         setPosition(
             targetX.coerceIn(EDGE_MARGIN, max(EDGE_MARGIN, stage.width - width - EDGE_MARGIN)),
             centeredY.coerceIn(EDGE_MARGIN, max(EDGE_MARGIN, stage.height - height - EDGE_MARGIN))
