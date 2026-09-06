@@ -123,4 +123,81 @@ object UnitImages {
         )
         UnitDocument.atomicWrite(target, bytes)
     }
+
+    /** Resamples into an exact-sized transparent canvas without changing the source image. */
+    fun resize(
+        source: BufferedImage,
+        width: Int,
+        height: Int,
+        preserveAspect: Boolean = true
+    ): BufferedImage {
+        require(width in 1..4096 && height in 1..4096 && width.toLong() * height <= 4_194_304) {
+            "Размер должен быть от 1 до 4096 пикселей по каждой стороне, максимум 4 мегапикселя"
+        }
+        val scale = minOf(width.toDouble() / source.width, height.toDouble() / source.height)
+        val drawWidth = if (preserveAspect) kotlin.math.round(source.width * scale).toInt()
+            .coerceIn(1, width) else width
+        val drawHeight = if (preserveAspect) kotlin.math.round(source.height * scale).toInt()
+            .coerceIn(1, height) else height
+        var current = source
+        // Reduce in stages to retain small details when importing large generated images.
+        while (current.width != drawWidth || current.height != drawHeight) {
+            val nextWidth = if (current.width > drawWidth) maxOf(
+                drawWidth,
+                current.width / 2
+            ) else drawWidth
+            val nextHeight = if (current.height > drawHeight) maxOf(
+                drawHeight,
+                current.height / 2
+            ) else drawHeight
+            val next = BufferedImage(nextWidth, nextHeight, BufferedImage.TYPE_INT_ARGB)
+            val graphics = next.createGraphics()
+            try {
+                graphics.composite = java.awt.AlphaComposite.Src
+                graphics.setRenderingHint(
+                    java.awt.RenderingHints.KEY_INTERPOLATION,
+                    java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC
+                )
+                graphics.drawImage(current, 0, 0, nextWidth, nextHeight, null)
+            } finally {
+                graphics.dispose()
+            }
+            if (current !== source) current.flush()
+            current = next
+        }
+        val result = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = result.createGraphics()
+        try {
+            graphics.composite = java.awt.AlphaComposite.Src
+            graphics.drawImage(current, (width - drawWidth) / 2, (height - drawHeight) / 2, null)
+        } finally {
+            graphics.dispose()
+        }
+        if (current !== source) current.flush()
+        return result
+    }
+
+    /** Resizes an alpha mask, then quantizes coverage to opaque black or fully transparent. */
+    fun resizeMask(
+        source: BufferedImage, width: Int, height: Int,
+        preserveAspect: Boolean = true, alphaThreshold: Int = 128
+    ): BufferedImage {
+        require(alphaThreshold in 1..255) { "Порог маски должен быть от 1 до 255" }
+        val result = resize(source, width, height, preserveAspect)
+        val pixels = result.getRGB(0, 0, width, height, null, 0, width)
+        for (index in pixels.indices) {
+            pixels[index] = if ((pixels[index] ushr 24) >= alphaThreshold) 0xff000000.toInt() else 0
+        }
+        result.setRGB(0, 0, width, height, pixels, 0, width)
+        return result
+    }
+
+    /** White RGB allows the game's multiplicative tint to select the displayed color. */
+    fun tintableIcon(source: BufferedImage): BufferedImage {
+        val result = copy(source)
+        val pixels = result.getRGB(0, 0, result.width, result.height, null, 0, result.width)
+        for (index in pixels.indices) pixels[index] = pixels[index] or 0x00ffffff
+        result.setRGB(0, 0, result.width, result.height, pixels, 0, result.width)
+        return result
+    }
 }

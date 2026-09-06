@@ -127,46 +127,9 @@ class UnitDocument(val file: Path) {
         }
     }
 
-    fun validate(): List<String> {
-        val errors = mutableListOf<String>()
-        val names = mutableSetOf<String>()
-        for (unit in units) {
-            val name = unit.path("name").asText()
-            runCatching { validateName(name) }.exceptionOrNull()
-                ?.let { errors += "$name: ${it.message}" }
-            if (!names.add(name.lowercase(Locale.ROOT))) errors += "Повторяющееся имя: $name"
-            for (field in numericFields) {
-                val value = unit.get(field) ?: continue
-                val number = value.asText().toIntOrNull()
-                if (number == null || (field != "hurryCostModifier" && number < 0))
-                    errors += "$name / $field: требуется допустимое целое число"
-            }
-            for (field in stringFields) {
-                val value = unit.get(field) ?: continue
-                if (!value.isTextual && !value.isNull) errors += "$name / $field: требуется строка"
-            }
-            if (unit.path("unitType").asText().isBlank()) errors += "$name: не выбран unitType"
-            for (field in listFields) {
-                val value = unit.get(field) ?: continue
-                if (!value.isArray || value.any { !it.isTextual }) errors += "$name / $field: требуется список строк"
-            }
-            val description = unit.get("civilopediaText")
-            if (description != null && (!description.isArray || description.any { !it.isObject }))
-                errors += "$name / civilopediaText: требуется список объектов"
-            for (field in references.keys + listOf("upgradesTo", "replaces")) {
-                if (field == "promotions") continue
-                val value = unit.get(field)?.takeUnless { it.isNull }?.asText().orEmpty()
-                if (value.isBlank()) continue
-                val available = choices(field)
-                if (available.isNotEmpty() && value !in available) errors += "$name / $field: неизвестное значение $value"
-            }
-            val promotions = choices("promotions")
-            if (promotions.isNotEmpty()) unit.path("promotions").filter { it.isTextual }.forEach {
-                if (it.asText() !in promotions) errors += "$name: неизвестное повышение ${it.asText()}"
-            }
-        }
-        return errors
-    }
+    fun validate(): List<String> =
+            validationErrors().map { "Ошибка: $it" } +
+                    validationWarnings().map { "Предупреждение (не мешает сохранению): $it" }
 
     fun addUnit(name: String, template: ObjectNode? = null): ObjectNode {
         validateName(name)
@@ -216,7 +179,7 @@ class UnitDocument(val file: Path) {
     }
 
     fun save(backupDirectory: Path) {
-        val errors = validate()
+        val errors = validationErrors()
         require(errors.isEmpty()) { errors.joinToString("\n") }
         check(Files.readAllBytes(file).contentEquals(originalBytes)) {
             "Units.json изменён другой программой. Откройте файл заново; текущие правки можно экспортировать отдельно."
@@ -234,4 +197,70 @@ class UnitDocument(val file: Path) {
     fun serialized(): ByteArray =
         (mapper.writerWithDefaultPrettyPrinter().writeValueAsString(tree()) + "\n")
             .toByteArray(Charsets.UTF_8)
+    fun validationErrors(): List<String> {
+        val errors = mutableListOf<String>()
+        val names = mutableSetOf<String>()
+        for (unit in units) {
+            val name = unit.path("name").asText()
+            runCatching { validateName(name) }.exceptionOrNull()
+                ?.let { errors += "$name: ${it.message}" }
+            if (!names.add(name.lowercase(Locale.ROOT))) errors += "Повторяющееся имя: $name"
+            for (field in numericFields) {
+                val value = unit.get(field) ?: continue
+                val number = value.asText().toIntOrNull()
+                if (number == null || (field != "hurryCostModifier" && number < 0))
+                    errors += "$name / $field: требуется допустимое целое число"
+            }
+            for (field in stringFields) {
+                val value = unit.get(field) ?: continue
+                if (!value.isTextual && !value.isNull) errors += "$name / $field: требуется строка"
+            }
+            val type = unit.get("unitType")
+            if (type == null || !type.isTextual || type.asText()
+                        .isBlank()
+            ) errors += "$name: не выбран unitType"
+            for (field in listFields) {
+                val value = unit.get(field) ?: continue
+                if (!value.isArray || value.any { !it.isTextual }) errors += "$name / $field: требуется список строк"
+            }
+            val description = unit.get("civilopediaText")
+            if (description != null && (!description.isArray || description.any { !it.isObject }))
+                errors += "$name / civilopediaText: требуется список объектов"
+        }
+        return errors
+    }
+
+    /** References are advisory: a local dictionary may be incomplete or intentionally customized. */
+    fun validationWarnings(): List<String> {
+        val warnings = mutableListOf<String>()
+        for (unit in units) {
+            val name = unit.path("name").asText()
+            for (field in references.keys + listOf("upgradesTo", "replaces")) {
+                if (field == "promotions") continue
+                val value = unit.get(field)?.takeIf { it.isTextual }?.asText().orEmpty()
+                if (value.isBlank()) continue
+                val available = choices(field)
+                if (available.isNotEmpty() && value !in available)
+                    warnings += "$name / $field: значение $value отсутствует в справочнике редактора"
+            }
+            val promotions = choices("promotions")
+            if (promotions.isNotEmpty()) unit.path("promotions").filter { it.isTextual }.forEach {
+                if (it.asText() !in promotions)
+                    warnings += "$name: повышение ${it.asText()} отсутствует в справочнике редактора"
+            }
+        }
+        return warnings
+    }
+    fun prepareSave(): UnitFileTransaction.Change {
+        val errors = validationErrors()
+        require(errors.isEmpty()) { errors.joinToString("\n") }
+        return UnitFileTransaction.Change(file, originalBytes.clone(), serialized())
+    }
+
+    /** Called on the UI thread only after the complete save transaction succeeds. */
+    fun acceptSaved(change: UnitFileTransaction.Change) {
+        val bytes = requireNotNull(change.bytes)
+        originalBytes = bytes.clone()
+        savedTree = mapper.readTree(bytes) as ArrayNode
+    }
 }

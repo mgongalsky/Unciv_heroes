@@ -27,6 +27,9 @@ dependencies {
     implementation("com.badlogicgames.gdx:gdx-platform:1.13.0:natives-desktop")
     implementation("com.badlogicgames.gdx:gdx-freetype:1.13.0")
     implementation("com.badlogicgames.gdx:gdx-freetype-platform:1.13.0:natives-desktop")
+    implementation("com.badlogicgames.gdx:gdx-tools:1.13.0") {
+        exclude(group = "com.badlogicgames.gdx", module = "gdx-backend-lwjgl")
+    }
     implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
     testImplementation("junit:junit:4.13.2")

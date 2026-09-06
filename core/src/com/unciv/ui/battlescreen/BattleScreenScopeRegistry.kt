@@ -1,7 +1,7 @@
 package com.unciv.ui.battlescreen
 
+import com.unciv.utils.concurrency.Dispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import java.util.WeakHashMap
 
@@ -10,5 +10,5 @@ internal object BattleScreenScopeRegistry {
 
     @Synchronized
     fun scopeFor(screen: BattleScreen): CoroutineScope =
-        scopes.getOrPut(screen) { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
+        scopes.getOrPut(screen) { CoroutineScope(SupervisorJob() + Dispatcher.GL) }
 }

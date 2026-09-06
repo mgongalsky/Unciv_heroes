@@ -75,4 +75,32 @@ class UnitDocumentTest {
         copy.put("requiredTech", "Other")
         assertEquals("Archery", document.units[0].path("requiredTech").asText())
     }
+
+    @Test
+    fun missingReferencesDoNotBlockSavingButInvalidNumbersDo() {
+        val directory = temporary.newFolder().toPath()
+        Files.writeString(directory.resolve("Techs.json"), """[{"techs":[{"name":"The Wheel"}]}]""")
+        val file = directory.resolve("Units.json")
+        Files.writeString(
+            file,
+            """[{"name":"Bowman","unitType":"Archery","requiredTech":"Archery","health":"15"}]"""
+        )
+        val document = UnitDocument(file)
+        assertTrue(document.validationErrors().isEmpty())
+        assertTrue(document.validationWarnings().any { "requiredTech" in it && "Archery" in it })
+        document.setText(document.units[0], "health", "20")
+        document.save(temporary.newFolder().toPath())
+        val saved = Files.readString(file)
+        val reloaded = UnitDocument(file)
+        assertEquals("Archery", reloaded.units[0].path("requiredTech").asText())
+        assertEquals("20", reloaded.units[0].path("health").asText())
+        assertFalse(document.isDirty())
+        document.units[0].put("health", "not a number")
+        assertThrows(IllegalArgumentException::class.java) {
+            document.save(
+                temporary.newFolder().toPath()
+            )
+        }
+        assertEquals(saved, Files.readString(file))
+    }
 }

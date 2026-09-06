@@ -218,17 +218,56 @@ class UnitEditorWindow(private val projectRoot: Path) : JFrame("Редактор
     private fun save() {
         commitForm()
         val doc = requireDocument()
-        doc.save(backupDirectory)
-        try {
-            imagePanels.values.flatten().forEach { it.save(backupDirectory) }
-        } catch (error: Exception) {
-            throw IllegalStateException(
-                "JSON сохранён, но не все изображения записаны. Несохранённые изображения остаются в редакторе. ${error.message}",
-                error
-            )
+        val documentChange = doc.prepareSave()
+        val pendingImages = imagePanels.values.flatten().mapNotNull { panel ->
+            panel.prepareSave()?.let { panel to it }
         }
-        status.text =
-                "JSON и исходники изображений сохранены. Для игры пересоберите атласы (см. devtools/README.md)."
+        val progress = JDialog(this, "Сохранение", java.awt.Dialog.ModalityType.APPLICATION_MODAL)
+        progress.defaultCloseOperation = WindowConstants.DO_NOTHING_ON_CLOSE
+        val progressLabel = JLabel("Подготовка сохранения…")
+        progress.contentPane = JPanel(BorderLayout(12, 12)).apply {
+            border = BorderFactory.createEmptyBorder(20, 20, 20, 20)
+            add(progressLabel, BorderLayout.NORTH)
+            add(JProgressBar().apply { isIndeterminate = true }, BorderLayout.CENTER)
+        }
+        progress.setSize(540, 130)
+        progress.setLocationRelativeTo(this)
+        var result: UnitEditorSave.Result? = null
+        var failure: Throwable? = null
+        val worker = object : SwingWorker<UnitEditorSave.Result, String>() {
+            override fun doInBackground(): UnitEditorSave.Result = UnitEditorSave.save(
+                projectRoot, documentChange, pendingImages.map { it.second }, backupDirectory,
+                progress = { publish(it) }
+            )
+
+            override fun process(chunks: MutableList<String>) {
+                chunks.lastOrNull()?.let { progressLabel.text = it }
+            }
+
+            override fun done() {
+                try {
+                    result = get()
+                } catch (error: Exception) {
+                    failure = error.cause ?: error
+                } finally {
+                    progress.dispose()
+                }
+            }
+        }
+        worker.execute()
+        // The modal event loop keeps progress responsive and prevents edits during the snapshot.
+        // This method returns only after saving, including when called by canDiscard().
+        progress.isVisible = true
+        failure?.let { throw IllegalStateException(it.message ?: "Ошибка сохранения", it) }
+        val saved = result ?: error("Сохранение не завершено")
+        doc.acceptSaved(documentChange)
+        pendingImages.forEach { (panel, edit) -> panel.acceptSaved(edit) }
+        val warnings = doc.validationWarnings()
+        val graphics = if (saved.atlases.isEmpty()) "" else
+            " Атласы обновлены: ${saved.atlases.joinToString()}. Перезапустите игру."
+        val warningText = if (warnings.isEmpty()) "" else
+            " Предупреждений: ${warnings.size} — подробнее в «Проверить»."
+        status.text = "Сохранено.$graphics$warningText Резервная копия: ${saved.backup}"
     }
 
     private fun export() {

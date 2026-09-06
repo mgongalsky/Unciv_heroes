@@ -41,8 +41,6 @@ import com.unciv.ui.tilegroups.TileSetStrings
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.koin.core.component.KoinComponent
@@ -306,12 +304,14 @@ class BattleScreen private constructor(
     }
 
     suspend fun runBattleLoop(initialBattleState: CreateBattleReportUseCase.InitialState) =
-            coroutineScope {
+            com.unciv.utils.concurrency.withGLContext {
+                // The manager is also read by input handlers and render(). Keep it and Scene2D
+                // mutations on the same thread, including after a suspended player action.
                 while (manager.isBattleOn()) {
                     val currentTroop = manager.getCurrentTroop()
                     if (currentTroop == null) {
-                        Gdx.app.postRunnable { shutdownScreen() }
-                        return@coroutineScope
+                        shutdownScreen()
+                        return@withGLContext
                     }
                     if (verboseTurn) println(
                         "Current troop: ${currentTroop.unitName} at position ${
@@ -320,7 +320,6 @@ class BattleScreen private constructor(
                             )?.position
                         }"
                     )
-
                     val actionResult = if (isTroopPlayerControlled(currentTroop)) {
                         var result: com.unciv.pure.application.battle.BattleCommandResult
                         while (true) {
@@ -341,7 +340,6 @@ class BattleScreen private constructor(
                             handleApplicationEvent(event, initialBattleState)
                         }.performTurn(currentTroop)
                     }
-
                     val currentTroopAfter = manager.getCurrentTroop()
                     if (ShouldAdvanceTurnUseCase.execute(actionResult) && currentTroopAfter != null &&
                             manager.getTurnQueue().isNotEmpty()
@@ -351,9 +349,11 @@ class BattleScreen private constructor(
                     } else if (actionResult?.isMorale == true && verboseTurn) {
                         println("Morale triggered: ${currentTroop.unitName} keeps the turn")
                     }
-
                     movePointerToNextTroop()
                     updateTilesShadowing()
+                    // Dispatch the next turn through the GL queue, allowing rendering, queued
+                    // visual events and cancellation even during consecutive AI turns.
+                    kotlinx.coroutines.yield()
                 }
                 manager.finishBattle()
                 println("Battle has ended!")
@@ -412,12 +412,19 @@ class BattleScreen private constructor(
 
     suspend fun waitForPlayerAction(): Pair<BattleCommand, TileGroup> {
         return suspendCancellableCoroutine { continuation ->
-            onPlayerActionReceived = { commandAndTileGroup ->
-                continuation.resume(commandAndTileGroup)
+            val handler: (Pair<BattleCommand, TileGroup>) -> Unit = { action ->
+                if (continuation.isActive) {
+                    // Consume this input slot before resuming: another click or Space
+                    // must not resume the same continuation twice.
+                    onPlayerActionReceived = null
+                    continuation.resume(action)
+                }
             }
-
+            onPlayerActionReceived = handler
             continuation.invokeOnCancellation {
-                onPlayerActionReceived = null
+                Gdx.app.postRunnable {
+                    if (onPlayerActionReceived === handler) onPlayerActionReceived = null
+                }
             }
         }
     }
