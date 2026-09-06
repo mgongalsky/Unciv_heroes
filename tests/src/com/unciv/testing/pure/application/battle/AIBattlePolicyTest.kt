@@ -42,25 +42,26 @@ class AIBattlePolicyTest {
             unitTypes["Ranged"] = UnitType().apply { name = "Ranged" }
             units["Spearman"] = BaseUnit().apply {
                 name = "Spearman"; unitType = "Melee"; speed = 5; health = 40; damage = 10
+                formationHealthPercent = 50
+                formationDamageReductionPercent = 60
             }
             units["Archer"] = BaseUnit().apply {
                 name = "Archer"; unitType = "Ranged"; speed = 3; health = 15; damage = 5
                 rangedStrength = 7
+                formationHealthPercent = 20
+                formationDamageReductionPercent = 25
             }
         }
         startKoin { allowOverride(true); modules(module { single { ruleset } }, testModule) }
-
         attackerTile = FakeBattleTile(Vector2(0f, 0f))
         defenderTile = FakeBattleTile(Vector2(1f, 0f))
         attackerTile.addNeighbor(defenderTile)
         defenderTile.addNeighbor(attackerTile)
-
         val civ = FakeCivilizationInfo()
         attackerArmy = ArmyInfo(civ, 5).apply { addUnits("Spearman", 10) }
         defenderArmy = ArmyInfo(civ, 5).apply { addUnits("Spearman", 10) }
         manager = TestableBattleManager(
-            attackerArmy,
-            defenderArmy,
+            attackerArmy, defenderArmy,
             FakeBattleField(listOf(attackerTile, defenderTile)),
             FakeBattleRandom(List(100) { 0.0 })
         )

@@ -10,4 +10,8 @@ class RulesetTroopDefinitionSource(private val ruleset: Ruleset) : ITroopDefinit
     override fun getRangedStrength(unitName: String) = ruleset.units[unitName]?.rangedStrength ?: 0
     override fun isSelfFeeding(unitName: String) =
             ruleset.units[unitName]?.hasUnique(UniqueType.SelfFeeding) ?: false
+    override fun getFormationHealthPercent(unitName: String) =
+        ruleset.units[unitName]?.formationHealthPercent ?: 0
+    override fun getFormationDamageReductionPercent(unitName: String) =
+            ruleset.units[unitName]?.formationDamageReductionPercent ?: 0
 }

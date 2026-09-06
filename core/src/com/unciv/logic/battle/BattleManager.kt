@@ -409,11 +409,15 @@ open class BattleManager(
 
     fun attack(defender: Troop, attacker: Troop? = getCurrentTroop()): Boolean {
         if (attacker == null) return false
-
         val isLuck = isLuckTriggered(attacker)
         val incomingDamage = attacker.currentAmount * attacker.damage * if (isLuck) 2 else 1
         val formationDamage = ApplyFormationDamageUseCase.execute(
-            ApplyFormationDamageUseCase.Input(incomingDamage, defender.formation.current)
+            ApplyFormationDamageUseCase.Input(
+                incomingDamage,
+                if (defender.hasFormation) defender.formation.current else 0,
+                defender.formationDamageReductionPercent.coerceIn(0, 100),
+                100
+            )
         )
         val result = CalculateDamageUseCase.execute(
             attackerAmount = 1,
@@ -423,13 +427,10 @@ open class BattleManager(
             defenderMaxHealth = defender.maxHealth,
             isLuck = false
         ).copy(isLuck = isLuck)
-
         defender.formation.current = formationDamage.remainingFormation
         defender.currentAmount = result.remainingAmount
         defender.currentHealth = result.remainingHealth
-
         if (defender.currentAmount <= 0) perishTroop(defender)
-
         return result.isLuck
     }
 
@@ -602,38 +603,29 @@ open class BattleManager(
         val targetIsEnemy = defender != null && isTileOccupiedByEnemy(troop, targetPosition)
         val attackFromAchievable = attackTile != null && isTileAchievable(troop, attackTile)
         val attackFromFree = attackTile != null && isTileFree(attackTile)
-        val canAttack =
-                defender != null && attackTile != null && targetIsEnemy && attackFromAchievable &&
-                        (attackFromFree || currentTile == attackTile)
+        val canAttack = defender != null && attackTile != null && targetIsEnemy &&
+                attackFromAchievable && (attackFromFree || currentTile == attackTile)
         val attackerIsLuck: Boolean
         val defenderIsLuck: Boolean
         val remaining: Int
         val died: Boolean
-
         if (canAttack) {
             moveTroop(troop, attackTile!!)
             attackerIsLuck = isLuckTriggered(troop)
             defenderIsLuck = isLuckTriggered(defender!!)
+            fun snapshot(unit: Troop) = CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
+                unit.currentAmount, unit.damage, unit.currentHealth, unit.maxHealth,
+                if (unit.hasFormation) unit.formation.current else 0,
+                unit.formationDamageReductionPercent
+            )
+
             val exchange = CalculateFormationMeleeExchangeUseCase.execute(
-                attacker = CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
-                    troop.currentAmount,
-                    troop.damage,
-                    troop.currentHealth,
-                    troop.maxHealth,
-                    troop.formation.current
-                ),
-                defender = CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
-                    defender.currentAmount,
-                    defender.damage,
-                    defender.currentHealth,
-                    defender.maxHealth,
-                    defender.formation.current
-                ),
+                attacker = snapshot(troop),
+                defender = snapshot(defender),
                 attackerIsLuck = attackerIsLuck,
                 defenderIsLuck = defenderIsLuck,
                 defenderRetaliationDamage = remainingRetaliationDamageByTroopId[defender.id]
             )
-
             remainingRetaliationDamageByTroopId[defender.id] = exchange.remainingRetaliationDamage
             troop.formation.current = exchange.attackerRemainingFormation
             defender.formation.current = exchange.defenderRemainingFormation
@@ -643,7 +635,6 @@ open class BattleManager(
             defender.currentHealth = exchange.damageToDefender.remainingHealth
             remaining = defender.currentAmount
             died = defender.currentAmount <= 0
-
             if (troop.currentAmount <= 0) perishTroop(troop)
             if (defender.currentAmount <= 0) perishTroop(defender)
         } else {
@@ -652,33 +643,18 @@ open class BattleManager(
             remaining = 0
             died = false
         }
-
         val output = PerformAttackUseCase.execute(
             PerformAttackUseCase.Input(
-                troop.id,
-                defender?.id,
-                attackTile?.toPoint(),
-                currentTile?.toPoint(),
-                targetIsEnemy,
-                attackFromAchievable,
-                attackFromFree,
-                attackerIsLuck,
-                isMorale,
-                remaining,
-                died
+                troop.id, defender?.id, attackTile?.toPoint(), currentTile?.toPoint(),
+                targetIsEnemy, attackFromAchievable, attackFromFree,
+                attackerIsLuck, isMorale, remaining, died
             )
         )
         if (output.success) {
             publishApplicationEvent(
                 com.unciv.pure.application.battle.BattleEvent.TroopAttacked(
-                    troop.id,
-                    defender!!.id,
-                    remaining,
-                    output.isLuck,
-                    output.isMorale,
-                    died
-                ),
-                onApplicationEvent
+                    troop.id, defender!!.id, remaining, output.isLuck, output.isMorale, died
+                ), onApplicationEvent
             )
         }
         if (!isBattleOn()) {

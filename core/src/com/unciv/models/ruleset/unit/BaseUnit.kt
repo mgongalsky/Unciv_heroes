@@ -705,4 +705,10 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
 
         cachedForceEvaluation = power.toInt()
     }
+
+    /** Formation capacity as a percentage of the soldiers' maximum health; zero disables formation. */
+    var formationHealthPercent: Int = 0
+
+    /** Incoming damage absorbed by available formation, from 0 to 100 percent. */
+    var formationDamageReductionPercent: Int = 0
 }

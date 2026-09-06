@@ -40,6 +40,8 @@ class BattleSimulationDeterminismTest {
             unitTypes["Melee"] = UnitType().apply { name = "Melee" }
             units["Spearman"] = BaseUnit().apply {
                 name = "Spearman"; unitType = "Melee"; speed = 5; health = 100; damage = 10
+                formationHealthPercent = 50
+                formationDamageReductionPercent = 60
             }
         }
         startKoin { allowOverride(true); modules(module { single { ruleset } }, testModule) }

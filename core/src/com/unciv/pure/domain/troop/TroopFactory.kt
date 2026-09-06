@@ -11,8 +11,6 @@ object TroopFactory {
         amount: Int,
         source: ITroopDefinitionSource
     ): Troop {
-        val ranged = source.getRangedStrength(unitName)
-        //println("TroopFactory.create: unitName=$unitName rangedStrength=$ranged")
         return Troop(
             id = nextId++,
             unitName = unitName,
@@ -20,10 +18,13 @@ object TroopFactory {
             speed = source.getSpeed(unitName),
             damage = source.getDamage(unitName),
             maxHealth = source.getMaxHealth(unitName),
-            rangedStrength = ranged,
+            rangedStrength = source.getRangedStrength(unitName),
             currentAmount = amount,
             currentHealth = source.getMaxHealth(unitName),
-            isSelfFeeding = source.isSelfFeeding(unitName)
+            isSelfFeeding = source.isSelfFeeding(unitName),
+            formationHealthPercent = source.getFormationHealthPercent(unitName).coerceAtLeast(0),
+            formationDamageReductionPercent = source.getFormationDamageReductionPercent(unitName)
+                .coerceIn(0, 100)
         )
     }
 }

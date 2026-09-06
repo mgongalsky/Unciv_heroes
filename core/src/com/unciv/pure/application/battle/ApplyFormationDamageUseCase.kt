@@ -23,14 +23,9 @@ object ApplyFormationDamageUseCase {
         require(input.formationDamageNumerator <= input.formationDamageDenominator) {
             "formation damage share must not exceed incoming damage"
         }
-
-        val allocatedToFormation =
-                input.incomingDamage * input.formationDamageNumerator / input.formationDamageDenominator
+        val allocatedToFormation = (input.incomingDamage.toLong() * input.formationDamageNumerator /
+                input.formationDamageDenominator).toInt()
         val absorbed = minOf(allocatedToFormation, input.currentFormation)
-        return Output(
-            absorbedByFormation = absorbed,
-            remainingFormation = input.currentFormation - absorbed,
-            damageToSoldiers = input.incomingDamage - absorbed
-        )
+        return Output(absorbed, input.currentFormation - absorbed, input.incomingDamage - absorbed)
     }
 }

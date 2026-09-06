@@ -17,7 +17,6 @@ import com.unciv.pure.domain.troop.Troop
 import com.unciv.pure.domain.troop.TroopFactory
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import com.unciv.pure.domain.troop.Formation
 
 open class ArmyInfo(
     @Transient var civInfo: CivilizationInfo = CivilizationInfo(),
@@ -136,10 +135,9 @@ open class ArmyInfo(
                 troops[index] = null
                 continue
             }
-
             troop.amount = troop.currentAmount
             troop.currentHealth = troop.maxHealth
-            troop.formation = Formation.forSoldiers(troop.currentAmount)
+            troop.resetFormation()
         }
     }
     fun copySlots(): Array<Troop?> = troops

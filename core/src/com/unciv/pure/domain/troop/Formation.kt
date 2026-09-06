@@ -20,5 +20,17 @@ data class Formation(
             val maximum = amount.coerceAtLeast(0) * POINTS_PER_SOLDIER
             return Formation(current = maximum, maximum = maximum)
         }
+
+        /** Rounds the whole troop's capacity down once and saturates at the supported Int limit. */
+        fun forHealth(amount: Int, maxHealth: Int, healthPercent: Int): Formation {
+            val totalHealth = amount.coerceAtLeast(0).toLong() * maxHealth.coerceAtLeast(0)
+            val percent = healthPercent.coerceAtLeast(0).toLong()
+            val maximum = if (percent == 0L) 0 else {
+                val saturationThreshold = (Int.MAX_VALUE.toLong() * 100L + percent - 1L) / percent
+                if (totalHealth >= saturationThreshold) Int.MAX_VALUE
+                else (totalHealth * percent / 100L).toInt()
+            }
+            return Formation(maximum, maximum)
+        }
     }
 }

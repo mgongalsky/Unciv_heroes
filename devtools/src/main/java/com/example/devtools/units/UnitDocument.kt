@@ -21,6 +21,7 @@ class UnitDocument(val file: Path) {
         val numericFields = linkedSetOf(
             "cost", "hurryCostModifier", "movement", "strength", "attackSkill",
             "defenceSkill", "health", "speed", "damage", "rangedStrength",
+            "formationHealthPercent", "formationDamageReductionPercent",
             "religiousStrength", "range", "interceptRange"
         )
         val stringFields = linkedSetOf(
@@ -111,15 +112,20 @@ class UnitDocument(val file: Path) {
         )
     }
 
-    /** Only call for changed controls: untouched values retain their exact JSON type. */
     fun setText(unit: ObjectNode, field: String, text: String) {
         if (field in numericFields) {
             if (text.isBlank()) {
-                unit.remove(field); return
+                unit.remove(field)
+                return
             }
-            val number =
-                text.trim().toIntOrNull() ?: error("$field: требуется целое число в диапазоне Int")
-            require(field == "hurryCostModifier" || number >= 0) { "$field: значение не может быть отрицательным" }
+            val number = text.trim().toIntOrNull()
+                ?: error("$field: требуется целое число в диапазоне Int")
+            require(field == "hurryCostModifier" || number >= 0) {
+                "$field: значение не может быть отрицательным"
+            }
+            require(field != "formationDamageReductionPercent" || number <= 100) {
+                "$field: процент поглощения должен быть от 0 до 100"
+            }
             if (unit.get(field)?.isTextual == true) unit.put(field, number.toString())
             else unit.put(field, number)
         } else {
@@ -197,6 +203,7 @@ class UnitDocument(val file: Path) {
     fun serialized(): ByteArray =
         (mapper.writerWithDefaultPrettyPrinter().writeValueAsString(tree()) + "\n")
             .toByteArray(Charsets.UTF_8)
+
     fun validationErrors(): List<String> {
         val errors = mutableListOf<String>()
         val names = mutableSetOf<String>()
@@ -210,18 +217,20 @@ class UnitDocument(val file: Path) {
                 val number = value.asText().toIntOrNull()
                 if (number == null || (field != "hurryCostModifier" && number < 0))
                     errors += "$name / $field: требуется допустимое целое число"
+                else if (field == "formationDamageReductionPercent" && number > 100)
+                    errors += "$name / $field: процент поглощения должен быть от 0 до 100"
             }
             for (field in stringFields) {
                 val value = unit.get(field) ?: continue
                 if (!value.isTextual && !value.isNull) errors += "$name / $field: требуется строка"
             }
             val type = unit.get("unitType")
-            if (type == null || !type.isTextual || type.asText()
-                        .isBlank()
-            ) errors += "$name: не выбран unitType"
+            if (type == null || !type.isTextual || type.asText().isBlank())
+                errors += "$name: не выбран unitType"
             for (field in listFields) {
                 val value = unit.get(field) ?: continue
-                if (!value.isArray || value.any { !it.isTextual }) errors += "$name / $field: требуется список строк"
+                if (!value.isArray || value.any { !it.isTextual })
+                    errors += "$name / $field: требуется список строк"
             }
             val description = unit.get("civilopediaText")
             if (description != null && (!description.isArray || description.any { !it.isObject }))

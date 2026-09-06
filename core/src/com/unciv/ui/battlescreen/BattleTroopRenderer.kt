@@ -27,12 +27,8 @@ fun populateBattleTroopGroup(
         name = "amountLabel"
         setPosition(parentWidth * 0.5f, 0f)
     }
-
     ImageGetter.getLayeredImageColored(
-        "TileSets/AbsoluteUnits/Units/${troop.unitName}",
-        null,
-        null,
-        null
+        "TileSets/AbsoluteUnits/Units/${troop.unitName}", null, null, null
     ).forEach { troopImage ->
         troopImage.setScale(if (attacker) -0.25f else 0.25f, 0.25f)
         troopImage.setPosition(
@@ -44,7 +40,8 @@ fun populateBattleTroopGroup(
         target.addActor(troopImage)
     }
     target.addActor(amountLabel)
-    target.addActor(createFormationBar(troop, parentWidth))
+    if (troop.hasFormation && troop.formation.maximum > 0)
+        target.addActor(createFormationBar(troop, parentWidth))
 }
 
 fun createActiveTroopOutline(
@@ -102,6 +99,10 @@ fun createActiveTroopOutline(
 
 fun updateFormationBar(target: Group, troop: Troop) {
     val bar = target.findActor<Group>("formationBar") ?: return
+    if (!troop.hasFormation || troop.formation.maximum <= 0) {
+        bar.remove()
+        return
+    }
     val fill = bar.findActor<Image>("formationFill") ?: return
     fill.width = (FORMATION_BAR_WIDTH - FORMATION_BORDER_WIDTH * 2) * troop.formation.fraction
     val borderColor = if (troop.formation.isBroken) Color.RED else Color(0.15f, 0.3f, 0.5f, 1f)

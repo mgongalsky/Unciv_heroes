@@ -8,7 +8,8 @@ object CalculateFormationMeleeExchangeUseCase {
         val damage: Int,
         val health: Int,
         val maxHealth: Int,
-        val formation: Int
+        val formation: Int,
+        val formationDamageReductionPercent: Int = 50
     )
 
     data class Output(
@@ -28,38 +29,44 @@ object CalculateFormationMeleeExchangeUseCase {
     ): Output {
         val fullRetaliationDamage = defender.amount * defender.damage * if (defenderIsLuck) 2 else 1
         val availableRetaliationDamage =
-                (defenderRetaliationDamage ?: fullRetaliationDamage).coerceAtLeast(0)
-        val attackerTotalHealth =
-                ((attacker.amount - 1).coerceAtLeast(0) * attacker.maxHealth + attacker.health)
-                    .coerceAtLeast(0)
-        val rawDamageNeeded = attacker.formation.coerceAtLeast(0) * 2 + attackerTotalHealth
-        val appliedRetaliationDamage = minOf(availableRetaliationDamage, rawDamageNeeded)
-        val retaliationFormation = ApplyFormationDamageUseCase.execute(
-            ApplyFormationDamageUseCase.Input(appliedRetaliationDamage, attacker.formation)
+            (defenderRetaliationDamage ?: fullRetaliationDamage).coerceAtLeast(0)
+        val attackerTotalHealth = if (attacker.amount <= 0) 0L else
+            (attacker.amount - 1).toLong() * attacker.maxHealth + attacker.health
+        // Find the smallest raw hit that kills the attacker with its configured absorption.
+        var lower = 0
+        var upper = availableRetaliationDamage
+        while (lower < upper) {
+            val middle = lower + (upper - lower) / 2
+            if (applyFormation(middle, attacker).damageToSoldiers.toLong() >= attackerTotalHealth)
+                upper = middle
+            else lower = middle + 1
+        }
+        val appliedRetaliationDamage = lower
+        val retaliationFormation = applyFormation(appliedRetaliationDamage, attacker)
+        val attackFormation = applyFormation(
+            attacker.amount * attacker.damage * if (attackerIsLuck) 2 else 1, defender
         )
-        val attackFormation = ApplyFormationDamageUseCase.execute(
-            ApplyFormationDamageUseCase.Input(
-                attacker.amount * attacker.damage * if (attackerIsLuck) 2 else 1,
-                defender.formation
-            )
-        )
-
         return Output(
             damageToAttacker = calculateSoldierDamage(
-                retaliationFormation.damageToSoldiers,
-                attacker,
+                retaliationFormation.damageToSoldiers, attacker,
                 defenderIsLuck && defenderRetaliationDamage == null
             ),
             damageToDefender = calculateSoldierDamage(
-                attackFormation.damageToSoldiers,
-                defender,
-                attackerIsLuck
+                attackFormation.damageToSoldiers, defender, attackerIsLuck
             ),
             attackerRemainingFormation = retaliationFormation.remainingFormation,
             defenderRemainingFormation = attackFormation.remainingFormation,
             remainingRetaliationDamage = availableRetaliationDamage - appliedRetaliationDamage
         )
     }
+
+    private fun applyFormation(damage: Int, troop: TroopSnapshot) =
+        ApplyFormationDamageUseCase.execute(
+            ApplyFormationDamageUseCase.Input(
+                damage, troop.formation.coerceAtLeast(0),
+                troop.formationDamageReductionPercent.coerceIn(0, 100), 100
+            )
+        )
 
     private fun calculateSoldierDamage(
         damage: Int,

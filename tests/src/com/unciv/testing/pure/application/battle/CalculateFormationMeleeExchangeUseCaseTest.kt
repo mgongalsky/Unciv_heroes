@@ -59,4 +59,29 @@ class CalculateFormationMeleeExchangeUseCaseTest {
         assertEquals(72, result.damageToAttacker.remainingHealth)
         assertEquals(0, result.remainingRetaliationDamage)
     }
+
+    @Test
+    fun `each side uses its own protection percentage`() {
+        val result = CalculateFormationMeleeExchangeUseCase.execute(
+            attacker = troop().copy(formationDamageReductionPercent = 60),
+            defender = troop().copy(formationDamageReductionPercent = 25),
+            attackerIsLuck = false, defenderIsLuck = false
+        )
+        assertEquals(40, result.attackerRemainingFormation)
+        assertEquals(75, result.defenderRemainingFormation)
+        assertEquals(60, result.damageToAttacker.remainingHealth)
+        assertEquals(25, result.damageToDefender.remainingHealth)
+    }
+
+    @Test
+    fun `retaliation spends only the lethal damage at full protection`() {
+        val result = CalculateFormationMeleeExchangeUseCase.execute(
+            attacker = troop(amount = 1, health = 10, formation = 20)
+                .copy(formationDamageReductionPercent = 100),
+            defender = troop(), attackerIsLuck = false, defenderIsLuck = false
+        )
+        assertEquals(0, result.damageToAttacker.remainingAmount)
+        assertEquals(0, result.attackerRemainingFormation)
+        assertEquals(70, result.remainingRetaliationDamage)
+    }
 }

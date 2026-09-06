@@ -40,10 +40,11 @@ class FormationCommandIntegrationTest {
             unitTypes["Melee"] = UnitType().apply { name = "Melee" }
             units["Runner"] = BaseUnit().apply {
                 name = "Runner"; unitType = "Melee"; speed = 5; health = 100; damage = 10
+                formationHealthPercent = 10
+                formationDamageReductionPercent = 50
             }
         }
         startKoin { allowOverride(true); modules(module { single { ruleset } }, testModule) }
-
         tiles = (0..3).map { FakeBattleTile(Vector2(it.toFloat(), 0f)) }
         tiles.zipWithNext().forEach { (left, right) ->
             left.addNeighbor(right)
@@ -52,11 +53,8 @@ class FormationCommandIntegrationTest {
         val attacker = ArmyInfo(FakeCivilizationInfo(), 5).apply { addUnits("Runner", 10) }
         val defender = ArmyInfo(FakeCivilizationInfo(), 5).apply { addUnits("Runner", 10) }
         manager = TestableBattleManager(
-            attacker,
-            defender,
-            FakeBattleField(tiles),
-            FakeBattleRandom(List(100) { 0.0 }),
-            useRealMovement = true
+            attacker, defender, FakeBattleField(tiles),
+            FakeBattleRandom(List(100) { 0.0 }), useRealMovement = true
         )
         troop = attacker.getAllTroops().filterNotNull().first()
         manager.placeTroop(troop, tiles.first())

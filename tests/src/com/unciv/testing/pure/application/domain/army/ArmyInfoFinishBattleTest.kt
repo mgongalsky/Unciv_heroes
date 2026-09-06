@@ -14,7 +14,9 @@ class ArmyInfoFinishBattleTest {
         speed = 3,
         damage = 10,
         maxHealth = 100,
-        rangedStrength = 0
+        rangedStrength = 0,
+        formationHealthPercent = 10,
+        formationDamageReductionPercent = 50
     )
 
     @Test
@@ -48,5 +50,18 @@ class ArmyInfoFinishBattleTest {
         army.finishBattle()
 
         assertNull(army.getTroopAt(0))
+    }
+
+    @Test
+    fun `finishing battle does not grant formation to an unconfigured troop`() {
+        val army = ArmyInfo(FakeCivilizationInfo(), maxSlots = 2)
+        val peasant = TroopFactory.create(
+            "Peasant", 10,
+            HardcodedTroopDefinitionSource(4, 2, 5, 0)
+        )
+        army.addTroop(peasant)
+        army.finishBattle()
+        assertEquals(0, peasant.formation.current)
+        assertEquals(0, peasant.formation.maximum)
     }
 }
