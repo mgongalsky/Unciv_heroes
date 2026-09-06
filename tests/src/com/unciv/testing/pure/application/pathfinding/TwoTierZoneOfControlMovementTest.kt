@@ -53,15 +53,16 @@ class TwoTierZoneOfControlMovementTest {
     }
 
     @Test
-    fun `entry costs one and continuation within control costs two`() {
+    fun `entry and continuation in ordinary control both cost two`() {
         val ring = ring()
         val approach = tile(2, 0)
         connect(approach, ring[0])
-        val reachable = MovementRangeUseCase.execute(approach, 3f, context)
-        assertEquals(1f, reachable.getValue(ring[0]).totalDistance, 0f)
+        val reachable = MovementRangeUseCase.execute(approach, 4f, context)
+        assertEquals(2f, reachable.getValue(ring[0]).totalDistance, 0f)
         assertTrue(reachable.containsKey(ring[1]))
-        assertEquals(3f, reachable.getValue(ring[1]).totalDistance, 0f)
+        assertEquals(4f, reachable.getValue(ring[1]).totalDistance, 0f)
         assertFalse(reachable.containsKey(ring[2]))
+        assertFalse(MovementRangeUseCase.execute(approach, 3f, context).containsKey(ring[1]))
     }
 
     @Test
@@ -79,7 +80,7 @@ class TwoTierZoneOfControlMovementTest {
     }
 
     @Test
-    fun `new action in reinforced control permits one ordinary controlled step only`() {
+    fun `starting in reinforced control allows multiple yellow steps within budget`() {
         val start = tile(0)
         val ordinary = tile(1)
         val beyond = tile(2)
@@ -88,12 +89,14 @@ class TwoTierZoneOfControlMovementTest {
         connect(ordinary, beyond)
         connect(start, firstGuard)
         connect(ordinary, firstGuard)
+        connect(beyond, firstGuard)
         connect(start, tile(0, -1).apply { setTroop(secondEnemy) })
-        val reachable = MovementRangeUseCase.execute(start, 5f, context)
-        assertTrue(reachable.containsKey(ordinary))
-        assertFalse(reachable.containsKey(beyond))
-        val nextAction = MovementRangeUseCase.execute(ordinary, 5f, context)
-        assertTrue(nextAction.containsKey(beyond))
+        val reachable = MovementRangeUseCase.execute(start, 4f, context)
+        assertEquals(2f, reachable.getValue(ordinary).totalDistance, 0f)
+        assertEquals(4f, reachable.getValue(beyond).totalDistance, 0f)
+        assertEquals(listOf(ordinary, beyond), reachable.getPathToTile(beyond))
+        assertFalse(MovementRangeUseCase.execute(start, 3.99f, context).containsKey(beyond))
+        assertTrue(MovementRangeUseCase.execute(start, 4.01f, context).containsKey(beyond))
     }
 
     @Test
@@ -120,7 +123,7 @@ class TwoTierZoneOfControlMovementTest {
     }
 
     @Test
-    fun `an alternative route through a free tile can continue past a controlled stopping point`() {
+    fun `direct exit through yellow control is cheaper than a detour through free space`() {
         val start = tile(0)
         val controlled = tile(1)
         val outside = tile(0, 2)
@@ -136,6 +139,6 @@ class TwoTierZoneOfControlMovementTest {
         val reachable = MovementRangeUseCase.execute(start, 3f, context)
         assertTrue(reachable.containsKey(beyond))
         assertEquals(3f, reachable.getValue(beyond).totalDistance, 0f)
-        assertEquals(listOf(outside, controlled, beyond), reachable.getPathToTile(beyond))
+        assertEquals(listOf(controlled, beyond), reachable.getPathToTile(beyond))
     }
 }

@@ -34,15 +34,14 @@ object ZoneOfControlTransition {
         require(input.normalMultiplier.isFinite() && input.normalMultiplier >= 1f)
 
         val cost = input.baseCost * if (
-            input.from == Strength.NORMAL && input.to != Strength.NONE
+                input.to == Strength.NORMAL ||
+                (input.from == Strength.NORMAL && input.to == Strength.REINFORCED)
         ) input.normalMultiplier else 1f
         val blocked = input.from == Strength.REINFORCED && !input.isFirstStep
-        val endsMovement = input.to == Strength.REINFORCED ||
-                (input.from == Strength.REINFORCED && input.to != Strength.NONE)
         return Output(
             allowed = !blocked && cost <= input.remainingMovement,
             movementCost = cost,
-            endsMovement = endsMovement
+            endsMovement = input.to == Strength.REINFORCED
         )
     }
 }

@@ -18,13 +18,14 @@ class ZoneOfControlTransitionTest {
     }
 
     @Test
-    fun `entering ordinary control has no surcharge`() {
-        val result = ZoneOfControlTransition.execute(
-            Input(Strength.NONE, Strength.NORMAL, 1f, false)
-        )
+    fun `entering ordinary control requires two points from free space`() {
+        val input = Input(Strength.NONE, Strength.NORMAL, 2f, false)
+        val result = ZoneOfControlTransition.execute(input)
         assertTrue(result.allowed)
-        assertEquals(1f, result.movementCost, 0f)
+        assertEquals(2f, result.movementCost, 0f)
         assertFalse(result.endsMovement)
+        assertFalse(ZoneOfControlTransition.execute(input.copy(remainingMovement = 1.99f)).allowed)
+        assertTrue(ZoneOfControlTransition.execute(input.copy(remainingMovement = 2.01f)).allowed)
     }
 
     @Test
@@ -51,15 +52,14 @@ class ZoneOfControlTransitionTest {
     }
 
     @Test
-    fun `a fresh action in reinforced control permits one controlled step`() {
-        for (to in listOf(Strength.NORMAL, Strength.REINFORCED)) {
-            val result = ZoneOfControlTransition.execute(
-                Input(Strength.REINFORCED, to, 1f, true)
-            )
-            assertTrue(result.allowed)
-            assertEquals(1f, result.movementCost, 0f)
-            assertTrue(result.endsMovement)
-        }
+    fun `leaving reinforced control for ordinary control costs two and permits continuation`() {
+        val input = Input(Strength.REINFORCED, Strength.NORMAL, 2f, true)
+        val result = ZoneOfControlTransition.execute(input)
+        assertTrue(result.allowed)
+        assertEquals(2f, result.movementCost, 0f)
+        assertFalse(result.endsMovement)
+        assertFalse(ZoneOfControlTransition.execute(input.copy(remainingMovement = 1.99f)).allowed)
+        assertTrue(ZoneOfControlTransition.execute(input.copy(remainingMovement = 2.01f)).allowed)
     }
 
     @Test
@@ -107,5 +107,15 @@ class ZoneOfControlTransitionTest {
     fun `the same facts always produce the same result`() {
         val input = Input(Strength.NORMAL, Strength.REINFORCED, 4f, false)
         assertEquals(ZoneOfControlTransition.execute(input), ZoneOfControlTransition.execute(input))
+    }
+
+    @Test
+    fun `moving from reinforced control to reinforced control still ends movement`() {
+        val result = ZoneOfControlTransition.execute(
+            Input(Strength.REINFORCED, Strength.REINFORCED, 10f, true)
+        )
+        assertTrue(result.allowed)
+        assertTrue(result.endsMovement)
+        assertEquals(1f, result.movementCost, 0f)
     }
 }
