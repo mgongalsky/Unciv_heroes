@@ -63,6 +63,7 @@ fun createActiveTroopOutline(
         touchable = Touchable.disabled
     }
     val supportedTroops = setOf(
+        "Peasant",
         "Swordsman",
         "Archer",
         "Spearman",

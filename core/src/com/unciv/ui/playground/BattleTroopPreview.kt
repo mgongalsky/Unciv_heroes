@@ -24,7 +24,6 @@ import com.unciv.ui.battlescreen.createBattleMovementRangeOverlay
 import com.unciv.ui.battlescreen.showBattleMovementStyle
 import com.unciv.ui.battlescreen.createActiveTroopOutline
 
-/** Opens the deterministic battle-troop scene shared by the playground and golden tests. */
 fun openBattleTroopPreview(screen: BaseScreen) {
     val popup = Popup(screen.stage, scrollable = false)
     popup.defaults().pad(10f)
@@ -33,6 +32,8 @@ fun openBattleTroopPreview(screen: BaseScreen) {
         .padBottom(62f)
     popup.row()
     popup.add(createBattleFieldPreview()).padLeft(24f).padRight(24f).padBottom(28f)
+    popup.row()
+    popup.add(createPeasantOutlinePreview())
     popup.row()
     popup.add(
         "Close".toTextButton(BaseScreen.skin.get("fantasy", TextButtonStyle::class.java)).apply {
@@ -209,4 +210,38 @@ fun openBattleTroopInfoPreview(screen: BaseScreen) {
     screen.stage.addActor(anchor)
     com.unciv.ui.battlescreen.BattleTroopInfoPanel(troop, attacker = true)
         .showNextTo(screen.stage, anchor)
+}
+
+private fun createPeasantOutlinePreview(): Group {
+    val source = HardcodedTroopDefinitionSource(
+        speed = 3, damage = 10, maxHealth = 100, rangedStrength = 0
+    )
+    return Group().apply {
+        setSize(380f, 155f)
+        for (attacking in listOf(true, false)) {
+            val troop = TroopFactory.create("Peasant", 6, source)
+            val troopGroup = Group().apply {
+                setPosition(if (attacking) 40f else 245f, 0f)
+            }
+            populateBattleTroopGroup(troopGroup, troop, attacking, 81f, 81f, 0f, 0f)
+            val outline = createActiveTroopOutline(
+                troop, attacking, 81f, 81f, 0f, 0f,
+                animated = false,
+                outlineColor = com.badlogic.gdx.graphics.Color.valueOf(
+                    if (attacking) "FFD65AFF" else "6675FFFF"
+                )
+            )
+            check(outline.children.size == 1) { "Peasant outline is missing" }
+            val outlineImage = outline.children.first() as com.badlogic.gdx.scenes.scene2d.ui.Image
+            val sprite =
+                troopGroup.findActor<com.badlogic.gdx.scenes.scene2d.ui.Image>("troopImage")
+            check(outlineImage.width == sprite.width && outlineImage.height == sprite.height) {
+                "Peasant outline dimensions do not match its sprite"
+            }
+            check(outlineImage.scaleX == sprite.scaleX && outlineImage.scaleY == sprite.scaleY)
+            check(outlineImage.x == sprite.x && outlineImage.y == sprite.y)
+            troopGroup.addActorAt(0, outline)
+            addActor(troopGroup)
+        }
+    }
 }
