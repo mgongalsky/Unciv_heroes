@@ -232,4 +232,102 @@ class TwoTierZoneOfControlIntegrationTest {
         assertEquals(guardFormation, s.guard.formation.current)
         assertTrue(events.isEmpty())
     }
+
+    @Test
+    fun `four movement leaves real red control through two yellow cells in one command`() {
+        ruleset.units.getValue("Runner").speed = 4
+        val s = scenario(reinforced = true)
+        val context = com.unciv.pure.application.pathfinding.TroopMovementContext(s.runner) {
+            s.manager.getDefenderArmy().contains(it)
+        }
+        assertEquals(
+            com.unciv.pure.domain.battle.ZoneOfControlTransition.Strength.REINFORCED,
+            context.controlStrength(s.start)
+        )
+        assertEquals(
+            com.unciv.pure.domain.battle.ZoneOfControlTransition.Strength.NORMAL,
+            context.controlStrength(s.next)
+        )
+        assertEquals(
+            com.unciv.pure.domain.battle.ZoneOfControlTransition.Strength.NORMAL,
+            context.controlStrength(s.beyond)
+        )
+        val paths = com.unciv.pure.application.pathfinding.MovementRangeUseCase.execute(
+            s.start,
+            4f,
+            context
+        )
+        assertEquals(4f, paths.getValue(s.beyond).totalDistance, 0f)
+        assertEquals(listOf(s.next, s.beyond), paths.getPathToTile(s.beyond))
+        val events = mutableListOf<BattleEvent>()
+        val result = s.manager.execute(BattleCommand.Move(s.runner.id, s.beyond.toPoint())) {
+            events.add(it)
+            if (it is BattleEvent.TroopMoved) assertSame(s.beyond, s.manager.getTroopTile(s.runner))
+        }
+        assertTrue(result.success)
+        assertNull(s.start.getTroop())
+        assertSame(s.runner, s.beyond.getTroop())
+        assertEquals(
+            listOf(s.beyond.toPoint()),
+            events.filterIsInstance<BattleEvent.TroopMoved>().map { it.to })
+    }
+
+    @Test
+    fun `real field range and move commands agree at every yellow route budget`() {
+        for (speed in 1..6) {
+            for (steps in 1..2) {
+                ruleset.units.getValue("Runner").speed = speed
+                val s = scenario(reinforced = true)
+                val destination = if (steps == 1) s.next else s.beyond
+                val expected = speed >= steps * 2
+                val label = "speed=$speed steps=$steps"
+                assertEquals(
+                    label,
+                    expected,
+                    s.manager.getReachableTiles(s.runner).contains(destination)
+                )
+                assertEquals(label, expected, s.manager.isTileAchievable(s.runner, destination))
+                val formation = s.runner.formation.copy()
+                val health = s.runner.currentHealth
+                val amount = s.runner.currentAmount
+                val events = mutableListOf<BattleEvent>()
+                val result =
+                        s.manager.execute(BattleCommand.Move(s.runner.id, destination.toPoint())) {
+                            events.add(it)
+                        }
+                assertEquals(label, expected, result.success)
+                assertEquals(label, health, s.runner.currentHealth)
+                assertEquals(label, amount, s.runner.currentAmount)
+                if (expected) {
+                    assertSame(destination, s.manager.getTroopTile(s.runner))
+                    assertSame(s.runner, destination.getTroop())
+                    assertNull(s.start.getTroop())
+                } else {
+                    assertSame(s.start, s.manager.getTroopTile(s.runner))
+                    assertSame(s.runner, s.start.getTroop())
+                    assertNull(destination.getTroop())
+                    assertEquals(formation, s.runner.formation)
+                    assertTrue(label, events.isEmpty())
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `headless runner completes red to yellow to yellow route in one activation`() {
+        ruleset.units.getValue("Runner").speed = 4
+        val s = scenario(reinforced = true)
+        val result = BattleSimulationRunner(
+            s.manager,
+            BattlePolicy { BattleCommand.Move(it, s.beyond.toPoint()) },
+            BattlePolicy { BattleCommand.Skip(it) },
+            maxTurns = 1, maxTurnsWithoutProgress = 10, seed = 42L
+        ).run()
+        assertEquals(BattleTermination.MAX_TURNS, result.termination)
+        assertEquals(1, result.turns)
+        assertEquals(
+            listOf(s.beyond.toPoint()),
+            result.events.filterIsInstance<BattleEvent.TroopMoved>().map { it.to })
+        assertSame(s.beyond, s.manager.getTroopTile(s.runner))
+    }
 }
