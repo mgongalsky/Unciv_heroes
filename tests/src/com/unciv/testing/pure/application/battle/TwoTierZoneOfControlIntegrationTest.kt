@@ -320,4 +320,69 @@ class TwoTierZoneOfControlIntegrationTest {
             result.events.filterIsInstance<BattleEvent.TroopMoved>().map { it.to })
         assertSame(s.beyond, s.manager.getTroopTile(s.runner))
     }
+
+    @Test
+    fun `fourth straight step can enter control and attack without entry surcharge`() {
+        for (attack in listOf(false, true)) {
+            ruleset.units.getValue("Runner").speed = 4
+            val map = TileMap(6, ruleset)
+            val start = map[Vector2(0f, 0f)]
+            val destination = map[Vector2(-4f, 0f)]
+            val guardTile = map[Vector2(-5f, 0f)]
+            val attackers = ArmyInfo(FakeCivilizationInfo(), 5).apply { addUnits("Runner", 9) }
+            val defenders = ArmyInfo(FakeCivilizationInfo(), 5).apply { addUnits("Guard", 10) }
+            val runner = attackers.getAllTroops().filterNotNull().single()
+            val guard = defenders.getAllTroops().filterNotNull().single()
+            val manager = BattleManager(
+                attackers, defenders, map, SeededBattleRandom(42L),
+                moraleProbability = 0.0, luckProbability = 0.0
+            )
+            start.receiveTroop(runner)
+            guardTile.receiveTroop(guard)
+            manager.setTroopPosition(runner, start)
+            manager.setTroopPosition(guard, guardTile)
+            manager.initializeTurnQueue()
+            val context = com.unciv.pure.application.pathfinding.TroopMovementContext(runner) {
+                defenders.contains(it)
+            }
+            assertEquals(
+                4,
+                com.unciv.logic.HexMath.getDistance(start.position, destination.position)
+            )
+            assertEquals(
+                com.unciv.pure.domain.battle.ZoneOfControlTransition.Strength.NORMAL,
+                context.controlStrength(destination)
+            )
+            val paths = com.unciv.pure.application.pathfinding.MovementRangeUseCase.execute(
+                start, 4f, context
+            )
+            assertEquals(4f, paths.getValue(destination).totalDistance, 0f)
+            assertTrue(manager.getReachableTiles(runner).contains(destination))
+            assertTrue(manager.isTileAchievable(runner, destination))
+            val insufficient = com.unciv.pure.application.pathfinding.MovementRangeUseCase.execute(
+                start, 3f, context
+            )
+            assertFalse(insufficient.containsKey(destination))
+            val healthBefore = guard.currentHealth
+            val amountBefore = guard.currentAmount
+            val events = mutableListOf<BattleEvent>()
+            val command = if (attack) BattleCommand.Attack(
+                runner.id, guardTile.toPoint(), destination.toPoint()
+            ) else BattleCommand.Move(runner.id, destination.toPoint())
+            val result = manager.execute(command) { events.add(it) }
+            assertTrue("attack=$attack rejection=${result.rejection}", result.success)
+            assertSame(destination, manager.getTroopTile(runner))
+            assertSame(runner, destination.getTroop())
+            assertNull(start.getTroop())
+            assertEquals(1, events.size)
+            if (attack) {
+                assertTrue(events.single() is BattleEvent.TroopAttacked)
+                assertTrue(guard.currentAmount < amountBefore || guard.currentHealth < healthBefore)
+            } else {
+                assertTrue(events.single() is BattleEvent.TroopMoved)
+                assertEquals(amountBefore, guard.currentAmount)
+                assertEquals(healthBefore, guard.currentHealth)
+            }
+        }
+    }
 }

@@ -33,10 +33,12 @@ object ZoneOfControlTransition {
         require(input.remainingMovement.isFinite() && input.remainingMovement >= 0f)
         require(input.normalMultiplier.isFinite() && input.normalMultiplier >= 1f)
 
-        val cost = input.baseCost * if (
+        // Entering control from an uncontrolled tile has no movement surcharge.
+        val hasControlPenalty = input.from != Strength.NONE && (
                 input.to == Strength.NORMAL ||
-                (input.from == Strength.NORMAL && input.to == Strength.REINFORCED)
-        ) input.normalMultiplier else 1f
+                        (input.from == Strength.NORMAL && input.to == Strength.REINFORCED)
+                )
+        val cost = input.baseCost * if (hasControlPenalty) input.normalMultiplier else 1f
         val blocked = input.from == Strength.REINFORCED && !input.isFirstStep
         return Output(
             allowed = !blocked && cost <= input.remainingMovement,

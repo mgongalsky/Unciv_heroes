@@ -53,16 +53,17 @@ class TwoTierZoneOfControlMovementTest {
     }
 
     @Test
-    fun `entry and continuation in ordinary control both cost two`() {
+    fun `entry costs one and continuation in ordinary control costs two`() {
         val ring = ring()
         val approach = tile(2, 0)
         connect(approach, ring[0])
-        val reachable = MovementRangeUseCase.execute(approach, 4f, context)
-        assertEquals(2f, reachable.getValue(ring[0]).totalDistance, 0f)
+        val reachable = MovementRangeUseCase.execute(approach, 3f, context)
+        assertEquals(1f, reachable.getValue(ring[0]).totalDistance, 0f)
         assertTrue(reachable.containsKey(ring[1]))
-        assertEquals(4f, reachable.getValue(ring[1]).totalDistance, 0f)
+        assertEquals(3f, reachable.getValue(ring[1]).totalDistance, 0f)
         assertFalse(reachable.containsKey(ring[2]))
-        assertFalse(MovementRangeUseCase.execute(approach, 3f, context).containsKey(ring[1]))
+        assertTrue(MovementRangeUseCase.execute(approach, 1f, context).containsKey(ring[0]))
+        assertFalse(MovementRangeUseCase.execute(approach, 2.99f, context).containsKey(ring[1]))
     }
 
     @Test

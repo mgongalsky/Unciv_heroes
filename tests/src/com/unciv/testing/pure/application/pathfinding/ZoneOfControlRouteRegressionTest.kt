@@ -56,21 +56,18 @@ class ZoneOfControlRouteRegressionTest {
     }
 
     @Test
-    fun `free cells between yellow cells neither keep nor cancel the next surcharge`() {
+    fun `entering separate yellow zones from free cells has no surcharge`() {
         val path = line(5)
         guard(path[1])
         guard(path[3])
-        val reachable = MovementRangeUseCase.execute(path.first(), 6f, context)
-        val expected = listOf(0f, 2f, 3f, 5f, 6f)
+        val reachable = MovementRangeUseCase.execute(path.first(), 4f, context)
+        val expected = listOf(0f, 1f, 2f, 3f, 4f)
         path.forEachIndexed { i, tile ->
-            assertEquals(
-                expected[i],
-                reachable.getValue(tile).totalDistance,
-                0f
-            )
+            assertEquals(expected[i], reachable.getValue(tile).totalDistance, 0f)
         }
+        assertEquals(path.drop(1), reachable.getPathToTile(path.last()))
         assertFalse(
-            MovementRangeUseCase.execute(path.first(), 5.99f, context).containsKey(path.last())
+            MovementRangeUseCase.execute(path.first(), 3.99f, context).containsKey(path.last())
         )
     }
 
@@ -130,8 +127,8 @@ class ZoneOfControlRouteRegressionTest {
         second.getTroop()!!.currentAmount = 0
         assertEquals(Strength.NORMAL, context.controlStrength(path[1]))
         assertEquals(
-            3f,
-            MovementRangeUseCase.execute(path[0], 3f, context).getValue(path[2]).totalDistance,
+            2f,
+            MovementRangeUseCase.execute(path[0], 2f, context).getValue(path[2]).totalDistance,
             0f
         )
         first.clearTroop()

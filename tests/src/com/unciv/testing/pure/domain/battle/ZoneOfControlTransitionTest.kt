@@ -18,14 +18,16 @@ class ZoneOfControlTransitionTest {
     }
 
     @Test
-    fun `entering ordinary control requires two points from free space`() {
-        val input = Input(Strength.NONE, Strength.NORMAL, 2f, false)
-        val result = ZoneOfControlTransition.execute(input)
-        assertTrue(result.allowed)
-        assertEquals(2f, result.movementCost, 0f)
-        assertFalse(result.endsMovement)
-        assertFalse(ZoneOfControlTransition.execute(input.copy(remainingMovement = 1.99f)).allowed)
-        assertTrue(ZoneOfControlTransition.execute(input.copy(remainingMovement = 2.01f)).allowed)
+    fun `entering ordinary control from free space has no surcharge`() {
+        for (firstStep in listOf(false, true)) {
+            val input = Input(Strength.NONE, Strength.NORMAL, 1f, firstStep)
+            val result = ZoneOfControlTransition.execute(input)
+            assertTrue(result.allowed)
+            assertEquals(1f, result.movementCost, 0f)
+            assertFalse(result.endsMovement)
+            assertFalse(ZoneOfControlTransition.execute(input.copy(remainingMovement = 0.99f)).allowed)
+            assertTrue(ZoneOfControlTransition.execute(input.copy(remainingMovement = 1.01f)).allowed)
+        }
     }
 
     @Test

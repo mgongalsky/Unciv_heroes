@@ -13,7 +13,7 @@ class ZoneOfControlTransitionMatrixTest {
 
     private val cases = listOf(
         Case(Strength.NONE, Strength.NONE, 1f, false),
-        Case(Strength.NONE, Strength.NORMAL, 2f, false),
+        Case(Strength.NONE, Strength.NORMAL, 1f, false),
         Case(Strength.NONE, Strength.REINFORCED, 1f, true),
         Case(Strength.NORMAL, Strength.NONE, 1f, false),
         Case(Strength.NORMAL, Strength.NORMAL, 2f, false),
@@ -58,15 +58,25 @@ class ZoneOfControlTransitionMatrixTest {
     }
 
     @Test
-    fun `yellow surcharge scales fractional terrain cost from every starting zone`() {
-        for (from in Strength.values()) {
-            val input =
-                Input(from, Strength.NORMAL, 1.5f, true, baseCost = 0.5f, normalMultiplier = 3f)
+    fun `fractional terrain cost is multiplied only when already in control`() {
+        for ((from, expectedCost) in listOf(
+            Strength.NONE to 0.5f,
+            Strength.NORMAL to 1.5f,
+            Strength.REINFORCED to 1.5f
+        )) {
+            val input = Input(
+                from, Strength.NORMAL, expectedCost, true,
+                baseCost = 0.5f, normalMultiplier = 3f
+            )
             val result = ZoneOfControlTransition.execute(input)
             assertTrue(from.toString(), result.allowed)
-            assertEquals(1.5f, result.movementCost, 0f)
+            assertEquals(expectedCost, result.movementCost, 0f)
             assertFalse(result.endsMovement)
-            assertFalse(ZoneOfControlTransition.execute(input.copy(remainingMovement = 1.49f)).allowed)
+            assertFalse(
+                ZoneOfControlTransition.execute(
+                    input.copy(remainingMovement = expectedCost - 0.01f)
+                ).allowed
+            )
         }
     }
 
