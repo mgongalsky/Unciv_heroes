@@ -54,7 +54,7 @@ class FormationCommandIntegrationTest {
         val defender = ArmyInfo(FakeCivilizationInfo(), 5).apply { addUnits("Runner", 10) }
         manager = TestableBattleManager(
             attacker, defender, FakeBattleField(tiles),
-            FakeBattleRandom(List(100) { 0.0 }), useRealMovement = true
+            FakeBattleRandom(List(100) { 0.0 })
         )
         troop = attacker.getAllTroops().filterNotNull().first()
         manager.placeTroop(troop, tiles.first())

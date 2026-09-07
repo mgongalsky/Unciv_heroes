@@ -171,20 +171,10 @@ class TwoTierZoneOfControlIntegrationTest {
     @Test
     fun `morale grants a second controlled step before the enemy activation`() {
         val s = scenario(reinforced = true)
-        val attackers = s.manager.getAttackerArmy()
-        val defenders = s.manager.getDefenderArmy()
-        // The public getter creates a real civilization when unset; preserve null without invoking it.
-        val civilizationField = com.unciv.logic.map.MapUnit::class.java
-            .getDeclaredField("_monsterCivInfo").apply { isAccessible = true }
-        val previousCivilization = civilizationField.get(null)
-        val previousId = com.unciv.logic.map.MapUnit.currID
-        try {
-            com.unciv.logic.map.MapUnit.setTestingInstance(FakeCivilizationInfo())
-            attackers.hero = com.unciv.testing.pure.fakes.TestableMapUnit().apply { morale = 3 }
-        } finally {
-            civilizationField.set(null, previousCivilization)
-            com.unciv.logic.map.MapUnit.currID = previousId
+        val attackers = object : com.unciv.pure.domain.army.IArmy by s.manager.getAttackerArmy() {
+            override fun getBattleMorale(): Int = 3
         }
+        val defenders = s.manager.getDefenderArmy()
         val manager = BattleManager(
             attackers, defenders, s.manager.battleField, SeededBattleRandom(42L),
             moraleProbability = 1.0, luckProbability = 0.0

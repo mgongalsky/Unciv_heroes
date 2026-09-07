@@ -1,104 +1,69 @@
 package com.unciv.logic.battle
 
-import BattleActionResult
-import com.unciv.logic.army.ArmyInfo
-import com.unciv.logic.army.TroopInfo
-import com.unciv.ui.battlescreen.ActionType
-import com.unciv.ui.battlescreen.BattleActionRequest
 import com.badlogic.gdx.math.Vector2
 import com.unciv.infrastructure.battle.RealBattleRandom
 import com.unciv.logic.HexMath
-import com.unciv.logic.civilization.CivilizationInfo
-import com.unciv.logic.map.TileInfo
-import com.unciv.logic.map.TileMap
-import com.unciv.logic.map.UnitMovementAlgorithms
 import com.unciv.models.GameConstants
-import com.unciv.pure.application.battle.CalculateDamageUseCase
-import com.unciv.pure.application.battle.IsMoraleTriggeredUseCase
-import com.unciv.pure.application.battle.PerformAttackUseCase
-import com.unciv.pure.application.battle.PerformMoveUseCase
-import com.unciv.pure.application.battle.PerformShootUseCase
-import com.unciv.pure.application.pathfinding.TroopMovementAdapter
+import com.unciv.pure.application.battle.*
+import com.unciv.pure.application.pathfinding.MovementRangeUseCase
 import com.unciv.pure.application.pathfinding.TroopMovementContext
+import com.unciv.pure.domain.army.IArmy
 import com.unciv.pure.domain.battle.IBattleField
 import com.unciv.pure.domain.battle.IBattleRandom
 import com.unciv.pure.domain.battle.TurnQueue
 import com.unciv.pure.domain.pathfinding.INavigableTile
 import com.unciv.pure.domain.troop.Troop
-import kotlin.random.Random
-import com.unciv.pure.application.battle.CalculateMeleeExchangeUseCase
-import com.unciv.pure.application.battle.ApplyFormationDamageUseCase
-import com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase
-import com.unciv.pure.application.battle.RestoreFormationUseCase
-import com.unciv.pure.application.battle.ApplyMovementFormationPenaltyUseCase
-import com.unciv.pure.application.battle.UpdateFormationAfterMoveUseCase
 
-internal fun configureEffectProbabilities(
-    luckProbability: Double?,
-    moraleProbability: Double?
-) {
-    require(luckProbability == null || luckProbability in 0.0..1.0)
-    require(moraleProbability == null || moraleProbability in 0.0..1.0)
-    luckProbabilityOverride = luckProbability
-    moraleProbabilityOverride = moraleProbability
-}
-
-private var moraleProbabilityOverride: Double? = null
-private var luckProbabilityOverride: Double? = null
-
-/**
- * Handles the logical part of a battle between two armies.
- * Does not include visual representation or UI logic.
- *
- * @property attackerArmy The attacking army participating in the battle.
- * @property defenderArmy The defending army participating in the battle.
- */
+/** Shared combat rules. Armies and battlefield expose only combat data. */
 open class BattleManager(
-    private var attackerArmy: ArmyInfo,
-    private var defenderArmy: ArmyInfo,
-    val battleField: IBattleField, // BattleField on use
+    private var attackerArmy: IArmy,
+    private var defenderArmy: IArmy,
+    val battleField: IBattleField,
     private val random: IBattleRandom = RealBattleRandom(),
     private val moraleProbability: Double = GameConstants.moraleProbability,
     private val luckProbability: Double = GameConstants.luckProbability
 ) {
+    internal var effectProbabilities: BattleEffectProbabilities? = null
+    private val remainingRetaliationDamageByTroopId = mutableMapOf<Int, Int>()
     protected val troopPositions = mutableMapOf<Troop, IBattleTile>()
     private val turnQueue = TurnQueue()
-
-    private fun makeAdapter(troop: Troop, tile: TileInfo): TroopMovementAdapter {
-        val armyCivInfo = getArmyOf(troop)?.civInfo ?: CivilizationInfo()
-        return TroopMovementAdapter(troop, tile, enemyChecker(troop), armyCivInfo)
-    }
+    private val verboseAttack = java.lang.Boolean.getBoolean("battle.verbose")
 
     fun initializeBattle() {
         val attackerTroops = attackerArmy.getAllTroops().filterNotNull()
         val defenderTroops = defenderArmy.getAllTroops().filterNotNull()
-
         fun startingPosition(x: Float, index: Int, count: Int): Vector2 {
-            // Keep the existing placement for up to four stacks. Five must fit within eight rows.
             val y = if (count == 5) listOf(3f, 1f, 0f, -1f, -3f)[index]
             else 3f - index.toFloat() * 2
             return HexMath.evenQ2HexCoords(Vector2(x, y))
         }
-
         attackerTroops.forEachIndexed { index, troop ->
-            val position = startingPosition(-7f, index, attackerTroops.size)
-            val tile = battleField.getTileAt(position) as? IBattleTile ?: return@forEachIndexed
+            val tile = battleField.getTileAt(
+                startingPosition(
+                    -7f,
+                    index,
+                    attackerTroops.size
+                )
+            ) as? IBattleTile
+                ?: return@forEachIndexed
             troopPositions[troop] = tile
             tile.receiveTroop(troop)
         }
         defenderTroops.forEachIndexed { index, troop ->
-            val position = startingPosition(6f, index, defenderTroops.size)
-            val tile = battleField.getTileAt(position) as? IBattleTile ?: return@forEachIndexed
+            val tile = battleField.getTileAt(
+                startingPosition(
+                    6f,
+                    index,
+                    defenderTroops.size
+                )
+            ) as? IBattleTile
+                ?: return@forEachIndexed
             troopPositions[troop] = tile
             tile.receiveTroop(troop)
         }
         initializeTurnQueue()
     }
 
-    /**
-     * Initializes the turn queue based on troop speed and priority rules.
-     * Attacker troops have priority in case of equal speed.
-     */
     fun initializeTurnQueue() {
         turnQueue.initialize(
             attackerArmy.getAllTroops().filterNotNull(),
@@ -108,60 +73,35 @@ open class BattleManager(
 
     fun getTroopTile(troop: Troop): IBattleTile? = troopPositions[troop]
     protected open fun getTroopCurrentTile(troop: Troop): IBattleTile? = troopPositions[troop]
-
     protected open fun moveTroop(troop: Troop, targetTile: IBattleTile) {
-        // Очищаем старый тайл
         troopPositions[troop]?.clearTroop()
-        // Обновляем позицию
         troopPositions[troop] = targetTile
-        // Ставим на новый тайл
         targetTile.receiveTroop(troop)
     }
-    /**
-     * Returns the troop currently taking its turn.
-     *
-     * @return The current troop or `null` if the queue is empty.
-     */
-    fun getCurrentTroop(): Troop? = turnQueue.current()
 
-    private fun getArmyOf(troop: Troop): ArmyInfo? {
-        return when {
-            attackerArmy.contains(troop) -> attackerArmy
-            defenderArmy.contains(troop) -> defenderArmy
-            else -> null
-        }
+    fun getCurrentTroop(): Troop? = turnQueue.current()
+    private fun getArmyOf(troop: Troop): IArmy? = when {
+        attackerArmy.contains(troop) -> attackerArmy
+        defenderArmy.contains(troop) -> defenderArmy
+        else -> null
     }
 
-    private fun isMoraleTriggered(troop: Troop) =
-            IsMoraleTriggeredUseCase.execute(
-                moraleValue = getArmyOf(troop)?.hero?.morale ?: 0,
-                random = random,
-                moraleProbability = configuredMoraleProbability(moraleProbability)
-            )
+    private fun isMoraleTriggered(troop: Troop) = IsMoraleTriggeredUseCase.execute(
+        moraleValue = getArmyOf(troop)?.getBattleMorale() ?: 0,
+        random = random,
+        moraleProbability = configuredMoraleProbability(moraleProbability)
+    )
 
     private fun isLuckTriggered(troop: Troop): Boolean {
-        val troopLuck = getArmyOf(troop)?.hero?.luck ?: 1
+        val troopLuck = getArmyOf(troop)?.getBattleLuck() ?: 1
         val configuredProbability = configuredLuckProbability(luckProbability)
-        val effectiveProbability = if (troopLuck <= 3) {
-            (configuredProbability / 3.0) * troopLuck
-        } else {
-            configuredProbability
-        }
-        if (verboseAttack) println(
-            "Unit: ${troop.unitName}, Amount: ${troop.amount}, " +
-                    "Hero present: ${getArmyOf(troop)?.hero != null}, Hero luck: $troopLuck, " +
-                    "Effective luck probability: $effectiveProbability"
-        )
+        val effectiveProbability = if (troopLuck <= 3) (configuredProbability / 3.0) * troopLuck
+        else configuredProbability
         return random.nextDouble() < effectiveProbability
     }
 
-
-    /**
-     * Finishes the battle and cleans up resources or state.
-     * Placeholder for additional logic.
-     */
+    /** Post-battle recovery, separate from command execution. */
     fun finishBattle() {
-        // Add logic to clean up battle state or notify the screen to close.
         attackerArmy.finishBattle()
         defenderArmy.finishBattle()
     }
@@ -181,7 +121,6 @@ open class BattleManager(
                 attackerArmy.getAllTroops().filterNotNull().filter { it.currentAmount > 0 }
         val remainingDefenders =
                 defenderArmy.getAllTroops().filterNotNull().filter { it.currentAmount > 0 }
-
         return when {
             remainingAttackers.isNotEmpty() && remainingDefenders.isEmpty() -> BattleTotalResult(
                 attackerArmy
@@ -196,13 +135,6 @@ open class BattleManager(
         }
     }
 
-    //fun getTroopOnHex() {}
-    /**
-     * Finds the troop located at the specified tile.
-     *
-     * @param tile The tile to check.
-     * @return The [TroopInfo] located at the tile or `null` if the tile is empty.
-     */
     fun getTroopOnTile(tile: IBattleTile): Troop? =
             troopPositions.entries.find { it.value == tile }?.key
 
@@ -210,200 +142,53 @@ open class BattleManager(
         troopPositions[troop] = tile
     }
 
+    fun getTroopById(id: Int): Troop? = (attackerArmy.getAllTroops() + defenderArmy.getAllTroops())
+        .filterNotNull().find { it.id == id }
 
-    private val verboseAttack = java.lang.Boolean.getBoolean("battle.verbose")
+    fun isBattleOn(): Boolean =
+            attackerArmy.getAllTroops().any { (it?.currentAmount ?: 0) > 0 } &&
+                    defenderArmy.getAllTroops().any { (it?.currentAmount ?: 0) > 0 }
 
-    fun getTroopById(id: Int): Troop? =
-            (attackerArmy.getAllTroops() + defenderArmy.getAllTroops())
-                .filterNotNull()
-                .find { it.id == id }
-
-
-    /**
-     * Checks if the battle is still ongoing.
-     *
-     * @return True if both armies have surviving troops, false otherwise.
-     */
-    fun isBattleOn(): Boolean {
-        val attackerHasTroops = attackerArmy.getAllTroops().any { (it?.currentAmount ?: 0) > 0 }
-        val defenderHasTroops = defenderArmy.getAllTroops().any { (it?.currentAmount ?: 0) > 0 }
-
-        return attackerHasTroops && defenderHasTroops
-    }
-
-    /**
-     * Checks if the target tile is occupied by an allied troop.
-     *
-     * @param troop The troop attempting to move.
-     * @param targetTile The tile to check.
-     * @return True if the tile is occupied by an allied troop, false otherwise.
-     */
     fun isTileOccupiedByAlly(troop: Troop, targetTile: IBattleTile): Boolean {
-        //val targetTroop = targetTile.troopUnit ?: return false  // Если клетка пустая, значит не занята союзником
         val targetTroop = targetTile.getTroop() ?: return false
-
-        // Определяем, к какой армии относится юнит
-        val isAlly = if (attackerArmy.contains(troop)) {
-            attackerArmy.contains(targetTroop)
-        } else {
-            defenderArmy.contains(targetTroop)
-        }
-
-        return isAlly && targetTroop != troop  // Союзный, но не сам себе союзник
+        val isAlly = if (attackerArmy.contains(troop)) attackerArmy.contains(targetTroop)
+        else defenderArmy.contains(targetTroop)
+        return isAlly && targetTroop != troop
     }
 
-/*
-    /**
-     * Checks if the target position is occupied by an enemy troop.
-     *
-     * @param troop The troop attempting to move.
-     * @param targetPosition The position to check.
-     * @return True if the position is occupied by an enemy troop, false otherwise.
-     */
-    fun isHexOccupiedByEnemy(troop: TroopInfo, targetPosition: Vector2): Boolean {
-        // Get all enemy troops
-        val enemyTroops = if (attackerArmy.contains(troop)) {
-            defenderArmy.getAllTroops()
-        } else {
-            attackerArmy.getAllTroops()
-        }
-
-        // Check if any enemy troop occupies the target position
-        return enemyTroops.any { enemyTroop ->
-            enemyTroop != null && enemyTroop.position == targetPosition
-        }
-    }
-
- */
-
-    /**
-     * Checks if the target tile is occupied by an enemy troop.
-     *
-     * @param troop The troop attempting to move.
-     * @param targetTile The tile to check.
-     * @return True if the tile is occupied by an enemy troop, false otherwise.
-     */
     fun isTileOccupiedByEnemy(troop: Troop, targetTile: IBattleTile): Boolean {
-        //val targetTroop = targetTile.troopUnit ?: return false  // Если клетка пустая, значит нет врага
         val targetTroop = targetTile.getTroop() ?: return false
-
-        // Определяем, к какой армии относится юнит и является ли цель врагом
-        return if (attackerArmy.contains(troop)) {
-            defenderArmy.contains(targetTroop)  // Если юнит из атакующей армии, то ищем врага в защитниках
-        } else {
-            attackerArmy.contains(targetTroop)  // И наоборот
-        }
+        return if (attackerArmy.contains(troop)) defenderArmy.contains(targetTroop)
+        else attackerArmy.contains(targetTroop)
     }
 
+    fun isTileFree(targetTile: INavigableTile): Boolean =
+            (targetTile as? IBattleTile)?.getTroop() == null
 
-    /**
-     * Checks if a hex is free of any troop.
-     *
-     * @param targetPosition The position to check.
-     * @return True if the position is free, false otherwise.
-     */
-    //fun isHexFree(targetPosition: Vector2) = turnQueue.none { it.position == targetPosition }
-
-    /**
-     * Checks if a tile is free of any troop.
-     *
-     * @param targetTile The tile to check.
-     * @return True if the tile is free, false otherwise.
-     */
-    fun isTileFree(targetTile: INavigableTile): Boolean {
-        //return (targetTile as? TileInfo)?.troopUnit == null  // Если юнита нет, клетка свободна
-        return (targetTile as? IBattleTile)?.getTroop() == null
+    fun getEnemies(troop: Troop): List<Troop> = when {
+        attackerArmy.contains(troop) -> defenderArmy.getAllTroops().filterNotNull()
+        defenderArmy.contains(troop) -> attackerArmy.getAllTroops().filterNotNull()
+        else -> emptyList()
     }
-
-
-    /**
-     * Returns a list of enemies for the given troop.
-     *
-     * @param troop The troop for which to get enemies.
-     * @return A list of enemy troops.
-     */
-    fun getEnemies(troop: Troop): List<Troop> {
-        return if (attackerArmy.contains(troop)) {
-            defenderArmy.getAllTroops().filterNotNull().toList()
-        } else if (defenderArmy.contains(troop)) {
-            attackerArmy.getAllTroops().filterNotNull().toList()
-        } else {
-            emptyList() // No enemies
-        }
-    }
-
-
-
-    /**
-     * Returns a list of reachable tiles for the given troop.
-     *
-     * @param troop The troop for which to calculate reachable tiles.
-     * @return A list of reachable tiles as Vector2.
-     */
-    /**
-     * Получает список клеток, доступных для перемещения отряда в текущем ходу.
-     *
-     * @param troop Отряд, для которого определяется доступность клеток.
-     * @return Список доступных клеток (`TileInfo`).
-     */
-    //fun getReachableTiles(troop: Troop): List<TileInfo> {
-    //    return troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop)).toList()
-    //}
-
 
     private fun enemyChecker(troop: Troop): (Troop) -> Boolean = { other ->
         attackerArmy.contains(troop) && defenderArmy.contains(other) ||
                 defenderArmy.contains(troop) && attackerArmy.contains(other)
     }
 
-    fun getReachableTiles(troop: Troop): List<TileInfo> {
-        val currentTile = getTroopTile(troop) as? TileInfo ?: return emptyList()
-        val movement = UnitMovementAlgorithms(makeAdapter(troop, currentTile))
-        return movement.getReachableTilesInCurrentTurn(
+    fun getReachableTiles(troop: Troop): List<IBattleTile> {
+        val currentTile = getTroopTile(troop) ?: return emptyList()
+        return MovementRangeUseCase.execute(
+            startTile = currentTile, unitMovement = troop.speed.toFloat(),
             context = TroopMovementContext(troop, enemyChecker(troop))
-        ).toList()
+        ).keys.toList()
     }
 
-    /*
-    fun getReachableTiles(troop: TroopInfo): List<Vector2> {
-        return troop.movement.getReachableTilesInCurrentTurn(context = TroopMovementContext(troop))().map { it.position }.toList()
+    fun isTileAchievable(troop: Troop, targetTile: INavigableTile): Boolean =
+            battleField.contains(targetTile) && isReachableInCurrentTurn(troop, targetTile)
 
-        val reachableTiles = mutableListOf<Vector2>()
-
-        // Iterate through all battlefield tiles
-        for (x in -7..6) {  // X-coordinates of the battlefield
-            for (y in -4..3) { // Y-coordinates of the battlefield
-                val tilePosition = HexMath.evenQ2HexCoords(Vector2(x.toFloat(), y.toFloat()))
-               // if (isTileAchievable(troop, tilePosition) && isHexFree(tilePosition)) {
-               //     reachableTiles.add(tilePosition)
-               // }
-            }
-        }
-
-        return reachableTiles
-
-
-    }
-
-     */
-
-
-
-    /**
-     * Проверяет, достижима ли целевая клетка для данного отряда.
-     *
-     * @param troop Отряд, совершающий перемещение.
-     * @param targetTile Целевая клетка.
-     * @return `true`, если клетка достижима юнитом в этот ход, иначе `false`.
-     */
-    fun isTileAchievable(troop: Troop, targetTile: INavigableTile): Boolean {
-        if (!battleField.contains(targetTile)) return false
-        if (!isReachableInCurrentTurn(troop, targetTile)) return false
-        return true
-    }
-
-    fun getAttackerArmy() =  attackerArmy
-    fun getDefenderArmy() =  defenderArmy
+    fun getAttackerArmy() = attackerArmy
+    fun getDefenderArmy() = defenderArmy
 
     fun attack(defender: Troop, attacker: Troop? = getCurrentTroop()): Boolean {
         if (attacker == null) return false
@@ -413,17 +198,13 @@ open class BattleManager(
             ApplyFormationDamageUseCase.Input(
                 incomingDamage,
                 if (defender.hasFormation) defender.formation.current else 0,
-                defender.formationDamageReductionPercent.coerceIn(0, 100),
-                100
+                defender.formationDamageReductionPercent.coerceIn(0, 100), 100
             )
         )
         val result = CalculateDamageUseCase.execute(
-            attackerAmount = 1,
-            attackerDamage = formationDamage.damageToSoldiers,
-            defenderAmount = defender.currentAmount,
-            defenderHealth = defender.currentHealth,
-            defenderMaxHealth = defender.maxHealth,
-            isLuck = false
+            attackerAmount = 1, attackerDamage = formationDamage.damageToSoldiers,
+            defenderAmount = defender.currentAmount, defenderHealth = defender.currentHealth,
+            defenderMaxHealth = defender.maxHealth, isLuck = false
         ).copy(isLuck = isLuck)
         defender.formation.current = formationDamage.remainingFormation
         defender.currentAmount = result.remainingAmount
@@ -432,7 +213,6 @@ open class BattleManager(
         return result.isLuck
     }
 
-    /** Removes a perished troop from its army, tile and turn queue. */
     fun perishTroop(troop: Troop) {
         removeTroop(troop)
         if (verboseAttack) println("Troop ${troop.unitName} has perished.")
@@ -440,14 +220,9 @@ open class BattleManager(
 
     fun removeTroop(troop: Troop) {
         turnQueue.remove(troop)
-        val occupiedTile = troopPositions.remove(troop)
-        occupiedTile?.clearTroop()
-
-        if (attackerArmy.contains(troop)) {
-            attackerArmy.removeTroop(troop)
-        } else if (defenderArmy.contains(troop)) {
-            defenderArmy.removeTroop(troop)
-        }
+        troopPositions.remove(troop)?.clearTroop()
+        if (attackerArmy.contains(troop)) attackerArmy.removeTroop(troop)
+        else if (defenderArmy.contains(troop)) defenderArmy.removeTroop(troop)
     }
 
     fun advanceTurn() {
@@ -459,39 +234,21 @@ open class BattleManager(
         turnQueue.current()?.let { remainingRetaliationDamageByTroopId.remove(it.id) }
     }
 
-    /**
-     * Checks if the given troop can shoot.
-     *
-     * @param troop The troop to check.
-     * @return True if the troop can shoot, false otherwise.
-     */
-    fun canShoot(troop: Troop): Boolean {
-        return troop.rangedStrength != 0
-    }
-
-    /**
-     * Returns the current turn queue (for debugging or visualization).
-     *
-     * @return A list of troops in the turn queue.
-     */
+    fun canShoot(troop: Troop): Boolean = troop.rangedStrength != 0
     fun getTurnQueue(): List<Troop> = turnQueue.getAll()
-
     protected open fun isReachableInCurrentTurn(troop: Troop, targetTile: INavigableTile): Boolean {
-        val currentTile = getTroopTile(troop) as? TileInfo ?: return false
-        val movement = UnitMovementAlgorithms(makeAdapter(troop, currentTile))
-        val reachableTiles = movement.getReachableTilesInCurrentTurn(
-            context = TroopMovementContext(troop, enemyChecker(troop)),
-            targetTile = targetTile as TileInfo
-        )
-        return reachableTiles.contains(targetTile)
+        val currentTile = getTroopTile(troop) ?: return false
+        val target = targetTile as? IBattleTile ?: return false
+        return MovementRangeUseCase.execute(
+            startTile = currentTile, unitMovement = troop.speed.toFloat(),
+            context = TroopMovementContext(troop, enemyChecker(troop)), targetTile = target
+        ).containsKey(target)
     }
 
     private fun performMoveAction(
-        troop: Troop,
-        targetPosition: IBattleTile,
-        isMorale: Boolean,
-        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
-    ): com.unciv.pure.application.battle.BattleCommandResult {
+        troop: Troop, targetPosition: IBattleTile, isMorale: Boolean,
+        onApplicationEvent: ((BattleEvent) -> Unit)? = null
+    ): BattleCommandResult {
         val currentTile = getTroopCurrentTile(troop)
         val output = PerformMoveUseCase.execute(
             PerformMoveUseCase.Input(
@@ -517,23 +274,19 @@ open class BattleManager(
             troop.formation.current = formation.remainingFormation
             moveTroop(troop, targetPosition)
             publishApplicationEvent(
-                com.unciv.pure.application.battle.BattleEvent.TroopMoved(
+                BattleEvent.TroopMoved(
                     troop.id,
                     output.movedFrom!!,
                     output.movedTo!!,
                     isMorale
-                ),
-                onApplicationEvent
+                ), onApplicationEvent
             )
         }
-        if (verboseAttack) println("Troop moved from ${output.movedFrom} to ${output.movedTo}")
-        if (!isBattleOn()) {
-            publishApplicationEvent(
-                com.unciv.pure.application.battle.BattleEvent.BattleEnded(isAttackerWinner()),
-                onApplicationEvent
-            )
-        }
-        return com.unciv.pure.application.battle.BattleCommandResult(
+        if (!isBattleOn()) publishApplicationEvent(
+            BattleEvent.BattleEnded(isAttackerWinner()),
+            onApplicationEvent
+        )
+        return BattleCommandResult(
             success = output.success,
             movedFrom = output.movedFrom,
             movedTo = output.movedTo,
@@ -544,58 +297,42 @@ open class BattleManager(
     }
 
     internal fun performMoveCommand(
-        troop: Troop,
-        targetPosition: IBattleTile,
-        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
-    ): com.unciv.pure.application.battle.BattleCommandResult {
-        val isMorale = isMoraleTriggered(troop)
-        if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
-        return performMoveAction(troop, targetPosition, isMorale, onApplicationEvent)
-    }
+        troop: Troop, targetPosition: IBattleTile,
+        onApplicationEvent: ((BattleEvent) -> Unit)? = null
+    ): BattleCommandResult =
+            performMoveAction(troop, targetPosition, isMoraleTriggered(troop), onApplicationEvent)
 
     private fun performSkipAction(
         troop: Troop,
-        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
-    ): com.unciv.pure.application.battle.BattleCommandResult {
+        onApplicationEvent: ((BattleEvent) -> Unit)? = null
+    ): BattleCommandResult {
         troop.formation.current = RestoreFormationUseCase.execute(
             RestoreFormationUseCase.Input(
                 currentFormation = troop.formation.current,
                 maximumFormation = troop.formation.maximum
             )
         )
-        publishApplicationEvent(
-            com.unciv.pure.application.battle.BattleEvent.TurnSkipped,
+        publishApplicationEvent(BattleEvent.TurnSkipped, onApplicationEvent)
+        if (!isBattleOn()) publishApplicationEvent(
+            BattleEvent.BattleEnded(isAttackerWinner()),
             onApplicationEvent
         )
-        if (!isBattleOn()) {
-            publishApplicationEvent(
-                com.unciv.pure.application.battle.BattleEvent.BattleEnded(isAttackerWinner()),
-                onApplicationEvent
-            )
-        }
-        return com.unciv.pure.application.battle.BattleCommandResult(
-            success = true,
-            isMorale = false,
-            battleEnded = !isBattleOn()
-        )
+        return BattleCommandResult(success = true, isMorale = false, battleEnded = !isBattleOn())
     }
 
     internal fun performSkipCommand(
         troop: Troop,
-        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
-    ): com.unciv.pure.application.battle.BattleCommandResult {
-        val isMorale = isMoraleTriggered(troop)
-        if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
+        onApplicationEvent: ((BattleEvent) -> Unit)? = null
+    ): BattleCommandResult {
+        // Preserve the game's random draw even though Skip does not grant an extra action.
+        isMoraleTriggered(troop)
         return performSkipAction(troop, onApplicationEvent)
     }
 
     private fun performAttackAction(
-        troop: Troop,
-        targetPosition: IBattleTile,
-        attackTile: IBattleTile?,
-        isMorale: Boolean,
-        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
-    ): com.unciv.pure.application.battle.BattleCommandResult {
+        troop: Troop, targetPosition: IBattleTile, attackTile: IBattleTile?,
+        isMorale: Boolean, onApplicationEvent: ((BattleEvent) -> Unit)? = null
+    ): BattleCommandResult {
         val defender = getTroopOnTile(targetPosition)
         val currentTile = getTroopCurrentTile(troop)
         val targetIsEnemy = defender != null && isTileOccupiedByEnemy(troop, targetPosition)
@@ -604,24 +341,24 @@ open class BattleManager(
         val canAttack = defender != null && attackTile != null && targetIsEnemy &&
                 attackFromAchievable && (attackFromFree || currentTile == attackTile)
         val attackerIsLuck: Boolean
-        val defenderIsLuck: Boolean
         val remaining: Int
         val died: Boolean
         if (canAttack) {
             moveTroop(troop, attackTile!!)
             attackerIsLuck = isLuckTriggered(troop)
-            defenderIsLuck = isLuckTriggered(defender!!)
+            val defenderIsLuck = isLuckTriggered(defender!!)
             fun snapshot(unit: Troop) = CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
-                unit.currentAmount, unit.damage, unit.currentHealth, unit.maxHealth,
+                unit.currentAmount,
+                unit.damage,
+                unit.currentHealth,
+                unit.maxHealth,
                 if (unit.hasFormation) unit.formation.current else 0,
                 unit.formationDamageReductionPercent
             )
 
             val exchange = CalculateFormationMeleeExchangeUseCase.execute(
-                attacker = snapshot(troop),
-                defender = snapshot(defender),
-                attackerIsLuck = attackerIsLuck,
-                defenderIsLuck = defenderIsLuck,
+                attacker = snapshot(troop), defender = snapshot(defender),
+                attackerIsLuck = attackerIsLuck, defenderIsLuck = defenderIsLuck,
                 defenderRetaliationDamage = remainingRetaliationDamageByTroopId[defender.id]
             )
             remainingRetaliationDamageByTroopId[defender.id] = exchange.remainingRetaliationDamage
@@ -637,58 +374,61 @@ open class BattleManager(
             if (defender.currentAmount <= 0) perishTroop(defender)
         } else {
             attackerIsLuck = false
-            defenderIsLuck = false
             remaining = 0
             died = false
         }
         val output = PerformAttackUseCase.execute(
             PerformAttackUseCase.Input(
-                troop.id, defender?.id, attackTile?.toPoint(), currentTile?.toPoint(),
-                targetIsEnemy, attackFromAchievable, attackFromFree,
-                attackerIsLuck, isMorale, remaining, died
+                troop.id,
+                defender?.id,
+                attackTile?.toPoint(),
+                currentTile?.toPoint(),
+                targetIsEnemy,
+                attackFromAchievable,
+                attackFromFree,
+                attackerIsLuck,
+                isMorale,
+                remaining,
+                died
             )
         )
-        if (output.success) {
-            publishApplicationEvent(
-                com.unciv.pure.application.battle.BattleEvent.TroopAttacked(
-                    troop.id, defender!!.id, remaining, output.isLuck, output.isMorale, died
-                ), onApplicationEvent
-            )
-        }
-        if (!isBattleOn()) {
-            publishApplicationEvent(
-                com.unciv.pure.application.battle.BattleEvent.BattleEnded(isAttackerWinner()),
-                onApplicationEvent
-            )
-        }
-        return com.unciv.pure.application.battle.BattleCommandResult(
-            success = output.success,
-            movedFrom = output.movedFrom,
-            movedTo = output.movedTo,
-            rejection = output.rejection,
-            isLuck = output.isLuck,
-            isMorale = output.isMorale,
-            battleEnded = !isBattleOn()
+        if (output.success) publishApplicationEvent(
+            BattleEvent.TroopAttacked(
+                troop.id,
+                defender!!.id,
+                remaining,
+                output.isLuck,
+                output.isMorale,
+                died
+            ), onApplicationEvent
+        )
+        if (!isBattleOn()) publishApplicationEvent(
+            BattleEvent.BattleEnded(isAttackerWinner()),
+            onApplicationEvent
+        )
+        return BattleCommandResult(
+            success = output.success, movedFrom = output.movedFrom,
+            movedTo = output.movedTo, rejection = output.rejection, isLuck = output.isLuck,
+            isMorale = output.isMorale, battleEnded = !isBattleOn()
         )
     }
 
     internal fun performAttackCommand(
-        troop: Troop,
-        targetPosition: IBattleTile,
-        attackTile: IBattleTile?,
-        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
-    ): com.unciv.pure.application.battle.BattleCommandResult {
-        val isMorale = isMoraleTriggered(troop)
-        if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
-        return performAttackAction(troop, targetPosition, attackTile, isMorale, onApplicationEvent)
-    }
+        troop: Troop, targetPosition: IBattleTile, attackTile: IBattleTile?,
+        onApplicationEvent: ((BattleEvent) -> Unit)? = null
+    ): BattleCommandResult =
+            performAttackAction(
+                troop,
+                targetPosition,
+                attackTile,
+                isMoraleTriggered(troop),
+                onApplicationEvent
+            )
 
     private fun performShootAction(
-        troop: Troop,
-        targetPosition: IBattleTile,
-        isMorale: Boolean,
-        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
-    ): com.unciv.pure.application.battle.BattleCommandResult {
+        troop: Troop, targetPosition: IBattleTile, isMorale: Boolean,
+        onApplicationEvent: ((BattleEvent) -> Unit)? = null
+    ): BattleCommandResult {
         val defender = getTroopOnTile(targetPosition)
         val canShoot = canShoot(troop)
         val targetIsEnemy = defender != null && isTileOccupiedByEnemy(troop, targetPosition)
@@ -707,62 +447,51 @@ open class BattleManager(
         }
         val output = PerformShootUseCase.execute(
             PerformShootUseCase.Input(
-                troop.id,
-                defender?.id,
-                canShoot,
-                targetIsEnemy,
-                isLuck,
-                isMorale,
-                remaining,
-                died
+                troop.id, defender?.id, canShoot, targetIsEnemy, isLuck, isMorale, remaining, died
             )
         )
-        if (output.success) {
-            publishApplicationEvent(
-                com.unciv.pure.application.battle.BattleEvent.TroopShot(
-                    troop.id,
-                    defender!!.id,
-                    remaining,
-                    output.isLuck,
-                    output.isMorale,
-                    died
-                ),
-                onApplicationEvent
-            )
-        }
-        if (!isBattleOn()) {
-            publishApplicationEvent(
-                com.unciv.pure.application.battle.BattleEvent.BattleEnded(isAttackerWinner()),
-                onApplicationEvent
-            )
-        }
-        return com.unciv.pure.application.battle.BattleCommandResult(
-            success = output.success,
-            rejection = output.rejection,
-            isLuck = output.isLuck,
-            isMorale = output.isMorale,
-            battleEnded = !isBattleOn()
+        if (output.success) publishApplicationEvent(
+            BattleEvent.TroopShot(
+                troop.id,
+                defender!!.id,
+                remaining,
+                output.isLuck,
+                output.isMorale,
+                died
+            ), onApplicationEvent
+        )
+        if (!isBattleOn()) publishApplicationEvent(
+            BattleEvent.BattleEnded(isAttackerWinner()),
+            onApplicationEvent
+        )
+        return BattleCommandResult(
+            success = output.success, rejection = output.rejection,
+            isLuck = output.isLuck, isMorale = output.isMorale, battleEnded = !isBattleOn()
         )
     }
 
     internal fun performShootCommand(
-        troop: Troop,
-        targetPosition: IBattleTile,
-        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
-    ): com.unciv.pure.application.battle.BattleCommandResult {
-        val isMorale = isMoraleTriggered(troop)
-        if (verboseAttack && isMorale) println("Troop ${troop.unitName} has morale")
-        return performShootAction(troop, targetPosition, isMorale, onApplicationEvent)
-    }
+        troop: Troop, targetPosition: IBattleTile,
+        onApplicationEvent: ((BattleEvent) -> Unit)? = null
+    ): BattleCommandResult =
+            performShootAction(troop, targetPosition, isMoraleTriggered(troop), onApplicationEvent)
 
     private fun publishApplicationEvent(
-        event: com.unciv.pure.application.battle.BattleEvent,
-        onApplicationEvent: ((com.unciv.pure.application.battle.BattleEvent) -> Unit)? = null
+        event: BattleEvent,
+        onApplicationEvent: ((BattleEvent) -> Unit)? = null
     ) {
         onApplicationEvent?.invoke(event)
     }
-}
+    fun hasRetaliationRemaining(troop: Troop): Boolean =
+            remainingRetaliationDamageByTroopId[troop.id] != 0
 
-private val remainingRetaliationDamageByTroopId = mutableMapOf<Int, Int>()
-fun hasRetaliationRemaining(troop: Troop): Boolean =
-        remainingRetaliationDamageByTroopId[troop.id] != 0
+    /** Shared activation completion for interactive and automated callers.
+     * Rejected player commands are retried before calling this method.
+     */
+    fun completeAction(actionResult: BattleCommandResult?) {
+        if (!isBattleOn() || getCurrentTroop() == null || getTurnQueue().isEmpty()) return
+        if (actionResult?.success != true || ShouldAdvanceTurnUseCase.execute(actionResult)) {
+            advanceTurn()
+        }
+    }
+}

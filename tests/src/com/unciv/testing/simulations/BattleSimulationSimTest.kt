@@ -27,6 +27,8 @@ import org.koin.dsl.module
 import kotlin.math.pow
 
 class BattleSimulationSimTest {
+    private lateinit var ruleset: Ruleset
+
     private data class Archetype(
         val name: String,
         val speed: Int,
@@ -50,41 +52,22 @@ class BattleSimulationSimTest {
         val distanceFromEven: Double get() = kotlin.math.abs(attackerDecisiveWinRate - 0.5)
     }
 
-    private val archetypes = listOf(
-        Archetype("Peasant", speed = 4, health = 5, damage = 2),
-        Archetype("Swordsman", speed = 7, health = 50, damage = 15),
-        Archetype("Archer", speed = 3, health = 15, damage = 5, rangedStrength = 7),
-        Archetype("Spearman", speed = 5, health = 40, damage = 10),
-        Archetype("Horseman", speed = 10, health = 60, damage = 20)
-    )
+    private val archetypes = BalanceUnitSources.preset.map {
+        Archetype(it.name, it.speed, it.health, it.damage, it.rangedStrength)
+    }
     private val seeds = (0L until 20L).toList()
 
     @Before
     fun setUp() {
         GameConstants.setTestingInstance(
-            GameConstantsData(luckProbability = 0.05, moraleProbability = 0.1, armySize = 1)
+            GameConstantsData(luckProbability = 0.05, moraleProbability = 0.1, armySize = 4)
         )
-        val ruleset = Ruleset().apply {
-            unitTypes["Melee"] = UnitType().apply { name = "Melee" }
-            unitTypes["Ranged"] = UnitType().apply { name = "Ranged" }
-            archetypes.forEach { archetype ->
-                units[archetype.name] = BaseUnit().apply {
-                    name = archetype.name
-                    unitType = if (archetype.rangedStrength > 0) "Ranged" else "Melee"
-                    speed = archetype.speed
-                    health = archetype.health
-                    damage = archetype.damage
-                    rangedStrength = archetype.rangedStrength
-                }
-            }
-        }
-        startKoin { allowOverride(true); modules(module { single { ruleset } }, testModule) }
+        ruleset = BalanceUnitSources.ruleset(BalanceUnitSources.preset)
     }
 
     @After
     fun tearDown() {
         GameConstants.clearTestingInstance()
-        stopKoin()
     }
 
     @Test
@@ -104,7 +87,7 @@ class BattleSimulationSimTest {
         defenderAmount = defenderAmount,
         seeds = seeds,
         luckProbability = GameConstants.luckProbability,
-        moraleProbability = GameConstants.moraleProbability
+        moraleProbability = GameConstants.moraleProbability, ruleset = ruleset
     )
 
     @Test
@@ -146,12 +129,12 @@ class BattleSimulationSimTest {
         }
 
         println("[$label] Planned: ${matchups.size} matchups, $totalBatches cells, $totalSimulations simulations (${seeds.size} seeds/cell).")
-        println("[$label] Grid: 1..$maxAmount vs 1..$maxAmount; luck=5%; morale=10%; maxTurns=300.")
+        println("[$label] Grid: 1..$maxAmount vs 1..$maxAmount; luck=5%; morale=10%; maxTurns=1000; noProgressLimit=100; troopSlots=4; field=14x8.")
         println("[$label] Completed: 0/$totalSimulations (0%); elapsed ${elapsed()}")
         println("[$label] Report destination: ${reportFile.absolutePath}")
         if (mirror) record("Identical troop mirror matches")
         record("Legend: each cell is attacker decisive win rate; S=stalemate, M=max turns")
-        record("Grid: 1..$maxAmount vs 1..$maxAmount; seeds per cell: ${seeds.size}; luck=5%; morale=10%; maxTurns=300")
+        record("Grid: 1..$maxAmount vs 1..$maxAmount; seeds per cell: ${seeds.size}; luck=5%; morale=10%; maxTurns=1000; noProgressLimit=100; troopSlots=4; field=14x8")
 
         matchups.forEachIndexed { matchupIndex, (attacker, defender) ->
             val matchup = "${attacker.name} vs ${defender.name}"
@@ -236,4 +219,3 @@ class BattleSimulationSimTest {
         println("[$label] Report written to ${reportFile.absolutePath}")
     }
 }
-

@@ -24,34 +24,27 @@ class BattleSimulationRunner(
         val events = mutableListOf<BattleEvent>()
         var turns = 0
         var turnsWithoutProgress = 0
-
         while (manager.isBattleOn() && turns < maxTurns) {
             val troop = manager.getCurrentTroop()
                 ?: return result(BattleTermination.NO_CURRENT_TROOP, turns, commands, events)
-            val policy =
-                if (manager.getAttackerArmy().contains(troop)) attackerPolicy else defenderPolicy
+            val policy = if (manager.getAttackerArmy()
+                        .contains(troop)
+            ) attackerPolicy else defenderPolicy
             val command = policy.chooseCommand(troop.id)
             turns++
-            var advanceTurn = true
-            val madeProgress = if (command == null || command.troopId != troop.id) {
-                false
+            val actionResult = if (command == null || command.troopId != troop.id) {
+                null
             } else {
                 commands.add(command)
-                val actionEvents = mutableListOf<BattleEvent>()
-                val actionResult = manager.execute(command) { actionEvents.add(it) }
-                events.addAll(actionEvents)
-                advanceTurn = !actionResult.success ||
-                        com.unciv.pure.application.battle.ShouldAdvanceTurnUseCase.execute(
-                            actionResult
-                        )
-                actionResult.success && command !is BattleCommand.Skip
+                manager.execute(command) { events.add(it) }
             }
+            val madeProgress = actionResult?.success == true && command !is BattleCommand.Skip
             turnsWithoutProgress = if (madeProgress) 0 else turnsWithoutProgress + 1
             if (!manager.isBattleOn()) break
             if (turnsWithoutProgress >= maxTurnsWithoutProgress) {
                 return result(BattleTermination.STALEMATE, turns, commands, events)
             }
-            if (advanceTurn && manager.getTurnQueue().isNotEmpty()) manager.advanceTurn()
+            manager.completeAction(actionResult)
         }
         val battleResult = manager.getBattleResult()
         val termination = when {

@@ -325,58 +325,36 @@ class BattleScreen private constructor(
 
     suspend fun runBattleLoop(initialBattleState: CreateBattleReportUseCase.InitialState) =
             com.unciv.utils.concurrency.withGLContext {
-                // The manager is also read by input handlers and render(). Keep it and Scene2D
-                // mutations on the same thread, including after a suspended player action.
+                // Input, combat mutations and rendering share the GL thread in the interactive adapter.
                 while (manager.isBattleOn()) {
                     val currentTroop = manager.getCurrentTroop()
                     if (currentTroop == null) {
                         shutdownScreen()
                         return@withGLContext
                     }
-                    if (verboseTurn) println(
-                        "Current troop: ${currentTroop.unitName} at position ${
-                            manager.getTroopTile(
-                                currentTroop
-                            )?.position
-                        }"
-                    )
                     val actionResult = if (isTroopPlayerControlled(currentTroop)) {
                         var result: com.unciv.pure.application.battle.BattleCommandResult
                         while (true) {
-                            if (verboseTurn) println("Waiting for player action...")
                             val (command, _) = waitForPlayerAction()
-                            if (verboseTurn) println("Received command: $command")
                             result = manager.execute(command) { event ->
                                 handleApplicationEvent(event, initialBattleState)
                             }
                             if (result.success) break
-                            if (verboseTurn) println("Command $command failed with rejection: ${result.rejection}")
                             handleActionError(result.rejection)
                         }
                         result
                     } else {
-                        if (verboseTurn) println("AI is performing action for troop: ${currentTroop.unitName}")
                         AIBattle(manager) { event ->
                             handleApplicationEvent(event, initialBattleState)
                         }.performTurn(currentTroop)
                     }
-                    val currentTroopAfter = manager.getCurrentTroop()
-                    if (ShouldAdvanceTurnUseCase.execute(actionResult) && currentTroopAfter != null &&
-                            manager.getTurnQueue().isNotEmpty()
-                    ) {
-                        manager.advanceTurn()
-                        if (verboseTurn) println("Turn advanced to next troop")
-                    } else if (actionResult?.isMorale == true && verboseTurn) {
-                        println("Morale triggered: ${currentTroop.unitName} keeps the turn")
-                    }
+                    manager.completeAction(actionResult)
                     movePointerToNextTroop()
                     updateTilesShadowing()
-                    // Dispatch the next turn through the GL queue, allowing rendering, queued
-                    // visual events and cancellation even during consecutive AI turns.
+                    // Give rendering, queued visual events and cancellation an opportunity to run.
                     kotlinx.coroutines.yield()
                 }
                 manager.finishBattle()
-                println("Battle has ended!")
             }
 
     fun refreshTroopViews() {
@@ -827,23 +805,24 @@ class BattleScreen private constructor(
             return
         }
 
-        if (!manager.getReachableTiles(currentTroop.getTroopInfo()).contains(tileGroup.tileInfo)
+        if (!manager.getReachableTiles(currentTroop.getTroopInfo()).any { it == targetTile }
                 && manager.isTileFree(targetTile)
         ) {
             Gdx.graphics.setCursor(cursorCancel)
         } else {
-            if (manager.isTileOccupiedByAlly(currentTroop.getTroopInfo(), tileGroup.tileInfo)) {
+            if (manager.isTileOccupiedByAlly(currentTroop.getTroopInfo(), targetTile)) {
                 Gdx.graphics.setCursor(cursorCancel)
                 return
             }
-
             if (manager.isTileOccupiedByEnemy(currentTroop.getTroopInfo(), targetTile)) {
                 val direction = pixelToDirection(x, y, width)
                 val tileToMove = battleField.getNeighborTile(targetTile, direction)
-
-                if (manager.getReachableTiles(currentTroop.getTroopInfo()).contains(tileToMove)
-                        && (tileToMove != null && manager.isTileFree(tileToMove)
-                                || tileToMove == manager.getTroopTile(currentTroop.getTroopInfo()))
+                if (tileToMove != null &&
+                        manager.getReachableTiles(currentTroop.getTroopInfo())
+                            .any { it == tileToMove } &&
+                        (manager.isTileFree(tileToMove) || tileToMove == manager.getTroopTile(
+                            currentTroop.getTroopInfo()
+                        ))
                 ) {
                     Gdx.graphics.setCursor(cursorAttack[direction.num])
                 } else {
@@ -851,7 +830,6 @@ class BattleScreen private constructor(
                 }
                 return
             }
-
             Gdx.graphics.setCursor(cursorMove)
         }
     }

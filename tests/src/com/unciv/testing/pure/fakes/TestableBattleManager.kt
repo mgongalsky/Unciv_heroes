@@ -1,21 +1,17 @@
 package com.unciv.testing.pure.fakes
 
-import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.battle.BattleManager
-import com.unciv.pure.application.pathfinding.BattleMovementContext
-import com.unciv.pure.application.pathfinding.MovementRangeUseCase
+import com.unciv.pure.domain.army.IArmy
 import com.unciv.pure.domain.battle.IBattleField
 import com.unciv.pure.domain.battle.IBattleRandom
-import com.unciv.pure.domain.pathfinding.INavigableTile
 import com.unciv.pure.domain.troop.Troop
 
+/** Fixture placement only. All movement and combat use unmodified game rules. */
 class TestableBattleManager(
-    attackerArmy: ArmyInfo,
-    defenderArmy: ArmyInfo,
+    attackerArmy: IArmy,
+    defenderArmy: IArmy,
     battleField: IBattleField,
     random: IBattleRandom,
-    private val allTilesReachable: Boolean = true,
-    private val useRealMovement: Boolean = false,
     moraleProbability: Double = 0.0,
     luckProbability: Double = 0.0
 ) : BattleManager(
@@ -23,25 +19,11 @@ class TestableBattleManager(
     defenderArmy,
     battleField,
     random,
-    moraleProbability = moraleProbability,
-    luckProbability = luckProbability
+    moraleProbability,
+    luckProbability
 ) {
-
     fun placeTroop(troop: Troop, tile: FakeBattleTile) {
-        tile.setTroop(troop)
-        troopPositions[troop] = tile
-    }
-
-    override fun isReachableInCurrentTurn(troop: Troop, targetTile: INavigableTile): Boolean {
-        if (useRealMovement) {
-            val startTile = troopPositions[troop] as? FakeBattleTile ?: return false
-            val reachable = MovementRangeUseCase.execute(
-                startTile = startTile,
-                unitMovement = troop.speed.toFloat(),
-                context = BattleMovementContext()
-            )
-            return reachable.containsKey(targetTile)
-        }
-        return allTilesReachable
+        tile.receiveTroop(troop)
+        setTroopPosition(troop, tile)
     }
 }

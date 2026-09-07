@@ -7,12 +7,11 @@ class Army(
     private val troops: Array<Troop?> = arrayOfNulls(maxSlots)
 ) : IArmy {
 
-    fun contains(troop: Troop): Boolean =
-            troops.any { it?.id == troop.id }
+    override fun contains(troop: Troop): Boolean = troops.any { it?.id == troop.id }
 
     override fun getAllTroops(): Array<Troop?> = troops
 
-    fun getTroopAt(index: Int): Troop? = troops.getOrNull(index)
+    override fun getTroopAt(index: Int): Troop? = troops.getOrNull(index)
 
     fun addTroop(troop: Troop): Boolean {
         val emptySlotIndex = troops.indexOfFirst { it == null }

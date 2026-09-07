@@ -73,8 +73,7 @@ class BattleEventCharTest {
             attackerArmy = attackerArmy,
             defenderArmy = defenderArmy,
             battleField = FakeBattleField(),
-            random = FakeBattleRandom(List(100) { 0.0 }),
-            allTilesReachable = true
+            random = FakeBattleRandom(List(100) { 0.0 })
         )
         manager.initializeTurnQueue()
         manager.placeTroop(attacker, attackerTile)
@@ -103,19 +102,25 @@ class BattleEventCharTest {
 
     @Test
     fun `characterize events on MOVE to empty tile`() {
+        val destination = FakeBattleTile(Vector2(-1f, 0f))
+        attackerTile.addNeighbor(destination)
+        destination.addNeighbor(attackerTile)
+        val troop = manager.getCurrentTroop()!!
         val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
-        manager.performTurn(
-            BattleActionRequest(
-                manager.getCurrentTroop()!!,
-                emptyTile,
-                ActionType.MOVE
-            )
-        ) { events.add(it) }
+        val result = manager.performTurn(
+            BattleActionRequest(troop, destination, ActionType.MOVE)
+        ) {
+            assertSame(destination, manager.getTroopTile(troop))
+            events.add(it)
+        }
+        assertTrue(result.success)
         assertEquals(1, events.size)
-        val event = events[0] as com.unciv.pure.application.battle.BattleEvent.TroopMoved
+        val event = events.single() as com.unciv.pure.application.battle.BattleEvent.TroopMoved
         assertEquals(Point(0, 0), event.from)
-        assertEquals(Point(2, 0), event.to)
+        assertEquals(Point(-1, 0), event.to)
         assertFalse(event.isMorale)
+        assertNull(attackerTile.getTroop())
+        assertSame(troop, destination.getTroop())
     }
 
     @Test

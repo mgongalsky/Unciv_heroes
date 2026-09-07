@@ -89,8 +89,7 @@ class BattleManagerRealisticFieldCharTest {
         val manager = TestableBattleManager(
             attackerArmy, defenderArmy,
             FakeBattleField(),
-            FakeBattleRandom(List(100) { 0.0 }),
-            useRealMovement = true
+            FakeBattleRandom(List(100) { 0.0 })
         )
         manager.initializeTurnQueue()
         return manager
@@ -203,8 +202,7 @@ class BattleManagerRealisticFieldCharTest {
         val manager = TestableBattleManager(
             archerArmy, defenderArmy,
             FakeBattleField(),
-            FakeBattleRandom(List(100) { 0.0 }),
-            useRealMovement = true
+            FakeBattleRandom(List(100) { 0.0 })
         )
         manager.initializeTurnQueue()
 

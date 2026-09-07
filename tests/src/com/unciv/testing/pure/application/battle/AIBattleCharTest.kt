@@ -79,8 +79,7 @@ class AIBattleCharTest {
             attackerArmy = attackerArmy,
             defenderArmy = defenderArmy,
             battleField = FakeBattleField(),
-            random = FakeBattleRandom(List(100) { 0.0 }),
-            allTilesReachable = true
+            random = FakeBattleRandom(List(100) { 0.0 })
         )
 
         val attacker = attackerArmy.getAllTroops().filterNotNull().first().apply {
@@ -118,15 +117,38 @@ class AIBattleCharTest {
 
     @Test
     fun `characterize melee AI moves toward enemy when not adjacent`() {
-        val farTile = FakeBattleTile(Vector2(5f, 0f))
+        val tiles = (0..8).map { FakeBattleTile(Vector2(it.toFloat(), 0f)) }
+        tiles.zipWithNext().forEach { (left, right) ->
+            left.addNeighbor(right)
+            right.addNeighbor(left)
+        }
+        val movementManager = TestableBattleManager(
+            attackerArmy = attackerArmy,
+            defenderArmy = defenderArmy,
+            battleField = FakeBattleField(tiles),
+            random = FakeBattleRandom(List(100) { 0.0 })
+        )
         val troop = attackerArmy.getAllTroops().filterNotNull().first()
-        manager.placeTroop(troop, farTile)
+        val defender = defenderArmy.getAllTroops().filterNotNull().first()
+        attackerTile.clearTroop()
+        defenderTile.clearTroop()
+        movementManager.placeTroop(troop, tiles.first())
+        movementManager.placeTroop(defender, tiles.last())
+        movementManager.initializeTurnQueue()
+        val defenderAmount = defender.currentAmount
+        val defenderHealth = defender.currentHealth
         val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
 
-        AIBattle(manager) { events.add(it) }.performTurn(troop)
+        val result = AIBattle(movementManager) { events.add(it) }.performTurn(troop)
 
+        assertEquals(true, result?.success)
         assertEquals(1, events.size)
-        assertTrue(events[0] is com.unciv.pure.application.battle.BattleEvent.TroopAttacked)
+        assertTrue(events.single() is com.unciv.pure.application.battle.BattleEvent.TroopMoved)
+        assertSame(tiles[5], movementManager.getTroopTile(troop))
+        assertSame(troop, tiles[5].getTroop())
+        assertNull(tiles.first().getTroop())
+        assertEquals(defenderAmount, defender.currentAmount)
+        assertEquals(defenderHealth, defender.currentHealth)
     }
 
     @Test
@@ -149,8 +171,7 @@ class AIBattleCharTest {
             attackerArmy = archerArmy,
             defenderArmy = spearArmy,
             battleField = FakeBattleField(),
-            random = FakeBattleRandom(List(100) { 0.0 }),
-            allTilesReachable = true
+            random = FakeBattleRandom(List(100) { 0.0 })
         )
         val archer = archerArmy.getAllTroops().filterNotNull().first()
         val spear = spearArmy.getAllTroops().filterNotNull().first().apply {
@@ -182,8 +203,7 @@ class AIBattleCharTest {
             attackerArmy = archerArmy,
             defenderArmy = mixedDefArmy,
             battleField = FakeBattleField(),
-            random = FakeBattleRandom(List(100) { 0.0 }),
-            allTilesReachable = true
+            random = FakeBattleRandom(List(100) { 0.0 })
         )
         val shooter = archerArmy.getAllTroops().filterNotNull().first()
         mixedDefArmy.getAllTroops().filterNotNull().forEachIndexed { i, troop ->

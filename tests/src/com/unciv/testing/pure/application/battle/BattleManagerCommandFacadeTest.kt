@@ -171,26 +171,20 @@ class BattleManagerCommandFacadeTest {
         var randomCalls = 0
         val countingRandom = object : com.unciv.pure.domain.battle.IBattleRandom {
             override fun nextDouble(): Double {
-                randomCalls++
-                return 0.0
+                randomCalls++; return 0.0
             }
         }
+        target.impassable = true
         val rejectingManager = TestableBattleManager(
-            attackerArmy,
-            defenderArmy,
-            FakeBattleField(listOf(start, target)),
-            countingRandom,
-            allTilesReachable = false
+            attackerArmy, defenderArmy, FakeBattleField(listOf(start, target)), countingRandom
         )
         rejectingManager.initializeTurnQueue()
         val attacker = attackerArmy.getAllTroops().filterNotNull().first()
         rejectingManager.placeTroop(attacker, start)
         val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
-
         val result = rejectingManager.execute(BattleCommand.Move(attacker.id, Point(1, 0))) {
             events.add(it)
         }
-
         assertFalse(result.success)
         assertEquals(BattleRejection.TOO_FAR, result.rejection)
         assertEquals(1, randomCalls)
@@ -335,16 +329,15 @@ class BattleManagerCommandFacadeTest {
         var randomCalls = 0
         val countingRandom = object : com.unciv.pure.domain.battle.IBattleRandom {
             override fun nextDouble(): Double {
-                randomCalls++
-                return 0.0
+                randomCalls++; return 0.0
             }
         }
+        val disconnectedApproach = FakeBattleTile(Vector2(2f, 0f))
         val rejectingManager = TestableBattleManager(
             attackerArmy,
             defenderArmy,
-            FakeBattleField(listOf(start, target)),
-            countingRandom,
-            allTilesReachable = false
+            FakeBattleField(listOf(start, target, disconnectedApproach)),
+            countingRandom
         )
         rejectingManager.initializeTurnQueue()
         val attacker = attackerArmy.getAllTroops().filterNotNull().first()
@@ -353,11 +346,9 @@ class BattleManagerCommandFacadeTest {
         rejectingManager.placeTroop(defender, target)
         val defenderAmountBefore = defender.currentAmount
         val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
-
         val result = rejectingManager.execute(
-            BattleCommand.Attack(attacker.id, Point(1, 0), Point(0, 0))
+            BattleCommand.Attack(attacker.id, Point(1, 0), Point(2, 0))
         ) { events.add(it) }
-
         assertFalse(result.success)
         assertEquals(BattleRejection.INVALID_TARGET, result.rejection)
         assertEquals(1, randomCalls)

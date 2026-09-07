@@ -18,7 +18,8 @@ import com.unciv.pure.domain.troop.TroopFactory
 object ArenaBattleSetup {
     val matchups: List<ArenaMatchup> = listOf(
         ArenaMatchup("Peasant", "Swordsman", 20, 1),
-        ArenaMatchup("Peasant", "Archer", 20, 5),
+        // Calibrated on the production 14x8 field with 4–5 squads; see docs/arena-peasant-balance.md.
+        ArenaMatchup("Peasant", "Archer", 36, 5),
         ArenaMatchup("Peasant", "Spearman", 20, 2),
         ArenaMatchup("Peasant", "Horseman", 20, 1),
         ArenaMatchup("Swordsman", "Peasant", 20, 176),

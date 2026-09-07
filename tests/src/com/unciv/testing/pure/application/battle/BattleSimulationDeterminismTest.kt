@@ -12,9 +12,6 @@ import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.ruleset.unit.UnitType
 import com.unciv.pure.application.battle.BattleEvent
-import com.unciv.pure.domain.battle.IBattleField
-import com.unciv.pure.domain.battle.IBattleRandom
-import com.unciv.pure.domain.pathfinding.INavigableTile
 import com.unciv.pure.domain.troop.Troop
 import com.unciv.testing.pure.fakes.FakeBattleField
 import com.unciv.testing.pure.fakes.FakeBattleTile
@@ -74,17 +71,23 @@ class BattleSimulationDeterminismTest {
         val civ = FakeCivilizationInfo()
         val attackerArmy = ArmyInfo(civ, 5).apply { addUnits("Spearman", 8) }
         val defenderArmy = ArmyInfo(civ, 5).apply { addUnits("Spearman", 8) }
-        val manager = DeterministicManager(
+        val manager = BattleManager(
             attackerArmy,
             defenderArmy,
             FakeBattleField(listOf(attackerTile, defenderTile)),
-            SeededBattleRandom(seed)
+            SeededBattleRandom(seed),
+            moraleProbability = 0.0,
+            luckProbability = 0.5
         )
-        manager.place(attackerArmy.getAllTroops().filterNotNull().first(), attackerTile)
-        manager.place(defenderArmy.getAllTroops().filterNotNull().first(), defenderTile)
+
+        fun place(troop: Troop, tile: FakeBattleTile) {
+            tile.receiveTroop(troop)
+            manager.setTroopPosition(troop, tile)
+        }
+        place(attackerArmy.getAllTroops().filterNotNull().first(), attackerTile)
+        place(defenderArmy.getAllTroops().filterNotNull().first(), defenderTile)
         manager.initializeTurnQueue()
         val policy = AIBattlePolicy(manager)
-
         return BattleSimulationRunner(
             manager,
             attackerPolicy = policy,
@@ -110,27 +113,4 @@ class BattleSimulationDeterminismTest {
         BattleEvent.TurnSkipped -> "skip"
     }
 
-    private class DeterministicManager(
-        attackerArmy: ArmyInfo,
-        defenderArmy: ArmyInfo,
-        battleField: IBattleField,
-        random: IBattleRandom
-    ) : BattleManager(
-        attackerArmy,
-        defenderArmy,
-        battleField,
-        random,
-        moraleProbability = 0.0,
-        luckProbability = 0.5
-    ) {
-        fun place(troop: Troop, tile: FakeBattleTile) {
-            tile.receiveTroop(troop)
-            setTroopPosition(troop, tile)
-        }
-
-        override fun isReachableInCurrentTurn(
-            troop: Troop,
-            targetTile: INavigableTile
-        ): Boolean = true
-    }
 }

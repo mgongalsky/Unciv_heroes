@@ -39,53 +39,41 @@ class PerformTurnCharTest {
     @Before
     fun setUp() {
         GameConstants.setTestingInstance(
-            GameConstantsData(
-                luckProbability = 0.0,
-                moraleProbability = 0.0,
-                armySize = 5
-            )
+            GameConstantsData(luckProbability = 0.0, moraleProbability = 0.0, armySize = 5)
         )
-
         val fakeRuleset = Ruleset().apply {
-            val unitTypeObj = UnitType().apply { name = "Melee" }
-            unitTypes["Melee"] = unitTypeObj
+            unitTypes["Melee"] = UnitType().apply { name = "Melee" }
             units["Spearman"] = BaseUnit().apply {
                 name = "Spearman"; unitType = "Melee"
                 damage = 10; health = 100; speed = 5
             }
             units["Archer"] = BaseUnit().apply {
                 name = "Archer"; unitType = "Melee"
-                damage = 10; health = 100; speed = 5
-                rangedStrength = 10
+                damage = 10; health = 100; speed = 5; rangedStrength = 10
             }
         }
-
         startKoin {
             allowOverride(true)
             modules(module { single { fakeRuleset } }, testModule)
         }
-
         civInfo = FakeCivilizationInfo()
         attackerArmy = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Spearman", 10) }
         defenderArmy = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Spearman", 10) }
-
         attackerTile = FakeBattleTile(Vector2(0f, 0f))
         defenderTile = FakeBattleTile(Vector2(1f, 0f))
-        emptyTile = FakeBattleTile(Vector2(2f, 0f))
-
+        emptyTile = FakeBattleTile(Vector2(-1f, 0f))
+        attackerTile.addNeighbor(defenderTile)
+        defenderTile.addNeighbor(attackerTile)
+        attackerTile.addNeighbor(emptyTile)
+        emptyTile.addNeighbor(attackerTile)
         manager = TestableBattleManager(
             attackerArmy, defenderArmy,
-            FakeBattleField(),
-            FakeBattleRandom(List(100) { 0.0 }),
-            allTilesReachable = true
+            FakeBattleField(listOf(attackerTile, defenderTile, emptyTile)),
+            FakeBattleRandom(List(100) { 0.0 })
         )
-
         manager.initializeTurnQueue()
-
-        val attacker = attackerArmy.getAllTroops().first { it != null }!!
-        val defender = defenderArmy.getAllTroops().first { it != null }!!
-        manager.placeTroop(attacker, attackerTile)
-        manager.placeTroop(defender, defenderTile)
+        manager.placeTroop(attackerArmy.getAllTroops().filterNotNull().first(), attackerTile)
+        manager.placeTroop(defenderArmy.getAllTroops().filterNotNull().first(), defenderTile)
     }
 
     @After
@@ -167,8 +155,7 @@ class PerformTurnCharTest {
         val shooterManager = TestableBattleManager(
             archerArmy, defenderArmy,
             FakeBattleField(),
-            FakeBattleRandom(List(100) { 0.0 }),
-            allTilesReachable = true
+            FakeBattleRandom(List(100) { 0.0 })
         )
         shooterManager.initializeTurnQueue()
         val archer = archerArmy.getAllTroops().first { it != null }!!

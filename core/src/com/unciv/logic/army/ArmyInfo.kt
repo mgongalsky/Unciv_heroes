@@ -81,8 +81,8 @@ open class ArmyInfo(
 
     fun dismissByMostMaintenance() = DismissByMostMaintenanceUseCase.execute(this)
 
-    fun getTroopAt(index: Int): Troop? = troops.getOrNull(index)
-    fun contains(troop: Troop): Boolean = army.contains(troop)
+    override fun getTroopAt(index: Int): Troop? = troops.getOrNull(index)
+    override fun contains(troop: Troop): Boolean = army.contains(troop)
     override fun getAllTroops(): Array<Troop?> = army.getAllTroops()
     override fun removeTroop(troop: Troop): Boolean = army.removeTroop(troop)
     override fun setTroopAt(index: Int, troop: Troop?) = army.setTroopAt(index, troop)
@@ -128,18 +128,7 @@ open class ArmyInfo(
         }
     }
 
-    fun finishBattle() {
-        for (index in troops.indices) {
-            val troop = troops[index] ?: continue
-            if (troop.currentAmount <= 0) {
-                troops[index] = null
-                continue
-            }
-            troop.amount = troop.currentAmount
-            troop.currentHealth = troop.maxHealth
-            troop.resetFormation()
-        }
-    }
+    override fun finishBattle() = super<IArmy>.finishBattle()
     fun copySlots(): Array<Troop?> = troops
 
     fun clone(): ArmyInfo {
@@ -147,4 +136,6 @@ open class ArmyInfo(
         for (index in troops.indices) copy.setTroopAt(index, troops[index])
         return copy
     }
+    override fun getBattleMorale(): Int = hero?.morale ?: 0
+    override fun getBattleLuck(): Int = hero?.luck ?: 1
 }

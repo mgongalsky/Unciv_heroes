@@ -115,9 +115,15 @@ class ArenaRealBattleTest {
         }
     }
 
-    private fun simulate(matchup: ArenaMatchup, seed: Long, slots: Int): BattleSimulationResult {
+    private fun simulate(
+        matchup: ArenaMatchup,
+        seed: Long,
+        slots: Int,
+        bonusPercent: Int = 30
+    ): BattleSimulationResult {
         val ruleset = ArenaBattleSetup.ruleset()
-        val playerCount = ((matchup.playerCount.toLong() * 130 + 99) / 100).toInt()
+        val playerCount =
+                ((matchup.playerCount.toLong() * (100L + bonusPercent) + 99) / 100).toInt()
         val player = ArenaBattleSetup.createArmy(matchup.playerUnit, playerCount, ruleset, slots)
         val opponent = ArenaBattleSetup.createArmy(
             matchup.opponentUnit,
@@ -134,8 +140,12 @@ class ArenaRealBattleTest {
         val climate = ClimateParameters(0.3, 0.5, 0.6)
         val field = MapGenerator(ruleset).generateBattlefield(14, 8, climate, climate)
         val manager = BattleManager(
-            player, opponent, field, SeededBattleRandom(seed),
-            moraleProbability = 0.1, luckProbability = 0.05
+            player,
+            opponent,
+            field,
+            SeededBattleRandom(seed),
+            moraleProbability = 0.1,
+            luckProbability = 0.05
         )
         manager.initializeBattle()
         val troops = player.getAllTroops().filterNotNull() + opponent.getAllTroops().filterNotNull()
@@ -149,8 +159,248 @@ class ArenaRealBattleTest {
         assertEquals(troops.size, manager.getTurnQueue().size)
         val policy = AIBattlePolicy(manager)
         return BattleSimulationRunner(
-            manager, policy, policy,
-            maxTurns = 1000, maxTurnsWithoutProgress = 100, seed = seed
+            manager,
+            policy,
+            policy,
+            maxTurns = 1000,
+            maxTurnsWithoutProgress = 100,
+            seed = seed
         ).run()
+    }
+
+    @Test
+    fun peasantArcherBalanceDiagnostic() {
+        val ruleset = ArenaBattleSetup.ruleset()
+        val report =
+                StringBuilder("Peasant vs Archer; production field 14x8; climate 0.3/0.5/0.6; seeds 0..19; luck=0.05 morale=0.1; AIBattlePolicy on both sides\n")
+        for (name in listOf("Peasant", "Archer")) {
+            val unit = ruleset.units.getValue(name)
+            report.append("$name: health=${unit.health} damage=${unit.damage} speed=${unit.speed} ranged=${unit.rangedStrength} formationHealth=${unit.formationHealthPercent} formationReduction=${unit.formationDamageReductionPercent}\n")
+        }
+        report.append("First attack counts are measured before the first chosen melee attack, excluding battles that never reach one.\n")
+        report.append("peasants archers slots wins draws unfinished reachedAttack avgPeasantsAtAttack avgShotsBeforeAttack avgActions\n")
+        val failures = mutableListOf<String>()
+        for (count in listOf(20, 26, 40, 60, 80)) for (slots in listOf(1, 4, 5)) {
+            var wins = 0
+            var draws = 0
+            var unfinished = 0
+            var contacts = 0
+            var peasantsAtContact = 0
+            var shotsAtContact = 0
+            var actions = 0
+            for (seed in 0L until 20L) {
+                val player = ArenaBattleSetup.createArmy("Peasant", count, ruleset, slots)
+                val enemy = ArenaBattleSetup.createArmy("Archer", 5, ruleset, slots)
+                val climate = ClimateParameters(0.3, 0.5, 0.6)
+                val field = MapGenerator(ruleset).generateBattlefield(14, 8, climate, climate)
+                if (count == 20 && slots == 1 && seed == 0L) {
+                    report.append("FIELD: ").append(field.values.groupingBy {
+                        "${it.baseTerrain}/${it.terrainFeatures.joinToString(",")}"
+                    }.eachCount().toSortedMap()).append('\n')
+                }
+                val manager = BattleManager(
+                    player, enemy, field, SeededBattleRandom(seed),
+                    moraleProbability = 0.1, luckProbability = 0.05
+                )
+                manager.initializeBattle()
+                val ai = AIBattlePolicy(manager)
+                var firstAttack = false
+                var shots = 0
+                val observed = object : com.unciv.pure.application.battle.BattlePolicy {
+                    override fun chooseCommand(troopId: Int): com.unciv.pure.application.battle.BattleCommand? {
+                        val command = ai.chooseCommand(troopId)
+                        if (!firstAttack && command is com.unciv.pure.application.battle.BattleCommand.Attack) {
+                            firstAttack = true
+                            contacts++
+                            peasantsAtContact += player.getAllTroops().filterNotNull()
+                                .sumOf { it.currentAmount }
+                            shotsAtContact += shots
+                        }
+                        if (!firstAttack && command is com.unciv.pure.application.battle.BattleCommand.Shoot) shots++
+                        return command
+                    }
+                }
+                val result = BattleSimulationRunner(
+                    manager, observed, observed,
+                    maxTurns = 1000, maxTurnsWithoutProgress = 100, seed = seed
+                ).run()
+                actions += result.turns
+                if (result.winnerIsAttacker == true) wins++
+                if (result.termination == BattleTermination.MUTUAL_DEFEAT) draws++
+                if (result.termination != BattleTermination.VICTORY && result.termination != BattleTermination.MUTUAL_DEFEAT) {
+                    unfinished++
+                    failures.add("count=$count slots=$slots seed=$seed: ${result.termination}")
+                }
+                if (count == 26 && slots == 4 && seed == 0L) {
+                    report.append("TRACE 26 vs 5, slots=4, seed=0:\n")
+                    result.events.forEach { report.append(it).append('\n') }
+                }
+            }
+            report.append("$count 5 $slots $wins $draws $unfinished $contacts ")
+            report.append(if (contacts == 0) "n/a n/a" else "${peasantsAtContact.toDouble() / contacts} ${shotsAtContact.toDouble() / contacts}")
+            report.append(" ${actions / 20.0}\n")
+        }
+        val projectRoot =
+                generateSequence(java.io.File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
+                    .firstOrNull { java.io.File(it, "android/assets").isDirectory }
+                    ?: error("Cannot locate project root for arena diagnostic report")
+        val output = java.io.File(projectRoot, "tests/balance-results/arena-peasant-diagnostic.txt")
+        output.parentFile.mkdirs()
+        output.writeText(report.toString())
+        println(report)
+        assertTrue(failures.joinToString("\n"), failures.isEmpty())
+    }
+
+    @Test
+    fun peasantArcherCalibration() {
+        val report =
+                StringBuilder("Production 14x8 field, climate 0.3/0.5/0.6; AIBattlePolicy both sides; seeds 20..59; no additional bonus\npeasants archers slots wins samples unfinished\n")
+        val failures = mutableListOf<String>()
+        for (count in 28..40 step 2) for (slots in 4..5) {
+            var wins = 0
+            var unfinished = 0
+            for (seed in 20L until 60L) {
+                val result = simulate(
+                    ArenaMatchup("Peasant", "Archer", count, 5),
+                    seed,
+                    slots,
+                    bonusPercent = 0
+                )
+                if (result.winnerIsAttacker == true) wins++
+                if (result.termination != BattleTermination.VICTORY && result.termination != BattleTermination.MUTUAL_DEFEAT) {
+                    unfinished++
+                    failures.add("count=$count slots=$slots seed=$seed: ${result.termination}")
+                }
+            }
+            report.append("$count 5 $slots $wins 40 $unfinished\n")
+        }
+        val root =
+                generateSequence(java.io.File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
+                    .firstOrNull { java.io.File(it, "android/assets").isDirectory }
+                    ?: error("Cannot locate project root")
+        val output = java.io.File(root, "tests/balance-results/arena-peasant-calibration.txt")
+        output.parentFile.mkdirs()
+        output.writeText(report.toString())
+        println(report)
+        assertTrue(failures.joinToString("\n"), failures.isEmpty())
+    }
+
+    @Test
+    fun peasantArcherTierWinRates() {
+        val matchup =
+                ArenaBattleSetup.matchups.single { it.playerUnit == "Peasant" && it.opponentUnit == "Archer" }
+        val report =
+                StringBuilder("Production field 14x8; climate 0.3/0.5/0.6; AIBattlePolicy both sides; validation seeds 60..159\nbonus peasants archers slots wins samples unfinished\n")
+        val failures = mutableListOf<String>()
+        for (bonus in listOf(30, 20, 10, 0)) for (slots in 4..5) {
+            var wins = 0
+            var unfinished = 0
+            val encounter = com.unciv.pure.domain.arena.ArenaGenerator.generate(
+                listOf(matchup), 0L, com.unciv.pure.domain.arena.ArenaTierConfig(1, bonus)
+            ).single()
+            for (seed in 60L until 160L) {
+                val result = simulate(matchup, seed, slots, bonus)
+                if (result.winnerIsAttacker == true) wins++
+                if (result.termination != BattleTermination.VICTORY && result.termination != BattleTermination.MUTUAL_DEFEAT) unfinished++
+            }
+            report.append("$bonus ${encounter.playerCount} ${matchup.opponentCount} $slots $wins 100 $unfinished\n")
+            if (unfinished != 0) failures.add("bonus=$bonus slots=$slots: $unfinished unfinished battles")
+            // Tier 1 should be forgiving under the reference policy; later tiers must remain winnable.
+            val minimumWins = if (bonus == 30) 90 else 1
+            if (wins < minimumWins) failures.add("bonus=$bonus slots=$slots: $wins/100 wins, expected at least $minimumWins")
+        }
+        val root =
+                generateSequence(java.io.File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
+                    .firstOrNull { java.io.File(it, "android/assets").isDirectory }
+                    ?: error("Cannot locate project root")
+        val output = java.io.File(root, "tests/balance-results/arena-peasant-tier-validation.txt")
+        output.parentFile.mkdirs()
+        output.writeText(report.toString())
+        println(report)
+        assertTrue(failures.joinToString("\n"), failures.isEmpty())
+    }
+
+    @Test
+    fun standaloneBattleMatchesGameAdapter() {
+        val ruleset = ArenaBattleSetup.ruleset()
+        val climate = ClimateParameters(0.3, 0.5, 0.6)
+        for (slots in 4..5) for (seed in 0L until 10L) {
+            val gameField = MapGenerator(ruleset).generateBattlefield(14, 8, climate, climate)
+            val gameManager = BattleManager(
+                ArenaBattleSetup.createArmy("Peasant", 47, ruleset, slots),
+                ArenaBattleSetup.createArmy("Archer", 5, ruleset, slots),
+                gameField, SeededBattleRandom(seed), moraleProbability = 0.1, luckProbability = 0.05
+            )
+            gameManager.initializeBattle()
+            fun stacks(name: String, count: Int) = ArenaArmyDistribution.split(count, slots).map {
+                com.unciv.logic.battle.StandaloneBattleSetup.Stack(name, it)
+            }
+
+            val standalone = com.unciv.logic.battle.StandaloneBattleSetup.create(
+                stacks("Peasant", 47), stacks("Archer", 5), ruleset, SeededBattleRandom(seed),
+                luckProbability = 0.05, moraleProbability = 0.1
+            )
+            val label = "slots=$slots seed=$seed"
+            for (tile in gameField.values) {
+                val other =
+                        standalone.battleField.getTileAt(tile.position) as com.unciv.logic.battle.IBattleTile
+                assertEquals(label, tile.isImpassible(), other.isImpassible())
+                assertEquals(
+                    label,
+                    tile.neighbors.map { it.position }.toList(),
+                    other.neighbors.map { it.position }.toList()
+                )
+            }
+            fun troopIds(manager: BattleManager) =
+                    (manager.getAttackerArmy().getAllTroops() + manager.getDefenderArmy()
+                        .getAllTroops())
+                        .filterNotNull().mapIndexed { index, troop -> troop.id to index }.toMap()
+
+            val gameIds = troopIds(gameManager)
+            val standaloneIds = troopIds(standalone)
+            fun normalize(events: List<BattleEvent>, ids: Map<Int, Int>): List<String> =
+                    events.map { event ->
+                        Regex("(troopId|attackerId|defenderId|nextTroopId)=([0-9]+)").replace(event.toString()) { match ->
+                            "${match.groupValues[1]}=${ids.getValue(match.groupValues[2].toInt())}"
+                        }
+                    }
+
+            val gameEvents = mutableListOf<BattleEvent>()
+            val gameAi = com.unciv.ai.AIBattle(gameManager) { gameEvents.add(it) }
+            var actions = 0
+            while (gameManager.isBattleOn() && actions < 1000) {
+                val troop = requireNotNull(gameManager.getCurrentTroop())
+                val result = gameAi.performTurn(troop)
+                assertTrue("Game AI rejected action: $label $result", result?.success == true)
+                gameManager.completeAction(result)
+                actions++
+            }
+            assertFalse("Game adapter did not finish: $label", gameManager.isBattleOn())
+            val policy = AIBattlePolicy(standalone)
+            val result = BattleSimulationRunner(standalone, policy, policy, seed = seed).run()
+            assertEquals(label, BattleTermination.VICTORY, result.termination)
+            assertEquals(label, actions, result.turns)
+            assertEquals(
+                label,
+                gameManager.getBattleResult()?.winningArmy === gameManager.getAttackerArmy(),
+                result.winnerIsAttacker
+            )
+            assertEquals(
+                label,
+                normalize(gameEvents, gameIds),
+                normalize(result.events, standaloneIds)
+            )
+            fun state(manager: BattleManager, ids: Map<Int, Int>): List<String> =
+                    (manager.getAttackerArmy().getAllTroops() + manager.getDefenderArmy()
+                        .getAllTroops()).map { troop ->
+                        if (troop == null) "empty" else
+                            "${ids.getValue(troop.id)}:${troop.currentAmount}:${troop.currentHealth}:${troop.formation.current}:${
+                                manager.getTroopTile(
+                                    troop
+                                )?.toPoint()
+                            }"
+                    }
+            assertEquals(label, state(gameManager, gameIds), state(standalone, standaloneIds))
+        }
     }
 }
