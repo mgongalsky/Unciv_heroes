@@ -78,9 +78,14 @@ class BattleScreen private constructor(
     private val attacker: ICombatant? = null,
     private val defender: ICombatant? = null,
 ) : BaseScreen(), RecreateOnResize, KoinComponent {
+    private var screenClosed = false
+    private var onStandaloneClosed: ((com.unciv.pure.domain.battle.BattleReport?) -> Unit)? = null
+    private var standaloneResult: com.unciv.pure.domain.battle.BattleReport? = null
     private val tileHighlightRenderer = BattleTileHighlightRenderer()
 
-    private val ruleset: Ruleset by inject()
+    private val ruleset: Ruleset = if (attacker == null && defender == null)
+        com.unciv.logic.arena.ArenaBattleSetup.ruleset()
+    else getKoin().get()
 
     companion object {
         fun fromCombatants(attacker: ICombatant, defender: ICombatant): BattleScreen {
@@ -135,6 +140,21 @@ class BattleScreen private constructor(
             )
             screen.manager.configureEffectProbabilities(luckProbability, moraleProbability)
             return screen
+        }
+        fun forArena(
+            attackerArmy: ArmyInfo,
+            defenderArmy: ArmyInfo,
+            onClosed: (com.unciv.pure.domain.battle.BattleReport?) -> Unit
+        ): BattleScreen = BattleScreen(
+            attackerArmy = attackerArmy,
+            defenderArmy = defenderArmy,
+            attackerIsPlayer = true,
+            defenderIsPlayer = false,
+            attackerClimate = ClimateParameters(0.3, 0.5, 0.6),
+            defenderClimate = ClimateParameters(0.3, 0.5, 0.6)
+        ).also {
+            it.manager.configureEffectProbabilities(0.05, 0.1)
+            it.onStandaloneClosed = onClosed
         }
     }
 
@@ -883,11 +903,9 @@ class BattleScreen private constructor(
 
     }
 
-     /**
-     * Resumes the screen. Used to replace the current screen after recreation.
-     */
     override fun resume() {
-        game.replaceCurrentScreen(recreate())
+        val replacement = recreate()
+        if (replacement !== this) game.replaceCurrentScreen(replacement)
     }
 
     /**
@@ -920,16 +938,14 @@ class BattleScreen private constructor(
     fun resizePage(tab: EmpireOverviewTab) {
     }
 
-    /**
-     * Shuts down the battle screen and performs cleanup.
-     * Ensures the default system cursor is restored and the game screen stack is updated.
-     */
-    private fun shutdownScreen()
-    {
-        // Change cursor to arrow, default for map view.
+    private fun shutdownScreen() {
+        if (screenClosed) return
+        screenClosed = true
         Gdx.graphics.setSystemCursor(SystemCursor.Arrow)
+        val callback = onStandaloneClosed
+        onStandaloneClosed = null
+        callback?.invoke(standaloneResult)
         game.popScreen()
-
     }
 
     private val battleScope: kotlinx.coroutines.CoroutineScope
@@ -996,16 +1012,20 @@ class BattleScreen private constructor(
             is com.unciv.pure.application.battle.BattleEvent.TurnAdvanced ->
                 println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
 
-            is com.unciv.pure.application.battle.BattleEvent.BattleEnded -> Gdx.app.postRunnable {
+            is com.unciv.pure.application.battle.BattleEvent.BattleEnded -> {
                 val report = CreateBattleReportUseCase.execute(
                     initialState = initialBattleState,
                     attackerArmy = manager.getAttackerArmy(),
                     defenderArmy = manager.getDefenderArmy(),
                     winnerIsAttacker = event.winnerIsAttacker
                 )
-                manager.finishBattle()
-                BattleWorldOutcomeHandler(attacker, defender).apply(event.winnerIsAttacker)
-                BattleResultPopup(this, report, ::shutdownScreen).open(force = true)
+                standaloneResult = report
+                Gdx.app.postRunnable {
+                    if (screenClosed) return@postRunnable
+                    manager.finishBattle()
+                    BattleWorldOutcomeHandler(attacker, defender).apply(event.winnerIsAttacker)
+                    BattleResultPopup(this, report, ::shutdownScreen).open(force = true)
+                }
             }
 
             com.unciv.pure.application.battle.BattleEvent.TurnSkipped ->

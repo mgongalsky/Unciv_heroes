@@ -24,6 +24,24 @@ val assetsDir = file("../android/assets")
 val discordDir = file("discord_rpc")
 val deployFolder = file("../deploy")
 
+// Android Studio creates this JavaExec task when running Arena's main method.
+// Configure lazily so tasks added by the IDE's init script also receive the assets directory.
+tasks.withType<JavaExec>().configureEach {
+    if (name == "com.unciv.app.desktop.DesktopLauncherArena.main()") {
+        workingDir = assetsDir
+    }
+}
+
+tasks.register<JavaExec>("runArena") {
+    group = "application"
+    description = "Launch Arena using the desktop assets directory."
+    dependsOn(tasks.getByName("classes"))
+    mainClass.set("com.unciv.app.desktop.DesktopLauncherArena")
+    classpath = sourceSets.main.get().runtimeClasspath
+    standardInput = System.`in`
+    workingDir = assetsDir
+}
+
 fun JavaExec.configureUiGoldenRun(update: Boolean) {
     dependsOn(tasks.getByName("classes"))
     mainClass.set("com.unciv.app.desktop.UiGoldenTestRunner")

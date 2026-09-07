@@ -1,0 +1,138 @@
+package com.unciv.ui.arena
+
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.unciv.logic.arena.ArenaBattleSetup
+import com.unciv.pure.domain.arena.ArenaRun
+import com.unciv.pure.domain.battle.BattleSide
+import com.unciv.ui.battlescreen.BattleScreen
+import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.popup.ToastPopup
+import com.unciv.ui.utils.AutoScrollPane
+import com.unciv.ui.utils.BaseScreen
+import com.unciv.ui.utils.KeyCharAndCode
+import com.unciv.ui.utils.RecreateOnResize
+import com.unciv.ui.utils.extensions.onActivation
+import com.unciv.ui.utils.extensions.toLabel
+import com.unciv.ui.utils.extensions.toTextButton
+
+class ArenaScreen(
+    private var run: ArenaRun = ArenaBattleSetup.newRun(System.currentTimeMillis()),
+    private val onRunChanged: (ArenaRun) -> Unit = {}
+) : BaseScreen(), RecreateOnResize {
+    init {
+        globalShortcuts.add(KeyCharAndCode.BACK) { game.popScreen() }
+        rebuild()
+    }
+
+    private fun rebuild() {
+        stage.clear()
+        val content = createArenaContent(run, ::startBattle, {
+            run = ArenaBattleSetup.newRun(System.currentTimeMillis())
+            onRunChanged(run)
+            rebuild()
+        }, { game.popScreen() })
+        stage.addActor(AutoScrollPane(content).apply { setFillParent(true) })
+    }
+
+    private fun startBattle() {
+        val battleRun = run
+        val attempt = battleRun.beginBattle() ?: return
+        try {
+            val ruleset = ArenaBattleSetup.ruleset()
+            val encounter = attempt.encounter
+            val player = ArenaBattleSetup.createArmy(
+                encounter.matchup.playerUnit, encounter.playerCount, ruleset, encounter.troopSlots
+            )
+            val opponent = ArenaBattleSetup.createArmy(
+                encounter.matchup.opponentUnit,
+                encounter.matchup.opponentCount,
+                ruleset,
+                encounter.troopSlots
+            )
+            game.pushScreen(BattleScreen.forArena(player, opponent) { report ->
+                val outcome = when {
+                    report == null -> ArenaRun.Outcome.ABANDONED
+                    report.winner == BattleSide.ATTACKER -> ArenaRun.Outcome.VICTORY
+                    report.winner == BattleSide.DEFENDER -> ArenaRun.Outcome.DEFEAT
+                    else -> ArenaRun.Outcome.DRAW
+                }
+                battleRun.finishBattle(attempt, outcome)
+            })
+        } catch (exception: Exception) {
+            battleRun.finishBattle(attempt, ArenaRun.Outcome.ABANDONED)
+            rebuild()
+            ToastPopup("Could not start arena battle: ${exception.message}", this)
+        }
+    }
+
+    override fun resume() {
+        rebuild()
+    }
+
+    override fun recreate(): BaseScreen = ArenaScreen(run, onRunChanged)
+}
+
+fun createArenaContent(
+    run: ArenaRun,
+    onBattle: () -> Unit,
+    onNewRun: () -> Unit,
+    onBack: () -> Unit
+): Table = Table().apply {
+    fun armyCell(unit: String, total: Int, stacks: List<Int>) = Table().apply {
+        add(ImageGetter.getImage("UnitIcons/$unit")).size(40f).padRight(8f)
+        add(Table().apply {
+            add("$unit: $total".toLabel()).left().row()
+            add("${stacks.size} squads: ${stacks.joinToString(" + ")}".toLabel(fontSize = 16)).left()
+        }).left()
+    }
+    defaults().pad(8f)
+    add("Arena — Tier 1".toLabel(fontSize = 32)).colspan(3).padBottom(12f).row()
+    add("Win five battles. Your army receives 30% extra troops.".toLabel()).colspan(3).row()
+    add("Armies split into 4–5 squads when numbers allow. Retries start fresh.".toLabel()).colspan(3)
+        .row()
+    add("Progress: ${run.completedBattles} / ${run.encounters.size}".toLabel(fontSize = 24))
+        .colspan(3).padBottom(16f).row()
+    run.encounters.forEachIndexed { index, encounter ->
+        val status = when {
+            index < run.completedBattles -> "Completed"
+            index == run.completedBattles -> "Next battle"
+            else -> "Locked"
+        }
+        val tint = if (index < run.completedBattles) Color.GREEN
+        else if (index == run.completedBattles) Color.GOLD else Color.LIGHT_GRAY
+        add("${index + 1}. $status".toLabel().apply { color = tint }).left()
+        add(
+            armyCell(
+                encounter.matchup.playerUnit,
+                encounter.playerCount,
+                encounter.playerStacks
+            )
+        ).left()
+        add(
+            armyCell(
+                encounter.matchup.opponentUnit,
+                encounter.matchup.opponentCount,
+                encounter.opponentStacks
+            )
+        ).left().row()
+    }
+    val feedback = when {
+        run.isComplete -> "Tier complete! All five battles won."
+        run.lastOutcome == ArenaRun.Outcome.VICTORY -> "Victory! The next battle is ready."
+        run.lastOutcome == ArenaRun.Outcome.DEFEAT -> "Defeat. Try again — your progress is safe."
+        run.lastOutcome == ArenaRun.Outcome.DRAW -> "Draw. Try this battle again."
+        run.lastOutcome == ArenaRun.Outcome.ABANDONED -> "Battle left. You can retry the same encounter."
+        else -> "Your troops are on the left. Defeat the opposing army!"
+    }
+    add(feedback.toLabel()).colspan(3).padTop(16f).row()
+    if (run.isComplete) {
+        add("New arena run".toTextButton().apply { onActivation(onNewRun) }).colspan(3).height(55f)
+            .row()
+    } else {
+        val retry = run.lastOutcome != null && run.lastOutcome != ArenaRun.Outcome.VICTORY
+        val caption = if (retry) "Retry battle" else "Start battle ${run.completedBattles + 1}"
+        add(caption.toTextButton().apply { onActivation(onBattle) }).colspan(3).height(55f).row()
+    }
+    add("Back".toTextButton().apply { onActivation(onBack) }).colspan(3).height(45f).row()
+}

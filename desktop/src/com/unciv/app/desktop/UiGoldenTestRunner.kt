@@ -22,7 +22,6 @@ import com.unciv.ui.utils.Fonts
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import java.io.File
-import kotlin.system.exitProcess
 import com.unciv.ui.playground.openBattleThreatPreview
 import com.unciv.ui.playground.openBattleTurnQueuePreview
 import com.unciv.ui.playground.openBattleTroopInfoPreview
@@ -40,20 +39,16 @@ object UiGoldenTestRunner {
     @JvmStatic
     fun main(args: Array<String>) {
         val update = args.contains("--update")
-        val requestedScenarios = args
-            .filter { it.startsWith("--scenario=") }
-            .map { it.substringAfter('=') }
-            .toSet()
+        val requestedScenarios = args.filter { it.startsWith("--scenario=") }
+            .map { it.substringAfter('=') }.toSet()
         val projectRoot = File(System.getProperty("golden.projectRoot") ?: "../..").canonicalFile
         val allScenarios = scenarios()
         val selectedScenarios = if (requestedScenarios.isEmpty()) allScenarios
         else allScenarios.filter { it.name in requestedScenarios }
         val unknownScenarios = requestedScenarios - allScenarios.map { it.name }.toSet()
-        if (unknownScenarios.isNotEmpty()) {
-            System.err.println("Unknown UI golden scenario(s): ${unknownScenarios.joinToString()}")
-            exitProcess(2)
+        require(unknownScenarios.isEmpty()) {
+            "Unknown UI golden scenario(s): ${unknownScenarios.joinToString()}"
         }
-
         val result = GoldenResult()
         System.setProperty("org.lwjgl.opengl.Display.allowSoftwareOpenGL", "true")
         System.setProperty("org.lwjgl.system.stackSize", "384")
@@ -63,22 +58,32 @@ object UiGoldenTestRunner {
             allowOverride(true)
             modules(gameModule)
         }
-
-        val config = Lwjgl3ApplicationConfiguration().apply {
-            setTitle("Heroic Civs UI golden tests")
-            setHdpiMode(HdpiMode.Logical)
-            setWindowedMode(WIDTH, HEIGHT)
-            setInitialVisible(false)
-            setForegroundFPS(60)
-            setIdleFPS(60)
-            disableAudio(true)
+        try {
+            val config = Lwjgl3ApplicationConfiguration().apply {
+                setTitle("Heroic Civs UI golden tests")
+                setHdpiMode(HdpiMode.Logical)
+                setWindowedMode(WIDTH, HEIGHT)
+                setInitialVisible(false)
+                setForegroundFPS(60)
+                setIdleFPS(60)
+                disableAudio(true)
+            }
+            Lwjgl3Application(
+                GoldenApplication(projectRoot, update, selectedScenarios, result),
+                config
+            )
+            check(result.passed) {
+                "UI golden verification failed. See console and tests/golden/results for missing baselines or differences."
+            }
+        } finally {
+            stopKoin()
         }
-        Lwjgl3Application(GoldenApplication(projectRoot, update, selectedScenarios, result), config)
-        stopKoin()
-        if (!result.passed) exitProcess(1)
     }
 
     private fun scenarios() = listOf(
+        arenaScenario("arena-start", 0),
+        arenaScenario("arena-retry", 2, defeat = true),
+        arenaScenario("arena-complete", 5),
         Scenario("split-troop-empty") { com.unciv.ui.playground.openSplitTroopPreview(it) },
         Scenario("split-troop-occupied") {
             com.unciv.ui.playground.openSplitTroopPreview(
@@ -98,8 +103,7 @@ object UiGoldenTestRunner {
         },
         Scenario("battle-result-attacker-victory") { screen ->
             BattleResultPopup(
-                screen,
-                BattleReport(
+                screen, BattleReport(
                     winner = BattleSide.ATTACKER,
                     attackerLosses = listOf(
                         BattleLoss(1, "Peasant", 13),
@@ -184,7 +188,14 @@ object UiGoldenTestRunner {
         private fun scenarioScreen(scenario: Scenario) = GoldenScenarioScreen(scenario.open)
 
         override fun dispose() {
-            if (::game.isInitialized) game.dispose()
+            if (!::game.isInitialized) return
+            // UncivGame.dispose() exits the JVM with code 0, hiding golden failures from JUnit.
+            // Release the test application's resources without saving user settings or exiting.
+            Gdx.input.inputProcessor = null
+            game.screenStack.toList().forEach { it.dispose() }
+            game.screenStack.clear()
+            com.unciv.ui.audio.SoundPlayer.clearCache()
+            if (game.isInitialized) game.musicController.gracefulShutdown()
         }
     }
 
@@ -279,4 +290,22 @@ object UiGoldenTestRunner {
         file.parentFile.mkdirs()
         PixmapIO.writePNG(Gdx.files.absolute(file.absolutePath), pixmap)
     }
+    private fun arenaScenario(name: String, victories: Int, defeat: Boolean = false) =
+            Scenario(name) { screen ->
+                val run = com.unciv.logic.arena.ArenaBattleSetup.newRun(42L)
+                repeat(victories) {
+                    run.finishBattle(
+                        run.beginBattle()!!,
+                        com.unciv.pure.domain.arena.ArenaRun.Outcome.VICTORY
+                    )
+                }
+                if (defeat) run.finishBattle(
+                    run.beginBattle()!!,
+                    com.unciv.pure.domain.arena.ArenaRun.Outcome.DEFEAT
+                )
+                screen.stage.addActor(
+                    com.unciv.ui.utils.AutoScrollPane(
+                        com.unciv.ui.arena.createArenaContent(run, {}, {}, {})
+                    ).apply { setFillParent(true) })
+            }
 }

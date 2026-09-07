@@ -73,27 +73,25 @@ open class BattleManager(
         val attackerTroops = attackerArmy.getAllTroops().filterNotNull()
         val defenderTroops = defenderArmy.getAllTroops().filterNotNull()
 
-        // Расставляем атакующих
-        attackerTroops.forEachIndexed { index, troop ->
-            val position = HexMath.evenQ2HexCoords(Vector2(-7f, 3f - index.toFloat() * 2))
-            val rawTile = battleField.getTileAt(position)
-            println("Attacker $index: position=$position, tile=$rawTile, isBattleTile=${rawTile is IBattleTile}")
-            val tile = rawTile as? IBattleTile ?: run {
-                println("WARNING: tile is null or not IBattleTile for attacker $index at $position")
-                return@forEachIndexed
-            }
-            troopPositions[troop] = tile
-            tile.receiveTroop(troop)
+        fun startingPosition(x: Float, index: Int, count: Int): Vector2 {
+            // Keep the existing placement for up to four stacks. Five must fit within eight rows.
+            val y = if (count == 5) listOf(3f, 1f, 0f, -1f, -3f)[index]
+            else 3f - index.toFloat() * 2
+            return HexMath.evenQ2HexCoords(Vector2(x, y))
         }
 
-        // Расставляем защитников
-        defenderTroops.forEachIndexed { index, troop ->
-            val position = HexMath.evenQ2HexCoords(Vector2(6f, 3f - index.toFloat() * 2))
+        attackerTroops.forEachIndexed { index, troop ->
+            val position = startingPosition(-7f, index, attackerTroops.size)
             val tile = battleField.getTileAt(position) as? IBattleTile ?: return@forEachIndexed
             troopPositions[troop] = tile
             tile.receiveTroop(troop)
         }
-
+        defenderTroops.forEachIndexed { index, troop ->
+            val position = startingPosition(6f, index, defenderTroops.size)
+            val tile = battleField.getTileAt(position) as? IBattleTile ?: return@forEachIndexed
+            troopPositions[troop] = tile
+            tile.receiveTroop(troop)
+        }
         initializeTurnQueue()
     }
 

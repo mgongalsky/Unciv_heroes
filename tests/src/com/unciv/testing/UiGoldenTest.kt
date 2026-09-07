@@ -48,4 +48,15 @@ class UiGoldenTest {
     fun armyTroopInfo() {
         UiGoldenTestRunner.main(arrayOf("--scenario=army-troop-info"))
     }
+
+    @Test
+    fun arena() {
+        UiGoldenTestRunner.main(
+            arrayOf(
+                "--scenario=arena-start",
+                "--scenario=arena-retry",
+                "--scenario=arena-complete"
+            )
+        )
+    }
 }

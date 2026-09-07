@@ -53,6 +53,7 @@ import kotlin.math.min
 
 
 class MainMenuScreen: BaseScreen(), RecreateOnResize {
+    private var arenaRun: com.unciv.pure.domain.arena.ArenaRun? = null
     private val backgroundTable = Table().apply {
         background = skinStrings.getUiBackground("MainMenuScreen/Background", tintColor = Color.WHITE)
     }
@@ -97,102 +98,90 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
     init {
         stage.addActor(backgroundTable)
         backgroundTable.center(stage)
-
-        // If we were in a mod, some of the resource images for the background map we're creating
-        // will not exist unless we reset the ruleset and images
         ImageGetter.ruleset = RulesetCache.getVanillaRuleset()
-
         Concurrency.run("ShowMapBackground") {
             var scale = 1f
             var mapWidth = stage.width / TileGroupMap.groupHorizontalAdvance
             var mapHeight = stage.height / TileGroupMap.groupVerticalAdvance
-            if (mapWidth * mapHeight > 3000f) {  // 3000 as max estimated number of tiles is arbitrary (we had typically 721 before)
+            if (mapWidth * mapHeight > 3000f) {
                 scale = mapWidth * mapHeight / 3000f
                 mapWidth /= scale
                 mapHeight /= scale
                 scale = min(scale, 20f)
             }
-
             val baseRuleset = RulesetCache.getVanillaRuleset()
             easterEggRuleset = EasterEggRulesets.getTodayEasterEggRuleset()?.let {
                 RulesetCache.getComplexRuleset(baseRuleset, listOf(it))
             }
             val mapRuleset = easterEggRuleset ?: baseRuleset
-
-            val newMap = MapGenerator(mapRuleset)
-                    .generateMap(MapParameters().apply {
-                        shape = MapShape.rectangular
-                        mapSize = MapSizeNew(mapWidth.toInt() + 1, mapHeight.toInt() + 1)
-                        type = MapType.default
-                        waterThreshold = -0.1f // mainly land, gets about 30% water
-                        modifyForEasterEgg()
-                    })
-
-            launchOnGLThread { // for GL context
+            val newMap = MapGenerator(mapRuleset).generateMap(MapParameters().apply {
+                shape = MapShape.rectangular
+                mapSize = MapSizeNew(mapWidth.toInt() + 1, mapHeight.toInt() + 1)
+                type = MapType.default
+                waterThreshold = -0.1f
+                modifyForEasterEgg()
+            })
+            launchOnGLThread {
                 ImageGetter.setNewRuleset(mapRuleset)
                 val mapHolder = EditorMapHolder(this@MainMenuScreen, newMap) {}
                 mapHolder.setScale(scale)
-                backgroundTable.addAction(Actions.sequence(
+                backgroundTable.addAction(
+                    Actions.sequence(
                         Actions.fadeOut(0f),
                         Actions.run {
                             backgroundTable.addActor(mapHolder)
                             mapHolder.center(backgroundTable)
                         },
                         Actions.fadeIn(0.3f)
-                ))
+                    )
+                )
             }
         }
-
         val column1 = Table().apply { defaults().pad(10f).fillX() }
         val column2 = if (singleColumn) column1 else Table().apply { defaults().pad(10f).fillX() }
-
         if (game.files.autosaveExists()) {
-            val resumeTable = getMenuButton("Resume","OtherIcons/Resume", 'r')
-                { resumeGame() }
-            column1.add(resumeTable).row()
+            column1.add(getMenuButton("Resume", "OtherIcons/Resume", 'r') { resumeGame() }).row()
         }
-
-        val quickstartTable = getMenuButton("Quickstart", "OtherIcons/Quickstart", 'q')
-            { quickstartNewGame() }
-        column1.add(quickstartTable).row()
-
-        val newGameButton = getMenuButton("Start new game", "OtherIcons/New", 'n')
-            { game.pushScreen(NewGameScreen()) }
-        column1.add(newGameButton).row()
-
+        column1.add(getMenuButton("Arena", "OtherIcons/Shield", 'a') {
+            val run = arenaRun
+                ?: com.unciv.logic.arena.ArenaBattleSetup.newRun(System.currentTimeMillis()).also {
+                    arenaRun = it
+                }
+            game.pushScreen(com.unciv.ui.arena.ArenaScreen(run) { arenaRun = it })
+        }).row()
+        column1.add(
+            getMenuButton(
+                "Quickstart",
+                "OtherIcons/Quickstart",
+                'q'
+            ) { quickstartNewGame() }).row()
+        column1.add(getMenuButton("Start new game", "OtherIcons/New", 'n') {
+            game.pushScreen(NewGameScreen())
+        }).row()
         if (game.files.getSaves().any()) {
-            val loadGameTable = getMenuButton("Load game", "OtherIcons/Load", 'l')
-                { game.pushScreen(LoadGameScreen(this)) }
-            column1.add(loadGameTable).row()
+            column1.add(getMenuButton("Load game", "OtherIcons/Load", 'l') {
+                game.pushScreen(LoadGameScreen(this))
+            }).row()
         }
-
-        val multiplayerTable = getMenuButton("Multiplayer", "OtherIcons/Multiplayer", 'm')
-            { game.pushScreen(MultiplayerScreen(this)) }
-        column2.add(multiplayerTable).row()
-
-        val mapEditorScreenTable = getMenuButton("Map editor", "OtherIcons/MapEditor", 'e')
-            { game.pushScreen(MapEditorScreen()) }
-        column2.add(mapEditorScreenTable).row()
-
-        val modsTable = getMenuButton("Mods", "OtherIcons/Mods", 'd')
-            { game.pushScreen(ModManagementScreen()) }
-        column2.add(modsTable).row()
-
-        val optionsTable = getMenuButton("Options", "OtherIcons/Options", 'o')
-            { this.openOptionsPopup() }
-        column2.add(optionsTable).row()
-
-
+        column2.add(getMenuButton("Multiplayer", "OtherIcons/Multiplayer", 'm') {
+            game.pushScreen(MultiplayerScreen(this))
+        }).row()
+        column2.add(getMenuButton("Map editor", "OtherIcons/MapEditor", 'e') {
+            game.pushScreen(MapEditorScreen())
+        }).row()
+        column2.add(getMenuButton("Mods", "OtherIcons/Mods", 'd') {
+            game.pushScreen(ModManagementScreen())
+        }).row()
+        column2.add(getMenuButton("Options", "OtherIcons/Options", 'o') { openOptionsPopup() })
+            .row()
         val table = Table().apply { defaults().pad(10f) }
         table.add(column1)
         if (!singleColumn) table.add(column2)
         table.pack()
-
         val scrollPane = AutoScrollPane(table)
         scrollPane.setFillParent(true)
         stage.addActor(scrollPane)
         table.center(scrollPane)
-
         globalShortcuts.add(KeyCharAndCode.BACK) {
             if (hasOpenPopups()) {
                 closeAllPopups()
@@ -200,11 +189,10 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             }
             game.popScreen()
         }
-
         val helpButton = "?".toLabel(fontSize = 48)
             .apply { setAlignment(Align.center) }
             .surroundWithCircle(60f, color = skinStrings.skinConfig.baseColor)
-            .apply { actor.y -= 2.5f } // compensate font baseline (empirical)
+            .apply { actor.y -= 2.5f }
             .surroundWithCircle(64f, resizeActor = false)
         helpButton.touchable = Touchable.enabled
         helpButton.onActivation { openCivilopedia() }
@@ -281,5 +269,5 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         game.pushScreen(CivilopediaScreen(ruleset))
     }
 
-    override fun recreate(): BaseScreen = MainMenuScreen()
+    override fun recreate(): BaseScreen = MainMenuScreen().also { it.arenaRun = arenaRun }
 }
