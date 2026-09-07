@@ -24,7 +24,7 @@ class ArenaArmyDistributionTest {
     fun generatedSeriesVariesSquadsAndRetryPreservesComposition() {
         val pairs = (1..5).map { ArenaMatchup("Player$it", "Opponent$it", 20, 15) }
         val encounters = ArenaGenerator.generate(pairs, 42L)
-        assertEquals(listOf(4, 5, 4, 5, 4), encounters.map { it.troopSlots })
+        assertEquals(listOf(4, 5, 4), encounters.map { it.troopSlots })
         assertEquals(encounters, ArenaGenerator.generate(pairs, 42L))
         val run = ArenaRun(encounters)
         run.finishBattle(run.beginBattle()!!, ArenaRun.Outcome.VICTORY)

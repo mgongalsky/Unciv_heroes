@@ -83,7 +83,7 @@ object UiGoldenTestRunner {
     private fun scenarios() = listOf(
         arenaScenario("arena-start", 0),
         arenaScenario("arena-retry", 2, defeat = true),
-        arenaScenario("arena-complete", 5),
+        arenaScenario("arena-complete", 3),
         Scenario("split-troop-empty") { com.unciv.ui.playground.openSplitTroopPreview(it) },
         Scenario("split-troop-occupied") {
             com.unciv.ui.playground.openSplitTroopPreview(

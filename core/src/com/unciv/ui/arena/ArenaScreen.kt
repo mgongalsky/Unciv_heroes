@@ -28,9 +28,10 @@ class ArenaScreen(
     private fun rebuild() {
         stage.clear()
         val content = createArenaContent(run, ::startBattle, {
-            run = ArenaBattleSetup.newRun(System.currentTimeMillis())
-            onRunChanged(run)
-            rebuild()
+            if (run.advanceTier()) {
+                onRunChanged(run)
+                rebuild()
+            }
         }, { game.popScreen() })
         stage.addActor(AutoScrollPane(content).apply { setFillParent(true) })
     }
@@ -87,8 +88,8 @@ fun createArenaContent(
         }).left()
     }
     defaults().pad(8f)
-    add("Arena — Tier 1".toLabel(fontSize = 32)).colspan(3).padBottom(12f).row()
-    add("Win five battles. Your army receives 30% extra troops.".toLabel()).colspan(3).row()
+    add("Arena — Tier ${run.tier}".toLabel(fontSize = 32)).colspan(3).padBottom(12f).row()
+    add("Win three battles. Troop bonus: +${run.playerBonusPercent}%.".toLabel()).colspan(3).row()
     add("Armies split into 4–5 squads when numbers allow. Retries start fresh.".toLabel()).colspan(3)
         .row()
     add("Progress: ${run.completedBattles} / ${run.encounters.size}".toLabel(fontSize = 24))
@@ -118,7 +119,7 @@ fun createArenaContent(
         ).left().row()
     }
     val feedback = when {
-        run.isComplete -> "Tier complete! All five battles won."
+        run.isComplete -> "Tier complete! All three battles won."
         run.lastOutcome == ArenaRun.Outcome.VICTORY -> "Victory! The next battle is ready."
         run.lastOutcome == ArenaRun.Outcome.DEFEAT -> "Defeat. Try again — your progress is safe."
         run.lastOutcome == ArenaRun.Outcome.DRAW -> "Draw. Try this battle again."
@@ -127,8 +128,9 @@ fun createArenaContent(
     }
     add(feedback.toLabel()).colspan(3).padTop(16f).row()
     if (run.isComplete) {
-        add("New arena run".toTextButton().apply { onActivation(onNewRun) }).colspan(3).height(55f)
-            .row()
+        val nextBonus = (run.playerBonusPercent - 10).coerceAtLeast(0)
+        add("Next tier (+$nextBonus% troops)".toTextButton().apply { onActivation(onNewRun) })
+            .colspan(3).height(55f).row()
     } else {
         val retry = run.lastOutcome != null && run.lastOutcome != ArenaRun.Outcome.VICTORY
         val caption = if (retry) "Retry battle" else "Start battle ${run.completedBattles + 1}"

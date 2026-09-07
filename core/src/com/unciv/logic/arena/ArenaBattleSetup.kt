@@ -39,7 +39,7 @@ object ArenaBattleSetup {
         ArenaMatchup("Horseman", "Spearman", 20, 34)
     )
 
-    fun newRun(seed: Long): ArenaRun = ArenaRun(ArenaGenerator.generate(matchups, seed))
+    fun newRun(seed: Long): ArenaRun = ArenaRun.generated(matchups, seed)
 
     fun ruleset(): Ruleset = requireNotNull(RulesetCache[BaseRuleset.Civ_V_GnK.fullName]) {
         "Arena ruleset has not been loaded"

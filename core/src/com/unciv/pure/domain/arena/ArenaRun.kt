@@ -34,7 +34,7 @@ data class ArenaEncounter(
         )
 }
 
-data class ArenaTierConfig(val battleCount: Int = 5, val playerBonusPercent: Int = 30) {
+data class ArenaTierConfig(val battleCount: Int = 3, val playerBonusPercent: Int = 30) {
     init {
         require(battleCount > 0)
         require(playerBonusPercent in 0..1000)
@@ -42,6 +42,11 @@ data class ArenaTierConfig(val battleCount: Int = 5, val playerBonusPercent: Int
 }
 
 object ArenaGenerator {
+    fun bonusForTier(tier: Int): Int {
+        require(tier > 0)
+        return if (tier >= 4) 0 else 30 - (tier - 1) * 10
+    }
+
     fun generate(
         matchups: List<ArenaMatchup>,
         seed: Long,
@@ -60,8 +65,26 @@ object ArenaGenerator {
 }
 
 /** Progress belongs to the run; mutable combat armies are recreated for every attempt. */
-class ArenaRun(encounters: List<ArenaEncounter>) {
-    val encounters: List<ArenaEncounter> = encounters.toList()
+class ArenaRun(
+    encounters: List<ArenaEncounter>,
+    private val nextTierEncounters: ((Int) -> List<ArenaEncounter>)? = null
+) {
+    companion object {
+        fun generated(matchups: List<ArenaMatchup>, seed: Long): ArenaRun {
+            val pool = matchups.toList()
+            fun generateTier(tier: Int) = ArenaGenerator.generate(
+                pool, seed + tier.toLong() - 1L,
+                ArenaTierConfig(playerBonusPercent = ArenaGenerator.bonusForTier(tier))
+            )
+            return ArenaRun(generateTier(1), ::generateTier)
+        }
+    }
+
+    var encounters: List<ArenaEncounter> = encounters.toList()
+        private set
+    var tier: Int = 1
+        private set
+    val playerBonusPercent: Int get() = ArenaGenerator.bonusForTier(tier)
     var completedBattles: Int = 0
         private set
     val isComplete: Boolean get() = completedBattles == encounters.size
@@ -90,6 +113,18 @@ class ArenaRun(encounters: List<ArenaEncounter>) {
         activeAttempt = null
         lastOutcome = outcome
         if (outcome == Outcome.VICTORY) completedBattles++
+        return true
+    }
+
+    fun advanceTier(): Boolean {
+        if (!isComplete || activeAttempt != null || tier == Int.MAX_VALUE) return false
+        val factory = nextTierEncounters ?: return false
+        val next = factory(tier + 1).toList()
+        require(next.size == 3)
+        encounters = next
+        tier++
+        completedBattles = 0
+        lastOutcome = null
         return true
     }
 }
