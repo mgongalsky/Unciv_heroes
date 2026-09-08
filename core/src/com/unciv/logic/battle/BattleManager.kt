@@ -67,6 +67,9 @@ open class BattleManager(
     fun initializeTurnQueue() {
         formationRecovery.clear()
         moraleExtraActionTroops.clear()
+        pendingFollowUpShots.clear()
+        moveAndShootGranted.clear()
+        deferredMoveMorale.clear()
         turnQueue.initialize(
             attackerArmy.getAllTroops().filterNotNull(),
             defenderArmy.getAllTroops().filterNotNull()
@@ -179,6 +182,7 @@ open class BattleManager(
     }
 
     fun getReachableTiles(troop: Troop): List<IBattleTile> {
+        if (hasPendingFollowUpShot(troop)) return emptyList()
         val currentTile = getTroopTile(troop) ?: return emptyList()
         return MovementRangeUseCase.execute(
             startTile = currentTile, unitMovement = troop.speed.toFloat(),
@@ -187,7 +191,8 @@ open class BattleManager(
     }
 
     fun isTileAchievable(troop: Troop, targetTile: INavigableTile): Boolean =
-            battleField.contains(targetTile) && isReachableInCurrentTurn(troop, targetTile)
+            !hasPendingFollowUpShot(troop) && battleField.contains(targetTile) &&
+                    isReachableInCurrentTurn(troop, targetTile)
 
     fun getAttackerArmy() = attackerArmy
     fun getDefenderArmy() = defenderArmy
@@ -195,7 +200,10 @@ open class BattleManager(
     fun attack(defender: Troop, attacker: Troop? = getCurrentTroop()): Boolean {
         if (attacker == null) return false
         val isLuck = isLuckTriggered(attacker)
-        val incomingDamage = attacker.currentAmount * attacker.damage * if (isLuck) 2 else 1
+        val incomingDamage = MoveAndShootRules.shotDamage(
+            attacker.currentAmount * attacker.damage * if (isLuck) 2 else 1,
+            afterMovement = attacker.isRanged && attacker in moveAndShootGranted
+        )
         val formationDamage = ApplyFormationDamageUseCase.execute(
             ApplyFormationDamageUseCase.Input(
                 incomingDamage,
@@ -221,6 +229,9 @@ open class BattleManager(
     }
 
     fun removeTroop(troop: Troop) {
+        pendingFollowUpShots.remove(troop)
+        moveAndShootGranted.remove(troop)
+        deferredMoveMorale.remove(troop)
         turnQueue.remove(troop)
         troopPositions.remove(troop)?.clearTroop()
         if (attackerArmy.contains(troop)) attackerArmy.removeTroop(troop)
@@ -235,6 +246,9 @@ open class BattleManager(
         turnQueue.current()?.let { troop ->
             formationRecovery[troop] = FormationRecoveryUseCase.endActivation(recoveryState(troop))
             moraleExtraActionTroops.remove(troop)
+            pendingFollowUpShots.remove(troop)
+            moveAndShootGranted.remove(troop)
+            deferredMoveMorale.remove(troop)
             logFormationRecovery(troop, "end-activation")
         }
         turnQueue.advance()
@@ -243,6 +257,9 @@ open class BattleManager(
             formationRecovery[troop] =
                     FormationRecoveryUseCase.beginActivation(recoveryState(troop))
             moraleExtraActionTroops.remove(troop)
+            pendingFollowUpShots.remove(troop)
+            moveAndShootGranted.remove(troop)
+            deferredMoveMorale.remove(troop)
             logFormationRecovery(troop, "begin-activation")
         }
     }
@@ -275,6 +292,7 @@ open class BattleManager(
                 isTileOccupiedByAlly(troop, targetPosition), isTileFree(targetPosition)
             )
         )
+        var grantsShot = false
         if (output.success) {
             val movementCost = MovementRangeUseCase.execute(
                 startTile = currentTile!!, unitMovement = troop.speed.toFloat(),
@@ -283,17 +301,25 @@ open class BattleManager(
             )[targetPosition]?.totalDistance
             val movementDistance =
                     HexMath.getDistance(currentTile.position, targetPosition.position)
+            grantsShot = MoveAndShootRules.grantsShot(
+                troop.isRanged, movementDistance, troop.speed, troop in moveAndShootGranted
+            )
             val formation = UpdateFormationAfterMoveUseCase.execute(
                 UpdateFormationAfterMoveUseCase.Input(
                     currentFormation = troop.formation.current,
                     maximumFormation = troop.formation.maximum,
                     movementDistance = movementDistance,
                     maximumMovement = troop.speed,
-                    turnEndsWithoutAttack = !isMorale
+                    turnEndsWithoutAttack = !isMorale && !grantsShot
                 )
             )
             troop.formation.current = formation.remainingFormation
             moveTroop(troop, targetPosition)
+            if (grantsShot) {
+                pendingFollowUpShots.add(troop)
+                moveAndShootGranted.add(troop)
+                if (isMorale) deferredMoveMorale.add(troop)
+            }
             formationRecovery[troop] = if (movementCost != null && movementCost > 0f) {
                 FormationRecoveryUseCase.afterMove(
                     recoveryState(troop), movementCost, troop.speed,
@@ -310,7 +336,8 @@ open class BattleManager(
         )
         return BattleCommandResult(
             success = output.success, movedFrom = output.movedFrom, movedTo = output.movedTo,
-            rejection = output.rejection, isMorale = isMorale, battleEnded = !isBattleOn()
+            rejection = output.rejection, isMorale = isMorale, battleEnded = !isBattleOn(),
+            hasFollowUpShot = grantsShot
         )
     }
 
@@ -352,6 +379,8 @@ open class BattleManager(
     ): BattleCommandResult {
         // Preserve the game's random draw even though Skip does not grant an extra action.
         isMoraleTriggered(troop)
+        pendingFollowUpShots.remove(troop)
+        deferredMoveMorale.remove(troop)
         return performSkipAction(troop, onApplicationEvent)
     }
 
@@ -477,23 +506,24 @@ open class BattleManager(
                 troop.id, defender?.id, canShoot, targetIsEnemy, isLuck, isMorale, remaining, died
             )
         )
-        if (output.success) publishApplicationEvent(
-            BattleEvent.TroopShot(
-                troop.id,
-                defender!!.id,
-                remaining,
-                output.isLuck,
-                output.isMorale,
-                died
-            ), onApplicationEvent
-        )
+        var keepsDeferredMorale = false
+        if (output.success) {
+            pendingFollowUpShots.remove(troop)
+            keepsDeferredMorale = deferredMoveMorale.remove(troop)
+            publishApplicationEvent(
+                BattleEvent.TroopShot(
+                    troop.id, defender!!.id, remaining,
+                    output.isLuck, output.isMorale, died
+                ), onApplicationEvent
+            )
+        }
         if (!isBattleOn()) publishApplicationEvent(
-            BattleEvent.BattleEnded(isAttackerWinner()),
-            onApplicationEvent
+            BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent
         )
         return BattleCommandResult(
             success = output.success, rejection = output.rejection,
-            isLuck = output.isLuck, isMorale = output.isMorale, battleEnded = !isBattleOn()
+            isLuck = output.isLuck, isMorale = output.isMorale || keepsDeferredMorale,
+            battleEnded = !isBattleOn()
         )
     }
 
@@ -603,4 +633,10 @@ open class BattleManager(
                     }"
         )
     }
+    private val pendingFollowUpShots = mutableSetOf<Troop>()
+    private val moveAndShootGranted = mutableSetOf<Troop>()
+    private val deferredMoveMorale = mutableSetOf<Troop>()
+
+    /** The remaining action is a shot or Skip; movement and melee are unavailable. */
+    fun hasPendingFollowUpShot(troop: Troop): Boolean = troop in pendingFollowUpShots
 }

@@ -13,6 +13,11 @@ class AIBattlePolicy(
 ) : BattlePolicy {
     override fun chooseCommand(troopId: Int): BattleCommand? {
         val troop = battleManager.getTroopById(troopId) ?: return null
+        if (battleManager.hasPendingFollowUpShot(troop)) {
+            return if (battleManager.canShoot(troop)) {
+                chooseRangedCommand(troop) ?: BattleCommand.Skip(troop.id)
+            } else BattleCommand.Skip(troop.id)
+        }
         if (battleManager.canFullyRestoreFormation(troop)) return BattleCommand.Skip(troop.id)
         return if (troop.isRanged) chooseRangedCommand(troop) else chooseMeleeCommand(troop)
     }

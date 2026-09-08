@@ -26,4 +26,13 @@ class ShouldAdvanceTurnUseCaseTest {
     fun `AI without an available action yields the turn`() {
         assertTrue(ShouldAdvanceTurnUseCase.execute(null))
     }
+
+    @Test
+    fun `short movement keeps turn for a shot without morale`() {
+        val result = BattleCommandResult(success = true, hasFollowUpShot = true)
+        assertFalse(result.isMorale)
+        assertFalse(ShouldAdvanceTurnUseCase.execute(result))
+        assertTrue(ShouldAdvanceTurnUseCase.execute(result.copy(hasFollowUpShot = false)))
+        assertTrue(ShouldAdvanceTurnUseCase.execute(result.copy(success = false)))
+    }
 }
