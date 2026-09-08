@@ -9,7 +9,9 @@ object CalculateFormationMeleeExchangeUseCase {
         val health: Int,
         val maxHealth: Int,
         val formation: Int,
-        val formationDamageReductionPercent: Int = 50
+        val formationDamageReductionPercent: Int = 50,
+        val isRanged: Boolean = false,
+        val meleePenaltyPercent: Int = 50
     )
 
     data class Output(
@@ -27,7 +29,8 @@ object CalculateFormationMeleeExchangeUseCase {
         defenderIsLuck: Boolean,
         defenderRetaliationDamage: Int? = null
     ): Output {
-        val fullRetaliationDamage = defender.amount * defender.damage * if (defenderIsLuck) 2 else 1
+        val fullRetaliationDamage = meleeDamage(defender, defenderIsLuck)
+        // Stored retaliation is already penalized; never apply the penalty twice.
         val availableRetaliationDamage =
             (defenderRetaliationDamage ?: fullRetaliationDamage).coerceAtLeast(0)
         val attackerTotalHealth = if (attacker.amount <= 0) 0L else
@@ -43,9 +46,7 @@ object CalculateFormationMeleeExchangeUseCase {
         }
         val appliedRetaliationDamage = lower
         val retaliationFormation = applyFormation(appliedRetaliationDamage, attacker)
-        val attackFormation = applyFormation(
-            attacker.amount * attacker.damage * if (attackerIsLuck) 2 else 1, defender
-        )
+        val attackFormation = applyFormation(meleeDamage(attacker, attackerIsLuck), defender)
         return Output(
             damageToAttacker = calculateSoldierDamage(
                 retaliationFormation.damageToSoldiers, attacker,
@@ -59,6 +60,12 @@ object CalculateFormationMeleeExchangeUseCase {
             remainingRetaliationDamage = availableRetaliationDamage - appliedRetaliationDamage
         )
     }
+
+    private fun meleeDamage(troop: TroopSnapshot, isLuck: Boolean): Int =
+        RangedCombatRules.meleeDamage(
+            troop.amount * troop.damage * if (isLuck) 2 else 1,
+            troop.isRanged, troop.meleePenaltyPercent
+        )
 
     private fun applyFormation(damage: Int, troop: TroopSnapshot) =
         ApplyFormationDamageUseCase.execute(

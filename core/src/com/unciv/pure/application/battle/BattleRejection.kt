@@ -10,5 +10,6 @@ enum class BattleRejection {
     AI_NO_VALID_MOVE,
     AI_NO_TARGET,
     AI_NO_ENEMIES,
-    AI_NO_CLOSEST_ENEMY
+    AI_NO_CLOSEST_ENEMY,
+    SHOOTING_BLOCKED_BY_ENEMY
 }

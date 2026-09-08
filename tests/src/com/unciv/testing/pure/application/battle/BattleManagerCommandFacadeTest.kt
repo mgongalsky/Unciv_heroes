@@ -367,22 +367,23 @@ class BattleManagerCommandFacadeTest {
                 return 0.0
             }
         }
+        val distantTarget = FakeBattleTile(Vector2(2f, 0f))
+        target.addNeighbor(distantTarget)
+        distantTarget.addNeighbor(target)
         val archerArmy = ArmyInfo(FakeCivilizationInfo(), 5).apply { addUnits("Archer", 100) }
         val shootManager = TestableBattleManager(
-            archerArmy,
-            defenderArmy,
-            FakeBattleField(listOf(start, target)),
-            countingRandom
+            archerArmy, defenderArmy,
+            FakeBattleField(listOf(start, target, distantTarget)), countingRandom
         )
         shootManager.initializeTurnQueue()
         val archer = archerArmy.getAllTroops().filterNotNull().first()
         val defender = defenderArmy.getAllTroops().filterNotNull().first()
         defender.currentAmount = 1
         shootManager.placeTroop(archer, start)
-        shootManager.placeTroop(defender, target)
+        shootManager.placeTroop(defender, distantTarget)
         val events = mutableListOf<com.unciv.pure.application.battle.BattleEvent>()
 
-        val result = shootManager.execute(BattleCommand.Shoot(archer.id, Point(1, 0))) {
+        val result = shootManager.execute(BattleCommand.Shoot(archer.id, Point(2, 0))) {
             events.add(it)
         }
 
@@ -394,10 +395,7 @@ class BattleManagerCommandFacadeTest {
         assertFalse(shootManager.getTurnQueue().contains(defender))
         assertNull(shootManager.getTroopTile(defender))
         assertSame(start, shootManager.getTroopTile(archer))
-        assertEquals(
-            listOf("TroopShot", "BattleEnded"),
-            events.map { it.javaClass.simpleName }
-        )
+        assertEquals(listOf("TroopShot", "BattleEnded"), events.map { it.javaClass.simpleName })
     }
 
     @Test

@@ -247,7 +247,12 @@ open class BattleManager(
         }
     }
 
-    fun canShoot(troop: Troop): Boolean = troop.rangedStrength != 0
+    fun canShoot(troop: Troop): Boolean = RangedCombatRules.canShoot(
+        isRanged = troop.isRanged,
+        isAlive = troop.currentAmount > 0,
+        isPlaced = getTroopTile(troop) != null,
+        hasAdjacentEnemy = hasAdjacentEnemy(troop)
+    )
     fun getTurnQueue(): List<Troop> = turnQueue.getAll()
     protected open fun isReachableInCurrentTurn(troop: Troop, targetTile: INavigableTile): Boolean {
         val currentTile = getTroopTile(troop) ?: return false
@@ -374,7 +379,8 @@ open class BattleManager(
                 unit.currentHealth,
                 unit.maxHealth,
                 if (unit.hasFormation) unit.formation.current else 0,
-                unit.formationDamageReductionPercent
+                unit.formationDamageReductionPercent,
+                isRanged = unit.isRanged
             )
 
             val exchange = CalculateFormationMeleeExchangeUseCase.execute(
@@ -494,8 +500,20 @@ open class BattleManager(
     internal fun performShootCommand(
         troop: Troop, targetPosition: IBattleTile,
         onApplicationEvent: ((BattleEvent) -> Unit)? = null
-    ): BattleCommandResult =
-            performShootAction(troop, targetPosition, isMoraleTriggered(troop), onApplicationEvent)
+    ): BattleCommandResult {
+        // Preserve the existing morale draw for resolved commands, including rejections.
+        val isMorale = isMoraleTriggered(troop)
+        if (troop.isRanged && troop.currentAmount > 0 && getTroopTile(troop) != null &&
+                hasAdjacentEnemy(troop) && getTroopOnTile(targetPosition) != null &&
+                isTileOccupiedByEnemy(troop, targetPosition)
+        ) {
+            return BattleCommandResult(
+                success = false, rejection = BattleRejection.SHOOTING_BLOCKED_BY_ENEMY,
+                battleEnded = !isBattleOn()
+            )
+        }
+        return performShootAction(troop, targetPosition, isMorale, onApplicationEvent)
+    }
 
     private fun publishApplicationEvent(
         event: BattleEvent,

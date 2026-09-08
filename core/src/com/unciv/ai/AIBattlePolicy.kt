@@ -42,8 +42,19 @@ class AIBattlePolicy(
     }
 
     private fun chooseRangedCommand(troop: Troop): BattleCommand? {
-        if (battleManager.getTroopTile(troop) == null) return null
-        val target = battleManager.getEnemies(troop).sortedWith(
+        val currentTile = battleManager.getTroopTile(troop) ?: return null
+        val enemies = battleManager.getEnemies(troop).filter { it.currentAmount > 0 }
+        if (!battleManager.canShoot(troop)) {
+            val adjacentEnemy = enemies.filter { enemy ->
+                battleManager.getTroopTile(enemy)?.let { it in currentTile.neighbors } == true
+            }.minWithOrNull(
+                compareBy<Troop> { if (it.formation.isBroken) 0 else 1 }
+                    .thenBy { if (targetHasRetaliationRemaining(it)) 1 else 0 }
+            ) ?: return chooseMeleeCommand(troop)
+            val targetTile = battleManager.getTroopTile(adjacentEnemy) ?: return null
+            return BattleCommand.Attack(troop.id, targetTile.toPoint(), currentTile.toPoint())
+        }
+        val target = enemies.sortedWith(
             compareByDescending<Troop> { it.formation.isBroken }
                 .thenByDescending { it.isRanged }
                 .thenByDescending { it.speed }
