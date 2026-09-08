@@ -194,3 +194,15 @@ private fun dot(name: String, color: Color, x: Float, y: Float, width: Float, he
             setPosition(x, y)
             setSize(width, height)
         }
+
+/** Applies readiness supplied by battle logic; green takes priority over a broken red border. */
+fun updateFormationRecoveryBorder(target: Group, troop: Troop, hasRecoveryChance: Boolean) {
+    updateFormationBar(target, troop)
+    if (!hasRecoveryChance) return
+    val bar = target.findActor<Group>("formationBar") ?: return
+    listOf(
+        "formationBorderTop", "formationBorderBottom",
+        "formationBorderLeft", "formationBorderRight"
+    ).mapNotNull { bar.findActor<Image>(it) }
+        .forEach { it.color = Color.valueOf("43D96BFF") }
+}

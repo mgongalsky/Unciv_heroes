@@ -94,11 +94,16 @@ class AIBattleRetaliationPolicyTest {
 
     @Test
     fun `broken formation remains more important than exhausted retaliation`() {
-        armedTarget.formation.current = 0
+        // Explicit policy snapshots: the fixture's unit definitions disable formation by default.
+        armedTarget.formation = com.unciv.pure.domain.troop.Formation(current = 0, maximum = 100)
+        exhaustedTarget.formation =
+            com.unciv.pure.domain.troop.Formation(current = 100, maximum = 100)
 
         val command = policy().chooseCommand(attacker.id)
 
         assertEquals(BattleCommand.Attack(attacker.id, Point(1, 0), Point(0, 0)), command)
+        assertEquals(0, armedTarget.formation.current)
+        assertEquals(100, exhaustedTarget.formation.current)
     }
 
     private fun policy() = AIBattlePolicy(manager) { target -> target !== exhaustedTarget }

@@ -671,7 +671,8 @@ class BattleScreen private constructor(
         defenderTroopViewsArray.forEach { troopView ->
             troopView?.setActive(troopView.getTroopInfo() === currentTroop)
         }
-        bottomBar.refresh()
+        // Includes Skip and activation changes, which can consume or mature recovery preparation.
+        refreshTroopViews()
         if (currentTroop != null) {
             val currentTile = manager.getTroopTile(currentTroop)
                 ?: throw IllegalStateException("Current troop has no tile: $currentTroop")
@@ -1089,6 +1090,8 @@ class BattleScreen private constructor(
         }
         tileHighlightRenderer.restoreAll()
     }
+    internal fun hasFormationRecoveryChance(troop: Troop): Boolean =
+            manager.hasFormationRecoveryChance(troop)
 }
 
 private fun BattleScreen.setQueueHoveredTroop(troop: Troop?) {

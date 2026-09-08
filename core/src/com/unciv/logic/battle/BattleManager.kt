@@ -65,6 +65,8 @@ open class BattleManager(
     }
 
     fun initializeTurnQueue() {
+        formationRecovery.clear()
+        moraleExtraActionTroops.clear()
         turnQueue.initialize(
             attackerArmy.getAllTroops().filterNotNull(),
             defenderArmy.getAllTroops().filterNotNull()
@@ -230,8 +232,19 @@ open class BattleManager(
             finishBattle()
             return
         }
+        turnQueue.current()?.let { troop ->
+            formationRecovery[troop] = FormationRecoveryUseCase.endActivation(recoveryState(troop))
+            moraleExtraActionTroops.remove(troop)
+            logFormationRecovery(troop, "end-activation")
+        }
         turnQueue.advance()
-        turnQueue.current()?.let { remainingRetaliationDamageByTroopId.remove(it.id) }
+        turnQueue.current()?.let { troop ->
+            remainingRetaliationDamageByTroopId.remove(troop.id)
+            formationRecovery[troop] =
+                    FormationRecoveryUseCase.beginActivation(recoveryState(troop))
+            moraleExtraActionTroops.remove(troop)
+            logFormationRecovery(troop, "begin-activation")
+        }
     }
 
     fun canShoot(troop: Troop): Boolean = troop.rangedStrength != 0
@@ -252,16 +265,19 @@ open class BattleManager(
         val currentTile = getTroopCurrentTile(troop)
         val output = PerformMoveUseCase.execute(
             PerformMoveUseCase.Input(
-                targetPosition.toPoint(),
-                currentTile?.toPoint(),
+                targetPosition.toPoint(), currentTile?.toPoint(),
                 isTileAchievable(troop, targetPosition),
-                isTileOccupiedByAlly(troop, targetPosition),
-                isTileFree(targetPosition)
+                isTileOccupiedByAlly(troop, targetPosition), isTileFree(targetPosition)
             )
         )
         if (output.success) {
+            val movementCost = MovementRangeUseCase.execute(
+                startTile = currentTile!!, unitMovement = troop.speed.toFloat(),
+                context = TroopMovementContext(troop, enemyChecker(troop)),
+                targetTile = targetPosition
+            )[targetPosition]?.totalDistance
             val movementDistance =
-                    HexMath.getDistance(currentTile!!.position, targetPosition.position)
+                    HexMath.getDistance(currentTile.position, targetPosition.position)
             val formation = UpdateFormationAfterMoveUseCase.execute(
                 UpdateFormationAfterMoveUseCase.Input(
                     currentFormation = troop.formation.current,
@@ -273,26 +289,23 @@ open class BattleManager(
             )
             troop.formation.current = formation.remainingFormation
             moveTroop(troop, targetPosition)
+            formationRecovery[troop] = if (movementCost != null && movementCost > 0f) {
+                FormationRecoveryUseCase.afterMove(
+                    recoveryState(troop), movementCost, troop.speed,
+                    hasDamagedFormation(troop), hasAdjacentEnemy(troop)
+                )
+            } else FormationRecoveryUseCase.interrupt(recoveryState(troop))
             publishApplicationEvent(
-                BattleEvent.TroopMoved(
-                    troop.id,
-                    output.movedFrom!!,
-                    output.movedTo!!,
-                    isMorale
-                ), onApplicationEvent
+                BattleEvent.TroopMoved(troop.id, output.movedFrom!!, output.movedTo!!, isMorale),
+                onApplicationEvent
             )
         }
         if (!isBattleOn()) publishApplicationEvent(
-            BattleEvent.BattleEnded(isAttackerWinner()),
-            onApplicationEvent
+            BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent
         )
         return BattleCommandResult(
-            success = output.success,
-            movedFrom = output.movedFrom,
-            movedTo = output.movedTo,
-            rejection = output.rejection,
-            isMorale = isMorale,
-            battleEnded = !isBattleOn()
+            success = output.success, movedFrom = output.movedFrom, movedTo = output.movedTo,
+            rejection = output.rejection, isMorale = isMorale, battleEnded = !isBattleOn()
         )
     }
 
@@ -306,16 +319,24 @@ open class BattleManager(
         troop: Troop,
         onApplicationEvent: ((BattleEvent) -> Unit)? = null
     ): BattleCommandResult {
-        troop.formation.current = RestoreFormationUseCase.execute(
-            RestoreFormationUseCase.Input(
-                currentFormation = troop.formation.current,
-                maximumFormation = troop.formation.maximum
+        logFormationRecovery(troop, "before-skip")
+        if (troop !in moraleExtraActionTroops) {
+            troop.formation.current = if (canFullyRestoreFormation(troop)) {
+                troop.formation.maximum
+            } else RestoreFormationUseCase.execute(
+                RestoreFormationUseCase.Input(
+                    currentFormation = troop.formation.current,
+                    maximumFormation = troop.formation.maximum
+                )
             )
-        )
+        }
+        if (recoveryState(troop).phase == FormationRecoveryUseCase.Phase.READY) {
+            formationRecovery[troop] = FormationRecoveryUseCase.State()
+        }
+        logFormationRecovery(troop, "after-skip")
         publishApplicationEvent(BattleEvent.TurnSkipped, onApplicationEvent)
         if (!isBattleOn()) publishApplicationEvent(
-            BattleEvent.BattleEnded(isAttackerWinner()),
-            onApplicationEvent
+            BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent
         )
         return BattleCommandResult(success = true, isMorale = false, battleEnded = !isBattleOn())
     }
@@ -480,6 +501,33 @@ open class BattleManager(
         event: BattleEvent,
         onApplicationEvent: ((BattleEvent) -> Unit)? = null
     ) {
+        fun recordAction(troopId: Int, isMorale: Boolean, interrupts: Boolean) {
+            val troop = getTroopById(troopId) ?: return
+            if (interrupts) formationRecovery[troop] =
+                    FormationRecoveryUseCase.interrupt(recoveryState(troop))
+            if (isMorale) moraleExtraActionTroops.add(troop)
+            logFormationRecovery(troop, event.javaClass.simpleName)
+        }
+
+        fun recordIncomingAttack(troopId: Int) {
+            val troop = getTroopById(troopId) ?: return
+            formationRecovery[troop] = FormationRecoveryUseCase.interrupt(recoveryState(troop))
+            logFormationRecovery(troop, "incoming-${event.javaClass.simpleName}")
+        }
+        when (event) {
+            is BattleEvent.TroopMoved -> recordAction(event.troopId, event.isMorale, false)
+            is BattleEvent.TroopAttacked -> {
+                recordAction(event.attackerId, event.isMorale, true)
+                recordIncomingAttack(event.defenderId)
+            }
+
+            is BattleEvent.TroopShot -> {
+                recordAction(event.attackerId, event.isMorale, true)
+                recordIncomingAttack(event.defenderId)
+            }
+
+            else -> Unit
+        }
         onApplicationEvent?.invoke(event)
     }
     fun hasRetaliationRemaining(troop: Troop): Boolean =
@@ -493,5 +541,48 @@ open class BattleManager(
         if (actionResult?.success != true || ShouldAdvanceTurnUseCase.execute(actionResult)) {
             advanceTurn()
         }
+    }
+    private val formationRecovery = mutableMapOf<Troop, FormationRecoveryUseCase.State>()
+    private val moraleExtraActionTroops = mutableSetOf<Troop>()
+    private fun recoveryState(troop: Troop): FormationRecoveryUseCase.State =
+            formationRecovery[troop] ?: FormationRecoveryUseCase.State()
+    private fun hasDamagedFormation(troop: Troop): Boolean =
+            troop.currentAmount > 0 && troop.hasFormation && troop.formation.maximum > 0 &&
+                    troop.formation.current < troop.formation.maximum
+    private fun hasAdjacentEnemy(troop: Troop): Boolean {
+        val tile = getTroopTile(troop) ?: return true
+        return getEnemies(troop).any { enemy ->
+            enemy.currentAmount > 0 && getTroopTile(enemy)?.let { it in tile.neighbors } == true
+        }
+    }
+
+    /** Presentation query only; preparation does not imply recovery in this activation. */
+    fun hasFormationRecoveryChance(troop: Troop): Boolean =
+            FormationRecoveryUseCase.hasChance(
+                recoveryState(troop), hasDamagedFormation(troop), hasAdjacentEnemy(troop)
+            )
+
+    /** Both AI and Skip execution use the same full-recovery eligibility. */
+    fun canFullyRestoreFormation(troop: Troop): Boolean =
+            getCurrentTroop() === troop && troop !in moraleExtraActionTroops &&
+                    FormationRecoveryUseCase.canRestore(
+                        recoveryState(troop), hasDamagedFormation(troop), hasAdjacentEnemy(troop)
+                    )
+    private fun logFormationRecovery(troop: Troop, action: String) {
+        if (!System.getProperty("battle.formation.verbose", "true").toBoolean()) return
+        val state = recoveryState(troop)
+        println(
+            "[FormationRecovery] action=$action troop=${troop.unitName}#${troop.id} " +
+                    "tile=${getTroopTile(troop)?.toPoint()} speed=${troop.speed} " +
+                    "movementSpent=${state.movementSpent} phase=${state.phase} " +
+                    "interrupted=${state.interrupted} adjacentEnemy=${hasAdjacentEnemy(troop)} " +
+                    "formation=${troop.formation.current}/${troop.formation.maximum} " +
+                    "configured=${troop.hasFormation} moraleExtra=${troop in moraleExtraActionTroops} " +
+                    "chance=${hasFormationRecoveryChance(troop)} fullRecovery=${
+                        canFullyRestoreFormation(
+                            troop
+                        )
+                    }"
+        )
     }
 }

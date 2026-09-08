@@ -152,10 +152,8 @@ class TroopBattleView(
             val amountLabel = troopGroup.findActor<Label>("amountLabel")
             if (amountLabel != null) amountLabel.setText(troop.currentAmount.toString())
             else println("Amount Label not found")
-            updateFormationBar(troopGroup, troop)
-            println(
-                "Troop stats updated: ${troop.unitName}, Amount: ${troop.currentAmount}, " +
-                        "Formation: ${troop.formation.current}/${troop.formation.maximum}"
+            updateFormationRecoveryBorder(
+                troopGroup, troop, battleScreen.hasFormationRecoveryChance(troop)
             )
         }
     }

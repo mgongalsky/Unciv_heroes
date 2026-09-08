@@ -28,10 +28,11 @@ fun openBattleTroopPreview(screen: BaseScreen) {
     val popup = Popup(screen.stage, scrollable = false)
     popup.defaults().pad(10f)
     popup.add("Swordsman attacks Crossbowman".toLabel(fontSize = 24))
-        .padTop(28f)
-        .padBottom(62f)
+        .padTop(28f).padBottom(32f)
     popup.row()
-    popup.add(createBattleFieldPreview()).padLeft(24f).padRight(24f).padBottom(28f)
+    popup.add(createBattleFieldPreview()).padLeft(24f).padRight(24f).padBottom(18f)
+    popup.row()
+    popup.add(createFormationRecoveryPreview())
     popup.row()
     popup.add(createPeasantOutlinePreview())
     popup.row()
@@ -243,5 +244,34 @@ private fun createPeasantOutlinePreview(): Group {
             troopGroup.addActorAt(0, outline)
             addActor(troopGroup)
         }
+    }
+}
+
+private fun createFormationRecoveryPreview(): Group = Group().apply {
+    setSize(380f, 30f)
+    listOf(50 to false, 50 to true, 0 to true).forEachIndexed { index, (current, ready) ->
+        val troop = com.unciv.pure.domain.troop.Troop(
+            unitName = "Swordsman", amount = 10, maxHealth = 100,
+            formationHealthPercent = 10, formationDamageReductionPercent = 50
+        ).apply { formation.current = current }
+        val sample = Group()
+        populateBattleTroopGroup(sample, troop, false, 100f, 81f, 0f, 0f)
+        val border =
+            sample.findActor<com.badlogic.gdx.scenes.scene2d.ui.Image>("formationBorderTop")
+        com.unciv.ui.battlescreen.updateFormationRecoveryBorder(sample, troop, true)
+        check(border.color == com.badlogic.gdx.graphics.Color.valueOf("43D96BFF"))
+        com.unciv.ui.battlescreen.updateFormationRecoveryBorder(sample, troop, false)
+        check(
+            border.color == if (current == 0) com.badlogic.gdx.graphics.Color.RED
+            else com.badlogic.gdx.graphics.Color(0.15f, 0.3f, 0.5f, 1f)
+        )
+        com.unciv.ui.battlescreen.updateFormationRecoveryBorder(sample, troop, ready)
+        val bar = sample.findActor<Group>("formationBar")
+        bar.remove()
+        bar.setPosition(index * 125f + 35f, 20f)
+        addActor(bar)
+        addActor(
+            (if (!ready) "Formation" else if (current == 0) "Broken: ready" else "Recovery ready")
+                .toLabel(fontSize = 12).apply { setPosition(index * 125f, 0f) })
     }
 }
