@@ -42,14 +42,11 @@ class ArenaScreen(
         try {
             val ruleset = ArenaBattleSetup.ruleset()
             val encounter = attempt.encounter
-            val player = ArenaBattleSetup.createArmy(
-                encounter.matchup.playerUnit, encounter.playerCount, ruleset, encounter.troopSlots
+            val player = ArenaBattleSetup.createArmyFromStacks(
+                encounter.playerArmy, ruleset, encounter.troopSlots
             )
-            val opponent = ArenaBattleSetup.createArmy(
-                encounter.matchup.opponentUnit,
-                encounter.matchup.opponentCount,
-                ruleset,
-                encounter.troopSlots
+            val opponent = ArenaBattleSetup.createArmyFromStacks(
+                encounter.opponentArmy, ruleset, encounter.troopSlots
             )
             game.pushScreen(BattleScreen.forArena(player, opponent) { report ->
                 val outcome = when {
@@ -80,18 +77,22 @@ fun createArenaContent(
     onNewRun: () -> Unit,
     onBack: () -> Unit
 ): Table = Table().apply {
-    fun armyCell(unit: String, total: Int, stacks: List<Int>) = Table().apply {
-        add(ImageGetter.getImage("UnitIcons/$unit")).size(40f).padRight(8f)
-        add(Table().apply {
-            add("$unit: $total".toLabel()).left().row()
-            add("${stacks.size} squads: ${stacks.joinToString(" + ")}".toLabel(fontSize = 16)).left()
-        }).left()
+    fun armyCell(stacks: List<com.unciv.pure.domain.arena.ArenaStack>) = Table().apply {
+        stacks.groupBy { it.unitName }.forEach { (unit, troops) ->
+            add(ImageGetter.getImage("UnitIcons/$unit")).size(32f).padRight(8f)
+            add(Table().apply {
+                add("$unit: ${troops.sumOf { it.count.toLong() }}".toLabel()).left().row()
+                add(
+                    "${troops.size} squads: ${troops.joinToString(" + ") { it.count.toString() }}"
+                        .toLabel(fontSize = 16)
+                ).left()
+            }).left().padBottom(4f).row()
+        }
     }
     defaults().pad(8f)
     add("Arena — Tier ${run.tier}".toLabel(fontSize = 32)).colspan(3).padBottom(12f).row()
     add("Win three battles. Troop bonus: +${run.playerBonusPercent}%.".toLabel()).colspan(3).row()
-    add("Armies split into 4–5 squads when numbers allow. Retries start fresh.".toLabel()).colspan(3)
-        .row()
+    add("Up to five squads per army. Retries start fresh.".toLabel()).colspan(3).row()
     add("Progress: ${run.completedBattles} / ${run.encounters.size}".toLabel(fontSize = 24))
         .colspan(3).padBottom(16f).row()
     run.encounters.forEachIndexed { index, encounter ->
@@ -102,21 +103,10 @@ fun createArenaContent(
         }
         val tint = if (index < run.completedBattles) Color.GREEN
         else if (index == run.completedBattles) Color.GOLD else Color.LIGHT_GRAY
-        add("${index + 1}. $status".toLabel().apply { color = tint }).left()
-        add(
-            armyCell(
-                encounter.matchup.playerUnit,
-                encounter.playerCount,
-                encounter.playerStacks
-            )
-        ).left()
-        add(
-            armyCell(
-                encounter.matchup.opponentUnit,
-                encounter.matchup.opponentCount,
-                encounter.opponentStacks
-            )
-        ).left().row()
+        val format = if (encounter.isMixed) "Mixed" else "Single unit type"
+        add("${index + 1}. $status\n$format".toLabel().apply { color = tint }).left()
+        add(armyCell(encounter.playerArmy)).left()
+        add(armyCell(encounter.opponentArmy)).left().row()
     }
     val feedback = when {
         run.isComplete -> "Tier complete! All three battles won."

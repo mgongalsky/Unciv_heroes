@@ -40,7 +40,7 @@ object ArenaBattleSetup {
         ArenaMatchup("Horseman", "Spearman", 20, 34)
     )
 
-    fun newRun(seed: Long): ArenaRun = ArenaRun.generated(matchups, seed)
+    fun newRun(seed: Long): ArenaRun = ArenaRun.withMixedBattles(matchups, mixedMatchups, seed)
 
     fun ruleset(): Ruleset = requireNotNull(RulesetCache[BaseRuleset.Civ_V_GnK.fullName]) {
         "Arena ruleset has not been loaded"
@@ -56,5 +56,46 @@ object ArenaBattleSetup {
                 setTroopAt(index, TroopFactory.create(unitName, amount, source))
             }
         }
+    }
+    fun createArmyFromStacks(
+        stacks: List<com.unciv.pure.domain.arena.ArenaStack>,
+        ruleset: Ruleset,
+        troopSlots: Int
+    ): ArmyInfo {
+        require(troopSlots in 1..5)
+        require(stacks.size in 1..troopSlots)
+        stacks.forEach { stack ->
+            val unit = requireNotNull(ruleset.units[stack.unitName]) {
+                "Unknown arena unit: ${stack.unitName}"
+            }
+            require(unit.speed > 0 && unit.health > 0 && unit.damage > 0)
+        }
+        val source = RulesetTroopDefinitionSource(ruleset)
+        return ArmyInfo(CivilizationInfo(), maxSlots = troopSlots).apply {
+            stacks.forEachIndexed { index, stack ->
+                setTroopAt(index, TroopFactory.create(stack.unitName, stack.count, source))
+            }
+        }
+    }
+
+    /** Symmetric base compositions for initial tuning on the production battlefield. */
+    val mixedMatchups: List<com.unciv.pure.domain.arena.ArenaMixedMatchup> = run {
+        fun army(vararg groups: com.unciv.pure.domain.arena.ArenaUnitGroup) =
+                com.unciv.pure.domain.arena.ArenaArmyComposition(groups.toList())
+
+        fun group(unit: String, count: Int, slots: Int) =
+                com.unciv.pure.domain.arena.ArenaUnitGroup(unit, count, slots)
+
+        fun matchup(id: String, composition: com.unciv.pure.domain.arena.ArenaArmyComposition) =
+                com.unciv.pure.domain.arena.ArenaMixedMatchup(id, composition, composition)
+        listOf(
+            matchup("infantry-archers", army(group("Spearman", 12, 2), group("Archer", 10, 2))),
+            matchup("infantry-cavalry", army(group("Swordsman", 10, 2), group("Horseman", 6, 2))),
+            matchup(
+                "combined-arms", army(
+                    group("Spearman", 10, 2), group("Archer", 8, 2), group("Horseman", 4, 1)
+                )
+            )
+        )
     }
 }

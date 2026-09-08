@@ -26,14 +26,14 @@ class ArenaArmyDistributionTest {
         val encounters = ArenaGenerator.generate(pairs, 42L)
         assertEquals(listOf(4, 5, 4), encounters.map { it.troopSlots })
         assertEquals(encounters, ArenaGenerator.generate(pairs, 42L))
-        val run = ArenaRun(encounters)
+        val run = ArenaRun(encounters.map { ArenaBattleDefinition.homogeneous(it) })
         run.finishBattle(run.beginBattle()!!, ArenaRun.Outcome.VICTORY)
         val first = run.beginBattle()!!
         run.finishBattle(first, ArenaRun.Outcome.DEFEAT)
         val retry = run.beginBattle()!!
-        assertEquals(first.encounter.playerStacks, retry.encounter.playerStacks)
-        assertEquals(first.encounter.opponentStacks, retry.encounter.opponentStacks)
-        assertEquals(5, retry.encounter.playerStacks.size)
+        assertEquals(first.encounter.playerArmy, retry.encounter.playerArmy)
+        assertEquals(first.encounter.opponentArmy, retry.encounter.opponentArmy)
+        assertEquals(5, retry.encounter.playerArmy.size)
         assertEquals(1, run.completedBattles)
     }
 

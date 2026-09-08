@@ -15,8 +15,11 @@ class ArenaRunTest {
     fun threeDistinctBattlesReceiveThirtyPercentBonus() {
         val encounters = newRun().encounters
         assertEquals(3, encounters.size)
-        assertEquals(3, encounters.map { it.matchup }.distinct().size)
-        assertTrue(encounters.all { it.playerCount == 26 && it.matchup.opponentCount == 15 })
+        assertEquals(3, encounters.map { it.id }.distinct().size)
+        assertTrue(encounters.all {
+            it.playerArmy.sumOf { stack -> stack.count } == 26 &&
+                    it.opponentArmy.sumOf { stack -> stack.count } == 15
+        })
         assertEquals(encounters, newRun().encounters)
     }
 
@@ -93,8 +96,8 @@ class ArenaRunTest {
             assertEquals(index + 1, run.tier)
             assertEquals(bonus, run.playerBonusPercent)
             assertEquals(3, run.encounters.size)
-            assertTrue(run.encounters.all { it.playerCount == 20 + bonus / 5 })
-            assertTrue(run.encounters.all { it.matchup.opponentCount == 15 })
+            assertTrue(run.encounters.all { it.playerArmy.sumOf { stack -> stack.count } == 20 + bonus / 5 })
+            assertTrue(run.encounters.all { it.opponentArmy.sumOf { stack -> stack.count } == 15 })
             assertEquals(listOf(4, 5, 4), run.encounters.map { it.troopSlots })
             winTier(run)
             assertTrue(run.advanceTier())

@@ -28,10 +28,7 @@ data class ArenaEncounter(
 
     val playerStacks: List<Int> get() = ArenaArmyDistribution.split(playerCount, troopSlots)
     val opponentStacks: List<Int>
-        get() = ArenaArmyDistribution.split(
-            matchup.opponentCount,
-            troopSlots
-        )
+        get() = ArenaArmyDistribution.split(matchup.opponentCount, troopSlots)
 }
 
 data class ArenaTierConfig(val battleCount: Int = 3, val playerBonusPercent: Int = 30) {
@@ -57,7 +54,7 @@ object ArenaGenerator {
         return matchups.shuffled(Random(seed)).take(config.battleCount)
             .mapIndexed { index, matchup ->
                 val count =
-                        (matchup.playerCount.toLong() * (100L + config.playerBonusPercent) + 99L) / 100L
+                    (matchup.playerCount.toLong() * (100L + config.playerBonusPercent) + 99L) / 100L
                 require(count <= Int.MAX_VALUE)
                 ArenaEncounter(matchup, count.toInt(), troopSlots = 4 + index % 2)
             }
@@ -66,8 +63,8 @@ object ArenaGenerator {
 
 /** Progress belongs to the run; mutable combat armies are recreated for every attempt. */
 class ArenaRun(
-    encounters: List<ArenaEncounter>,
-    private val nextTierEncounters: ((Int) -> List<ArenaEncounter>)? = null
+    encounters: List<ArenaBattleDefinition>,
+    private val nextTierEncounters: ((Int) -> List<ArenaBattleDefinition>)? = null
 ) {
     companion object {
         fun generated(matchups: List<ArenaMatchup>, seed: Long): ArenaRun {
@@ -75,12 +72,25 @@ class ArenaRun(
             fun generateTier(tier: Int) = ArenaGenerator.generate(
                 pool, seed + tier.toLong() - 1L,
                 ArenaTierConfig(playerBonusPercent = ArenaGenerator.bonusForTier(tier))
+            ).map { ArenaBattleDefinition.homogeneous(it) }
+            return ArenaRun(generateTier(1), ::generateTier)
+        }
+
+        fun withMixedBattles(
+            matchups: List<ArenaMatchup>,
+            mixedMatchups: List<ArenaMixedMatchup>,
+            seed: Long
+        ): ArenaRun {
+            val pool = matchups.toList()
+            val mixedPool = mixedMatchups.toList()
+            fun generateTier(tier: Int) = ArenaTierGenerator.generate(
+                pool, mixedPool, seed + tier.toLong() - 1L, ArenaGenerator.bonusForTier(tier)
             )
             return ArenaRun(generateTier(1), ::generateTier)
         }
     }
 
-    var encounters: List<ArenaEncounter> = encounters.toList()
+    var encounters: List<ArenaBattleDefinition> = encounters.toList()
         private set
     var tier: Int = 1
         private set
@@ -95,11 +105,10 @@ class ArenaRun(
 
     init {
         require(this.encounters.isNotEmpty())
-        require(this.encounters.all { it.playerCount > 0 })
     }
 
     enum class Outcome { VICTORY, DEFEAT, DRAW, ABANDONED }
-    data class Attempt(val id: Long, val battleIndex: Int, val encounter: ArenaEncounter)
+    data class Attempt(val id: Long, val battleIndex: Int, val encounter: ArenaBattleDefinition)
 
     fun beginBattle(): Attempt? {
         if (isComplete || activeAttempt != null) return null

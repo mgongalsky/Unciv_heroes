@@ -403,4 +403,135 @@ class ArenaRealBattleTest {
             assertEquals(label, state(gameManager, gameIds), state(standalone, standaloneIds))
         }
     }
+    private fun mixedManager(
+        encounter: com.unciv.pure.domain.arena.ArenaBattleDefinition,
+        seed: Long
+    ): BattleManager {
+        val ruleset = ArenaBattleSetup.ruleset()
+        val player = ArenaBattleSetup.createArmyFromStacks(
+            encounter.playerArmy,
+            ruleset,
+            encounter.troopSlots
+        )
+        val opponent = ArenaBattleSetup.createArmyFromStacks(
+            encounter.opponentArmy,
+            ruleset,
+            encounter.troopSlots
+        )
+        assertEquals(
+            encounter.playerArmy.map { it.unitName to it.count },
+            player.getAllTroops().filterNotNull().map { it.unitName to it.currentAmount })
+        assertEquals(
+            encounter.opponentArmy.map { it.unitName to it.count },
+            opponent.getAllTroops().filterNotNull().map { it.unitName to it.currentAmount })
+        val climate = ClimateParameters(0.3, 0.5, 0.6)
+        val manager = BattleManager(
+            player, opponent, MapGenerator(ruleset).generateBattlefield(14, 8, climate, climate),
+            SeededBattleRandom(seed), moraleProbability = 0.1, luckProbability = 0.05
+        )
+        manager.initializeBattle()
+        val troops = (player.getAllTroops() + opponent.getAllTroops()).filterNotNull()
+        val tiles = troops.map { troop ->
+            val tile = manager.getTroopTile(troop)
+            assertNotNull("Unplaced mixed troop: ${troop.unitName}", tile)
+            assertSame(troop, tile!!.getTroop())
+            tile
+        }
+        assertEquals(troops.size, tiles.distinct().size)
+        assertEquals(troops.size, manager.getTurnQueue().size)
+        return manager
+    }
+
+    @Test
+    fun mixedTemplatesFinishAcrossTierBonuses() {
+        for (template in ArenaBattleSetup.mixedMatchups) for (bonus in listOf(30, 20, 10, 0)) {
+            val encounter = com.unciv.pure.domain.arena.ArenaBattleDefinition.mixed(template, bonus)
+            val batch =
+                    com.unciv.pure.application.battle.BattleBatchSimulator.run(0L until 20L) { seed ->
+                        val manager = mixedManager(encounter, seed)
+                        val policy = AIBattlePolicy(manager)
+                        BattleSimulationRunner(
+                            manager, policy, policy,
+                            maxTurns = 1000, maxTurnsWithoutProgress = 100, seed = seed
+                        ).run()
+                    }
+            println(
+                "ARENA MIXED ${template.id} bonus=$bonus seeds=0..19 " +
+                        "attackerWins=${batch.attackerWins} defenderWins=${batch.defenderWins} " +
+                        "stalemates=${batch.stalemates} maxTurns=${batch.maxTurnTerminations} " +
+                        "averageActions=${batch.averageTurns} medianActions=${batch.medianTurns}"
+            )
+            batch.results.forEachIndexed { index, result ->
+                assertTrue(
+                    "${template.id} bonus=$bonus seed=$index: ${result.termination}",
+                    result.termination == BattleTermination.VICTORY ||
+                            result.termination == BattleTermination.MUTUAL_DEFEAT
+                )
+                assertTrue(result.events.any { it is BattleEvent.TroopAttacked || it is BattleEvent.TroopShot })
+            }
+        }
+    }
+
+    @Test
+    fun mixedSeedRepeatsNormalizedTranscript() {
+        for (template in ArenaBattleSetup.mixedMatchups) {
+            val encounter = com.unciv.pure.domain.arena.ArenaBattleDefinition.mixed(template, 30)
+            fun transcript(): Pair<BattleSimulationResult, List<String>> {
+                val manager = mixedManager(encounter, 42L)
+                val ids = (manager.getAttackerArmy().getAllTroops() + manager.getDefenderArmy()
+                    .getAllTroops())
+                    .filterNotNull().mapIndexed { index, troop -> troop.id to index }.toMap()
+                val policy = AIBattlePolicy(manager)
+                val result = BattleSimulationRunner(
+                    manager, policy, policy,
+                    maxTurns = 1000, maxTurnsWithoutProgress = 100, seed = 42L
+                ).run()
+                val events = result.events.map { event ->
+                    Regex("(troopId|attackerId|defenderId|nextTroopId)=([0-9]+)").replace(event.toString()) { match ->
+                        "${match.groupValues[1]}=${ids.getValue(match.groupValues[2].toInt())}"
+                    }
+                }
+                return result to events
+            }
+
+            val first = transcript()
+            val second = transcript()
+            assertEquals(template.id, first.first.termination, second.first.termination)
+            assertEquals(template.id, first.first.winnerIsAttacker, second.first.winnerIsAttacker)
+            assertEquals(template.id, first.first.turns, second.first.turns)
+            assertEquals(template.id, first.second, second.second)
+        }
+    }
+
+    @Test
+    fun mixedRetriesCreateIndependentFullStrengthArmies() {
+        val ruleset = ArenaBattleSetup.ruleset()
+        for (template in ArenaBattleSetup.mixedMatchups) {
+            val encounter = com.unciv.pure.domain.arena.ArenaBattleDefinition.mixed(template, 30)
+            for (stacks in listOf(encounter.playerArmy, encounter.opponentArmy)) {
+                val first =
+                        ArenaBattleSetup.createArmyFromStacks(stacks, ruleset, encounter.troopSlots)
+                val damaged = first.getAllTroops().filterNotNull()
+                damaged.forEach {
+                    it.currentAmount = 1
+                    it.currentHealth = 1
+                    it.formation.current = 0
+                }
+                val retry =
+                        ArenaBattleSetup.createArmyFromStacks(stacks, ruleset, encounter.troopSlots)
+                val fresh = retry.getAllTroops().filterNotNull()
+                assertNotSame(first, retry)
+                assertEquals(
+                    stacks.map { it.unitName to it.count },
+                    fresh.map { it.unitName to it.currentAmount })
+                assertEquals(fresh.size, fresh.map { it.id }.distinct().size)
+                fresh.forEachIndexed { index, troop ->
+                    assertNotSame(damaged[index], troop)
+                    assertEquals(troop.maxHealth, troop.currentHealth)
+                    assertEquals(troop.formation.maximum, troop.formation.current)
+                    assertEquals(1, damaged[index].currentAmount)
+                }
+            }
+        }
+    }
 }
