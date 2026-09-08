@@ -24,7 +24,8 @@ object TroopFactory {
             isSelfFeeding = source.isSelfFeeding(unitName),
             formationHealthPercent = source.getFormationHealthPercent(unitName).coerceAtLeast(0),
             formationDamageReductionPercent = source.getFormationDamageReductionPercent(unitName)
-                .coerceIn(0, 100)
+                .coerceIn(0, 100),
+            supportBonusPercent = source.getSupportBonusPercent(unitName).coerceAtLeast(0)
         )
     }
 }

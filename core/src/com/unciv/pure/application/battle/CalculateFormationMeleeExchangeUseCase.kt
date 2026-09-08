@@ -1,6 +1,7 @@
 package com.unciv.pure.application.battle
 
 import com.unciv.pure.domain.battle.DamageResult
+import com.unciv.pure.domain.battle.TroopSupport
 
 object CalculateFormationMeleeExchangeUseCase {
     data class TroopSnapshot(
@@ -11,7 +12,8 @@ object CalculateFormationMeleeExchangeUseCase {
         val formation: Int,
         val formationDamageReductionPercent: Int = 50,
         val isRanged: Boolean = false,
-        val meleePenaltyPercent: Int = 50
+        val meleePenaltyPercent: Int = 50,
+        val supportBonusPercent: Int = 0
     )
 
     data class Output(
@@ -30,9 +32,9 @@ object CalculateFormationMeleeExchangeUseCase {
         defenderRetaliationDamage: Int? = null
     ): Output {
         val fullRetaliationDamage = meleeDamage(defender, defenderIsLuck)
-        // Stored retaliation is already penalized; never apply the penalty twice.
+        // Stored retaliation already includes support, luck and penalties; do not apply them twice.
         val availableRetaliationDamage =
-            (defenderRetaliationDamage ?: fullRetaliationDamage).coerceAtLeast(0)
+                (defenderRetaliationDamage ?: fullRetaliationDamage).coerceAtLeast(0)
         val attackerTotalHealth = if (attacker.amount <= 0) 0L else
             (attacker.amount - 1).toLong() * attacker.maxHealth + attacker.health
         // Find the smallest raw hit that kills the attacker with its configured absorption.
@@ -62,18 +64,21 @@ object CalculateFormationMeleeExchangeUseCase {
     }
 
     private fun meleeDamage(troop: TroopSnapshot, isLuck: Boolean): Int =
-        RangedCombatRules.meleeDamage(
-            troop.amount * troop.damage * if (isLuck) 2 else 1,
-            troop.isRanged, troop.meleePenaltyPercent
-        )
+            RangedCombatRules.meleeDamage(
+                TroopSupport.damage(
+                    troop.amount * troop.damage * if (isLuck) 2 else 1,
+                    troop.supportBonusPercent
+                ),
+                troop.isRanged, troop.meleePenaltyPercent
+            )
 
     private fun applyFormation(damage: Int, troop: TroopSnapshot) =
-        ApplyFormationDamageUseCase.execute(
-            ApplyFormationDamageUseCase.Input(
-                damage, troop.formation.coerceAtLeast(0),
-                troop.formationDamageReductionPercent.coerceIn(0, 100), 100
+            ApplyFormationDamageUseCase.execute(
+                ApplyFormationDamageUseCase.Input(
+                    damage, troop.formation.coerceAtLeast(0),
+                    troop.formationDamageReductionPercent.coerceIn(0, 100), 100
+                )
             )
-        )
 
     private fun calculateSoldierDamage(
         damage: Int,

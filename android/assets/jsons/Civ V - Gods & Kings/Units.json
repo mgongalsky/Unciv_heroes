@@ -428,6 +428,7 @@
     "damage": "10",
     "formationHealthPercent": 50,
     "formationDamageReductionPercent": 60,
+    "supportBonusPercent": 25,
     "uniques": [
       "[+50]% Strength <vs [Mounted] units>"
     ],
@@ -727,6 +728,7 @@
     "damage": "15",
     "formationHealthPercent": 30,
     "formationDamageReductionPercent": 40,
+    "supportBonusPercent": 25,
     "cost": "75",
     "hurryCostModifier": "20",
     "strength": "14",
@@ -1395,7 +1397,7 @@
   {
     "name": "Sipahi",
     "unitType": "Mounted",
-    "movement": "5",
+    "movement": "4",
     "speed": "5",
     "health": "20",
     "damage": "5",
@@ -2333,7 +2335,7 @@
     "civilopediaText": [],
     "rangedStrength": "75",
     "requiredTech": "Lasers",
-    "requiredResource": "Aluminum",
+    "requiredResource": "Oil",
     "range": "10",
     "interceptRange": "10"
   },

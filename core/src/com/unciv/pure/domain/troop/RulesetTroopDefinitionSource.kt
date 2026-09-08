@@ -14,4 +14,6 @@ class RulesetTroopDefinitionSource(private val ruleset: Ruleset) : ITroopDefinit
         ruleset.units[unitName]?.formationHealthPercent ?: 0
     override fun getFormationDamageReductionPercent(unitName: String) =
             ruleset.units[unitName]?.formationDamageReductionPercent ?: 0
+    override fun getSupportBonusPercent(unitName: String): Int =
+        ruleset.units[unitName]?.supportBonusPercent ?: 0
 }

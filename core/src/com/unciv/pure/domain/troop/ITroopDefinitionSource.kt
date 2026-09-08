@@ -8,4 +8,5 @@ interface ITroopDefinitionSource {
     fun isSelfFeeding(unitName: String): Boolean
     fun getFormationHealthPercent(unitName: String): Int = 0
     fun getFormationDamageReductionPercent(unitName: String): Int = 0
+    fun getSupportBonusPercent(unitName: String): Int = 0
 }

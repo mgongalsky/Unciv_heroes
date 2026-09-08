@@ -115,8 +115,22 @@ open class ArmyInfo(
             val troopData = if (i < slotArray.size) slotArray.get(i) else null
             troops[i] = when {
                 troopData == null || !troopData.has("amount") -> null
-                troopData.has("speed") -> json.readValue(Troop::class.java, troopData).also {
-                    it.restoreFormationIfMissing()
+                troopData.has("speed") -> {
+                    // Older saves contain combat snapshots but predate support configuration.
+                    // Restore only the missing capability; preserve all saved combat state.
+                    if (!troopData.has("supportBonusPercent")) {
+                        val unitName = troopData.getString("unitName", "Spearman")
+                        troopData.addChild(
+                            "supportBonusPercent",
+                            JsonValue(
+                                troopSource.getSupportBonusPercent(unitName).coerceAtLeast(0)
+                                    .toLong()
+                            )
+                        )
+                    }
+                    json.readValue(Troop::class.java, troopData).also {
+                        it.restoreFormationIfMissing()
+                    }
                 }
 
                 else -> {

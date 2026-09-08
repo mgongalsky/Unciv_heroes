@@ -359,6 +359,7 @@ class BattleScreen private constructor(
 
     fun refreshTroopViews() {
         Gdx.app.postRunnable {
+            if (screenClosed) return@postRunnable
             for (i in attackerTroopViewsArray.indices) {
                 val troop = manager.getAttackerArmy().getTroopAt(i)
                 if (troop == null) {
@@ -381,6 +382,7 @@ class BattleScreen private constructor(
                 }
             }
             bottomBar.refresh()
+            updateTilesShadowing()
         }
     }
 
@@ -657,6 +659,10 @@ class BattleScreen private constructor(
                 canDisplayControl = manager.isTileFree(tile) || tile == currentTile
             )
             tileHighlightRenderer.update(tileGroup, appearance)
+            val occupant = manager.getTroopOnTile(tile)
+            tileHighlightRenderer.updateSupport(
+                tileGroup, occupant != null && manager.getSupportBonusPercent(occupant) > 0
+            )
         }
         // Also refresh when the hovered enemy is unchanged but troops moved or the active side changed.
         // Posting keeps initialization safe: the preview maps are declared after the screen's init block.

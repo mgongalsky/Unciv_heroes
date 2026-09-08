@@ -201,7 +201,10 @@ open class BattleManager(
         if (attacker == null) return false
         val isLuck = isLuckTriggered(attacker)
         val incomingDamage = MoveAndShootRules.shotDamage(
-            attacker.currentAmount * attacker.damage * if (isLuck) 2 else 1,
+            com.unciv.pure.domain.battle.TroopSupport.damage(
+                attacker.currentAmount * attacker.damage * if (isLuck) 2 else 1,
+                getSupportBonusPercent(attacker)
+            ),
             afterMovement = attacker.isRanged && attacker in moveAndShootGranted
         )
         val formationDamage = ApplyFormationDamageUseCase.execute(
@@ -409,7 +412,8 @@ open class BattleManager(
                 unit.maxHealth,
                 if (unit.hasFormation) unit.formation.current else 0,
                 unit.formationDamageReductionPercent,
-                isRanged = unit.isRanged
+                isRanged = unit.isRanged,
+                supportBonusPercent = getSupportBonusPercent(unit)
             )
 
             val exchange = CalculateFormationMeleeExchangeUseCase.execute(
@@ -639,4 +643,24 @@ open class BattleManager(
 
     /** The remaining action is a shot or Skip; movement and melee are unavailable. */
     fun hasPendingFollowUpShot(troop: Troop): Boolean = troop in pendingFollowUpShots
+
+    /** Read-only support query, also usable for a prospective attack or movement tile. */
+    fun getSupportBonusPercent(troop: Troop, at: IBattleTile? = getTroopTile(troop)): Int {
+        val army = getArmyOf(troop) ?: return 0
+        val neighbors = at?.neighbors?.toSet().orEmpty()
+        return com.unciv.pure.domain.battle.TroopSupport.bonusPercent(
+            configuredPercent = troop.supportBonusPercent,
+            isAlive = troop.currentAmount > 0,
+            isPlaced = at != null && getTroopTile(troop) != null && battleField.contains(at),
+            neighbors = army.getAllTroops().filterNotNull().map { other ->
+                com.unciv.pure.domain.battle.TroopSupport.Neighbor(
+                    isOtherTroop = other !== troop,
+                    isAlly = true,
+                    isAlive = other.currentAmount > 0,
+                    hasSupport = other.hasSupport,
+                    isAdjacent = getTroopTile(other)?.let { it in neighbors } == true
+                )
+            }
+        )
+    }
 }

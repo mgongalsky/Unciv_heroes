@@ -711,4 +711,7 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
 
     /** Incoming damage absorbed by available formation, from 0 to 100 percent. */
     var formationDamageReductionPercent: Int = 0
+
+    /** Outgoing tactical damage bonus with an adjacent supporting ally; zero disables support. */
+    var supportBonusPercent: Int = 0
 }

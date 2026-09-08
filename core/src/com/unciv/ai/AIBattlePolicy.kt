@@ -70,13 +70,19 @@ class AIBattlePolicy(
 
     private fun findAttackTile(troop: Troop, targetTile: IBattleTile): IBattleTile? {
         val currentTile = battleManager.getTroopTile(troop) ?: return null
-        if (targetTile.neighbors.contains(currentTile)) return currentTile
-        return targetTile.neighbors.filterIsInstance<IBattleTile>().firstOrNull {
-            battleManager.isTileAchievable(troop, it) && battleManager.isTileFree(it)
+        val candidates = targetTile.neighbors.filterIsInstance<IBattleTile>().filter {
+            it == currentTile ||
+                    (battleManager.isTileAchievable(troop, it) && battleManager.isTileFree(it))
         }
+        return candidates.sortedWith(
+            compareByDescending<IBattleTile> { battleManager.getSupportBonusPercent(troop, it) }
+                .thenBy { if (it == currentTile) 0 else 1 }
+        ).firstOrNull()
     }
 
     private fun findBestMoveTarget(troop: Troop, targetTile: IBattleTile): IBattleTile? =
-            battleManager.getReachableTiles(troop)
-                .minByOrNull { HexMath.getDistance(it.position, targetTile.position) }
+            battleManager.getReachableTiles(troop).minWithOrNull(
+                compareBy<IBattleTile> { HexMath.getDistance(it.position, targetTile.position) }
+                    .thenByDescending { battleManager.getSupportBonusPercent(troop, it) }
+            )
 }

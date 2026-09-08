@@ -80,4 +80,25 @@ class BattleTileHighlightRenderer {
         // Keep control readable when the independent Shift preview also covers this tile.
         overlay.toFront()
     }
+    private val supportOverlays = mutableMapOf<TileGroup, Image>()
+
+    /** Support remains visible independently of cursor hover and movement shading. */
+    fun updateSupport(tile: TileGroup, isSupported: Boolean) {
+        if (!isSupported) {
+            supportOverlays[tile]?.isVisible = false
+            return
+        }
+        val overlay = supportOverlays.getOrPut(tile) {
+            val reference = ImageGetter.getDrawable(tile.tileSetStrings.hexagon)
+            Image(BattleSupportFillDrawable(reference.minWidth, reference.minHeight)).apply {
+                name = "battleSupportOverlay"
+                touchable = Touchable.disabled
+                tile.highlightFogCrosshairLayerGroup.addActorAt(0, this)
+                tile.sizeAndPlaceOverHex(this)
+                color = Color(0.25f, 0.7f, 1f, 0.6f)
+            }
+        }
+        overlay.isVisible = true
+        overlay.toBack()
+    }
 }

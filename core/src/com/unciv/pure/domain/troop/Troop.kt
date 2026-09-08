@@ -13,11 +13,13 @@ class Troop(
     val id: Int = 0,
     var formation: Formation = Formation(),
     val formationHealthPercent: Int = 0,
-    val formationDamageReductionPercent: Int = 0
+    val formationDamageReductionPercent: Int = 0,
+    val supportBonusPercent: Int = 0
 ) {
     var currentAmount: Int = currentAmount
     var currentHealth: Int = currentHealth
     val isRanged: Boolean get() = rangedStrength > 0
+    val hasSupport: Boolean get() = supportBonusPercent > 0
     val hasFormation: Boolean
         get() = formationHealthPercent > 0 && formationDamageReductionPercent > 0
 

@@ -81,11 +81,33 @@ fun openBattleTileHighlightPreview(screen: BaseScreen) {
     renderer.restoreAll()
     check(!marker.isVisible)
 
+    // Support is independent of hover, movement shading and control markers.
+    tiles.takeLast(5).forEach { tile ->
+        renderer.updateSupport(tile, true)
+        val support = tile.highlightFogCrosshairLayerGroup.findActor<Image>("battleSupportOverlay")
+        check(support.isVisible)
+        check(support.touchable == com.badlogic.gdx.scenes.scene2d.Touchable.disabled)
+        check(support.color.a == 0.3f)
+        pointer(tile, InputEvent.Type.enter)
+        check(support.isVisible && support.color.a == 0.3f)
+        renderer.updateSupport(tile, false)
+        check(!support.isVisible)
+        pointer(tile, InputEvent.Type.exit)
+        renderer.restoreAll()
+        check(!support.isVisible)
+        renderer.updateSupport(tile, true)
+        check(support.isVisible)
+        check(tile.highlightFogCrosshairLayerGroup.children.count {
+            it.name == "battleSupportOverlay"
+        } == 1)
+    }
+
     Popup(screen.stage, scrollable = false).apply {
         defaults().pad(12f)
-        add("Battle movement and control".toLabel(fontSize = 24)).row()
+        add("Battle movement, control and support".toLabel(fontSize = 24)).row()
         add("Dark: formation preserved. Light: formation penalty.".toLabel()).row()
         add("Amber: normal control. Red: reinforced control.".toLabel()).row()
+        add("Translucent blue: mutual support (+25% damage).".toLabel()).row()
         add(fieldView).pad(30f).row()
         open(force = true)
     }
