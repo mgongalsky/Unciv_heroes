@@ -48,49 +48,44 @@ class BattleSandboxCatalog {
 class BattleSandboxScreen(
     private val catalog: BattleSandboxCatalog = loadCatalog()
 ) : BaseScreen() {
-
     init {
         val content = Table().apply {
             defaults().pad(8f)
-            add("Battle sandbox".toLabel()).colspan(2).padBottom(20f)
-            row()
-
+            add("Battle sandbox".toLabel()).colspan(2).padBottom(20f).row()
+            add("Network battle".toTextButton().onClick {
+                game.pushScreen(BattleRoomScreen(onBattleReady = { client, room ->
+                    val battle = BattleSessionScreen(client, client.side, room.battle,
+                        com.unciv.logic.arena.ArenaBattleSetup.ruleset())
+                    game.replaceCurrentScreen(battle)
+                }))
+            }).colspan(2).height(55f).row()
             catalog.scenarios.forEach { scenario ->
                 val details = Table().apply {
-                    add(scenario.title.toLabel()).left().growX()
-                    row()
+                    add(scenario.title.toLabel()).left().growX().row()
                     add(scenario.description.toLabel().apply { setWrap(true) })
                         .left().width(560f).growX()
                 }
                 val launchButton = "Start battle".toTextButton().onClick {
-                    game.pushScreen(
-                        BattleScreen.forTesting(
-                            attackerArmy = scenario.attacker.createArmy(scenario.effects),
-                            defenderArmy = scenario.defender.createArmy(scenario.effects),
-                            luckProbability = scenario.effects?.luckProbability,
-                            moraleProbability = scenario.effects?.moraleProbability
-                        )
-                    )
+                    game.pushScreen(BattleScreen.forTesting(
+                        attackerArmy = scenario.attacker.createArmy(scenario.effects),
+                        defenderArmy = scenario.defender.createArmy(scenario.effects),
+                        luckProbability = scenario.effects?.luckProbability,
+                        moraleProbability = scenario.effects?.moraleProbability
+                    ))
                 }
-
                 add(details).left().growX()
-                add(launchButton).width(180f).height(55f)
-                row()
+                add(launchButton).width(180f).height(55f).row()
             }
         }
-
-        stage.addActor(
-            Table().apply {
-                setFillParent(true)
-                add(content).width(800f)
-            }
-        )
+        stage.addActor(Table().apply {
+            setFillParent(true)
+            add(com.unciv.ui.utils.AutoScrollPane(content)).width(800f).growY()
+        })
     }
 
     companion object {
         private const val CatalogPath = "jsons/BattleScenarios.json"
-
         fun loadCatalog(): BattleSandboxCatalog =
-                json().fromJsonFile(BattleSandboxCatalog::class.java, CatalogPath)
+            json().fromJsonFile(BattleSandboxCatalog::class.java, CatalogPath)
     }
 }

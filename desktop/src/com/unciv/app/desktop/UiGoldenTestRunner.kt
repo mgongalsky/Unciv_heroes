@@ -81,6 +81,8 @@ object UiGoldenTestRunner {
     }
 
     private fun scenarios() = listOf(
+        Scenario("network-room") {},
+        Scenario("network-battle") {},
         arenaScenario("arena-start", 0),
         arenaScenario("arena-retry", 2, defeat = true),
         arenaScenario("arena-complete", 3),
@@ -124,6 +126,7 @@ object UiGoldenTestRunner {
         private val scenarios: List<Scenario>,
         private val result: GoldenResult
     ) : ApplicationAdapter() {
+        private var expectedScreen: BaseScreen? = null
         private lateinit var game: UncivGame
         private var scenarioIndex = 0
         private var stableFrames = 0
@@ -148,20 +151,18 @@ object UiGoldenTestRunner {
         override fun render() {
             Gdx.graphics.isContinuousRendering = true
             if (System.currentTimeMillis() - startedAt > 30_000L) {
-                System.err.println("\u001B[31mTIMEOUT: UI golden scenarios did not finish within 30 seconds\u001B[0m")
+                System.err.println("TIMEOUT: UI golden scenarios did not finish within 30 seconds")
                 result.passed = false
                 Gdx.app.exit()
                 return
             }
-
             game.render()
-            if (game.screen !is GoldenScenarioScreen) {
+            if (expectedScreen == null || game.screen !== expectedScreen) {
                 stableFrames = 0
                 return
             }
             stableFrames++
             if (stableFrames < STABLE_FRAMES_BEFORE_CAPTURE) return
-
             val framebuffer = ScreenUtils.getFrameBufferPixmap(0, 0, WIDTH, HEIGHT)
             val actual = flipVertically(framebuffer)
             framebuffer.dispose()
@@ -172,7 +173,6 @@ object UiGoldenTestRunner {
                 update = update
             ) && allPassed
             actual.dispose()
-
             scenarioIndex++
             stableFrames = 0
             if (scenarioIndex < scenarios.size) {
@@ -183,7 +183,11 @@ object UiGoldenTestRunner {
             }
         }
 
-        private fun scenarioScreen(scenario: Scenario) = GoldenScenarioScreen(scenario.open)
+        private fun scenarioScreen(scenario: Scenario): BaseScreen = when (scenario.name) {
+            "network-room" -> NetworkBattleGoldenScreens.room()
+            "network-battle" -> NetworkBattleGoldenScreens.battle()
+            else -> GoldenScenarioScreen(scenario.open)
+        }.also { expectedScreen = it }
 
         override fun dispose() {
             if (!::game.isInitialized) return

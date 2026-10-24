@@ -17,8 +17,11 @@ import com.unciv.ui.tilegroups.TileGroup
 /** Represents the view of a troop in battles. */
 class TroopBattleView(
     private val troop: Troop,
-    private val battleScreen: BattleScreen
+    private val battleScreen: BattleTroopViewHost
 ) {
+    constructor(troop: Troop, screen: BattleScreen) :
+        this(troop, LocalBattleTroopViewHost(screen))
+
     private val troopGroup = Group()
     private var troopImages: ArrayList<Image>
     private var activeOutline: Group? = null
@@ -130,7 +133,7 @@ class TroopBattleView(
             originX = tileGroup.originX,
             originY = tileGroup.originY
         ).also { outline ->
-            outline.isVisible = battleScreen.getCurrentTroopView()?.getTroopInfo() === troop
+            outline.isVisible = battleScreen.isCurrentTroop(troop)
             troopGroup.addActorAt(0, outline)
         }
         hoveredOutline = createActiveTroopOutline(

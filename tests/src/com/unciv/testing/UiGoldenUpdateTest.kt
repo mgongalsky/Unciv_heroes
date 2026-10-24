@@ -66,4 +66,15 @@ class UiGoldenUpdateTest {
     fun battleFlanking() {
         UiGoldenTestRunner.main(arrayOf("--update", "--scenario=battle-flanking"))
     }
+
+    @Test
+    fun networkBattle() {
+        UiGoldenTestRunner.main(
+            arrayOf(
+                "--update",
+                "--scenario=network-room",
+                "--scenario=network-battle"
+            )
+        )
+    }
 }

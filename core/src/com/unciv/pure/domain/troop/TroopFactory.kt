@@ -10,25 +10,31 @@ object TroopFactory {
         unitName: String,
         amount: Int,
         source: ITroopDefinitionSource
-    ): Troop {
-        return Troop(
-            id = nextId++,
-            unitName = unitName,
-            amount = amount,
-            speed = source.getSpeed(unitName),
-            damage = source.getDamage(unitName),
-            maxHealth = source.getMaxHealth(unitName),
-            rangedStrength = source.getRangedStrength(unitName),
-            currentAmount = amount,
-            currentHealth = source.getMaxHealth(unitName),
-            isSelfFeeding = source.isSelfFeeding(unitName),
-            formationHealthPercent = source.getFormationHealthPercent(unitName).coerceAtLeast(0),
-            formationDamageReductionPercent = source.getFormationDamageReductionPercent(unitName)
-                .coerceIn(0, 100),
-            supportBonusPercent = source.getSupportBonusPercent(unitName).coerceAtLeast(0)
-        ).also {
-            it.flanking = source.getFlankingProfile(unitName)
-            it.rangedShot = source.getRangedShotProfile(unitName)
-        }
+    ): Troop = createWithId(nextId++, unitName, amount, source)
+
+    /** Creates a troop with an ID owned by the caller, without accessing the global counter. */
+    fun createWithId(
+        id: Int,
+        unitName: String,
+        amount: Int,
+        source: ITroopDefinitionSource
+    ): Troop = Troop(
+        id = id,
+        unitName = unitName,
+        amount = amount,
+        speed = source.getSpeed(unitName),
+        damage = source.getDamage(unitName),
+        maxHealth = source.getMaxHealth(unitName),
+        rangedStrength = source.getRangedStrength(unitName),
+        currentAmount = amount,
+        currentHealth = source.getMaxHealth(unitName),
+        isSelfFeeding = source.isSelfFeeding(unitName),
+        formationHealthPercent = source.getFormationHealthPercent(unitName).coerceAtLeast(0),
+        formationDamageReductionPercent = source.getFormationDamageReductionPercent(unitName)
+            .coerceIn(0, 100),
+        supportBonusPercent = source.getSupportBonusPercent(unitName).coerceAtLeast(0)
+    ).also {
+        it.flanking = source.getFlankingProfile(unitName)
+        it.rangedShot = source.getRangedShotProfile(unitName)
     }
 }

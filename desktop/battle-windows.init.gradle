@@ -1,0 +1,95 @@
+// Usage from the repository root:
+// .\gradlew.bat -I desktop/battle-windows.init.gradle :desktop:battleWindowsZip
+// Requires a Windows JDK 17+ containing jpackage (the Gradle JVM by default).
+// Override the packaging JDK with -PbattleJdkHome="C:\path\to\jdk".
+
+gradle.projectsEvaluated {
+    // Init scripts also run for buildSrc and included builds.
+    // Configure packaging only in a build that contains the desktop project.
+    def desktop = gradle.rootProject.findProject(':desktop')
+    if (desktop == null) return
+
+    def battleMainClass = 'com.unciv.app.desktop.DesktopLauncherBattle'
+    def battleName = 'HeroicCivsBattle'
+    def assets = new File(gradle.rootProject.projectDir, 'android/assets')
+    def jarDirectory = desktop.layout.buildDirectory.dir('battle-jar')
+    def imageDirectory = desktop.layout.buildDirectory.dir('battle-windows')
+    def packagingJdk = new File(
+        desktop.findProperty('battleJdkHome')?.toString() ?: System.getProperty('java.home')
+    )
+    def jpackage = new File(packagingJdk, 'bin/jpackage.exe')
+
+    def checkPackaging = desktop.tasks.register('checkBattleWindowsPackaging') {
+        group = 'distribution'
+        description = 'Check the local Windows packaging JDK.'
+        doLast {
+            if (!System.getProperty('os.name').toLowerCase(java.util.Locale.ROOT).contains('windows')) {
+                throw new GradleException('Build this Windows application image on Windows.')
+            }
+            if (!jpackage.isFile() || !new File(packagingJdk, 'bin/jlink.exe').isFile()) {
+                throw new GradleException(
+                    'A full Windows JDK 17+ with jpackage and jlink is required. ' +
+                    'Set -PbattleJdkHome="C:\\path\\to\\jdk". Checked: ' + packagingJdk
+                )
+            }
+        }
+    }
+
+    def battleJar = desktop.tasks.register('battleDist', org.gradle.api.tasks.bundling.Jar) {
+        group = 'distribution'
+        description = 'Package the battle sandbox entry point and shared runtime resources.'
+        dependsOn desktop.tasks.named('classes')
+        archiveFileName.set("${battleName}.jar")
+        destinationDirectory.set(jarDirectory)
+        duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
+        from desktop.sourceSets.main.output
+        from({
+            desktop.configurations.runtimeClasspath.files.collect {
+                it.isDirectory() ? it : desktop.zipTree(it)
+            }
+        }) {
+            exclude 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'META-INF/INDEX.LIST'
+        }
+        from(assets) {
+            exclude 'SaveFiles/**', 'MultiplayerFiles/**', 'mods/**', 'GameSettings.json', 'lasterror.txt'
+        }
+        manifest {
+            attributes 'Main-Class': battleMainClass
+        }
+    }
+
+    def windowsImage = desktop.tasks.register('battleWindows', org.gradle.api.tasks.Exec) {
+        group = 'distribution'
+        description = 'Create a portable Windows battle sandbox with EXE and bundled Java.'
+        dependsOn checkPackaging, battleJar
+        doFirst {
+            // Only this task's generated application image is replaced.
+            desktop.delete(imageDirectory.get().asFile)
+            commandLine jpackage.absolutePath,
+                '--type', 'app-image',
+                '--name', battleName,
+                '--dest', imageDirectory.get().asFile.absolutePath,
+                '--input', jarDirectory.get().asFile.absolutePath,
+                '--main-jar', "${battleName}.jar",
+                '--main-class', battleMainClass,
+                '--add-modules', 'ALL-MODULE-PATH',
+                '--java-options', '-Xmx1G'
+        }
+        doLast {
+            def executable = new File(imageDirectory.get().asFile, "${battleName}/${battleName}.exe")
+            if (!executable.isFile()) {
+                throw new GradleException('Packaging finished without the expected EXE: ' + executable)
+            }
+            logger.lifecycle('Battle sandbox EXE: ' + executable)
+        }
+    }
+
+    desktop.tasks.register('battleWindowsZip', org.gradle.api.tasks.bundling.Zip) {
+        group = 'distribution'
+        description = 'Zip the complete Windows battle sandbox for sharing.'
+        dependsOn windowsImage
+        from(imageDirectory)
+        archiveFileName.set("${battleName}-Windows64.zip")
+        destinationDirectory.set(desktop.layout.buildDirectory.dir('distributions'))
+    }
+}

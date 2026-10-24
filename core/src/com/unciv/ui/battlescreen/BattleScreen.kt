@@ -78,6 +78,9 @@ class BattleScreen private constructor(
     private val attacker: ICombatant? = null,
     private val defender: ICombatant? = null,
 ) : BaseScreen(), RecreateOnResize, KoinComponent {
+    private val presentationRenderer by lazy {
+        BattlePresentationRenderer(daTileGroups, tileHighlightRenderer, bindHover = false)
+    }
     private var screenClosed = false
     private var onStandaloneClosed: ((com.unciv.pure.domain.battle.BattleReport?) -> Unit)? = null
     private var standaloneResult: com.unciv.pure.domain.battle.BattleReport? = null
@@ -307,14 +310,8 @@ class BattleScreen private constructor(
         )
     }
 
-    fun loadCursor(filename: String, xHotspot: Int, yHotspot: Int): Cursor {
-        val pixmap = com.badlogic.gdx.graphics.Pixmap(Gdx.files.internal("ExtraImages/$filename"))
-        return try {
-            Gdx.graphics.newCursor(pixmap, xHotspot, yHotspot)
-        } finally {
-            pixmap.dispose()
-        }
-    }
+    fun loadCursor(filename: String, xHotspot: Int, yHotspot: Int): Cursor =
+            BattleCursorSet.load(filename, xHotspot, yHotspot)
 
 
     private fun isTroopPlayerControlled(troop: Troop): Boolean {
@@ -637,35 +634,15 @@ class BattleScreen private constructor(
     }
 
     private fun updateTilesShadowing() {
-        val currentTroop = manager.getCurrentTroop()?.takeIf { manager.isBattleOn() }
-        val currentTile = currentTroop?.let(manager::getTroopTile)
-        val reachableTiles = currentTroop?.let(manager::getReachableTiles)?.toSet().orEmpty()
-        val enemies = currentTroop?.let(manager::getEnemies)?.toSet().orEmpty()
-        val movementContext = currentTroop?.let { troop ->
-            TroopMovementContext(troop) { it in enemies }
-        }
-        daTileGroups.forEach { tileGroup ->
-            val tile = tileGroup.tileInfo
-            val appearance = com.unciv.pure.application.battle.BattleTileAppearanceUseCase.execute(
-                isReachable = tile in reachableTiles,
-                movementDistance = if (currentTile == null) 0 else HexMath.getDistance(
-                    currentTile.position,
-                    tile.position
-                ),
-                maximumMovement = currentTroop?.speed ?: 0,
-                control = movementContext?.controlStrength(tile)
-                    ?: com.unciv.pure.domain.battle.ZoneOfControlTransition.Strength.NONE,
-                canDisplayControl = manager.isTileFree(tile) || tile == currentTile
+        presentationRenderer.update(
+            com.unciv.logic.battle.session.BattleStateSnapshotReader.capture(
+                manager
             )
-            tileHighlightRenderer.update(tileGroup, appearance)
-            val occupant = manager.getTroopOnTile(tile)
-            tileHighlightRenderer.updateSupport(
-                tileGroup, occupant != null && manager.getSupportBonusPercent(occupant) > 0
-            )
+        )
+        // The preview maps are initialized after this screen's init block.
+        Gdx.app.postRunnable {
+            if (!screenClosed) updateEnemyMovementPreview(previewedTroop)
         }
-        // Also refresh when the hovered enemy is unchanged but troops moved or the active side changed.
-        // Posting keeps initialization safe: the preview maps are declared after the screen's init block.
-        Gdx.app.postRunnable { updateEnemyMovementPreview(previewedTroop) }
     }
 
     fun movePointerToNextTroop() {
@@ -842,52 +819,8 @@ class BattleScreen private constructor(
         }
     }
 
-    /**
-     * Determines the direction of the attack based on the mouse pointer position.
-     *
-     * @param x The x-coordinate of the pointer relative to the tile.
-     * @param y The y-coordinate of the pointer relative to the tile.
-     * @param width The width of the hexagon tile.
-     * @return The direction of the attack.
-     */
-    fun pixelToDirection(x: Float, y: Float, width: Float): Direction{
-        // width of the hex
-
-        val x0 = width/2
-        val height = width * 1.1547f
-        val y0 = x0 * 0.577f // tangents of 30 degrees
-
-        // Here we divide the hex with defender into 6 triangles in order to show from which adjacent hex attack will be mad
-        // We have three diagonal lines intersecting at the center of the hex:
-
-        when{
-            y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
-                    x <= x0
-            -> return Direction.TopLeft
-
-            y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
-                    y - y0 - x * y0 / x0 >= 0
-            -> return Direction.CenterLeft
-
-            y - y0 - x * y0 / x0 < 0 &&
-                    x <= x0
-            -> return Direction.BottomLeft
-
-            y - (height - y0) + x * (height - y0) / (3f * x0) < 0 &&
-                    x > x0
-            -> return Direction.BottomRight
-
-            y - (height - y0) + x * (height - y0) / (3f * x0) >= 0 &&
-                    y - y0 - x * y0 / x0 < 0
-            -> return Direction.CenterRight
-
-            y - y0 - x * y0 / x0 >= 0 &&
-                    x > x0
-            -> return Direction.TopRight
-        }
-        return Direction.DirError
-
-    }
+    fun pixelToDirection(x: Float, y: Float, width: Float): Direction =
+            BattlePointerGeometry.attackDirection(x, y, width)
 
     override fun resume() {
         val replacement = recreate()
