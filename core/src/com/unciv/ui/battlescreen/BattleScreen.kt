@@ -275,7 +275,8 @@ class BattleScreen private constructor(
             isAttacker = { troop -> manager.getAttackerArmy().contains(troop) },
             onSkip = ::sendSkipTurnRequest,
             onExit = ::shutdownScreen,
-            onHover = ::setQueueHoveredTroop
+            onHover = ::setQueueHoveredTroop,
+            remainingInRoundProvider = manager::getRemainingTurnsInRound
         ).apply {
             setSize(this@BattleScreen.stage.width, BattleTurnBar.HEIGHT)
             setPosition(0f, 0f)

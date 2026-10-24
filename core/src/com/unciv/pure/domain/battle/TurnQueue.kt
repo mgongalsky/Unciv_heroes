@@ -1,60 +1,89 @@
-// com/unciv/pure/domain/battle/TurnQueue.kt
 package com.unciv.pure.domain.battle
 
 import com.unciv.pure.domain.troop.Troop
 
-class TurnQueue {
-    private val queue: MutableList<Troop> = mutableListOf()
-    private var currentIndex: Int = 0
+/** Round-based initiative shared by execution and the presentation forecast. */
+class TurnQueue(private val penaltyPerTurn: Int = 1) {
+    private val troops = mutableListOf<Troop>()
+    private val attackers = mutableSetOf<Troop>()
+    private val remaining = mutableListOf<Troop>()
+    private var attackerTurns = 0
+    private var defenderTurns = 0
+    private var active: Troop? = null
+
+    init {
+        require(penaltyPerTurn >= 0)
+    }
 
     fun initialize(attackerTroops: List<Troop>, defenderTroops: List<Troop>) {
-        val attackers = attackerTroops.toSet()
-        val defenders = defenderTroops.toSet()
-        val troopsBySpeed = (attackerTroops + defenderTroops)
-            .groupBy { it.speed }
-            .toSortedMap(compareByDescending { it })
-
-        queue.clear()
-        troopsBySpeed.values.forEach { sameSpeedTroops ->
-            val sameSpeedAttackers = sameSpeedTroops.filter { it in attackers }
-            val sameSpeedDefenders = sameSpeedTroops.filter { it in defenders }
-            val pairedCount = minOf(sameSpeedAttackers.size, sameSpeedDefenders.size)
-
-            repeat(pairedCount) { index ->
-                queue += sameSpeedAttackers[index]
-                queue += sameSpeedDefenders[index]
-            }
-            queue += sameSpeedAttackers.drop(pairedCount)
-            queue += sameSpeedDefenders.drop(pairedCount)
-        }
-
-        currentIndex = 0
+        troops.clear()
+        troops.addAll((attackerTroops + defenderTroops).distinct())
+        attackers.clear()
+        attackers.addAll(attackerTroops)
+        startRound()
+        selectNext()
     }
 
-    fun current(): Troop? {
-        if (queue.isEmpty()) return null
-        if (currentIndex >= queue.size) currentIndex = queue.size - 1
-        return queue[currentIndex]
-    }
+    fun current(): Troop? = active
 
+    /** Completes one activation, including any morale or move-and-shoot follow-ups. */
     fun advance() {
-        if (queue.isEmpty()) return
-        currentIndex = (currentIndex + 1) % queue.size
+        val completed = active ?: return
+        if (completed in attackers) attackerTurns++ else defenderTurns++
+        remaining.remove(completed)
+        if (remaining.isEmpty()) startRound()
+        selectNext()
     }
 
+    /** Removing the active troop completes its activation and selects its successor. */
     fun remove(troop: Troop) {
-        val index = queue.indexOf(troop)
-        if (index != -1) {
-            queue.removeAt(index)
-            if (index < currentIndex) currentIndex--
-            if (currentIndex >= queue.size) currentIndex = 0
+        if (!troops.remove(troop)) return
+        if (active === troop) {
+            advance()
+        } else {
+            remaining.remove(troop)
+        }
+        attackers.remove(troop)
+    }
+
+    /**
+     * Forecasts the next [troops] count of activations, beginning with the current one.
+     * May cross a round boundary; assumes no future casualties or extra actions.
+     * Reads never consume an activation or mutate a troop.
+     */
+    fun getAll(): List<Troop> {
+        val forecast = TurnQueue(penaltyPerTurn)
+        forecast.troops.addAll(troops)
+        forecast.attackers.addAll(attackers)
+        forecast.remaining.addAll(remaining)
+        forecast.attackerTurns = attackerTurns
+        forecast.defenderTurns = defenderTurns
+        forecast.active = active
+        return buildList {
+            repeat(troops.size) {
+                forecast.current()?.let { add(it) }
+                forecast.advance()
+            }
         }
     }
 
-    fun getAll(): List<Troop> {
-        if (queue.isEmpty()) return emptyList()
-        return queue.drop(currentIndex) + queue.take(currentIndex)
+    fun isEmpty(): Boolean = troops.isEmpty()
+
+    private fun startRound() {
+        attackerTurns = 0
+        defenderTurns = 0
+        remaining.clear()
+        remaining.addAll(troops)
     }
 
-    fun isEmpty(): Boolean = queue.isEmpty()
+    private fun selectNext() {
+        val index = InitiativeOrder.nextIndex(
+            remaining.map { InitiativeOrder.Entry(it.speed, it in attackers) },
+            attackerTurns, defenderTurns, penaltyPerTurn
+        )
+        active = index?.let { remaining[it] }
+    }
+
+    /** Activations before the next round, including the current troop. */
+    fun remainingInRound(): Int = remaining.size
 }

@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
@@ -19,7 +20,8 @@ internal class BattleTurnBar(
     private val isAttacker: (Troop) -> Boolean,
     private val onSkip: () -> Unit,
     private val onExit: () -> Unit,
-    private val onHover: (Troop?) -> Unit
+    private val onHover: (Troop?) -> Unit,
+    private val remainingInRoundProvider: () -> Int
 ) : Table() {
 
     companion object {
@@ -54,10 +56,22 @@ internal class BattleTurnBar(
         add(actionButton("Skip", onSkip)).width(92f).height(54f).padRight(8f)
         add(actionButton("Exit", onExit)).width(92f).height(54f).padRight(18f)
 
-        queueProvider().forEachIndexed { index, troop ->
+        val queue = queueProvider()
+        val remainingInRound = remainingInRoundProvider()
+        queue.forEachIndexed { index, troop ->
             add(createQueueSlot(troop, index == 0))
                 .size(SLOT_SIZE)
                 .padRight(7f)
+            if (index + 1 == remainingInRound) {
+                val divider = Image(
+                    ImageGetter.getDrawable("OtherIcons/whiteDot")
+                        .tint(Color.valueOf("B8C4D6CC"))
+                ).apply {
+                    name = "round-divider"
+                    touchable = com.badlogic.gdx.scenes.scene2d.Touchable.disabled
+                }
+                add(divider).width(2f).height(SLOT_SIZE).padLeft(4f).padRight(11f)
+            }
         }
     }
 

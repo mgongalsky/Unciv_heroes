@@ -179,13 +179,17 @@ fun openBattleTurnQueuePreview(screen: BaseScreen) {
         TroopFactory.create("Crossbowman", 14, source),
         TroopFactory.create("Spearman", 9, source)
     )
-    val queue = listOf(attackers[0], defenders[0], attackers[1], defenders[1])
+    val queue = com.unciv.pure.domain.battle.TurnQueue().apply {
+        initialize(attackers, defenders)
+        repeat(2) { advance() }
+    }
     val bar = com.unciv.ui.battlescreen.BattleTurnBar(
-        queueProvider = { queue },
+        queueProvider = queue::getAll,
         isAttacker = { it in attackers },
         onSkip = {},
         onExit = {},
-        onHover = {}
+        onHover = {},
+        remainingInRoundProvider = queue::remainingInRound
     ).apply {
         setSize(screen.stage.width, com.unciv.ui.battlescreen.BattleTurnBar.HEIGHT)
         setPosition(0f, 0f)

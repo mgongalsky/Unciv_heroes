@@ -742,4 +742,7 @@ open class BattleManager(
                 .map { getFlanking(it, defender).flankLevel }
                 .maxOrNull() ?: 0
     private var activeTroopRemoved = false
+
+    /** Position of the next round boundary in the turn forecast. */
+    fun getRemainingTurnsInRound(): Int = turnQueue.remainingInRound()
 }
