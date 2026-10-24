@@ -56,9 +56,36 @@ class TroopBattleView(
     fun getTroopInfo(): Troop = troop
     fun getCurrentGroup(): Group = troopGroup
 
-    fun showInfo(anchor: Actor) {
+    fun showInfo(
+        anchor: Actor,
+        preview: com.unciv.pure.application.battle.BattleAttackPreview? = null,
+        retaliationBudget: Int? = null,
+        attackUnavailable: Boolean = false
+    ) {
+        val normalRetaliation = if (retaliationBudget != null)
+            battleScreen.getNormalRetaliationBudget(troop) else 0
+        val state = listOf(
+            preview,
+            retaliationBudget,
+            normalRetaliation,
+            attackUnavailable,
+            troop.currentAmount,
+            troop.currentHealth,
+            troop.formation.current,
+            troop.formation.maximum,
+            anchor
+        )
+        if (infoPanel != null && infoState == state) return
         infoPanel?.remove()
+        infoState = state
         infoPanel = BattleTroopInfoPanel(troop, attacker).also { panel ->
+            if (retaliationBudget != null)
+                panel.setAttackPreview(
+                    preview,
+                    retaliationBudget,
+                    attackUnavailable,
+                    normalRetaliation
+                )
             panel.showNextTo(battleScreen.stage, anchor)
         }
     }
@@ -162,4 +189,5 @@ class TroopBattleView(
         hideInfo()
         troopGroup.remove()
     }
+    private var infoState: List<Any?>? = null
 }

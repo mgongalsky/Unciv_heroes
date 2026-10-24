@@ -233,4 +233,52 @@ class FlankingIntegrationTest {
         assertEquals(0, s.manager.getCurrentFlankingLevel(s.defender))
         assertEquals(0, s.randomCalls)
     }
+
+    @Test
+    fun `preview flanking and formation losses match execution from a prospective position`() {
+        val s = Scenario(true)
+        val attacker = s.attackers.first()
+        attacker.flanking = FlankingProfile(17, 29, 43)
+        val original = s.field.getTileAt(Vector2(-3f, -3f))!!
+        s.place(attacker, original)
+        val preview =
+                requireNotNull(s.manager.getAttackPreview(attacker, s.defender, s.ring.first()))
+        assertEquals(34, preview.attack.flanking.formedDamageBonusPercent)
+        assertEquals(58, preview.attack.flanking.formationDamageBonusPercent)
+        assertSame(original, s.manager.getTroopTile(attacker))
+        assertEquals(0, s.randomCalls)
+        val result = s.attack()
+        assertTrue(result.success)
+        assertEquals(preview.attack.flanking, result.attackFlanking)
+        assertEquals(preview.attack.result.remainingHealth, s.defender.currentHealth)
+        assertEquals(preview.attack.remainingFormation, s.defender.formation.current)
+    }
+
+    @Test
+    fun `retaliation flanking is forecast around the approach rather than the original position`() {
+        val s = Scenario(true)
+        val attacker = s.attackers.first()
+        val approach = s.ring.first()
+        s.attackers.drop(1).forEach { s.manager.removeTroop(it) }
+        val original = s.field.getTileAt(Vector2(-3f, -3f))!!
+        s.place(attacker, original)
+        s.defender.flanking = FlankingProfile(11, 23, 37)
+        val available = approach.neighbors.filterIsInstance<IBattleTile>()
+            .filter { it.getTroop() == null && it !== original }.take(2).toList()
+        assertEquals(2, available.size)
+        available.forEachIndexed { index, tile ->
+            val enemy = Troop("Spearman", 4, 2, 10, 1000, id = 30 + index)
+                .apply { flanking = FlankingProfile() }
+            s.defenderArmy.setTroopAt(index + 1, enemy)
+            s.place(enemy, tile)
+        }
+        val preview = requireNotNull(s.manager.getAttackPreview(attacker, s.defender, approach))
+        assertTrue(preview.retaliation!!.flanking.unformedDamageBonusPercent > 0)
+        assertEquals(0, s.manager.getFlanking(s.defender, attacker).flankLevel)
+        assertEquals(0, s.randomCalls)
+        val result = s.attack()
+        assertTrue(result.success)
+        assertEquals(preview.retaliation!!.flanking, result.retaliationFlanking)
+        assertEquals(preview.retaliation!!.result.remainingHealth, attacker.currentHealth)
+    }
 }

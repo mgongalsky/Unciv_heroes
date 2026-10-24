@@ -202,50 +202,32 @@ open class BattleManager(
         defender: Troop,
         attacker: Troop? = getCurrentTroop(),
         shot: com.unciv.pure.domain.battle.RangedShotRules.Result? = attacker?.let {
-            getRangedShot(
-                it,
-                defender
-            )
+            getRangedShot(it, defender)
         }
     ): Boolean {
         if (attacker == null) return false
         val isLuck = isLuckTriggered(attacker)
-        val luckMultiplier = if (isLuck) 2 else 1
-        val afterLuck = (attacker.currentAmount.toLong() * attacker.damage * luckMultiplier)
-            .coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
-        val supportPercent = getSupportBonusPercent(attacker)
-        val afterSupport =
-                com.unciv.pure.domain.battle.TroopSupport.damage(afterLuck, supportPercent)
-        val afterMovement = attacker.isRanged && attacker in moveAndShootGranted
-        val movementDamage = MoveAndShootRules.shotDamage(afterSupport, afterMovement)
-        val incomingDamage =
-                com.unciv.pure.domain.battle.RangedShotRules.damage(movementDamage, shot)
-        val formationBefore = if (defender.hasFormation) defender.formation.current else 0
-        val reduction = defender.formationDamageReductionPercent.coerceIn(0, 100)
-        val formationDamage = ApplyFormationDamageUseCase.execute(
-            ApplyFormationDamageUseCase.Input(incomingDamage, formationBefore, reduction, 100)
+        val hit = CalculateRangedAttackUseCase.execute(
+            damageSnapshot(attacker), damageSnapshot(defender), isLuck,
+            attacker.isRanged && attacker in moveAndShootGranted, shot
         )
-        val result = CalculateDamageUseCase.execute(
-            attackerAmount = 1, attackerDamage = formationDamage.damageToSoldiers,
-            defenderAmount = defender.currentAmount, defenderHealth = defender.currentHealth,
-            defenderMaxHealth = defender.maxHealth, isLuck = false
-        ).copy(isLuck = isLuck)
         BattleDiagnostics.shared.log {
             BattleDamageLog.describe(
                 "SHOT ${attacker.unitName}#${attacker.id} -> ${defender.unitName}#${defender.id}",
-                PreparedBattleDamage(
-                    attacker.currentAmount, attacker.damage, luckMultiplier, afterLuck,
-                    supportPercent, afterSupport, if (afterMovement) 50 else 0, movementDamage
+                hit.preparation,
+                com.unciv.pure.domain.battle.RangedShotRules.damage(
+                    hit.preparation!!.incomingDamage,
+                    shot
                 ),
-                incomingDamage, formationBefore, formationDamage.remainingFormation, reduction,
-                com.unciv.pure.domain.battle.FlankingCalculator.Result(), result
+                hit.formationBefore, hit.remainingFormation, hit.formationReductionPercent,
+                hit.flanking, hit.result
             ) + " rangedShot=$shot"
         }
-        defender.formation.current = formationDamage.remainingFormation
-        defender.currentAmount = result.remainingAmount
-        defender.currentHealth = result.remainingHealth
+        defender.formation.current = hit.remainingFormation
+        defender.currentAmount = hit.result.remainingAmount
+        defender.currentHealth = hit.result.remainingHealth
         if (defender.currentAmount <= 0) perishTroop(defender)
-        return result.isLuck
+        return hit.result.isLuck
     }
 
     fun perishTroop(troop: Troop) {
@@ -711,13 +693,14 @@ open class BattleManager(
         )
     }
 
-    /** Read-only flanking query; a prospective attack tile replaces the attacker's current position. */
+    /** Prospective positions replace the combatants' positions without mutating the field. */
     fun getFlanking(
         attacker: Troop,
         defender: Troop,
-        attackFrom: IBattleTile? = getTroopTile(attacker)
+        attackFrom: IBattleTile? = getTroopTile(attacker),
+        defenderAt: IBattleTile? = getTroopTile(defender)
     ): com.unciv.pure.domain.battle.FlankingCalculator.Result {
-        val targetTile = getTroopTile(defender)
+        val targetTile = defenderAt
             ?: return com.unciv.pure.domain.battle.FlankingCalculator.Result()
         val defendingArmy = getArmyOf(defender)
             ?: return com.unciv.pure.domain.battle.FlankingCalculator.Result()
@@ -789,5 +772,85 @@ open class BattleManager(
             distance,
             blockers
         )
+    }
+    private fun damageSnapshot(
+        troop: Troop,
+        at: IBattleTile? = getTroopTile(troop),
+        flanking: com.unciv.pure.domain.battle.FlankingCalculator.Result =
+                com.unciv.pure.domain.battle.FlankingCalculator.Result()
+    ) = CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
+        troop.currentAmount, troop.damage, troop.currentHealth, troop.maxHealth,
+        if (troop.hasFormation) troop.formation.current else 0,
+        troop.formationDamageReductionPercent,
+        isRanged = troop.isRanged,
+        supportBonusPercent = getSupportBonusPercent(troop, at),
+        outgoingFlanking = flanking
+    )
+
+    /** Forecast the selected attack without moving troops, spending retaliation or drawing randomness. */
+    fun getAttackPreview(
+        attacker: Troop,
+        defender: Troop,
+        attackFrom: IBattleTile? = null
+    ): BattleAttackPreview? {
+        val targetTile = getTroopTile(defender) ?: return null
+        val currentTile = getTroopTile(attacker) ?: return null
+        if (attacker !== getCurrentTroop() || attacker.currentAmount <= 0 ||
+                defender.currentAmount <= 0 || !isBattleOn() ||
+                !isTileOccupiedByEnemy(attacker, targetTile)
+        ) return null
+        if (canShoot(attacker)) {
+            val shot = getRangedShot(attacker, defender)
+            return BattleAttackPreview(
+                attack = CalculateRangedAttackUseCase.execute(
+                    damageSnapshot(attacker), damageSnapshot(defender), false,
+                    attacker in moveAndShootGranted, shot
+                ),
+                isRanged = true, rangedShot = shot
+            )
+        }
+        if (attackFrom == null || hasPendingFollowUpShot(attacker) ||
+                attackFrom !in targetTile.neighbors || !isTileAchievable(attacker, attackFrom) ||
+                (!isTileFree(attackFrom) && attackFrom != currentTile)
+        ) return null
+        val attacking =
+                damageSnapshot(attacker, attackFrom, getFlanking(attacker, defender, attackFrom))
+        val defending = damageSnapshot(
+            defender, targetTile, getFlanking(defender, attacker, targetTile, attackFrom)
+        )
+        val stored = remainingRetaliationDamageByTroopId[defender.id]
+        val exchange = CalculateFormationMeleeExchangeUseCase.execute(
+            attacking, defending, false, false, stored
+        )
+        return BattleAttackPreview(
+            attack = BattleAttackPreview.Hit(
+                exchange.attackPreparation, exchange.attackFlanking, defending.formation,
+                defending.formationDamageReductionPercent.coerceIn(0, 100),
+                exchange.defenderRemainingFormation, exchange.damageToDefender
+            ),
+            retaliation = BattleAttackPreview.Hit(
+                exchange.retaliationPreparation, exchange.retaliationFlanking, attacking.formation,
+                attacking.formationDamageReductionPercent.coerceIn(0, 100),
+                exchange.attackerRemainingFormation, exchange.damageToAttacker
+            ),
+            retaliationBudget = exchange.availableRetaliationDamage,
+            remainingRetaliationBudget = exchange.remainingRetaliationDamage,
+            usesStoredRetaliation = stored != null
+        )
+    }
+
+    /** Raw remaining reserve; an unused reserve is estimated without a luck roll. */
+    fun getRetaliationBudget(troop: Troop): Int {
+        if (troop.currentAmount <= 0 || getTroopTile(troop) == null) return 0
+        return remainingRetaliationDamageByTroopId[troop.id] ?: getNormalRetaliationBudget(troop)
+    }
+
+    /** Normal full reserve for the current troop strength and support, before spending or new luck. */
+    fun getNormalRetaliationBudget(troop: Troop): Int {
+        if (troop.currentAmount <= 0 || getTroopTile(troop) == null) return 0
+        val snapshot = damageSnapshot(troop)
+        return CalculateFormationMeleeExchangeUseCase.execute(
+            snapshot, snapshot, false, false
+        ).availableRetaliationDamage
     }
 }

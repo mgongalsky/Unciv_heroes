@@ -36,25 +36,29 @@ class BattleTroopInfoPanel(
 
     private fun buildContent() {
         val title =
-            troop.unitName.toLabel(fontColor = Color.valueOf("F5D77AFF"), fontSize = 22).apply {
-                setAlignment(Align.center)
-            }
+                troop.unitName.toLabel(fontColor = Color.valueOf("F5D77AFF"), fontSize = 22).apply {
+                    setAlignment(Align.center)
+                }
         add(title).colspan(2).expandX().fillX().padBottom(8f).row()
-        val portrait = ImageGetter.getUnitIcon(troop.unitName, Color.WHITE)
-        add(portrait).size(72f).top().padRight(14f)
+        if (attacker != null) {
+            add(createTroopPortrait()).size(144f, 180f).top().padRight(14f)
+        } else {
+            add(ImageGetter.getUnitIcon(troop.unitName, Color.WHITE)).size(72f).top().padRight(14f)
+        }
         val stats = Table().apply {
             defaults().pad(2f, 4f, 2f, 4f)
             attacker?.let { statRow("Side", if (it) "Attacker" else "Defender") }
             val amount = if (attacker == null) troop.amount else troop.currentAmount
             statRow("Amount", amount.toString())
             statRow("Health", "${troop.currentHealth} / ${troop.maxHealth}")
-            val totalHealth = if (amount <= 0) 0 else
-                max(0, amount - 1) * troop.maxHealth + troop.currentHealth
+            val totalHealth = if (amount <= 0) 0L else
+                max(0, amount - 1).toLong() * troop.maxHealth + troop.currentHealth
             statRow("Total health", totalHealth.toString())
             statRow("Damage", troop.damage.toString())
             if (troop.isRanged) statRow("Ranged", troop.rangedStrength.toString())
             statRow("Speed", troop.speed.toString())
             statRow("Formation", "${troop.formation.current} / ${troop.formation.maximum}")
+            retaliationBudget?.let { statRow("Retaliation", "$it / $normalRetaliationBudget") }
         }
         add(stats).top().left()
     }
@@ -83,5 +87,56 @@ class BattleTroopInfoPanel(
             centeredY.coerceIn(EDGE_MARGIN, max(EDGE_MARGIN, stage.height - height - EDGE_MARGIN))
         )
         toFront()
+    }
+    private var retaliationBudget: Int? = null
+    fun setAttackPreview(
+        preview: com.unciv.pure.application.battle.BattleAttackPreview?,
+        remainingRetaliation: Int,
+        attackUnavailable: Boolean,
+        normalRetaliation: Int
+    ) {
+        retaliationBudget = remainingRetaliation
+        normalRetaliationBudget = normalRetaliation
+        clearChildren()
+        buildContent()
+        row()
+        if (preview != null) {
+            add(buildBattleAttackPreviewTable(preview)).colspan(2).left().padTop(10f)
+        } else if (attackUnavailable) {
+            add(
+                "Attack unavailable from this position".toLabel(
+                    fontColor = Color.LIGHT_GRAY,
+                    fontSize = 14
+                )
+            )
+                .colspan(2).left().padTop(8f)
+        }
+        pack()
+    }
+    private var normalRetaliationBudget: Int = 0
+    private fun createTroopPortrait(): com.badlogic.gdx.scenes.scene2d.Group {
+        val portrait = com.badlogic.gdx.scenes.scene2d.Group().apply {
+            name = "battleTroopPortrait"
+            touchable = Touchable.disabled
+            setSize(144f, 180f)
+        }
+        val layers = ImageGetter.getLayeredImageColored(
+            "TileSets/AbsoluteUnits/Units/${troop.unitName}", null, null, null
+        )
+        val sourceWidth = layers.maxOfOrNull { it.width } ?: 0f
+        val sourceHeight = layers.maxOfOrNull { it.height } ?: 0f
+        if (sourceWidth <= 0f || sourceHeight <= 0f) return portrait
+        val scale = minOf(portrait.width / sourceWidth, portrait.height / sourceHeight)
+        val left = (portrait.width - sourceWidth * scale) / 2f
+        val bottom = (portrait.height - sourceHeight * scale) / 2f
+        layers.forEach { layer ->
+            layer.name = "portraitSprite"
+            layer.setOrigin(0f, 0f)
+            layer.setScale(if (attacker == true) -scale else scale, scale)
+            layer.setPosition(if (attacker == true) left + sourceWidth * scale else left, bottom)
+            layer.touchable = Touchable.disabled
+            portrait.addActor(layer)
+        }
+        return portrait
     }
 }

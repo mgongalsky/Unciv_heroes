@@ -1023,12 +1023,10 @@ class BattleScreen private constructor(
     private var previewedTroop: Troop? = null
     override fun render(delta: Float) {
         super.render(delta)
-
         val stagePosition = stage.screenToStageCoordinates(
             Vector2(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
         )
         val hitActor = stage.hit(stagePosition.x, stagePosition.y, true)
-
         var ancestor = hitActor
         var pointerOverBottomBar = false
         var tileUnderPointer: TileGroup? = null
@@ -1040,29 +1038,42 @@ class BattleScreen private constructor(
             }
             ancestor = ancestor.parent
         }
-
-        // Resolve every frame, including when the battlefield changes under a stationary pointer.
         updateFlankingHighlights(
             if (pointerOverBottomBar) null else tileUnderPointer,
             stagePosition
         )
-
         val troopUnderPointer = tileUnderPointer?.tileInfo?.let(manager::getTroopOnTile)
-        if (!pointerOverBottomBar && troopUnderPointer !== hoveredTroop) {
-            setHoveredTroop(troopUnderPointer)
-        }
+        if (!pointerOverBottomBar && troopUnderPointer !== hoveredTroop) setHoveredTroop(
+            troopUnderPointer
+        )
 
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)) {
-            attackerTroopViewsArray.forEach { it?.hideInfo() }
-            defenderTroopViewsArray.forEach { it?.hideInfo() }
-            if (troopUnderPointer != null && tileUnderPointer != null) {
-                getTroopViewFor(troopUnderPointer)?.showInfo(tileUnderPointer)
+        val inspected = troopUnderPointer?.takeIf {
+            !screenClosed && Gdx.input.isButtonPressed(Input.Buttons.RIGHT)
+        }
+        (attackerTroopViewsArray.asSequence() + defenderTroopViewsArray.asSequence()).forEach {
+            if (it?.getTroopInfo() !== inspected) it?.hideInfo()
+        }
+        if (inspected != null && tileUnderPointer != null) {
+            val active = manager.getCurrentTroop()?.takeIf {
+                manager.isBattleOn() && onPlayerActionReceived != null && isTroopPlayerControlled(it)
             }
-        } else if (!Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
-            attackerTroopViewsArray.forEach { it?.hideInfo() }
-            defenderTroopViewsArray.forEach { it?.hideInfo() }
+            val enemyTarget = active != null && manager.isTileOccupiedByEnemy(
+                active,
+                tileUnderPointer.tileInfo
+            )
+            val forecast = if (active != null && enemyTarget) {
+                val local = tileUnderPointer.stageToLocalCoordinates(stagePosition.cpy())
+                val direction =
+                        pixelToDirection(local.x, local.y, tileUnderPointer.baseLayerGroup.width)
+                val approach = if (direction == Direction.DirError) null
+                else battleField.getNeighborTile(tileUnderPointer.tileInfo, direction)
+                manager.getAttackPreview(active, inspected, approach)
+            } else null
+            getTroopViewFor(inspected)?.showInfo(
+                tileUnderPointer, forecast, manager.getRetaliationBudget(inspected),
+                attackUnavailable = enemyTarget && forecast == null
+            )
         }
-
         val shiftHeld = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) ||
                 Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)
         val troopToPreview = troopUnderPointer?.takeIf { shiftHeld }
@@ -1144,6 +1155,8 @@ class BattleScreen private constructor(
         }
     }
     private val cursorIndirectShoot: Cursor = loadCursor("BattleBrokenArrowCursor128.png", 64, 64)
+    internal fun getNormalRetaliationBudget(troop: Troop): Int =
+            manager.getNormalRetaliationBudget(troop)
 }
 
 private fun BattleScreen.setQueueHoveredTroop(troop: Troop?) {

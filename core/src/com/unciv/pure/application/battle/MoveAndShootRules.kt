@@ -2,6 +2,7 @@ package com.unciv.pure.application.battle
 
 /** Follow-up shooting uses the same half-movement boundary as the battle highlight. */
 object MoveAndShootRules {
+    const val DEFAULT_PENALTY_PERCENT = 50
     fun grantsShot(
         isRanged: Boolean,
         movementDistance: Int,
@@ -16,8 +17,11 @@ object MoveAndShootRules {
                 )
     }
 
-    /** Apply after luck, before formation absorption, rounding the total hit down. */
-    fun shotDamage(rawDamage: Int, afterMovement: Boolean, penaltyPercent: Int = 50): Int {
+    fun shotDamage(
+        rawDamage: Int,
+        afterMovement: Boolean,
+        penaltyPercent: Int = DEFAULT_PENALTY_PERCENT
+    ): Int {
         require(rawDamage >= 0)
         require(penaltyPercent in 0..100)
         return if (afterMovement) (rawDamage.toLong() * (100 - penaltyPercent) / 100).toInt()

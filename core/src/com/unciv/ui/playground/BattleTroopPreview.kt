@@ -198,23 +198,67 @@ fun openBattleTurnQueuePreview(screen: BaseScreen) {
 }
 
 fun openBattleTroopInfoPreview(screen: BaseScreen) {
-    val source = HardcodedTroopDefinitionSource(
-        speed = 4,
-        damage = 8,
-        maxHealth = 60,
-        rangedStrength = 7
+    val attacker = com.unciv.pure.domain.troop.Troop(
+        "Swordsman", 12, 5, 8, 60, id = 1,
+        formationHealthPercent = 10, formationDamageReductionPercent = 50
     )
-    val troop = TroopFactory.create("Archer", 12, source).apply {
-        currentHealth = 37
-        formation.current = formation.maximum / 2
-    }
+    val target = com.unciv.pure.domain.troop.Troop(
+        "Spearman", 12, 4, 8, 60, currentHealth = 37, id = 2,
+        formationHealthPercent = 10, formationDamageReductionPercent = 50
+    ).apply { formation.current = formation.maximum / 2 }
+    val flank = com.unciv.pure.domain.battle.FlankingCalculator.calculate(
+        List(3) {
+            com.unciv.pure.domain.battle.FlankingCalculator.Neighbor(
+                isEnemy = true, hasFlanking = true
+            )
+        }, com.unciv.pure.domain.battle.FlankingProfile(5, 10, 10)
+    )
+
+    fun snapshot(troop: com.unciv.pure.domain.troop.Troop) =
+            com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
+                troop.currentAmount, troop.damage, troop.currentHealth, troop.maxHealth,
+                troop.formation.current, troop.formationDamageReductionPercent,
+                supportBonusPercent = 25, outgoingFlanking = flank
+            )
+
+    val normalReserve =
+            com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase.execute(
+                snapshot(attacker), snapshot(target), false, false
+            ).availableRetaliationDamage
+    val remainingReserve = normalReserve / 3
+    val exchange = com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase.execute(
+        snapshot(attacker), snapshot(target), false, false, remainingReserve
+    )
+    val forecast = com.unciv.pure.application.battle.BattleAttackPreview(
+        attack = com.unciv.pure.application.battle.BattleAttackPreview.Hit(
+            exchange.attackPreparation, exchange.attackFlanking, target.formation.current,
+            target.formationDamageReductionPercent, exchange.defenderRemainingFormation,
+            exchange.damageToDefender
+        ),
+        retaliation = com.unciv.pure.application.battle.BattleAttackPreview.Hit(
+            exchange.retaliationPreparation,
+            exchange.retaliationFlanking,
+            attacker.formation.current,
+            attacker.formationDamageReductionPercent,
+            exchange.attackerRemainingFormation,
+            exchange.damageToAttacker
+        ),
+        retaliationBudget = exchange.availableRetaliationDamage,
+        remainingRetaliationBudget = exchange.remainingRetaliationDamage,
+        usesStoredRetaliation = true
+    )
     val anchor = Group().apply {
         setSize(120f, 120f)
         setPosition(screen.stage.width / 2f - 60f, screen.stage.height / 2f - 60f)
     }
     screen.stage.addActor(anchor)
-    com.unciv.ui.battlescreen.BattleTroopInfoPanel(troop, attacker = true)
-        .showNextTo(screen.stage, anchor)
+    com.unciv.ui.battlescreen.BattleTroopInfoPanel(target, attacker = false).apply {
+        setAttackPreview(forecast, remainingReserve, false, normalReserve)
+        showNextTo(screen.stage, anchor)
+        check(width <= screen.stage.width && height <= screen.stage.height) {
+            "Attack forecast does not fit the stage"
+        }
+    }
 }
 
 private fun createPeasantOutlinePreview(): Group {
