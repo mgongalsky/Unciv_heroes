@@ -26,6 +26,9 @@ object TroopFactory {
             formationDamageReductionPercent = source.getFormationDamageReductionPercent(unitName)
                 .coerceIn(0, 100),
             supportBonusPercent = source.getSupportBonusPercent(unitName).coerceAtLeast(0)
-        ).also { it.flanking = source.getFlankingProfile(unitName) }
+        ).also {
+            it.flanking = source.getFlankingProfile(unitName)
+            it.rangedShot = source.getRangedShotProfile(unitName)
+        }
     }
 }

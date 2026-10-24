@@ -17,4 +17,6 @@ class HardcodedTroopDefinitionSource(
     override fun getFormationHealthPercent(unitName: String) = formationHealthPercent
     override fun getFormationDamageReductionPercent(unitName: String) =
         formationDamageReductionPercent
+    override fun getRangedShotProfile(unitName: String): com.unciv.pure.domain.battle.RangedShotProfile? =
+        null
 }

@@ -236,6 +236,12 @@ class BattleScreen private constructor(
 
     override fun dispose() {
         battleScope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
+        Gdx.graphics.setSystemCursor(SystemCursor.Arrow)
+        cursorIndirectShoot.dispose()
+        cursorShoot.dispose()
+        cursorMove.dispose()
+        cursorCancel.dispose()
+        cursorAttack.forEach { it.dispose() }
         super.dispose()
     }
 
@@ -301,21 +307,13 @@ class BattleScreen private constructor(
         )
     }
 
-    /**
-     * Loads a custom cursor from a file.
-     *
-     * @param filename Name of the cursor image file.
-     * @param xHotspot X-coordinate of the cursor's hotspot.
-     * @param yHotspot Y-coordinate of the cursor's hotspot.
-     * @return A [Cursor] object for the specified image.
-     */
-    fun loadCursor(filename: String, xHotspot: Int, yHotspot: Int) : Cursor{
-
-        val texture = Texture("ExtraImages/" + filename)
-        texture.textureData.prepare()
-        val pixmap = texture.textureData.consumePixmap()
-        return Gdx.graphics.newCursor(pixmap, xHotspot, yHotspot)
-
+    fun loadCursor(filename: String, xHotspot: Int, yHotspot: Int): Cursor {
+        val pixmap = com.badlogic.gdx.graphics.Pixmap(Gdx.files.internal("ExtraImages/$filename"))
+        return try {
+            Gdx.graphics.newCursor(pixmap, xHotspot, yHotspot)
+        } finally {
+            pixmap.dispose()
+        }
     }
 
 
@@ -802,34 +800,36 @@ class BattleScreen private constructor(
     fun chooseCrosshair(tileGroup: TileGroup, x: Float, y: Float, width: Float) {
         val targetTile = tileGroup.tileInfo
         val currentTroop = getCurrentTroopView() ?: return
-        val hoveredEnemy = manager.getTroopOnTile(targetTile)
-            ?.takeIf { !isTroopPlayerControlled(it) }
-        setHoveredTroop(hoveredEnemy)
+        val shooter = currentTroop.getTroopInfo()
+        val targetTroop = manager.getTroopOnTile(targetTile)
+        setHoveredTroop(targetTroop?.takeIf { !isTroopPlayerControlled(it) })
 
-        if (manager.canShoot(currentTroop.getTroopInfo()) &&
-                manager.isTileOccupiedByEnemy(currentTroop.getTroopInfo(), targetTile)
-        ) {
-            Gdx.graphics.setCursor(cursorShoot)
+        if (manager.canShoot(shooter) && manager.isTileOccupiedByEnemy(shooter, targetTile)) {
+            val shot = targetTroop?.let { manager.getRangedShot(shooter, it) }
+            Gdx.graphics.setCursor(
+                if (shot?.shotType == com.unciv.pure.domain.battle.RangedShotRules.ShotType.INDIRECT)
+                    cursorIndirectShoot
+                else cursorShoot
+            )
             return
         }
 
-        if (!manager.getReachableTiles(currentTroop.getTroopInfo()).any { it == targetTile }
-                && manager.isTileFree(targetTile)
-        ) {
+        if (!manager.getReachableTiles(shooter).any { it == targetTile } && manager.isTileFree(
+                    targetTile
+                )) {
             Gdx.graphics.setCursor(cursorCancel)
         } else {
-            if (manager.isTileOccupiedByAlly(currentTroop.getTroopInfo(), targetTile)) {
+            if (manager.isTileOccupiedByAlly(shooter, targetTile)) {
                 Gdx.graphics.setCursor(cursorCancel)
                 return
             }
-            if (manager.isTileOccupiedByEnemy(currentTroop.getTroopInfo(), targetTile)) {
+            if (manager.isTileOccupiedByEnemy(shooter, targetTile)) {
                 val direction = pixelToDirection(x, y, width)
                 val tileToMove = battleField.getNeighborTile(targetTile, direction)
                 if (tileToMove != null &&
-                        manager.getReachableTiles(currentTroop.getTroopInfo())
-                            .any { it == tileToMove } &&
+                        manager.getReachableTiles(shooter).any { it == tileToMove } &&
                         (manager.isTileFree(tileToMove) || tileToMove == manager.getTroopTile(
-                            currentTroop.getTroopInfo()
+                            shooter
                         ))
                 ) {
                     Gdx.graphics.setCursor(cursorAttack[direction.num])
@@ -1143,6 +1143,7 @@ class BattleScreen private constructor(
             )
         }
     }
+    private val cursorIndirectShoot: Cursor = loadCursor("BattleBrokenArrowCursor128.png", 64, 64)
 }
 
 private fun BattleScreen.setQueueHoveredTroop(troop: Troop?) {

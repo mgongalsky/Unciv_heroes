@@ -2,6 +2,7 @@ package com.unciv.pure.application.battle
 
 import com.unciv.pure.domain.battle.FlankingCalculator
 import com.unciv.pure.domain.battle.Point
+import com.unciv.pure.domain.battle.RangedShotRules
 
 sealed class BattleEvent {
     data class TroopMoved(val troopId: Int, val from: Point, val to: Point, val isMorale: Boolean) :
@@ -24,7 +25,8 @@ sealed class BattleEvent {
         val defenderRemainingAmount: Int,
         val isLuck: Boolean,
         val isMorale: Boolean,
-        val defenderDied: Boolean
+        val defenderDied: Boolean,
+        val rangedShot: RangedShotRules.Result? = null
     ) : BattleEvent()
 
     data class TurnAdvanced(val nextTroopId: Int) : BattleEvent()

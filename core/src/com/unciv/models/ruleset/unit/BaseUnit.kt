@@ -717,4 +717,7 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
 
     /** Optional tactical melee flanking capability and percentage bonuses per level. */
     var flanking: com.unciv.pure.domain.battle.FlankingProfile? = null
+
+    /** Optional direct/indirect tactical shooting configuration; null preserves legacy damage. */
+    var rangedShot: com.unciv.pure.domain.battle.RangedShotProfile? = null
 }

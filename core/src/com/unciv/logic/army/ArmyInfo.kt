@@ -131,6 +131,9 @@ open class ArmyInfo(
                         if (!troopData.has("flanking")) {
                             it.flanking = troopSource.getFlankingProfile(it.unitName)
                         }
+                        if (!troopData.has("rangedShot")) {
+                            it.rangedShot = troopSource.getRangedShotProfile(it.unitName)
+                        }
                         it.restoreFormationIfMissing()
                     }
                 }

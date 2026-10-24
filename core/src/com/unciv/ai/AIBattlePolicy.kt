@@ -72,6 +72,9 @@ class AIBattlePolicy(
             compareByDescending<Troop> { it.formation.isBroken }
                 .thenByDescending { it.isRanged }
                 .thenByDescending { it.speed }
+                .thenByDescending {
+                    battleManager.getRangedShot(troop, it)?.damageModifierPercent ?: 0
+                }
         ).firstOrNull() ?: return null
         val targetTile = battleManager.getTroopTile(target) ?: return null
         return BattleCommand.Shoot(troop.id, targetTile.toPoint())

@@ -18,4 +18,6 @@ class RulesetTroopDefinitionSource(private val ruleset: Ruleset) : ITroopDefinit
         ruleset.units[unitName]?.supportBonusPercent ?: 0
     override fun getFlankingProfile(unitName: String): com.unciv.pure.domain.battle.FlankingProfile? =
         ruleset.units[unitName]?.flanking
+    override fun getRangedShotProfile(unitName: String): com.unciv.pure.domain.battle.RangedShotProfile? =
+            ruleset.units[unitName]?.rangedShot
 }

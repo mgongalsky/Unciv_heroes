@@ -48,4 +48,7 @@ class Troop(
     /** Null disables flanking; immutable profile values come from the unit definition. */
     var flanking: com.unciv.pure.domain.battle.FlankingProfile? = null
     val hasFlanking: Boolean get() = !isRanged && flanking != null
+
+    /** Applied only to ranged attacks; null preserves legacy shooting. */
+    var rangedShot: com.unciv.pure.domain.battle.RangedShotProfile? = null
 }

@@ -198,7 +198,16 @@ open class BattleManager(
     fun getAttackerArmy() = attackerArmy
     fun getDefenderArmy() = defenderArmy
 
-    fun attack(defender: Troop, attacker: Troop? = getCurrentTroop()): Boolean {
+    fun attack(
+        defender: Troop,
+        attacker: Troop? = getCurrentTroop(),
+        shot: com.unciv.pure.domain.battle.RangedShotRules.Result? = attacker?.let {
+            getRangedShot(
+                it,
+                defender
+            )
+        }
+    ): Boolean {
         if (attacker == null) return false
         val isLuck = isLuckTriggered(attacker)
         val luckMultiplier = if (isLuck) 2 else 1
@@ -208,7 +217,9 @@ open class BattleManager(
         val afterSupport =
                 com.unciv.pure.domain.battle.TroopSupport.damage(afterLuck, supportPercent)
         val afterMovement = attacker.isRanged && attacker in moveAndShootGranted
-        val incomingDamage = MoveAndShootRules.shotDamage(afterSupport, afterMovement)
+        val movementDamage = MoveAndShootRules.shotDamage(afterSupport, afterMovement)
+        val incomingDamage =
+                com.unciv.pure.domain.battle.RangedShotRules.damage(movementDamage, shot)
         val formationBefore = if (defender.hasFormation) defender.formation.current else 0
         val reduction = defender.formationDamageReductionPercent.coerceIn(0, 100)
         val formationDamage = ApplyFormationDamageUseCase.execute(
@@ -224,11 +235,11 @@ open class BattleManager(
                 "SHOT ${attacker.unitName}#${attacker.id} -> ${defender.unitName}#${defender.id}",
                 PreparedBattleDamage(
                     attacker.currentAmount, attacker.damage, luckMultiplier, afterLuck,
-                    supportPercent, afterSupport, if (afterMovement) 50 else 0, incomingDamage
+                    supportPercent, afterSupport, if (afterMovement) 50 else 0, movementDamage
                 ),
                 incomingDamage, formationBefore, formationDamage.remainingFormation, reduction,
                 com.unciv.pure.domain.battle.FlankingCalculator.Result(), result
-            )
+            ) + " rangedShot=$shot"
         }
         defender.formation.current = formationDamage.remainingFormation
         defender.currentAmount = result.remainingAmount
@@ -524,11 +535,15 @@ open class BattleManager(
         val defender = getTroopOnTile(targetPosition)
         val canShoot = canShoot(troop)
         val targetIsEnemy = defender != null && isTileOccupiedByEnemy(troop, targetPosition)
+        val shot = if (defender != null && canShoot && targetIsEnemy) getRangedShot(
+            troop,
+            defender
+        ) else null
         val isLuck: Boolean
         val remaining: Int
         val died: Boolean
         if (defender != null && canShoot && targetIsEnemy) {
-            isLuck = attack(defender, troop)
+            isLuck = attack(defender, troop, shot)
             remaining = defender.currentAmount
             died = defender.currentAmount <= 0
             if (died) removeTroop(defender)
@@ -549,7 +564,7 @@ open class BattleManager(
             publishApplicationEvent(
                 BattleEvent.TroopShot(
                     troop.id, defender!!.id, remaining,
-                    output.isLuck, output.isMorale, died
+                    output.isLuck, output.isMorale, died, rangedShot = shot
                 ), onApplicationEvent
             )
         }
@@ -559,7 +574,7 @@ open class BattleManager(
         return BattleCommandResult(
             success = output.success, rejection = output.rejection,
             isLuck = output.isLuck, isMorale = output.isMorale || keepsDeferredMorale,
-            battleEnded = !isBattleOn()
+            battleEnded = !isBattleOn(), rangedShot = if (output.success) shot else null
         )
     }
 
@@ -745,4 +760,34 @@ open class BattleManager(
 
     /** Position of the next round boundary in the turn forecast. */
     fun getRemainingTurnsInRound(): Int = turnQueue.remainingInRound()
+
+    /** Read-only shot classification shared by execution, AI and future previews. */
+    fun getRangedShot(
+        attacker: Troop,
+        defender: Troop
+    ): com.unciv.pure.domain.battle.RangedShotRules.Result? {
+        val profile = attacker.rangedShot ?: return null
+        if (!attacker.isRanged) return null
+        val from = getTroopTile(attacker) ?: return null
+        val to = getTroopTile(defender) ?: return null
+        val distance = HexMath.getDistance(from.position, to.position)
+        if (distance <= 0) return null
+        if (distance > profile.directShotRange) {
+            return com.unciv.pure.domain.battle.RangedShotRules.evaluate(true, profile, distance)
+        }
+        val line = BattleShotLine.intermediateCells(from.toPoint(), to.toPoint())
+        val blockers = (attackerArmy.getAllTroops() + defenderArmy.getAllTroops())
+            .filterNotNull().filter { other ->
+                other !== attacker && other !== defender && other.currentAmount > 0 &&
+                        getTroopTile(other)?.toPoint() in line
+            }.map { other ->
+                com.unciv.pure.domain.battle.RangedShotRules.Blocker(isMelee = !other.isRanged)
+            }
+        return com.unciv.pure.domain.battle.RangedShotRules.evaluate(
+            true,
+            profile,
+            distance,
+            blockers
+        )
+    }
 }

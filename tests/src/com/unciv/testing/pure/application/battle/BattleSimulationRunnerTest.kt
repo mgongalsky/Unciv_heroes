@@ -31,6 +31,8 @@ class BattleSimulationRunnerTest {
             override fun getMaxHealth(unitName: String) = 100
             override fun getRangedStrength(unitName: String) = 0
             override fun isSelfFeeding(unitName: String) = false
+            override fun getRangedShotProfile(unitName: String): com.unciv.pure.domain.battle.RangedShotProfile? =
+                null
         }
         val attackerTile = FakeBattleTile(Vector2(0f, 0f))
         val defenderTile = FakeBattleTile(Vector2(1f, 0f))

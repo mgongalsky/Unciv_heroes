@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.JsonReader
 import com.unciv.models.metadata.BaseRuleset
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.pure.domain.battle.FlankingProfile
+import com.unciv.pure.domain.battle.RangedShotProfile
 import java.io.File
 
 /** Immutable combat inputs captured from the selected game definitions. */
@@ -16,7 +17,8 @@ data class BalanceUnit(
     val rangedStrength: Int = 0,
     val formationHealthPercent: Int = 0,
     val formationDamageReductionPercent: Int = 0,
-    val flanking: FlankingProfile? = null
+    val flanking: FlankingProfile? = null,
+    val rangedShot: RangedShotProfile? = null
 ) {
     init {
         require(name.isNotBlank())
@@ -69,7 +71,8 @@ object BalanceUnitSources {
                 val unit = requireNotNull(ruleset.units[name]) { "Missing game unit: $name" }
                 BalanceUnit(
                     name, unit.speed, unit.health, unit.damage, unit.rangedStrength,
-                    unit.formationHealthPercent, unit.formationDamageReductionPercent, unit.flanking
+                    unit.formationHealthPercent, unit.formationDamageReductionPercent, unit.flanking,
+                    unit.rangedShot
                 )
             }
         }
@@ -95,10 +98,18 @@ object BalanceUnitSources {
                     value.getInt("unformedDamagePercent", 10)
                 )
             }
+            val shotProfile = node.get("rangedShot")?.takeUnless { it.isNull }?.let { value ->
+                require(value.isObject) { "$name: rangedShot must be an object or null" }
+                val defaults = RangedShotProfile()
+                RangedShotProfile(
+                    value.getInt("directShotRange", defaults.directShotRange),
+                    value.getInt("indirectPenaltyPercent", defaults.indirectPenaltyPercent)
+                )
+            }
             BalanceUnit(
                 name, number("speed"), number("health"), number("damage"),
                 number("rangedStrength", "0"), number("formationHealthPercent", "0"),
-                number("formationDamageReductionPercent", "0"), profile
+                number("formationDamageReductionPercent", "0"), profile, shotProfile
             )
         }
     }
@@ -114,6 +125,7 @@ object BalanceUnitSources {
             unit.formationHealthPercent = definition.formationHealthPercent
             unit.formationDamageReductionPercent = definition.formationDamageReductionPercent
             unit.flanking = definition.flanking
+            unit.rangedShot = definition.rangedShot
         }
     }
 }
