@@ -720,4 +720,7 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
 
     /** Optional direct/indirect tactical shooting configuration; null preserves legacy damage. */
     var rangedShot: com.unciv.pure.domain.battle.RangedShotProfile? = null
+
+    /** Price per soldier in budget-based tactical battles; zero excludes the unit from recruitment. */
+    var battleCost: Int = 0
 }

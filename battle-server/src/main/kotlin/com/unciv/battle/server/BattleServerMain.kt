@@ -16,10 +16,10 @@ object BattleServerMain {
         require(port in 1..65535) { "Port must be between 1 and 65535" }
         val bind = args.getOrNull(2) ?: System.getenv("BATTLE_BIND") ?: "127.0.0.1"
         val catalog = BattleScenarioCatalog(assets)
-        val rooms = BattleRooms({ scenario -> catalog.create(scenario) })
+        val rooms = BattleRooms({ scenario -> catalog.create(scenario) }, recruitment = catalog.recruitment, createPurchasedSession = catalog::createPurchased)
         val server = BattleHttpServer(
             InetSocketAddress(bind, port), rooms,
-            catalog.scenarios.map { WireScenario(it.id, it.title, it.description) }
+            listOf(WireScenario(BattleRooms.RECRUITMENT_SCENARIO, "Build army — 300 coins", "Choose up to four stacks. Both players receive 300 coins.")) + catalog.scenarios.map { WireScenario(it.id, it.title, it.description) }
         )
         val stopped = CountDownLatch(1)
         Runtime.getRuntime().addShutdownHook(Thread({
@@ -31,7 +31,7 @@ object BattleServerMain {
         }, "battle-server-shutdown"))
         try {
             server.start()
-            println("Battle server listening on $bind:${server.port}; scenarios=${catalog.scenarios.size}")
+            println("Battle server listening on $bind:${server.port}; scenarios=${catalog.scenarios.size + 1}")
             stopped.await()
         } catch (ex: Exception) {
             server.close()

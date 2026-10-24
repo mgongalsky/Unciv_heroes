@@ -58,4 +58,20 @@ internal object BattleHttpJson {
             WireAction.valueOf(string(root, "action")), integer(root, "troopId"), point("target"), point("attackFrom")
         ).also { it.validate() }
     }
+    fun readyArmy(root: JsonValue): ReadyBattleArmyRequest {
+        fields(root, setOf("protocolVersion", "battleNumber", "stacks"))
+        val entries = requireNotNull(root.get("stacks")) { "Army stacks are required" }
+        require(entries.isArray && entries.size in 1..4) { "Expected one to four stacks" }
+        val stacks = entries.map { node ->
+            require(node.isObject)
+            fields(node, setOf("unitName", "count"))
+            WireArmyStack(string(node, "unitName"), integer(node, "count"))
+        }
+        return ReadyBattleArmyRequest(
+            integer(root, "protocolVersion"),
+            integer(root, "battleNumber"),
+            stacks
+        )
+            .also { it.validate() }
+    }
 }

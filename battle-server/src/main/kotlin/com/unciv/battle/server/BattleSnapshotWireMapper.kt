@@ -64,6 +64,13 @@ object BattleSnapshotWireMapper {
                 WireBattleLoss(it.troopId, it.unitName, it.amount)
             }
             WireBattleReport(report.winner?.wire(), losses(report.attackerLosses), losses(report.defenderLosses))
+        },
+        view.recruitment?.let { selection ->
+            WireArmyLobby(
+                WireRecruitmentCatalog(selection.budget, selection.maxStacks,
+                    selection.units.map { WireRecruitmentUnit(it.unitName, it.cost) }),
+                view.ownArmy.map { WireArmyStack(it.unitName, it.count) }
+            )
         }
     )
 }

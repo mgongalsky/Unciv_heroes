@@ -73,12 +73,16 @@ class RemoteBattleClient internal constructor(
             RemoteBattleClient(transport, roomCode, token, side, number)
 
     suspend fun room(): RemoteRoomState = checkedRoom(transport.request("GET", path, token = token))
-    suspend fun ready(): RemoteRoomState = checkedRoom(
-        transport.request(
-            "POST", "$path/ready",
-            "{\"protocolVersion\":${BattleProtocol.VERSION},\"battleNumber\":$battleNumber}", token
-        )
-    )
+    suspend fun ready(stacks: List<com.unciv.pure.application.battle.recruitment.BattleArmyStack>? = null): RemoteRoomState {
+        val body = if (stacks == null)
+            "{\"protocolVersion\":${BattleProtocol.VERSION},\"battleNumber\":$battleNumber}"
+        else battleRequestJson(
+            ReadyBattleArmyRequest(
+                BattleProtocol.VERSION, battleNumber,
+                stacks.map { WireArmyStack(it.unitName, it.count) }
+            ).also { it.validate() })
+        return checkedRoom(transport.request("POST", "$path/ready", body, token))
+    }
 
     /** Retrying this call always votes for the same completed battle. */
     suspend fun rematch(): RemoteRoomState = checkedRoom(
@@ -135,8 +139,18 @@ class RemoteBattleClient internal constructor(
         return reply
     }
 
-    private fun checkedRoom(text: String): RemoteRoomState = BattleRoomJson.decode(text).also {
-        require(it.side == side) { "Battle response seat mismatch" }
-        latestRoom = it
+    private fun checkedRoom(text: String): RemoteRoomState {
+        var room = BattleRoomJson.decode(text)
+        require(room.side == side) { "Battle response seat mismatch" }
+        val lobby = JsonReader().parse(text).get("armyLobby")?.takeUnless { it.isNull }
+        if (lobby != null) {
+            val (selection, army) = BattleRecruitmentJson.decode(lobby)
+            room = room.copy(recruitment = selection, ownArmy = army)
+        }
+        require(room.scenarioId != "army-budget" || room.recruitment != null) {
+            "Server did not provide army recruitment data"
+        }
+        latestRoom = room
+        return room
     }
 }

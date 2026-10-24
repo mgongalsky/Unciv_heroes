@@ -75,7 +75,21 @@ class BattleRematchScreen(
             return
         }
         require(room.battleNumber > client.battleNumber) { "Battle number moved backwards" }
-        val next = BattleSessionScreen(client.forBattle(room.battleNumber), client.side, room.battle, ruleset)
+        val nextClient = client.forBattle(room.battleNumber)
+        val next: BaseScreen = if (room.recruitment != null &&
+                room.phase == com.unciv.infrastructure.battle.network.RemoteRoomPhase.WAITING
+        ) {
+            NetworkArmySetupScreen(nextClient, room) { connected, readyRoom ->
+                game.replaceCurrentScreen(
+                    BattleSessionScreen(
+                        connected,
+                        connected.side,
+                        readyRoom.battle,
+                        ruleset
+                    )
+                )
+            }
+        } else BattleSessionScreen(nextClient, client.side, room.battle, ruleset)
         changingScreen = true
         game.replaceCurrentScreen(next)
     }

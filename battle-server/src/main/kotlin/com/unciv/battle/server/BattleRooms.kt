@@ -1,6 +1,8 @@
 package com.unciv.battle.server
 
 import com.unciv.pure.application.battle.session.*
+import com.unciv.pure.application.battle.recruitment.BattleArmySelection
+import com.unciv.pure.application.battle.recruitment.BattleArmyStack
 import com.unciv.pure.domain.battle.BattleSide
 import com.unciv.pure.domain.battle.BattleReport
 import com.unciv.pure.domain.battle.BattleLoss
@@ -24,23 +26,31 @@ data class RoomView(
     val battleNumber: Int = 1,
     val attackerRematch: Boolean = false,
     val defenderRematch: Boolean = false,
-    val report: BattleReport? = null
+    val report: BattleReport? = null,
+    val recruitment: BattleArmySelection? = null,
+    val ownArmy: List<BattleArmyStack> = emptyList()
 )
 
-/** Owns sessions and serializes commands, rematch votes, snapshots and expiry. */
+/** Serializes setup, combat and rematches. Only the server constructs combat sessions. */
 class BattleRooms(
     private val createSession: (String) -> BattleSession,
     private val maxRooms: Int = 32,
     private val idleMillis: Long = 30 * 60 * 1000L,
-    private val now: () -> Long = { System.nanoTime() / 1_000_000L }
+    private val now: () -> Long = { System.nanoTime() / 1_000_000L },
+    private val recruitment: BattleArmySelection? = null,
+    private val createPurchasedSession: ((List<BattleArmyStack>, List<BattleArmyStack>) -> BattleSession)? = null
 ) {
+    companion object {
+        const val RECRUITMENT_SCENARIO = "army-budget"
+    }
+
     private class Room(
         val scenario: String,
-        var session: BattleSession,
+        var session: BattleSession?,
         val attacker: RoomAccess,
         var touched: Long
     ) {
-        var initialTroops = session.read(BattleSide.ATTACKER).state.troops.toList()
+        var initialTroops = session?.read(BattleSide.ATTACKER)?.state?.troops?.toList() ?: emptyList()
         var battleNumber = 1
         var defender: RoomAccess? = null
         var joinNonce: String? = null
@@ -48,11 +58,17 @@ class BattleRooms(
         var defenderReady = false
         var attackerRematch = false
         var defenderRematch = false
+        var attackerArmy: List<BattleArmyStack> = emptyList()
+        var defenderArmy: List<BattleArmyStack> = emptyList()
+        val purchased get() = scenario == RECRUITMENT_SCENARIO
     }
     private val random = SecureRandom()
     private val rooms = mutableMapOf<String, Room>()
 
-    init { require(maxRooms > 0 && idleMillis > 0) }
+    init {
+        require(maxRooms > 0 && idleMillis > 0)
+        require((recruitment == null) == (createPurchasedSession == null))
+    }
 
     private fun secret(bytes: Int): String = ByteArray(bytes).also(random::nextBytes).let {
         Base64.getUrlEncoder().withoutPadding().encodeToString(it)
@@ -63,7 +79,10 @@ class BattleRooms(
         val time = now()
         rooms.entries.removeAll { time - it.value.touched >= idleMillis }
         if (rooms.size >= maxRooms) throw RoomException(RoomFailure.CAPACITY)
-        val session = createSession(scenarioId)
+        val session = if (scenarioId == RECRUITMENT_SCENARIO) {
+            requireNotNull(recruitment) { "Army recruitment is unavailable" }
+            null
+        } else createSession(scenarioId)
         var code = secret(6)
         while (code in rooms) code = secret(6)
         val access = RoomAccess(code, secret(32), BattleSide.ATTACKER)
@@ -96,11 +115,35 @@ class BattleRooms(
         return view(room, side)
     }
 
+    /** Repeating Ready with the same army is safe, including after combat has begun. */
     @Synchronized
-    fun ready(code: String, token: String, battleNumber: Int = 1): RoomView {
+    fun ready(code: String, token: String, battleNumber: Int = 1,
+              stacks: List<BattleArmyStack>? = null): RoomView {
         val room = room(code)
         val side = authenticate(room, token)
         require(battleNumber == room.battleNumber) { "Battle number mismatch" }
+        if (room.purchased) {
+            val chosen = requireNotNull(recruitment).validate(requireNotNull(stacks) { "Army is required" })
+            val alreadyReady = if (side == BattleSide.ATTACKER) room.attackerReady else room.defenderReady
+            val previous = if (side == BattleSide.ATTACKER) room.attackerArmy else room.defenderArmy
+            if (alreadyReady) {
+                require(chosen == previous) { "Ready army cannot be changed" }
+            } else {
+                check(room.session == null) { "Battle has already started" }
+                val otherReady = if (side == BattleSide.ATTACKER) room.defenderReady else room.attackerReady
+                // Construct before mutating readiness: a failed factory leaves the request retryable.
+                val next = if (otherReady) requireNotNull(createPurchasedSession).invoke(
+                    if (side == BattleSide.ATTACKER) chosen else room.attackerArmy,
+                    if (side == BattleSide.DEFENDER) chosen else room.defenderArmy
+                ) else null
+                val initial = next?.read(BattleSide.ATTACKER)?.state?.troops?.toList()
+                if (side == BattleSide.ATTACKER) room.attackerArmy = chosen else room.defenderArmy = chosen
+                if (next != null) {
+                    room.session = next
+                    room.initialTroops = requireNotNull(initial)
+                }
+            }
+        } else require(stacks == null) { "This scenario uses fixed armies" }
         if (side == BattleSide.ATTACKER) room.attackerReady = true else room.defenderReady = true
         room.touched = now()
         return view(room, side)
@@ -113,11 +156,12 @@ class BattleRooms(
         val side = authenticate(room, token)
         require(battleNumber == room.battleNumber) { "Battle number mismatch" }
         if (!room.attackerReady || !room.defenderReady) throw RoomException(RoomFailure.NOT_READY)
+        val session = room.session ?: throw RoomException(RoomFailure.NOT_READY)
         room.touched = now()
-        return room.session.submit(side, request)
+        return session.submit(side, request)
     }
 
-    /** A retry for the previous battle reads the new state without voting in it. */
+    /** A retry for the previous battle never votes or confirms an army in the new one. */
     @Synchronized
     fun rematch(code: String, token: String, battleNumber: Int): RoomView {
         val room = room(code)
@@ -128,27 +172,31 @@ class BattleRooms(
             return view(room, side)
         }
         require(battleNumber == room.battleNumber) { "Battle number mismatch" }
-        if (room.defender == null || !room.session.read(side).state.finished)
+        if (room.defender == null || room.session?.read(side)?.state?.finished != true)
             throw RoomException(RoomFailure.NOT_READY)
         if (side == BattleSide.ATTACKER) room.attackerRematch = true else room.defenderRematch = true
         if (room.attackerRematch && room.defenderRematch) {
             check(room.battleNumber < Int.MAX_VALUE) { "Battle number exhausted" }
-            val next = createSession(room.scenario)
-            val initial = next.read(BattleSide.ATTACKER).state.troops.toList()
+            val next = if (room.purchased) null else createSession(room.scenario)
+            val initial = next?.read(BattleSide.ATTACKER)?.state?.troops?.toList() ?: emptyList()
             room.session = next
             room.initialTroops = initial
             room.battleNumber++
             room.attackerRematch = false
             room.defenderRematch = false
-            room.attackerReady = true
-            room.defenderReady = true
+            room.attackerReady = !room.purchased
+            room.defenderReady = !room.purchased
         }
         room.touched = now()
         return view(room, side)
     }
 
     private fun view(room: Room, side: BattleSide): RoomView {
-        val snapshot = room.session.read(side)
+        // Empty waiting-state value preserves the snapshot contract without constructing a battle.
+        val snapshot = room.session?.read(side) ?: BattleSessionSnapshot(
+            0L, 0L, null,
+            BattleStateSnapshot(emptyList(), emptyList(), 0, null, null, false, null)
+        )
         val report = if (!snapshot.state.finished) null else {
             val remaining = snapshot.state.troops.associateBy { it.id }
             fun losses(seat: BattleSide) = room.initialTroops.filter { it.side == seat }.mapNotNull {
@@ -159,7 +207,9 @@ class BattleRooms(
         }
         return RoomView(room.scenario, side, room.defender != null,
             room.attackerReady, room.defenderReady, snapshot, room.battleNumber,
-            room.attackerRematch, room.defenderRematch, report)
+            room.attackerRematch, room.defenderRematch, report,
+            if (room.purchased) recruitment else null,
+            (if (side == BattleSide.ATTACKER) room.attackerArmy else room.defenderArmy).toList())
     }
 
     private fun room(code: String): Room {

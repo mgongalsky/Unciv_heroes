@@ -58,10 +58,8 @@ class BattleHttpServer(
     private fun route(exchange: HttpExchange): Any {
         val path = exchange.requestURI.path
         val method = exchange.requestMethod
-        if (path == "/v1/scenarios" && method == "GET") return WireScenarioCatalog(
-            BattleProtocol.VERSION,
-            scenarios
-        )
+        if (path == "/v1/scenarios" && method == "GET")
+            return WireScenarioCatalog(BattleProtocol.VERSION, scenarios)
         if (path == "/v1/rooms" && method == "POST") {
             val root = BattleHttpJson.objectValue(body(exchange))
             BattleHttpJson.fields(root, setOf("protocolVersion", "scenarioId"))
@@ -112,12 +110,8 @@ class BattleHttpServer(
             ).also { it.validate() }
             return ticket(rooms.join(code, request.clientNonce))
         }
-        if (action.isEmpty() && method == "GET") return BattleSnapshotWireMapper.encode(
-            rooms.read(
-                code,
-                token(exchange)
-            )
-        )
+        if (action.isEmpty() && method == "GET")
+            return BattleSnapshotWireMapper.encode(rooms.read(code, token(exchange)))
         if (action == "rematch" && method == "POST") {
             val credential = token(exchange)
             val root = BattleHttpJson.objectValue(body(exchange))
@@ -125,7 +119,8 @@ class BattleHttpServer(
             BattleProtocol.requireVersion(BattleHttpJson.integer(root, "protocolVersion"))
             return BattleSnapshotWireMapper.encode(
                 rooms.rematch(
-                    code, credential,
+                    code,
+                    credential,
                     BattleHttpJson.integer(root, "battleNumber")
                 )
             )
@@ -133,6 +128,23 @@ class BattleHttpServer(
         if (action == "ready" && method == "POST") {
             val credential = token(exchange)
             val root = BattleHttpJson.objectValue(body(exchange))
+            if (root.has("stacks")) {
+                val request = BattleHttpJson.readyArmy(root)
+                val stacks = request.stacks.map {
+                    com.unciv.pure.application.battle.recruitment.BattleArmyStack(
+                        it.unitName,
+                        it.count
+                    )
+                }
+                return BattleSnapshotWireMapper.encode(
+                    rooms.ready(
+                        code,
+                        credential,
+                        request.battleNumber,
+                        stacks
+                    )
+                )
+            }
             BattleHttpJson.fields(root, setOf("protocolVersion", "battleNumber"))
             BattleProtocol.requireVersion(BattleHttpJson.integer(root, "protocolVersion"))
             val number = if (root.has("battleNumber")) BattleHttpJson.integer(

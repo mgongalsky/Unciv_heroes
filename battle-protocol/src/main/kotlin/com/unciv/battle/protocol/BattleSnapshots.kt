@@ -81,7 +81,8 @@ data class WireRoomView(
     val battleNumber: Int = 1,
     val attackerRematch: Boolean = false,
     val defenderRematch: Boolean = false,
-    val report: WireBattleReport? = null
+    val report: WireBattleReport? = null,
+    val armyLobby: WireArmyLobby? = null
 )
 
 data class WireScenario(val id: String, val title: String, val description: String)

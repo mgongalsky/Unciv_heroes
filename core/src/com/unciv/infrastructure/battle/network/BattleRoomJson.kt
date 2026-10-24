@@ -26,7 +26,9 @@ data class RemoteRoomState(
     val battleNumber: Int = 1,
     val attackerRematch: Boolean = false,
     val defenderRematch: Boolean = false,
-    val report: com.unciv.pure.domain.battle.BattleReport? = null
+    val report: com.unciv.pure.domain.battle.BattleReport? = null,
+    val recruitment: com.unciv.pure.application.battle.recruitment.BattleArmySelection? = null,
+    val ownArmy: List<com.unciv.pure.application.battle.recruitment.BattleArmyStack> = emptyList()
 )
 
 internal object BattleRoomJson {

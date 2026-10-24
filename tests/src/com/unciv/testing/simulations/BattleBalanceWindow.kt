@@ -30,7 +30,7 @@ private class BalanceFrame : JFrame("Сколько войск нужно для
     private val source = JTextField("preset", 36)
     private val browse = JButton("Units.json…")
     private val preset = JButton("Набор sim-test")
-    private val battles = JSpinner(SpinnerNumberModel(20, 1, 10000, 10))
+    private val battles = JSpinner(SpinnerNumberModel(4, 1, 10000, 1))
     private val scale = JSpinner(SpinnerNumberModel(20, 1, 20, 1))
     private val seed = JTextField("0", 8)
     private val start = JButton("Найти соотношения")

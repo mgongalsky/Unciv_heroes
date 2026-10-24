@@ -16,6 +16,9 @@ import java.security.SecureRandom
 
 /** Loads trusted server assets once. Network requests select IDs, never file paths or unit stats. */
 class BattleScenarioCatalog(assetsDirectory: File) {
+    private var recruitmentMoraleProbability = 0.0
+    private var recruitmentLuckProbability = 0.0
+
     data class Scenario(
         val id: String,
         val title: String,
@@ -43,6 +46,8 @@ class BattleScenarioCatalog(assetsDirectory: File) {
         val defaultLuck = constants.getDouble("luckProbability")
         val defaultMorale = constants.getDouble("moraleProbability")
         require(defaultLuck in 0.0..1.0 && defaultMorale in 0.0..1.0)
+        recruitmentLuckProbability = defaultLuck
+        recruitmentMoraleProbability = defaultMorale
         val catalog = JsonReader().parse(FileHandle(File(assetsDirectory, "jsons/BattleScenarios.json")))
         val entries = requireNotNull(catalog.get("scenarios")) { "Missing scenarios" }
         require(entries.isArray && entries.size > 0)
@@ -84,15 +89,35 @@ class BattleScenarioCatalog(assetsDirectory: File) {
     /** Explicit seed supports reproducible integration tests; the server chooses production seeds. */
     fun create(scenarioId: String, seed: Long): BattleSession {
         val scenario = requireNotNull(byId[scenarioId]) { "Unknown battle scenario" }
+        return createConfigured(scenario.attacker, scenario.defender, scenario.luckProbability, scenario.moraleProbability, seed)
+    }
+
+    fun createPurchased(
+        attacker: List<com.unciv.pure.application.battle.recruitment.BattleArmyStack>,
+        defender: List<com.unciv.pure.application.battle.recruitment.BattleArmyStack>
+    ): BattleSession = createConfigured(
+        com.unciv.logic.battle.session.BattleRecruitmentRules.side(recruitment, attacker),
+        com.unciv.logic.battle.session.BattleRecruitmentRules.side(recruitment, defender),
+        recruitmentLuckProbability, recruitmentMoraleProbability, seedSource.nextLong()
+    )
+
+    private fun createConfigured(
+        attacker: BattleSessionSetup.Side,
+        defender: BattleSessionSetup.Side,
+        luckProbability: Double,
+        moraleProbability: Double,
+        seed: Long
+    ): BattleSession {
         val climate = ClimateParameters(0.3, 0.5, 0.6)
         val prepared = BattleFieldPreparation.create(climate, climate) { name ->
             requireNotNull(ruleset.terrains[name]) { "Missing battlefield terrain definition: $name" }.impassable
         }
         val session = BattleSessionSetup.create(
-            scenario.attacker, scenario.defender, source,
+            attacker, defender, source,
             prepared.field, SeededBattleRandom(seed),
-            scenario.luckProbability, scenario.moraleProbability
+            luckProbability, moraleProbability
         )
         return BattleFieldSession(session, prepared.description)
     }
+    val recruitment by lazy { com.unciv.logic.battle.session.BattleRecruitmentRules.from(ruleset) }
 }

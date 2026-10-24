@@ -224,17 +224,25 @@ class BattleRoomScreen(
     private fun accept(room: RemoteRoomState) {
         lastRoom = room
         val connected = requireNotNull(client)
+        if (!handedOff && room.recruitment != null && room.phase == RemoteRoomPhase.WAITING) {
+            handedOff = true
+            updateControls()
+            game.replaceCurrentScreen(NetworkArmySetupScreen(connected, room, onBattleReady))
+            return
+        }
         roomStatus.setText(
             "Room: ${connected.roomCode}   Your side: ${connected.side}\n" +
-                "Attacker: ${if (room.attackerReady) "ready" else "waiting"}   " +
-                "Defender: ${if (!room.opponentJoined) "not joined" else if (room.defenderReady) "ready" else "waiting"}"
+                    "Attacker: ${if (room.attackerReady) "ready" else "waiting"}   " +
+                    "Defender: ${if (!room.opponentJoined) "not joined" else if (room.defenderReady) "ready" else "waiting"}"
         )
-        status.setText(when (room.phase) {
-            RemoteRoomPhase.WAITING -> "Share the room code with your opponent. Both players must press Ready."
-            RemoteRoomPhase.ACTIVE -> "Battle ready."
-            RemoteRoomPhase.FINISHED -> "Battle finished."
-            RemoteRoomPhase.CLOSED -> "Room closed."
-        })
+        status.setText(
+            when (room.phase) {
+                RemoteRoomPhase.WAITING -> "Share the room code with your opponent. Both players must press Ready."
+                RemoteRoomPhase.ACTIVE -> "Battle ready."
+                RemoteRoomPhase.FINISHED -> "Battle finished."
+                RemoteRoomPhase.CLOSED -> "Room closed."
+            }
+        )
         updateControls()
         if (!handedOff && (room.phase == RemoteRoomPhase.ACTIVE || room.phase == RemoteRoomPhase.FINISHED)) {
             requireNotNull(room.battle.state.field) { "Server did not provide battlefield terrain" }
