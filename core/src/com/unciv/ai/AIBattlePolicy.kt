@@ -34,6 +34,15 @@ class AIBattlePolicy(
                     } ?: Int.MAX_VALUE
                 }
                 .thenBy { if (targetHasRetaliationRemaining(it)) 1 else 0 }
+                .thenByDescending { enemy ->
+                    val targetTile = battleManager.getTroopTile(enemy)
+                    val attackFrom = targetTile?.let { findAttackTile(troop, it) }
+                    if (attackFrom == null) 0L else {
+                        val flanking = battleManager.getFlanking(troop, enemy, attackFrom)
+                        if (enemy.formation.isBroken) flanking.unformedDamageBonusPercent.toLong()
+                        else flanking.formedDamageBonusPercent.toLong() + flanking.formationDamageBonusPercent
+                    }
+                }
         ) ?: return null
         val preferredEnemyTile = battleManager.getTroopTile(preferredEnemy) ?: return null
         val attackTile = findAttackTile(troop, preferredEnemyTile)

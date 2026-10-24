@@ -714,4 +714,7 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
 
     /** Outgoing tactical damage bonus with an adjacent supporting ally; zero disables support. */
     var supportBonusPercent: Int = 0
+
+    /** Optional tactical melee flanking capability and percentage bonuses per level. */
+    var flanking: com.unciv.pure.domain.battle.FlankingProfile? = null
 }

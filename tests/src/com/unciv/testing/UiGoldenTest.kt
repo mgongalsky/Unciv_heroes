@@ -59,4 +59,9 @@ class UiGoldenTest {
             )
         )
     }
+
+    @Test
+    fun battleFlanking() {
+        UiGoldenTestRunner.main(arrayOf("--scenario=battle-flanking"))
+    }
 }

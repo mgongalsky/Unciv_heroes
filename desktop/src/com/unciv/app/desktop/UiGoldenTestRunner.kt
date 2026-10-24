@@ -86,10 +86,7 @@ object UiGoldenTestRunner {
         arenaScenario("arena-complete", 3),
         Scenario("split-troop-empty") { com.unciv.ui.playground.openSplitTroopPreview(it) },
         Scenario("split-troop-occupied") {
-            com.unciv.ui.playground.openSplitTroopPreview(
-                it,
-                targetAmount = 12
-            )
+            com.unciv.ui.playground.openSplitTroopPreview(it, targetAmount = 12)
         },
         Scenario("army-troop-info") { com.unciv.ui.playground.openArmyTroopInfoPreview(it) },
         Scenario("battle-troops") { screen -> openBattleTroopPreview(screen) },
@@ -97,9 +94,10 @@ object UiGoldenTestRunner {
         Scenario("battle-troop-info") { screen -> openBattleTroopInfoPreview(screen) },
         Scenario("battle-threat-preview") { screen -> openBattleThreatPreview(screen) },
         Scenario("battle-tile-highlights") { screen ->
-            com.unciv.ui.playground.openBattleTileHighlightPreview(
-                screen
-            )
+            com.unciv.ui.playground.openBattleTileHighlightPreview(screen)
+        },
+        Scenario("battle-flanking") { screen ->
+            com.unciv.ui.playground.openBattleFlankingPreview(screen)
         },
         Scenario("battle-result-attacker-victory") { screen ->
             BattleResultPopup(

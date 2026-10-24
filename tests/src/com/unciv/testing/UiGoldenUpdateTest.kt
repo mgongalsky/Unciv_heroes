@@ -61,4 +61,9 @@ class UiGoldenUpdateTest {
             )
         )
     }
+
+    @Test
+    fun battleFlanking() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=battle-flanking"))
+    }
 }

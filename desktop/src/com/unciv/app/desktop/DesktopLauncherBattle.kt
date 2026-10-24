@@ -15,6 +15,10 @@ import org.koin.core.context.startKoin
 internal object DesktopLauncherBattle {
     @JvmStatic
     fun main(arg: Array<String>) {
+        println(
+            "[Battle] diagnostics=" +
+                    if (com.unciv.logic.battle.BattleDiagnostics.ENABLED) "ON" else "OFF"
+        )
         Log.backend = DesktopLogBackend()
         System.setProperty("org.lwjgl.opengl.Display.allowSoftwareOpenGL", "true")
         System.setProperty("org.lwjgl.system.stackSize", "384")
@@ -34,7 +38,6 @@ internal object DesktopLauncherBattle {
         }
 
         val settings = UncivFiles.getSettingsForPlatformLaunchers()
-
         val desktopParameters = UncivGameParameters(
             fontImplementation = NativeFontDesktop(
                 (Fonts.ORIGINAL_FONT_SIZE * settings.fontSizeMultiplier).toInt(),

@@ -1,5 +1,6 @@
 package com.unciv.pure.application.battle
 
+import com.unciv.pure.domain.battle.FlankingCalculator
 import com.unciv.pure.domain.battle.Point
 
 sealed class BattleEvent {
@@ -12,7 +13,9 @@ sealed class BattleEvent {
         val defenderRemainingAmount: Int,
         val isLuck: Boolean,
         val isMorale: Boolean,
-        val defenderDied: Boolean
+        val defenderDied: Boolean,
+        val attackFlanking: FlankingCalculator.Result = FlankingCalculator.Result(),
+        val retaliationFlanking: FlankingCalculator.Result = FlankingCalculator.Result()
     ) : BattleEvent()
 
     data class TroopShot(

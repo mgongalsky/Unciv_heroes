@@ -82,8 +82,11 @@ class BattleTileHighlightRenderer {
     }
     private val supportOverlays = mutableMapOf<TileGroup, Image>()
 
-    /** Support remains visible independently of cursor hover and movement shading. */
+    /** Support remains effective while Flanking takes priority in the shared visual fill. */
     fun updateSupport(tile: TileGroup, isSupported: Boolean) {
+        if (isSupported) supportedTiles.add(tile) else supportedTiles.remove(tile)
+        val flanking = flankingOverlays[tile]
+        flanking?.setSupported(isSupported)
         if (!isSupported) {
             supportOverlays[tile]?.isVisible = false
             return
@@ -98,7 +101,33 @@ class BattleTileHighlightRenderer {
                 color = Color(0.25f, 0.7f, 1f, 0.6f)
             }
         }
-        overlay.isVisible = true
+        overlay.isVisible = flanking?.hasFlanking != true
         overlay.toBack()
     }
+    private val flankingOverlays = mutableMapOf<TileGroup, BattleFlankingOverlay>()
+
+    /** Levels are supplied by Combat Core; fixedPhase freezes the wave for visual scenarios. */
+    fun updateFlanking(
+        tile: TileGroup,
+        currentLevel: Int,
+        previewLevel: Int? = null,
+        fixedPhase: Float? = null
+    ) {
+        if (currentLevel <= 0 && (previewLevel ?: 0) <= 0) {
+            flankingOverlays[tile]?.configure(0, null, fixedPhase)
+            supportOverlays[tile]?.isVisible = tile in supportedTiles
+            return
+        }
+        val overlay = flankingOverlays.getOrPut(tile) {
+            val reference = ImageGetter.getDrawable(tile.tileSetStrings.hexagon)
+            BattleFlankingOverlay(reference.minWidth, reference.minHeight).apply {
+                tile.sizeAndPlaceOverHex(this)
+                tile.highlightFogCrosshairLayerGroup.addActorAt(0, this)
+            }
+        }
+        overlay.setSupported(tile in supportedTiles)
+        overlay.configure(currentLevel, previewLevel, fixedPhase)
+        supportOverlays[tile]?.isVisible = false
+    }
+    private val supportedTiles = mutableSetOf<TileGroup>()
 }

@@ -65,6 +65,7 @@ open class BattleManager(
     }
 
     fun initializeTurnQueue() {
+        activeTroopRemoved = false
         formationRecovery.clear()
         moraleExtraActionTroops.clear()
         pendingFollowUpShots.clear()
@@ -200,25 +201,35 @@ open class BattleManager(
     fun attack(defender: Troop, attacker: Troop? = getCurrentTroop()): Boolean {
         if (attacker == null) return false
         val isLuck = isLuckTriggered(attacker)
-        val incomingDamage = MoveAndShootRules.shotDamage(
-            com.unciv.pure.domain.battle.TroopSupport.damage(
-                attacker.currentAmount * attacker.damage * if (isLuck) 2 else 1,
-                getSupportBonusPercent(attacker)
-            ),
-            afterMovement = attacker.isRanged && attacker in moveAndShootGranted
-        )
+        val luckMultiplier = if (isLuck) 2 else 1
+        val afterLuck = (attacker.currentAmount.toLong() * attacker.damage * luckMultiplier)
+            .coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+        val supportPercent = getSupportBonusPercent(attacker)
+        val afterSupport =
+                com.unciv.pure.domain.battle.TroopSupport.damage(afterLuck, supportPercent)
+        val afterMovement = attacker.isRanged && attacker in moveAndShootGranted
+        val incomingDamage = MoveAndShootRules.shotDamage(afterSupport, afterMovement)
+        val formationBefore = if (defender.hasFormation) defender.formation.current else 0
+        val reduction = defender.formationDamageReductionPercent.coerceIn(0, 100)
         val formationDamage = ApplyFormationDamageUseCase.execute(
-            ApplyFormationDamageUseCase.Input(
-                incomingDamage,
-                if (defender.hasFormation) defender.formation.current else 0,
-                defender.formationDamageReductionPercent.coerceIn(0, 100), 100
-            )
+            ApplyFormationDamageUseCase.Input(incomingDamage, formationBefore, reduction, 100)
         )
         val result = CalculateDamageUseCase.execute(
             attackerAmount = 1, attackerDamage = formationDamage.damageToSoldiers,
             defenderAmount = defender.currentAmount, defenderHealth = defender.currentHealth,
             defenderMaxHealth = defender.maxHealth, isLuck = false
         ).copy(isLuck = isLuck)
+        BattleDiagnostics.shared.log {
+            BattleDamageLog.describe(
+                "SHOT ${attacker.unitName}#${attacker.id} -> ${defender.unitName}#${defender.id}",
+                PreparedBattleDamage(
+                    attacker.currentAmount, attacker.damage, luckMultiplier, afterLuck,
+                    supportPercent, afterSupport, if (afterMovement) 50 else 0, incomingDamage
+                ),
+                incomingDamage, formationBefore, formationDamage.remainingFormation, reduction,
+                com.unciv.pure.domain.battle.FlankingCalculator.Result(), result
+            )
+        }
         defender.formation.current = formationDamage.remainingFormation
         defender.currentAmount = result.remainingAmount
         defender.currentHealth = result.remainingHealth
@@ -228,13 +239,17 @@ open class BattleManager(
 
     fun perishTroop(troop: Troop) {
         removeTroop(troop)
-        if (verboseAttack) println("Troop ${troop.unitName} has perished.")
+        BattleDiagnostics.shared.log { "perished troop=${troop.unitName}#${troop.id}" }
     }
 
     fun removeTroop(troop: Troop) {
+        if (turnQueue.current() === troop) activeTroopRemoved = true
         pendingFollowUpShots.remove(troop)
         moveAndShootGranted.remove(troop)
         deferredMoveMorale.remove(troop)
+        moraleExtraActionTroops.remove(troop)
+        formationRecovery.remove(troop)
+        remainingRetaliationDamageByTroopId.remove(troop.id)
         turnQueue.remove(troop)
         troopPositions.remove(troop)?.clearTroop()
         if (attackerArmy.contains(troop)) attackerArmy.removeTroop(troop)
@@ -243,18 +258,24 @@ open class BattleManager(
 
     fun advanceTurn() {
         if (turnQueue.isEmpty()) {
+            activeTroopRemoved = false
             finishBattle()
             return
         }
-        turnQueue.current()?.let { troop ->
-            formationRecovery[troop] = FormationRecoveryUseCase.endActivation(recoveryState(troop))
-            moraleExtraActionTroops.remove(troop)
-            pendingFollowUpShots.remove(troop)
-            moveAndShootGranted.remove(troop)
-            deferredMoveMorale.remove(troop)
-            logFormationRecovery(troop, "end-activation")
+        // Removing the active troop already selects its successor in TurnQueue.
+        if (!activeTroopRemoved) {
+            turnQueue.current()?.let { troop ->
+                formationRecovery[troop] =
+                        FormationRecoveryUseCase.endActivation(recoveryState(troop))
+                moraleExtraActionTroops.remove(troop)
+                pendingFollowUpShots.remove(troop)
+                moveAndShootGranted.remove(troop)
+                deferredMoveMorale.remove(troop)
+                logFormationRecovery(troop, "end-activation")
+            }
+            turnQueue.advance()
         }
-        turnQueue.advance()
+        activeTroopRemoved = false
         turnQueue.current()?.let { troop ->
             remainingRetaliationDamageByTroopId.remove(troop.id)
             formationRecovery[troop] =
@@ -401,26 +422,49 @@ open class BattleManager(
         val attackerIsLuck: Boolean
         val remaining: Int
         val died: Boolean
+        var attackFlanking = com.unciv.pure.domain.battle.FlankingCalculator.Result()
+        var retaliationFlanking = com.unciv.pure.domain.battle.FlankingCalculator.Result()
         if (canAttack) {
             moveTroop(troop, attackTile!!)
             attackerIsLuck = isLuckTriggered(troop)
             val defenderIsLuck = isLuckTriggered(defender!!)
-            fun snapshot(unit: Troop) = CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
-                unit.currentAmount,
-                unit.damage,
-                unit.currentHealth,
-                unit.maxHealth,
-                if (unit.hasFormation) unit.formation.current else 0,
-                unit.formationDamageReductionPercent,
-                isRanged = unit.isRanged,
-                supportBonusPercent = getSupportBonusPercent(unit)
-            )
+            fun snapshot(unit: Troop, target: Troop) =
+                    CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
+                        unit.currentAmount, unit.damage, unit.currentHealth, unit.maxHealth,
+                        if (unit.hasFormation) unit.formation.current else 0,
+                        unit.formationDamageReductionPercent,
+                        isRanged = unit.isRanged,
+                        supportBonusPercent = getSupportBonusPercent(unit),
+                        outgoingFlanking = getFlanking(unit, target)
+                    )
 
+            val attackerSnapshot = snapshot(troop, defender)
+            val defenderSnapshot = snapshot(defender, troop)
             val exchange = CalculateFormationMeleeExchangeUseCase.execute(
-                attacker = snapshot(troop), defender = snapshot(defender),
+                attacker = attackerSnapshot, defender = defenderSnapshot,
                 attackerIsLuck = attackerIsLuck, defenderIsLuck = defenderIsLuck,
                 defenderRetaliationDamage = remainingRetaliationDamageByTroopId[defender.id]
             )
+            BattleDiagnostics.shared.log {
+                BattleDamageLog.describe(
+                    "MELEE ${troop.unitName}#${troop.id} -> ${defender.unitName}#${defender.id}",
+                    exchange.attackPreparation, exchange.attackPreparation!!.incomingDamage,
+                    defenderSnapshot.formation, exchange.defenderRemainingFormation,
+                    defenderSnapshot.formationDamageReductionPercent.coerceIn(0, 100),
+                    exchange.attackFlanking, exchange.damageToDefender
+                )
+            }
+            BattleDiagnostics.shared.log {
+                BattleDamageLog.describe(
+                    "RETALIATION ${defender.unitName}#${defender.id} -> ${troop.unitName}#${troop.id}",
+                    exchange.retaliationPreparation, exchange.appliedRetaliationDamage,
+                    attackerSnapshot.formation, exchange.attackerRemainingFormation,
+                    attackerSnapshot.formationDamageReductionPercent.coerceIn(0, 100),
+                    exchange.retaliationFlanking, exchange.damageToAttacker
+                ) + "; budget=${exchange.availableRetaliationDamage}-${exchange.appliedRetaliationDamage}=${exchange.remainingRetaliationDamage}"
+            }
+            attackFlanking = exchange.attackFlanking
+            retaliationFlanking = exchange.retaliationFlanking
             remainingRetaliationDamageByTroopId[defender.id] = exchange.remainingRetaliationDamage
             troop.formation.current = exchange.attackerRemainingFormation
             defender.formation.current = exchange.defenderRemainingFormation
@@ -439,37 +483,25 @@ open class BattleManager(
         }
         val output = PerformAttackUseCase.execute(
             PerformAttackUseCase.Input(
-                troop.id,
-                defender?.id,
-                attackTile?.toPoint(),
-                currentTile?.toPoint(),
-                targetIsEnemy,
-                attackFromAchievable,
-                attackFromFree,
-                attackerIsLuck,
-                isMorale,
-                remaining,
-                died
+                troop.id, defender?.id, attackTile?.toPoint(), currentTile?.toPoint(),
+                targetIsEnemy, attackFromAchievable, attackFromFree,
+                attackerIsLuck, isMorale, remaining, died
             )
         )
         if (output.success) publishApplicationEvent(
             BattleEvent.TroopAttacked(
-                troop.id,
-                defender!!.id,
-                remaining,
-                output.isLuck,
-                output.isMorale,
-                died
+                troop.id, defender!!.id, remaining, output.isLuck, output.isMorale, died,
+                attackFlanking, retaliationFlanking
             ), onApplicationEvent
         )
         if (!isBattleOn()) publishApplicationEvent(
-            BattleEvent.BattleEnded(isAttackerWinner()),
-            onApplicationEvent
+            BattleEvent.BattleEnded(isAttackerWinner()), onApplicationEvent
         )
         return BattleCommandResult(
             success = output.success, movedFrom = output.movedFrom,
             movedTo = output.movedTo, rejection = output.rejection, isLuck = output.isLuck,
-            isMorale = output.isMorale, battleEnded = !isBattleOn()
+            isMorale = output.isMorale, battleEnded = !isBattleOn(),
+            attackFlanking = attackFlanking, retaliationFlanking = retaliationFlanking
         )
     }
 
@@ -585,12 +617,12 @@ open class BattleManager(
     fun hasRetaliationRemaining(troop: Troop): Boolean =
             remainingRetaliationDamageByTroopId[troop.id] != 0
 
-    /** Shared activation completion for interactive and automated callers.
-     * Rejected player commands are retried before calling this method.
-     */
+    /** Shared activation completion for interactive and automated callers. */
     fun completeAction(actionResult: BattleCommandResult?) {
         if (!isBattleOn() || getCurrentTroop() == null || getTurnQueue().isEmpty()) return
-        if (actionResult?.success != true || ShouldAdvanceTurnUseCase.execute(actionResult)) {
+        if (activeTroopRemoved || actionResult?.success != true ||
+                ShouldAdvanceTurnUseCase.execute(actionResult)
+        ) {
             advanceTurn()
         }
     }
@@ -620,11 +652,11 @@ open class BattleManager(
                     FormationRecoveryUseCase.canRestore(
                         recoveryState(troop), hasDamagedFormation(troop), hasAdjacentEnemy(troop)
                     )
+
     private fun logFormationRecovery(troop: Troop, action: String) {
-        if (!System.getProperty("battle.formation.verbose", "true").toBoolean()) return
-        val state = recoveryState(troop)
-        println(
-            "[FormationRecovery] action=$action troop=${troop.unitName}#${troop.id} " +
+        BattleDiagnostics.shared.log {
+            val state = recoveryState(troop)
+            "formation action=$action troop=${troop.unitName}#${troop.id} " +
                     "tile=${getTroopTile(troop)?.toPoint()} speed=${troop.speed} " +
                     "movementSpent=${state.movementSpent} phase=${state.phase} " +
                     "interrupted=${state.interrupted} adjacentEnemy=${hasAdjacentEnemy(troop)} " +
@@ -635,7 +667,7 @@ open class BattleManager(
                             troop
                         )
                     }"
-        )
+        }
     }
     private val pendingFollowUpShots = mutableSetOf<Troop>()
     private val moveAndShootGranted = mutableSetOf<Troop>()
@@ -663,4 +695,51 @@ open class BattleManager(
             }
         )
     }
+
+    /** Read-only flanking query; a prospective attack tile replaces the attacker's current position. */
+    fun getFlanking(
+        attacker: Troop,
+        defender: Troop,
+        attackFrom: IBattleTile? = getTroopTile(attacker)
+    ): com.unciv.pure.domain.battle.FlankingCalculator.Result {
+        val targetTile = getTroopTile(defender)
+            ?: return com.unciv.pure.domain.battle.FlankingCalculator.Result()
+        val defendingArmy = getArmyOf(defender)
+            ?: return com.unciv.pure.domain.battle.FlankingCalculator.Result()
+        val attackingArmy = getArmyOf(attacker)
+        if (defender.currentAmount <= 0 || !battleField.contains(targetTile) ||
+                attackingArmy == null || attackingArmy === defendingArmy
+        ) return com.unciv.pure.domain.battle.FlankingCalculator.Result()
+        val neighbors = targetTile.neighbors.toSet()
+        val facts = (attackerArmy.getAllTroops() + defenderArmy.getAllTroops())
+            .filterNotNull().distinct().filter { it !== defender }.map { other ->
+                val tile = if (other === attacker) attackFrom else getTroopTile(other)
+                com.unciv.pure.domain.battle.FlankingCalculator.Neighbor(
+                    isEnemy = getArmyOf(other) !== defendingArmy,
+                    isAlly = getArmyOf(other) === defendingArmy,
+                    isAlive = other.currentAmount > 0,
+                    isActive = tile != null && getTroopTile(other) != null && battleField.contains(
+                        tile
+                    ),
+                    isAdjacent = tile?.let { it in neighbors } == true,
+                    isMelee = !other.isRanged,
+                    hasFlanking = other.hasFlanking,
+                    hasSupport = other.hasSupport
+                )
+            }
+        return com.unciv.pure.domain.battle.FlankingCalculator.calculate(
+            facts, attacker.flanking,
+            isMeleeAttack = !attacker.isRanged && attacker.currentAmount > 0 &&
+                    getTroopTile(attacker) != null && attackFrom != null &&
+                    battleField.contains(attackFrom) && attackFrom in neighbors
+        )
+    }
+
+    /** Current encirclement, independent of the selected troop and without moving anyone. */
+    fun getCurrentFlankingLevel(defender: Troop): Int =
+            getEnemies(defender).asSequence()
+                .filter { it.currentAmount > 0 && it.hasFlanking && getTroopTile(it) != null }
+                .map { getFlanking(it, defender).flankLevel }
+                .maxOrNull() ?: 0
+    private var activeTroopRemoved = false
 }

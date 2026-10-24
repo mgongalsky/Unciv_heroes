@@ -958,7 +958,6 @@ class BattleScreen private constructor(
                 }
             }
         }
-
         when (event) {
             is com.unciv.pure.application.battle.BattleEvent.TroopMoved -> Gdx.app.postRunnable {
                 val troop = manager.getTroopById(event.troopId) ?: return@postRunnable
@@ -995,7 +994,9 @@ class BattleScreen private constructor(
             }
 
             is com.unciv.pure.application.battle.BattleEvent.TurnAdvanced ->
-                println("[EVENT] TurnAdvanced: nextTroop=${event.nextTroopId}")
+                com.unciv.logic.battle.BattleDiagnostics.shared.log {
+                    "screen nextTroop=${event.nextTroopId}"
+                }
 
             is com.unciv.pure.application.battle.BattleEvent.BattleEnded -> {
                 val report = CreateBattleReportUseCase.execute(
@@ -1012,9 +1013,8 @@ class BattleScreen private constructor(
                     BattleResultPopup(this, report, ::shutdownScreen).open(force = true)
                 }
             }
-
-            com.unciv.pure.application.battle.BattleEvent.TurnSkipped ->
-                println("[EVENT] TurnSkipped")
+            // Command diagnostics already record Skip, including headless battles.
+            com.unciv.pure.application.battle.BattleEvent.TurnSkipped -> Unit
         }
     }
     private val movementRangeOverlays = HashMap<TileGroup, Image>()
@@ -1040,9 +1040,13 @@ class BattleScreen private constructor(
             ancestor = ancestor.parent
         }
 
-        val troopUnderPointer = tileUnderPointer
-            ?.tileInfo
-            ?.let(manager::getTroopOnTile)
+        // Resolve every frame, including when the battlefield changes under a stationary pointer.
+        updateFlankingHighlights(
+            if (pointerOverBottomBar) null else tileUnderPointer,
+            stagePosition
+        )
+
+        val troopUnderPointer = tileUnderPointer?.tileInfo?.let(manager::getTroopOnTile)
         if (!pointerOverBottomBar && troopUnderPointer !== hoveredTroop) {
             setHoveredTroop(troopUnderPointer)
         }
@@ -1098,6 +1102,46 @@ class BattleScreen private constructor(
     }
     internal fun hasFormationRecoveryChance(troop: Troop): Boolean =
             manager.hasFormationRecoveryChance(troop)
+    private fun updateFlankingHighlights(tileUnderPointer: TileGroup?, stagePosition: Vector2) {
+        val active = manager.getCurrentTroop()?.takeIf {
+            !screenClosed && manager.isBattleOn() && onPlayerActionReceived != null &&
+                    isTroopPlayerControlled(it) && it.currentAmount > 0 && it.hasFlanking &&
+                    !manager.canShoot(it) && !manager.hasPendingFollowUpShot(it)
+        }
+        var forecastTile: TileGroup? = null
+        var forecastLevel: Int? = null
+        if (active != null && tileUnderPointer != null &&
+                manager.isTileOccupiedByEnemy(active, tileUnderPointer.tileInfo)
+        ) {
+            val local = tileUnderPointer.stageToLocalCoordinates(stagePosition.cpy())
+            val direction =
+                    pixelToDirection(local.x, local.y, tileUnderPointer.baseLayerGroup.width)
+            val approach = if (direction == Direction.DirError) null
+            else battleField.getNeighborTile(tileUnderPointer.tileInfo, direction)
+            val target = manager.getTroopOnTile(tileUnderPointer.tileInfo)
+            if (target != null && target.currentAmount > 0 && approach != null &&
+                    manager.isTileAchievable(active, approach) &&
+                    (manager.isTileFree(approach) || approach == manager.getTroopTile(active))
+            ) {
+                val flanking = manager.getFlanking(active, target, approach)
+                if (flanking.formedDamageBonusPercent > 0 ||
+                        flanking.formationDamageBonusPercent > 0 ||
+                        flanking.unformedDamageBonusPercent > 0
+                ) {
+                    forecastTile = tileUnderPointer
+                    forecastLevel = flanking.flankLevel
+                }
+            }
+        }
+        daTileGroups.forEach { tile ->
+            val occupant = manager.getTroopOnTile(tile.tileInfo)
+            val currentLevel = if (!screenClosed && manager.isBattleOn() && occupant != null)
+                manager.getCurrentFlankingLevel(occupant) else 0
+            tileHighlightRenderer.updateFlanking(
+                tile, currentLevel, if (tile === forecastTile) forecastLevel else null
+            )
+        }
+    }
 }
 
 private fun BattleScreen.setQueueHoveredTroop(troop: Troop?) {

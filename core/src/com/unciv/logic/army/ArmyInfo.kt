@@ -116,8 +116,7 @@ open class ArmyInfo(
             troops[i] = when {
                 troopData == null || !troopData.has("amount") -> null
                 troopData.has("speed") -> {
-                    // Older saves contain combat snapshots but predate support configuration.
-                    // Restore only the missing capability; preserve all saved combat state.
+                    // Restore missing capabilities without replacing saved combat state.
                     if (!troopData.has("supportBonusPercent")) {
                         val unitName = troopData.getString("unitName", "Spearman")
                         troopData.addChild(
@@ -129,6 +128,9 @@ open class ArmyInfo(
                         )
                     }
                     json.readValue(Troop::class.java, troopData).also {
+                        if (!troopData.has("flanking")) {
+                            it.flanking = troopSource.getFlankingProfile(it.unitName)
+                        }
                         it.restoreFormationIfMissing()
                     }
                 }

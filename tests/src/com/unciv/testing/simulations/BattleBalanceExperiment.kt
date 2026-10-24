@@ -4,6 +4,7 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.utils.JsonReader
 import com.unciv.models.metadata.BaseRuleset
 import com.unciv.models.ruleset.Ruleset
+import com.unciv.pure.domain.battle.FlankingProfile
 import java.io.File
 
 /** Immutable combat inputs captured from the selected game definitions. */
@@ -14,7 +15,8 @@ data class BalanceUnit(
     val damage: Int,
     val rangedStrength: Int = 0,
     val formationHealthPercent: Int = 0,
-    val formationDamageReductionPercent: Int = 0
+    val formationDamageReductionPercent: Int = 0,
+    val flanking: FlankingProfile? = null
 ) {
     init {
         require(name.isNotBlank())
@@ -37,10 +39,10 @@ data class BalanceExperimentConfig(
     }
 
     fun totalCells(unitCount: Int): Int =
-            Math.multiplyExact(Math.multiplyExact(unitCount, unitCount), maxAmount * maxAmount)
+        Math.multiplyExact(Math.multiplyExact(unitCount, unitCount), maxAmount * maxAmount)
 
     fun totalBattles(unitCount: Int): Int =
-            Math.multiplyExact(totalCells(unitCount), battlesPerCell)
+        Math.multiplyExact(totalCells(unitCount), battlesPerCell)
 
     fun seeds(): List<Long> = (0 until battlesPerCell).map { firstSeed + it }
 }
@@ -51,15 +53,12 @@ object BalanceUnitSources {
     private fun loadGameRuleset(): Ruleset {
         val relative = "jsons/${BaseRuleset.Civ_V_GnK.fullName}"
         val directory =
-                generateSequence(File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
-                    .flatMap {
-                        sequenceOf(
-                            File(it, relative),
-                            File(it, "android/assets/$relative")
-                        )
-                    }
-                    .firstOrNull { File(it, "Units.json").isFile }
-                    ?: error("Cannot locate game ruleset $relative")
+            generateSequence(File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
+                .flatMap {
+                    sequenceOf(File(it, relative), File(it, "android/assets/$relative"))
+                }
+                .firstOrNull { File(it, "Units.json").isFile }
+                ?: error("Cannot locate game ruleset $relative")
         return Ruleset().apply { load(FileHandle(directory)) }
     }
 
@@ -70,7 +69,7 @@ object BalanceUnitSources {
                 val unit = requireNotNull(ruleset.units[name]) { "Missing game unit: $name" }
                 BalanceUnit(
                     name, unit.speed, unit.health, unit.damage, unit.rangedStrength,
-                    unit.formationHealthPercent, unit.formationDamageReductionPercent
+                    unit.formationHealthPercent, unit.formationDamageReductionPercent, unit.flanking
                 )
             }
         }
@@ -88,10 +87,18 @@ object BalanceUnitSources {
                 val raw = node.getString(field, default)
                 return raw?.toIntOrNull() ?: error("$name: missing or invalid $field")
             }
+            val profile = node.get("flanking")?.takeUnless { it.isNull }?.let { value ->
+                require(value.isObject) { "$name: flanking must be an object or null" }
+                FlankingProfile(
+                    value.getInt("formedDamagePercent", 5),
+                    value.getInt("formationDamagePercent", 10),
+                    value.getInt("unformedDamagePercent", 10)
+                )
+            }
             BalanceUnit(
                 name, number("speed"), number("health"), number("damage"),
                 number("rangedStrength", "0"), number("formationHealthPercent", "0"),
-                number("formationDamageReductionPercent", "0")
+                number("formationDamageReductionPercent", "0"), profile
             )
         }
     }
@@ -99,14 +106,14 @@ object BalanceUnitSources {
     /** Retain real terrain and unit definitions; apply the experiment's selected combat values. */
     fun ruleset(units: List<BalanceUnit>): Ruleset = loadGameRuleset().apply {
         units.forEach { definition ->
-            val unit =
-                    requireNotNull(this.units[definition.name]) { "Unknown game unit: ${definition.name}" }
+            val unit = requireNotNull(this.units[definition.name]) { "Unknown game unit: ${definition.name}" }
             unit.speed = definition.speed
             unit.health = definition.health
             unit.damage = definition.damage
             unit.rangedStrength = definition.rangedStrength
             unit.formationHealthPercent = definition.formationHealthPercent
             unit.formationDamageReductionPercent = definition.formationDamageReductionPercent
+            unit.flanking = definition.flanking
         }
     }
 }

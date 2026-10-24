@@ -44,4 +44,8 @@ class Troop(
             formation.normalize()
         }
     }
+
+    /** Null disables flanking; immutable profile values come from the unit definition. */
+    var flanking: com.unciv.pure.domain.battle.FlankingProfile? = null
+    val hasFlanking: Boolean get() = !isRanged && flanking != null
 }

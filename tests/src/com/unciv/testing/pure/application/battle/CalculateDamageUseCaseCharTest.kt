@@ -54,7 +54,8 @@ class CalculateDamageUseCaseCharTest {
     @Test
     fun `full army wiped out`() {
         val result = execute(attackerAmount = 100, attackerDamage = 100, defenderAmount = 5)
-        assertEquals(100, result.perished)
+        assertEquals(10000, result.damageDealt)
+        assertEquals(5, result.perished)
         assertEquals(0, result.remainingAmount)
     }
 

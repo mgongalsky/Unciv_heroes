@@ -46,7 +46,6 @@ fun openBattleTileHighlightPreview(screen: BaseScreen) {
             this.pointer = -1
         })
     }
-
     tiles.forEachIndexed { index, tile ->
         renderer.bind(tile)
         val expected = styles[index % styles.size]
@@ -63,8 +62,6 @@ fun openBattleTileHighlightPreview(screen: BaseScreen) {
             )
         }
     }
-
-    // An action changes the cached appearance while the pointer stays on the tile.
     val changingTile = tiles.first()
     pointer(changingTile, InputEvent.Type.enter)
     renderer.update(changingTile, styles[3])
@@ -81,15 +78,15 @@ fun openBattleTileHighlightPreview(screen: BaseScreen) {
     renderer.restoreAll()
     check(!marker.isVisible)
 
-    // Support is independent of hover, movement shading and control markers.
+    // Support uses its own alpha, independent of terrain hover shading.
     tiles.takeLast(5).forEach { tile ->
         renderer.updateSupport(tile, true)
         val support = tile.highlightFogCrosshairLayerGroup.findActor<Image>("battleSupportOverlay")
         check(support.isVisible)
         check(support.touchable == com.badlogic.gdx.scenes.scene2d.Touchable.disabled)
-        check(support.color.a == 0.3f)
+        check(support.color.a == 0.6f) { "Support alpha must be 0.6, got ${support.color.a}" }
         pointer(tile, InputEvent.Type.enter)
-        check(support.isVisible && support.color.a == 0.3f)
+        check(support.isVisible && support.color.a == 0.6f)
         renderer.updateSupport(tile, false)
         check(!support.isVisible)
         pointer(tile, InputEvent.Type.exit)
@@ -101,7 +98,6 @@ fun openBattleTileHighlightPreview(screen: BaseScreen) {
             it.name == "battleSupportOverlay"
         } == 1)
     }
-
     Popup(screen.stage, scrollable = false).apply {
         defaults().pad(12f)
         add("Battle movement, control and support".toLabel(fontSize = 24)).row()

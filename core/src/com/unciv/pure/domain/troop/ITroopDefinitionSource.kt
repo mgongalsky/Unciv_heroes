@@ -9,4 +9,5 @@ interface ITroopDefinitionSource {
     fun getFormationHealthPercent(unitName: String): Int = 0
     fun getFormationDamageReductionPercent(unitName: String): Int = 0
     fun getSupportBonusPercent(unitName: String): Int = 0
+    fun getFlankingProfile(unitName: String): com.unciv.pure.domain.battle.FlankingProfile? = null
 }

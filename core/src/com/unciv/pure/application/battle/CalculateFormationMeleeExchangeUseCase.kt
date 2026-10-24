@@ -1,6 +1,7 @@
 package com.unciv.pure.application.battle
 
 import com.unciv.pure.domain.battle.DamageResult
+import com.unciv.pure.domain.battle.FlankingCalculator
 import com.unciv.pure.domain.battle.TroopSupport
 
 object CalculateFormationMeleeExchangeUseCase {
@@ -13,7 +14,8 @@ object CalculateFormationMeleeExchangeUseCase {
         val formationDamageReductionPercent: Int = 50,
         val isRanged: Boolean = false,
         val meleePenaltyPercent: Int = 50,
-        val supportBonusPercent: Int = 0
+        val supportBonusPercent: Int = 0,
+        val outgoingFlanking: FlankingCalculator.Result = FlankingCalculator.Result()
     )
 
     data class Output(
@@ -21,7 +23,13 @@ object CalculateFormationMeleeExchangeUseCase {
         val damageToDefender: DamageResult,
         val attackerRemainingFormation: Int,
         val defenderRemainingFormation: Int,
-        val remainingRetaliationDamage: Int
+        val remainingRetaliationDamage: Int,
+        val attackFlanking: FlankingCalculator.Result = FlankingCalculator.Result(),
+        val retaliationFlanking: FlankingCalculator.Result = FlankingCalculator.Result(),
+        val attackPreparation: PreparedBattleDamage? = null,
+        val retaliationPreparation: PreparedBattleDamage? = null,
+        val availableRetaliationDamage: Int = 0,
+        val appliedRetaliationDamage: Int = 0
     )
 
     fun execute(
@@ -31,24 +39,27 @@ object CalculateFormationMeleeExchangeUseCase {
         defenderIsLuck: Boolean,
         defenderRetaliationDamage: Int? = null
     ): Output {
-        val fullRetaliationDamage = meleeDamage(defender, defenderIsLuck)
-        // Stored retaliation already includes support, luck and penalties; do not apply them twice.
+        val attackFlanking = if (attacker.isRanged) FlankingCalculator.Result() else attacker.outgoingFlanking
+        val retaliationFlanking = if (defender.isRanged) FlankingCalculator.Result() else defender.outgoingFlanking
+        val retaliationPreparation = prepareDamage(defender, defenderIsLuck)
+        // Stored retaliation includes support, luck and penalties, but no target-specific flanking.
         val availableRetaliationDamage =
-                (defenderRetaliationDamage ?: fullRetaliationDamage).coerceAtLeast(0)
+            (defenderRetaliationDamage ?: retaliationPreparation.incomingDamage).coerceAtLeast(0)
         val attackerTotalHealth = if (attacker.amount <= 0) 0L else
             (attacker.amount - 1).toLong() * attacker.maxHealth + attacker.health
-        // Find the smallest raw hit that kills the attacker with its configured absorption.
+        // Consume only the raw retaliation budget needed to kill this target.
         var lower = 0
         var upper = availableRetaliationDamage
         while (lower < upper) {
             val middle = lower + (upper - lower) / 2
-            if (applyFormation(middle, attacker).damageToSoldiers.toLong() >= attackerTotalHealth)
+            if (applyFormation(middle, attacker, retaliationFlanking).damageToSoldiers.toLong() >= attackerTotalHealth)
                 upper = middle
             else lower = middle + 1
         }
         val appliedRetaliationDamage = lower
-        val retaliationFormation = applyFormation(appliedRetaliationDamage, attacker)
-        val attackFormation = applyFormation(meleeDamage(attacker, attackerIsLuck), defender)
+        val retaliationFormation = applyFormation(appliedRetaliationDamage, attacker, retaliationFlanking)
+        val attackPreparation = prepareDamage(attacker, attackerIsLuck)
+        val attackFormation = applyFormation(attackPreparation.incomingDamage, defender, attackFlanking)
         return Output(
             damageToAttacker = calculateSoldierDamage(
                 retaliationFormation.damageToSoldiers, attacker,
@@ -59,26 +70,36 @@ object CalculateFormationMeleeExchangeUseCase {
             ),
             attackerRemainingFormation = retaliationFormation.remainingFormation,
             defenderRemainingFormation = attackFormation.remainingFormation,
-            remainingRetaliationDamage = availableRetaliationDamage - appliedRetaliationDamage
+            remainingRetaliationDamage = availableRetaliationDamage - appliedRetaliationDamage,
+            attackFlanking = attackFlanking,
+            retaliationFlanking = if (appliedRetaliationDamage > 0) retaliationFlanking else FlankingCalculator.Result(),
+            attackPreparation = attackPreparation,
+            retaliationPreparation = if (defenderRetaliationDamage == null) retaliationPreparation else null,
+            availableRetaliationDamage = availableRetaliationDamage,
+            appliedRetaliationDamage = appliedRetaliationDamage
         )
     }
 
-    private fun meleeDamage(troop: TroopSnapshot, isLuck: Boolean): Int =
-            RangedCombatRules.meleeDamage(
-                TroopSupport.damage(
-                    troop.amount * troop.damage * if (isLuck) 2 else 1,
-                    troop.supportBonusPercent
-                ),
-                troop.isRanged, troop.meleePenaltyPercent
-            )
+    private fun prepareDamage(troop: TroopSnapshot, isLuck: Boolean): PreparedBattleDamage {
+        val luckMultiplier = if (isLuck) 2 else 1
+        val afterLuck = (troop.amount.toLong() * troop.damage * luckMultiplier)
+            .coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+        val afterSupport = TroopSupport.damage(afterLuck, troop.supportBonusPercent)
+        val incomingDamage = RangedCombatRules.meleeDamage(
+            afterSupport, troop.isRanged, troop.meleePenaltyPercent
+        )
+        return PreparedBattleDamage(
+            troop.amount, troop.damage, luckMultiplier, afterLuck,
+            troop.supportBonusPercent, afterSupport,
+            if (troop.isRanged) troop.meleePenaltyPercent else 0, incomingDamage
+        )
+    }
 
-    private fun applyFormation(damage: Int, troop: TroopSnapshot) =
-            ApplyFormationDamageUseCase.execute(
-                ApplyFormationDamageUseCase.Input(
-                    damage, troop.formation.coerceAtLeast(0),
-                    troop.formationDamageReductionPercent.coerceIn(0, 100), 100
-                )
-            )
+    private fun applyFormation(damage: Int, troop: TroopSnapshot, flanking: FlankingCalculator.Result) =
+        ApplyFlankingDamageUseCase.execute(
+            damage, troop.formation.coerceAtLeast(0),
+            troop.formationDamageReductionPercent.coerceIn(0, 100), flanking
+        )
 
     private fun calculateSoldierDamage(
         damage: Int,
