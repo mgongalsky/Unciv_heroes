@@ -22,7 +22,11 @@ data class RemoteRoomState(
     val opponentJoined: Boolean,
     val attackerReady: Boolean,
     val defenderReady: Boolean,
-    val battle: BattleSessionSnapshot
+    val battle: BattleSessionSnapshot,
+    val battleNumber: Int = 1,
+    val attackerRematch: Boolean = false,
+    val defenderRematch: Boolean = false,
+    val report: com.unciv.pure.domain.battle.BattleReport? = null
 )
 
 internal object BattleRoomJson {
@@ -61,8 +65,7 @@ internal object BattleRoomJson {
             )
         }
         val queue = state.required("turnQueue").also { require(it.isArray) }.map {
-            require(it.isLong && it.asLong() in 1L..Int.MAX_VALUE.toLong())
-            it.asInt()
+            require(it.isLong && it.asLong() in 1L..Int.MAX_VALUE.toLong()); it.asInt()
         }
         val current = state.optional("currentTroopId")?.let {
             require(it.isLong && it.asLong() in 1L..Int.MAX_VALUE.toLong()); it.asInt()
@@ -78,6 +81,20 @@ internal object BattleRoomJson {
                 })
         require(presentation.attacks.all { it.command in commands })
         require(presentation.movementRanges.all { range -> troops.any { it.id == range.troopId } })
+        val report = root.optional("report")?.let { value ->
+            require(value.isObject && finished)
+            fun losses(name: String) = value.required(name).also { require(it.isArray) }.map {
+                val id = it.int("troopId").also { id -> require(id > 0) }
+                val amount = it.int("amount").also { count -> require(count > 0) }
+                com.unciv.pure.domain.battle.BattleLoss(id, it.required("unitName").text(), amount)
+            }
+            com.unciv.pure.domain.battle.BattleReport(
+                value.optional("winner")?.let(::side),
+                losses("attackerLosses"), losses("defenderLosses")
+            ).also {
+                require(it.winner == state.optional("winner")?.let(::side))
+            }
+        }
         return RemoteRoomState(
             root.required("scenarioId").text(), side(root.required("side")),
             RemoteRoomPhase.valueOf(root.required("phase").text()), root.bool("opponentJoined"),
@@ -86,12 +103,21 @@ internal object BattleRoomJson {
                 session.long("revision"), session.long("lastSequence"),
                 session.optional("lastReply")?.let(BattleReplyJson::decode),
                 BattleStateSnapshot(
-                    troops, queue, state.int("remainingTurnsInRound"), current,
-                    state.optional("currentSide")?.let(::side), finished,
+                    troops,
+                    queue,
+                    state.int("remainingTurnsInRound"),
+                    current,
+                    state.optional("currentSide")?.let(::side),
+                    finished,
                     state.optional("winner")?.let(::side),
-                    state.optional("field")?.let(::decodeField), commands, presentation
+                    state.optional("field")?.let(::decodeField),
+                    commands,
+                    presentation
                 )
-            )
+            ),
+            battleNumber = root.int("battleNumber").also { require(it > 0) },
+            attackerRematch = root.bool("attackerRematch"),
+            defenderRematch = root.bool("defenderRematch"), report = report
         )
     }
 

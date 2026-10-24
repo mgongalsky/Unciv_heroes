@@ -57,6 +57,13 @@ object BattleSnapshotWireMapper {
             view.attackerReady && view.defenderReady -> WireRoomPhase.ACTIVE
             else -> WireRoomPhase.WAITING
         },
-        view.opponentJoined, view.attackerReady, view.defenderReady, encode(view.battle)
+        view.opponentJoined, view.attackerReady, view.defenderReady, encode(view.battle),
+        view.battleNumber, view.attackerRematch, view.defenderRematch,
+        view.report?.let { report ->
+            fun losses(values: List<com.unciv.pure.domain.battle.BattleLoss>) = values.map {
+                WireBattleLoss(it.troopId, it.unitName, it.amount)
+            }
+            WireBattleReport(report.winner?.wire(), losses(report.attackerLosses), losses(report.defenderLosses))
+        }
     )
 }

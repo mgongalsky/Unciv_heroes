@@ -51,44 +51,92 @@ class RemoteBattleLobby(private val transport: BattleHttpTransport) {
     }
 }
 
-/** Holds credentials privately. The caller uses the same application port as a local player. */
+/** Credentials are retained across battles; each client instance is bound to one battle number. */
 class RemoteBattleClient internal constructor(
     private val transport: BattleHttpTransport,
     val roomCode: String,
     private val token: String,
-    val side: BattleSide
+    val side: BattleSide,
+    val battleNumber: Int = 1
 ) : BattleClient {
     init {
         require(roomCode.matches(Regex("[A-Za-z0-9_-]{8}")))
         require(token.matches(Regex("[A-Za-z0-9_-]{43}")))
+        require(battleNumber > 0)
     }
+
     private val path = "/v1/rooms/$roomCode"
+    var latestRoom: RemoteRoomState? = null
+        private set
+
+    fun forBattle(number: Int): RemoteBattleClient =
+            RemoteBattleClient(transport, roomCode, token, side, number)
 
     suspend fun room(): RemoteRoomState = checkedRoom(transport.request("GET", path, token = token))
-    suspend fun ready(): RemoteRoomState = checkedRoom(transport.request(
-        "POST", "$path/ready", "{\"protocolVersion\":${BattleProtocol.VERSION}}", token
-    ))
-    override suspend fun read(): BattleSessionSnapshot = room().battle
+    suspend fun ready(): RemoteRoomState = checkedRoom(
+        transport.request(
+            "POST", "$path/ready",
+            "{\"protocolVersion\":${BattleProtocol.VERSION},\"battleNumber\":$battleNumber}", token
+        )
+    )
+
+    /** Retrying this call always votes for the same completed battle. */
+    suspend fun rematch(): RemoteRoomState = checkedRoom(
+        transport.request(
+            "POST", "$path/rematch",
+            "{\"protocolVersion\":${BattleProtocol.VERSION},\"battleNumber\":$battleNumber}", token
+        )
+    )
+
+    override suspend fun read(): BattleSessionSnapshot = room().also {
+        check(it.battleNumber == battleNumber) { "The room has moved to another battle" }
+    }.battle
 
     override suspend fun submit(request: BattleSessionRequest): BattleSessionReply {
         fun Point.wire() = WirePoint(x, y)
         val command = request.command
         val wire = when (command) {
-            is BattleCommand.Move -> WireBattleCommand(BattleProtocol.VERSION, request.sequence, request.expectedRevision,
-                WireAction.MOVE, command.troopId, command.target.wire())
-            is BattleCommand.Attack -> WireBattleCommand(BattleProtocol.VERSION, request.sequence, request.expectedRevision,
-                WireAction.ATTACK, command.troopId, command.target.wire(), command.attackFrom?.wire())
-            is BattleCommand.Shoot -> WireBattleCommand(BattleProtocol.VERSION, request.sequence, request.expectedRevision,
-                WireAction.SHOOT, command.troopId, command.target.wire())
-            is BattleCommand.Skip -> WireBattleCommand(BattleProtocol.VERSION, request.sequence, request.expectedRevision,
-                WireAction.SKIP, command.troopId)
+            is BattleCommand.Move -> WireBattleCommand(
+                BattleProtocol.VERSION, request.sequence, request.expectedRevision,
+                WireAction.MOVE, command.troopId, command.target.wire()
+            )
+
+            is BattleCommand.Attack -> WireBattleCommand(
+                BattleProtocol.VERSION,
+                request.sequence,
+                request.expectedRevision,
+                WireAction.ATTACK,
+                command.troopId,
+                command.target.wire(),
+                command.attackFrom?.wire()
+            )
+
+            is BattleCommand.Shoot -> WireBattleCommand(
+                BattleProtocol.VERSION, request.sequence, request.expectedRevision,
+                WireAction.SHOOT, command.troopId, command.target.wire()
+            )
+
+            is BattleCommand.Skip -> WireBattleCommand(
+                BattleProtocol.VERSION, request.sequence, request.expectedRevision,
+                WireAction.SKIP, command.troopId
+            )
         }.also { it.validate() }
-        val reply = BattleReplyJson.decode(transport.request("POST", "$path/commands", battleRequestJson(wire), token))
+        val commandPath =
+                if (battleNumber == 1) "$path/commands" else "$path/battles/$battleNumber/commands"
+        val reply = BattleReplyJson.decode(
+            transport.request(
+                "POST",
+                commandPath,
+                battleRequestJson(wire),
+                token
+            )
+        )
         require(reply.sequence == request.sequence) { "Battle response sequence mismatch" }
         return reply
     }
 
     private fun checkedRoom(text: String): RemoteRoomState = BattleRoomJson.decode(text).also {
         require(it.side == side) { "Battle response seat mismatch" }
+        latestRoom = it
     }
 }

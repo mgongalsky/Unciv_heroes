@@ -33,6 +33,9 @@ class BattleSessionScreen(
     initial: BattleSessionSnapshot,
     ruleset: Ruleset
 ) : BaseScreen() {
+    private var resultTransitionScheduled = false
+    private val sessionRuleset = ruleset
+    private val remoteClient = client as? com.unciv.infrastructure.battle.network.RemoteBattleClient
     private val cursors by lazy { BattleCursorSet() }
     private val presentationRenderer by lazy { BattlePresentationRenderer(tileGroups) }
     private val controller = BattleClientController(client, side)
@@ -177,6 +180,7 @@ class BattleSessionScreen(
                 else -> "Opponent's turn."
             })
         presentationRenderer.update(displayed.state)
+        showBattleResultIfReady()
     }
 
     private fun operate(action: suspend () -> BattleSessionSnapshot) {
@@ -321,5 +325,19 @@ class BattleSessionScreen(
             BattleTurnBar.HEIGHT + (available - naturalHeight * scale) / 2f)
         bottomBar.setSize(stage.width, BattleTurnBar.HEIGHT)
         header.setBounds(0f, stage.height - 80f, stage.width, 80f)
+    }
+    private fun showBattleResultIfReady() {
+        val remote = remoteClient ?: return
+        if (scope == null || !displayed.state.finished || controller.pendingRequest != null || resultTransitionScheduled) return
+        val room = remote.latestRoom ?: return
+        if (room.battleNumber != remote.battleNumber || !room.battle.state.finished || room.report == null) return
+        resultTransitionScheduled = true
+        Gdx.app.postRunnable {
+            if (scope == null || game.screen !== this) {
+                resultTransitionScheduled = false
+                return@postRunnable
+            }
+            game.replaceCurrentScreen(BattleRematchScreen(remote, room, sessionRuleset))
+        }
     }
 }

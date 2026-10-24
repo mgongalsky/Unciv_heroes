@@ -30,6 +30,9 @@ class BattleRoomScreen(
     private val onBattleReady: (RemoteBattleClient, RemoteRoomState) -> Unit,
     initialAddress: String = "http://127.0.0.1:8081"
 ) : BaseScreen() {
+    private val pasteCodeButton = "Paste".toTextButton().apply {
+        onClick { roomCode.pasteCode() }
+    }
     private val copyCodeButton = "Copy code".toTextButton().apply {
         onClick {
             val code = client?.roomCode ?: roomCode.text.trim()
@@ -46,7 +49,7 @@ class BattleRoomScreen(
         }
     }
     private val address = TextField(initialAddress, skin)
-    private val roomCode = TextField("", skin)
+    private val roomCode = BattleRoomCodeField(skin) { message -> status.setText(message) }
     private val scenarios = SelectBox<String>(skin)
     private val status = "Enter the server address and load scenarios, or join by room code.".toLabel().apply {
         setWrap(true)
@@ -81,7 +84,8 @@ class BattleRoomScreen(
             add("Room code".toLabel()).left()
             add(Table().apply {
                 add(roomCode).growX().height(44f)
-                add(copyCodeButton).padLeft(8f).width(140f).height(44f)
+                add(pasteCodeButton).padLeft(8f).width(90f).height(44f)
+                add(copyCodeButton).padLeft(8f).width(130f).height(44f)
             }).width(480f).row()
             add(joinButton).colspan(2).height(44f).row()
             add(roomStatus).colspan(2).width(660f).row()
@@ -113,7 +117,6 @@ class BattleRoomScreen(
             if (server != catalogAddress || selected == null) {
                 status.setText("Load scenarios for this server first.")
             } else perform {
-                // Keep the ticket even if the subsequent state read fails.
                 client = RemoteBattleLobby(UrlBattleHttpTransport(server)).create(selected.id)
                 roomCode.text = requireNotNull(client).roomCode
                 accept(requireNotNull(client).room())
@@ -245,11 +248,13 @@ class BattleRoomScreen(
         val connected = client != null
         address.isDisabled = busy || connected || handedOff
         roomCode.isDisabled = busy || connected || handedOff
+        pasteCodeButton.isDisabled = roomCode.isDisabled
         scenarios.isDisabled = busy || connected || handedOff || catalog.isEmpty()
         loadButton.isDisabled = busy || connected || handedOff
         createButton.isDisabled = busy || connected || handedOff || catalog.isEmpty()
         joinButton.isDisabled = busy || connected || handedOff
-        readyButton.isDisabled = busy || !connected || handedOff || lastRoom?.phase == RemoteRoomPhase.CLOSED
+        readyButton.isDisabled =
+                busy || !connected || handedOff || lastRoom?.phase == RemoteRoomPhase.CLOSED
         refreshButton.isDisabled = busy || !connected || handedOff
     }
 }

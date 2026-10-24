@@ -58,40 +58,93 @@ class BattleHttpServer(
     private fun route(exchange: HttpExchange): Any {
         val path = exchange.requestURI.path
         val method = exchange.requestMethod
-        if (path == "/v1/scenarios" && method == "GET") return WireScenarioCatalog(BattleProtocol.VERSION, scenarios)
+        if (path == "/v1/scenarios" && method == "GET") return WireScenarioCatalog(
+            BattleProtocol.VERSION,
+            scenarios
+        )
         if (path == "/v1/rooms" && method == "POST") {
             val root = BattleHttpJson.objectValue(body(exchange))
             BattleHttpJson.fields(root, setOf("protocolVersion", "scenarioId"))
             val request = CreateBattleRoomRequest(
-                BattleHttpJson.integer(root, "protocolVersion"), BattleHttpJson.string(root, "scenarioId")
+                BattleHttpJson.integer(root, "protocolVersion"),
+                BattleHttpJson.string(root, "scenarioId")
             ).also { it.validate() }
-            if (scenarios.none { it.id == request.scenarioId }) throw HttpFailure(400, "UNKNOWN_SCENARIO")
+            if (scenarios.none { it.id == request.scenarioId }) throw HttpFailure(
+                400,
+                "UNKNOWN_SCENARIO"
+            )
             return ticket(rooms.create(request.scenarioId))
         }
-        val match = Regex("/v1/rooms/([A-Za-z0-9_-]{8})(?:/(join|ready|commands))?").matchEntire(path)
-            ?: throw HttpFailure(404, "NOT_FOUND")
+        val battleMatch =
+                Regex("/v1/rooms/([A-Za-z0-9_-]{8})/battles/([1-9][0-9]*)/commands").matchEntire(
+                    path
+                )
+        if (battleMatch != null) {
+            if (method != "POST") throw HttpFailure(405, "METHOD_NOT_ALLOWED")
+            val number = battleMatch.groupValues[2].toIntOrNull() ?: throw HttpFailure(
+                400,
+                "INVALID_REQUEST"
+            )
+            val credential = token(exchange)
+            val request = BattleCommandWireMapper.decode(BattleHttpJson.command(body(exchange)))
+            return BattleReplyWireMapper.encode(
+                rooms.submit(
+                    battleMatch.groupValues[1],
+                    credential,
+                    request,
+                    number
+                )
+            )
+        }
+        val match =
+                Regex("/v1/rooms/([A-Za-z0-9_-]{8})(?:/(join|ready|commands|rematch))?").matchEntire(
+                    path
+                )
+                    ?: throw HttpFailure(404, "NOT_FOUND")
         val code = match.groupValues[1]
         val action = match.groupValues[2]
         if (action == "join" && method == "POST") {
             val root = BattleHttpJson.objectValue(body(exchange))
             BattleHttpJson.fields(root, setOf("protocolVersion", "clientNonce"))
             val request = JoinBattleRoomRequest(
-                BattleHttpJson.integer(root, "protocolVersion"), BattleHttpJson.string(root, "clientNonce")
+                BattleHttpJson.integer(root, "protocolVersion"),
+                BattleHttpJson.string(root, "clientNonce")
             ).also { it.validate() }
             return ticket(rooms.join(code, request.clientNonce))
         }
-        if (action.isEmpty() && method == "GET") return BattleSnapshotWireMapper.encode(rooms.read(code, token(exchange)))
+        if (action.isEmpty() && method == "GET") return BattleSnapshotWireMapper.encode(
+            rooms.read(
+                code,
+                token(exchange)
+            )
+        )
+        if (action == "rematch" && method == "POST") {
+            val credential = token(exchange)
+            val root = BattleHttpJson.objectValue(body(exchange))
+            BattleHttpJson.fields(root, setOf("protocolVersion", "battleNumber"))
+            BattleProtocol.requireVersion(BattleHttpJson.integer(root, "protocolVersion"))
+            return BattleSnapshotWireMapper.encode(
+                rooms.rematch(
+                    code, credential,
+                    BattleHttpJson.integer(root, "battleNumber")
+                )
+            )
+        }
         if (action == "ready" && method == "POST") {
             val credential = token(exchange)
             val root = BattleHttpJson.objectValue(body(exchange))
-            BattleHttpJson.fields(root, setOf("protocolVersion"))
+            BattleHttpJson.fields(root, setOf("protocolVersion", "battleNumber"))
             BattleProtocol.requireVersion(BattleHttpJson.integer(root, "protocolVersion"))
-            return BattleSnapshotWireMapper.encode(rooms.ready(code, credential))
+            val number = if (root.has("battleNumber")) BattleHttpJson.integer(
+                root,
+                "battleNumber"
+            ) else 1
+            return BattleSnapshotWireMapper.encode(rooms.ready(code, credential, number))
         }
         if (action == "commands" && method == "POST") {
             val credential = token(exchange)
             val request = BattleCommandWireMapper.decode(BattleHttpJson.command(body(exchange)))
-            return BattleReplyWireMapper.encode(rooms.submit(code, credential, request))
+            return BattleReplyWireMapper.encode(rooms.submit(code, credential, request, 1))
         }
         throw HttpFailure(405, "METHOD_NOT_ALLOWED")
     }
