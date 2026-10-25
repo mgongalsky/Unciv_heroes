@@ -60,6 +60,7 @@ object BattlePresentationWireMapper {
         result = value.result.let {
             WirePreviewDamageResult(it.damageDealt, it.perished, it.remainingAmount,
                 it.remainingHealth, it.isLuck)
-        }
+        },
+        antiCavalryDamageBonusPercent = value.antiCavalryDamageBonusPercent
     )
 }

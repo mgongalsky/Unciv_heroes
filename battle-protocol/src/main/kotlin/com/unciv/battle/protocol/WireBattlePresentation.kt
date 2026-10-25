@@ -47,7 +47,8 @@ data class WirePreviewHit(
     val formationBefore: Int,
     val formationReductionPercent: Int,
     val remainingFormation: Int,
-    val result: WirePreviewDamageResult
+    val result: WirePreviewDamageResult,
+    val antiCavalryDamageBonusPercent: Int = 0
 )
 
 data class WirePreparedDamage(

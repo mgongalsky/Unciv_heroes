@@ -22,7 +22,7 @@ class BattlePreviewRoundTripTest {
         val hit = BattleAttackPreview.Hit(
             PreparedBattleDamage(10, 8, 1, 80, 15, 92, 25, 69),
             FlankingCalculator.Result(3, 2, 10, 20, 30),
-            40, 50, 0, DamageResult(49, 2, 8, 11, false)
+            40, 50, 0, DamageResult(49, 2, 8, 11, false), antiCavalryDamageBonusPercent = 50
         )
         val melee = BattleAttackPreview(hit,
             hit.copy(preparation = null, remainingFormation = 7),

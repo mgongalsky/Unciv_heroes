@@ -726,4 +726,9 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
 
     /** Tactical movement never reduces formation when enabled. */
     var ignoresMovementFormationPenalty: Boolean = false
+
+    /** Extra tactical damage against Mounted units, including retaliation. */
+    var antiCavalryDamageBonusPercent: Int = 0
+    val isCavalry: Boolean
+        get() = this::unitType.isInitialized && unitType == "Mounted"
 }

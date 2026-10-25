@@ -54,4 +54,10 @@ class Troop(
 
     /** Ruleset capability cancelling formation fatigue from movement only. */
     var ignoresMovementFormationPenalty: Boolean = false
+
+    /** Ruleset-derived classification used by tactical target-specific bonuses. */
+    var isCavalry: Boolean = false
+
+    /** Extra damage against cavalry; zero preserves ordinary damage. */
+    var antiCavalryDamageBonusPercent: Int = 0
 }

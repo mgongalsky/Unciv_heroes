@@ -19,7 +19,9 @@ data class BalanceUnit(
     val formationDamageReductionPercent: Int = 0,
     val flanking: FlankingProfile? = null,
     val rangedShot: RangedShotProfile? = null,
-    val ignoresMovementFormationPenalty: Boolean = false
+    val ignoresMovementFormationPenalty: Boolean = false,
+    val unitType: String? = null,
+    val antiCavalryDamageBonusPercent: Int = 0
 ) {
     init {
         require(name.isNotBlank())
@@ -27,6 +29,8 @@ data class BalanceUnit(
             "$name: speed/health must be positive; damage/rangedStrength must be non-negative"
         }
         require(formationHealthPercent >= 0 && formationDamageReductionPercent in 0..100)
+        require(unitType == null || unitType.isNotBlank())
+        require(antiCavalryDamageBonusPercent >= 0)
     }
 }
 
@@ -71,9 +75,18 @@ object BalanceUnitSources {
             return names.map { name ->
                 val unit = requireNotNull(ruleset.units[name]) { "Missing game unit: $name" }
                 BalanceUnit(
-                    name, unit.speed, unit.health, unit.damage, unit.rangedStrength,
-                    unit.formationHealthPercent, unit.formationDamageReductionPercent, unit.flanking,
-                    unit.rangedShot, unit.ignoresMovementFormationPenalty
+                    name,
+                    unit.speed,
+                    unit.health,
+                    unit.damage,
+                    unit.rangedStrength,
+                    unit.formationHealthPercent,
+                    unit.formationDamageReductionPercent,
+                    unit.flanking,
+                    unit.rangedShot,
+                    unit.ignoresMovementFormationPenalty,
+                    unit.unitType,
+                    unit.antiCavalryDamageBonusPercent
                 )
             }
         }
@@ -91,6 +104,7 @@ object BalanceUnitSources {
                 val raw = node.getString(field, default)
                 return raw?.toIntOrNull() ?: error("$name: missing or invalid $field")
             }
+
             val profile = node.get("flanking")?.takeUnless { it.isNull }?.let { value ->
                 require(value.isObject) { "$name: flanking must be an object or null" }
                 FlankingProfile(
@@ -111,7 +125,9 @@ object BalanceUnitSources {
                 name, number("speed"), number("health"), number("damage"),
                 number("rangedStrength", "0"), number("formationHealthPercent", "0"),
                 number("formationDamageReductionPercent", "0"), profile, shotProfile,
-                node.getBoolean("ignoresMovementFormationPenalty", false)
+                node.getBoolean("ignoresMovementFormationPenalty", false),
+                node.getString("unitType", null),
+                number("antiCavalryDamageBonusPercent", "0")
             )
         }
     }
@@ -119,7 +135,8 @@ object BalanceUnitSources {
     /** Retain real terrain and unit definitions; apply the experiment's selected combat values. */
     fun ruleset(units: List<BalanceUnit>): Ruleset = loadGameRuleset().apply {
         units.forEach { definition ->
-            val unit = requireNotNull(this.units[definition.name]) { "Unknown game unit: ${definition.name}" }
+            val unit =
+                    requireNotNull(this.units[definition.name]) { "Unknown game unit: ${definition.name}" }
             unit.speed = definition.speed
             unit.health = definition.health
             unit.damage = definition.damage
@@ -129,6 +146,8 @@ object BalanceUnitSources {
             unit.flanking = definition.flanking
             unit.rangedShot = definition.rangedShot
             unit.ignoresMovementFormationPenalty = definition.ignoresMovementFormationPenalty
+            definition.unitType?.let { unit.unitType = it }
+            unit.antiCavalryDamageBonusPercent = definition.antiCavalryDamageBonusPercent
         }
     }
 }

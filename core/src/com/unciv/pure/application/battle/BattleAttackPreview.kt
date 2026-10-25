@@ -20,7 +20,9 @@ data class BattleAttackPreview(
         val formationBefore: Int,
         val formationReductionPercent: Int,
         val remainingFormation: Int,
-        val result: DamageResult
+        val result: DamageResult,
+        /** Applied target-specific bonus; zero when the target is not cavalry. */
+        val antiCavalryDamageBonusPercent: Int = 0
     )
 
     /** Effective soldier-damage increase for the same raw hit, including formation breaking mid-hit. */
@@ -30,9 +32,12 @@ data class BattleAttackPreview(
         if (flank.flankLevel <= 0 || (flank.formedDamageBonusPercent == 0 &&
                         flank.formationDamageBonusPercent == 0 && flank.unformedDamageBonusPercent == 0)
         ) return 0.0
-        val rawDamage = if (isRetaliation)
+        val baseDamage = if (isRetaliation)
             ((retaliationBudget ?: 0) - (remainingRetaliationBudget ?: 0)).coerceAtLeast(0)
         else hit.preparation?.incomingDamage ?: return 0.0
+        val rawDamage = com.unciv.pure.domain.battle.AntiCavalryDamageRules.damage(
+            baseDamage, hit.antiCavalryDamageBonusPercent, true
+        )
         if (rawDamage == 0) return 0.0
         val withoutFlank = ApplyFlankingDamageUseCase.execute(
             rawDamage,

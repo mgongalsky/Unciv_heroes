@@ -22,4 +22,11 @@ class RulesetTroopDefinitionSource(private val ruleset: Ruleset) : ITroopDefinit
             ruleset.units[unitName]?.rangedShot
     override fun ignoresMovementFormationPenalty(unitName: String): Boolean =
         ruleset.units[unitName]?.ignoresMovementFormationPenalty ?: false
+
+    override fun isCavalry(unitName: String): Boolean =
+            ruleset.units[unitName]?.isCavalry ?: false
+    override fun getAntiCavalryDamageBonusPercent(unitName: String): Int =
+            (ruleset.units[unitName]?.antiCavalryDamageBonusPercent ?: 0).also {
+                require(it >= 0) { "Negative anti-cavalry damage bonus for $unitName" }
+            }
 }

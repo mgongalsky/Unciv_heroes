@@ -145,16 +145,30 @@ class MoveAndShootIntegrationTest {
     }
 
     @Test
-    fun `adjacent enemy blocks follow up and AI skips instead of attacking`() {
-        val f = Fixture()
-        f.place(f.enemy, 3)
-        assertTrue(f.move(2).hasFollowUpShot)
-        assertFalse(f.manager.canShoot(f.archer))
-        val healthBefore = f.health(f.enemy)
-        assertEquals(BattleRejection.SHOOTING_BLOCKED_BY_ENEMY, f.shoot().rejection)
-        assertEquals(healthBefore, f.health(f.enemy))
-        assertTrue(f.manager.hasPendingFollowUpShot(f.archer))
-        assertEquals(BattleCommand.Skip(1), AIBattlePolicy(f.manager).chooseCommand(1))
+    fun `blocked shot after short move ends activation without skip recovery`() {
+        for (distance in 1..2) {
+            val f = Fixture()
+            f.place(f.enemy, distance + 1)
+            val events = mutableListOf<BattleEvent>()
+            val healthBefore = f.health(f.enemy)
+            val moved = f.manager.execute(BattleCommand.Move(1, Point(distance, 0))) {
+                events.add(it)
+                assertFalse(f.manager.hasPendingFollowUpShot(f.archer))
+                assertEquals(0, f.archer.formation.current)
+            }
+            assertTrue(moved.success)
+            assertFalse(moved.hasFollowUpShot)
+            assertFalse(f.manager.canShoot(f.archer))
+            assertFalse(f.manager.hasPendingFollowUpShot(f.archer))
+            assertEquals(0, f.archer.formation.current)
+            assertEquals(healthBefore, f.health(f.enemy))
+            assertEquals(1, events.size)
+            assertTrue(events.single() is BattleEvent.TroopMoved)
+            assertTrue(ShouldAdvanceTurnUseCase.execute(moved))
+            f.manager.completeAction(moved)
+            assertSame(f.enemy, f.manager.getCurrentTroop())
+            assertEquals(0, f.archer.formation.current)
+        }
     }
 
     @Test

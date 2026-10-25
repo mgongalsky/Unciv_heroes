@@ -308,7 +308,7 @@ open class BattleManager(
             )[targetPosition]?.totalDistance
             val movementDistance =
                     HexMath.getDistance(currentTile.position, targetPosition.position)
-            grantsShot = MoveAndShootRules.grantsShot(
+            val eligibleForShot = MoveAndShootRules.grantsShot(
                 troop.isRanged, movementDistance, troop.speed, troop in moveAndShootGranted
             )
             val formation = UpdateFormationAfterMoveUseCase.execute(
@@ -317,12 +317,16 @@ open class BattleManager(
                     maximumFormation = troop.formation.maximum,
                     movementDistance = movementDistance,
                     maximumMovement = troop.speed,
-                    turnEndsWithoutAttack = !isMorale && !grantsShot,
+                    // An unavailable follow-up shot must not become a formation-restoring Skip.
+                    turnEndsWithoutAttack = !isMorale && !eligibleForShot,
                     ignoresMovementFormationPenalty = troop.ignoresMovementFormationPenalty
                 )
             )
             troop.formation.current = formation.remainingFormation
             moveTroop(troop, targetPosition)
+            grantsShot = eligibleForShot && canShoot(troop) && getEnemies(troop).any { enemy ->
+                getAttackPreview(troop, enemy)?.isRanged == true
+            }
             if (grantsShot) {
                 pendingFollowUpShots.add(troop)
                 moveAndShootGranted.add(troop)
@@ -412,18 +416,8 @@ open class BattleManager(
             moveTroop(troop, attackTile!!)
             attackerIsLuck = isLuckTriggered(troop)
             val defenderIsLuck = isLuckTriggered(defender!!)
-            fun snapshot(unit: Troop, target: Troop) =
-                    CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
-                        unit.currentAmount, unit.damage, unit.currentHealth, unit.maxHealth,
-                        if (unit.hasFormation) unit.formation.current else 0,
-                        unit.formationDamageReductionPercent,
-                        isRanged = unit.isRanged,
-                        supportBonusPercent = getSupportBonusPercent(unit),
-                        outgoingFlanking = getFlanking(unit, target)
-                    )
-
-            val attackerSnapshot = snapshot(troop, defender)
-            val defenderSnapshot = snapshot(defender, troop)
+            val attackerSnapshot = damageSnapshot(troop, flanking = getFlanking(troop, defender))
+            val defenderSnapshot = damageSnapshot(defender, flanking = getFlanking(defender, troop))
             val exchange = CalculateFormationMeleeExchangeUseCase.execute(
                 attacker = attackerSnapshot, defender = defenderSnapshot,
                 attackerIsLuck = attackerIsLuck, defenderIsLuck = defenderIsLuck,
@@ -432,7 +426,11 @@ open class BattleManager(
             BattleDiagnostics.shared.log {
                 BattleDamageLog.describe(
                     "MELEE ${troop.unitName}#${troop.id} -> ${defender.unitName}#${defender.id}",
-                    exchange.attackPreparation, exchange.attackPreparation!!.incomingDamage,
+                    exchange.attackPreparation,
+                    com.unciv.pure.domain.battle.AntiCavalryDamageRules.damage(
+                        exchange.attackPreparation!!.incomingDamage,
+                        troop.antiCavalryDamageBonusPercent, defender.isCavalry
+                    ),
                     defenderSnapshot.formation, exchange.defenderRemainingFormation,
                     defenderSnapshot.formationDamageReductionPercent.coerceIn(0, 100),
                     exchange.attackFlanking, exchange.damageToDefender
@@ -441,7 +439,11 @@ open class BattleManager(
             BattleDiagnostics.shared.log {
                 BattleDamageLog.describe(
                     "RETALIATION ${defender.unitName}#${defender.id} -> ${troop.unitName}#${troop.id}",
-                    exchange.retaliationPreparation, exchange.appliedRetaliationDamage,
+                    exchange.retaliationPreparation,
+                    com.unciv.pure.domain.battle.AntiCavalryDamageRules.damage(
+                        exchange.appliedRetaliationDamage,
+                        defender.antiCavalryDamageBonusPercent, troop.isCavalry
+                    ),
                     attackerSnapshot.formation, exchange.attackerRemainingFormation,
                     attackerSnapshot.formationDamageReductionPercent.coerceIn(0, 100),
                     exchange.retaliationFlanking, exchange.damageToAttacker
@@ -764,6 +766,7 @@ open class BattleManager(
             shot, attacker in moveAndShootGranted
         )
     }
+
     private fun damageSnapshot(
         troop: Troop,
         at: IBattleTile? = getTroopTile(troop),
@@ -775,7 +778,9 @@ open class BattleManager(
         troop.formationDamageReductionPercent,
         isRanged = troop.isRanged,
         supportBonusPercent = getSupportBonusPercent(troop, at),
-        outgoingFlanking = flanking
+        outgoingFlanking = flanking,
+        isCavalry = troop.isCavalry,
+        antiCavalryDamageBonusPercent = troop.antiCavalryDamageBonusPercent
     )
 
     /** Forecast the selected attack without moving troops, spending retaliation or drawing randomness. */
@@ -817,12 +822,12 @@ open class BattleManager(
             attack = BattleAttackPreview.Hit(
                 exchange.attackPreparation, exchange.attackFlanking, defending.formation,
                 defending.formationDamageReductionPercent.coerceIn(0, 100),
-                exchange.defenderRemainingFormation, exchange.damageToDefender
+                exchange.defenderRemainingFormation, exchange.damageToDefender, antiCavalryDamageBonusPercent = if (defender.isCavalry) attacker.antiCavalryDamageBonusPercent else 0
             ),
             retaliation = BattleAttackPreview.Hit(
                 exchange.retaliationPreparation, exchange.retaliationFlanking, attacking.formation,
                 attacking.formationDamageReductionPercent.coerceIn(0, 100),
-                exchange.attackerRemainingFormation, exchange.damageToAttacker
+                exchange.attackerRemainingFormation, exchange.damageToAttacker, antiCavalryDamageBonusPercent = if (attacker.isCavalry) defender.antiCavalryDamageBonusPercent else 0
             ),
             retaliationBudget = exchange.availableRetaliationDamage,
             remainingRetaliationBudget = exchange.remainingRetaliationDamage,

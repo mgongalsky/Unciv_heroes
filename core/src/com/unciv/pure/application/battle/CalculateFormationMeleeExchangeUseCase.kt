@@ -15,7 +15,9 @@ object CalculateFormationMeleeExchangeUseCase {
         val isRanged: Boolean = false,
         val meleePenaltyPercent: Int = 50,
         val supportBonusPercent: Int = 0,
-        val outgoingFlanking: FlankingCalculator.Result = FlankingCalculator.Result()
+        val outgoingFlanking: FlankingCalculator.Result = FlankingCalculator.Result(),
+        val isCavalry: Boolean = false,
+        val antiCavalryDamageBonusPercent: Int = 0
     )
 
     data class Output(
@@ -39,36 +41,53 @@ object CalculateFormationMeleeExchangeUseCase {
         defenderIsLuck: Boolean,
         defenderRetaliationDamage: Int? = null
     ): Output {
-        val attackFlanking = if (attacker.isRanged) FlankingCalculator.Result() else attacker.outgoingFlanking
-        val retaliationFlanking = if (defender.isRanged) FlankingCalculator.Result() else defender.outgoingFlanking
+        val attackFlanking =
+                if (attacker.isRanged) FlankingCalculator.Result() else attacker.outgoingFlanking
+        val retaliationFlanking =
+                if (defender.isRanged) FlankingCalculator.Result() else defender.outgoingFlanking
         val retaliationPreparation = prepareDamage(defender, defenderIsLuck)
-        // Stored retaliation includes support, luck and penalties, but no target-specific flanking.
+        // Target-specific bonuses are applied to hits, not stored in the shared reserve.
         val availableRetaliationDamage =
-            (defenderRetaliationDamage ?: retaliationPreparation.incomingDamage).coerceAtLeast(0)
+                (defenderRetaliationDamage
+                    ?: retaliationPreparation.incomingDamage).coerceAtLeast(0)
+
+        fun retaliationFormation(rawDamage: Int) = applyFormation(
+            com.unciv.pure.domain.battle.AntiCavalryDamageRules.damage(
+                rawDamage, defender.antiCavalryDamageBonusPercent, attacker.isCavalry
+            ),
+            attacker, retaliationFlanking
+        )
+
         val attackerTotalHealth = if (attacker.amount <= 0) 0L else
             (attacker.amount - 1).toLong() * attacker.maxHealth + attacker.health
-        // Consume only the raw retaliation budget needed to kill this target.
         var lower = 0
         var upper = availableRetaliationDamage
         while (lower < upper) {
             val middle = lower + (upper - lower) / 2
-            if (applyFormation(middle, attacker, retaliationFlanking).damageToSoldiers.toLong() >= attackerTotalHealth)
+            if (retaliationFormation(middle).damageToSoldiers.toLong() >= attackerTotalHealth)
                 upper = middle
             else lower = middle + 1
         }
         val appliedRetaliationDamage = lower
-        val retaliationFormation = applyFormation(appliedRetaliationDamage, attacker, retaliationFlanking)
+        val retaliationHit = retaliationFormation(appliedRetaliationDamage)
         val attackPreparation = prepareDamage(attacker, attackerIsLuck)
-        val attackFormation = applyFormation(attackPreparation.incomingDamage, defender, attackFlanking)
+        val attackFormation = applyFormation(
+            com.unciv.pure.domain.battle.AntiCavalryDamageRules.damage(
+                attackPreparation.incomingDamage,
+                attacker.antiCavalryDamageBonusPercent,
+                defender.isCavalry
+            ),
+            defender, attackFlanking
+        )
         return Output(
             damageToAttacker = calculateSoldierDamage(
-                retaliationFormation.damageToSoldiers, attacker,
+                retaliationHit.damageToSoldiers, attacker,
                 defenderIsLuck && defenderRetaliationDamage == null
             ),
             damageToDefender = calculateSoldierDamage(
                 attackFormation.damageToSoldiers, defender, attackerIsLuck
             ),
-            attackerRemainingFormation = retaliationFormation.remainingFormation,
+            attackerRemainingFormation = retaliationHit.remainingFormation,
             defenderRemainingFormation = attackFormation.remainingFormation,
             remainingRetaliationDamage = availableRetaliationDamage - appliedRetaliationDamage,
             attackFlanking = attackFlanking,

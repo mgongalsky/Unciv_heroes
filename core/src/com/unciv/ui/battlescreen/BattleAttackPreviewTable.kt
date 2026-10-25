@@ -38,6 +38,8 @@ internal fun buildBattleAttackPreviewTable(preview: BattleAttackPreview): Table 
                         "${shot.damageModifierPercent}%"
                     )
             }
+            if (hit.antiCavalryDamageBonusPercent > 0)
+                line("Against cavalry", "+${hit.antiCavalryDamageBonusPercent}%")
             if (hit.formationBefore > 0 && hit.formationReductionPercent > 0)
                 line("Formation protection", "-${hit.formationReductionPercent}%")
             val bonus = preview.flankingBonusPercent(retaliation)

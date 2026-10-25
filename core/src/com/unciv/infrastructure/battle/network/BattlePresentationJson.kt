@@ -101,11 +101,14 @@ internal object BattlePresentationJson {
         }
         val result = value.required("result")
         require(result.isObject)
+        val antiCavalryBonus = optionalInt(value, "antiCavalryDamageBonusPercent") ?: 0
+        require(antiCavalryBonus >= 0)
         return BattleAttackPreview.Hit(
             preparation, flank(value.required("flanking")), value.int("formationBefore"),
             value.int("formationReductionPercent"), value.int("remainingFormation"),
             DamageResult(result.int("damageDealt"), result.int("perished"),
-                result.int("remainingAmount"), result.int("remainingHealth"), result.bool("isLuck"))
+                result.int("remainingAmount"), result.int("remainingHealth"), result.bool("isLuck")),
+            antiCavalryDamageBonusPercent = antiCavalryBonus
         )
     }
 }

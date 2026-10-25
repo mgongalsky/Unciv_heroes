@@ -13,4 +13,6 @@ interface ITroopDefinitionSource {
     fun getRangedShotProfile(unitName: String): com.unciv.pure.domain.battle.RangedShotProfile? =
             null
     fun ignoresMovementFormationPenalty(unitName: String): Boolean = false
+    fun isCavalry(unitName: String): Boolean = false
+    fun getAntiCavalryDamageBonusPercent(unitName: String): Int = 0
 }

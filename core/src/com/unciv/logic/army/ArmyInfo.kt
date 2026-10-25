@@ -136,7 +136,17 @@ open class ArmyInfo(
                         }
                         if (!troopData.has("ignoresMovementFormationPenalty")) {
                             it.ignoresMovementFormationPenalty =
-                                troopSource.ignoresMovementFormationPenalty(it.unitName)
+                                    troopSource.ignoresMovementFormationPenalty(it.unitName)
+                        }
+                        if (!troopData.has("isCavalry")) {
+                            it.isCavalry = troopSource.isCavalry(it.unitName)
+                        }
+                        if (!troopData.has("antiCavalryDamageBonusPercent")) {
+                            it.antiCavalryDamageBonusPercent =
+                                    troopSource.getAntiCavalryDamageBonusPercent(it.unitName)
+                        }
+                        require(it.antiCavalryDamageBonusPercent >= 0) {
+                            "Negative anti-cavalry damage bonus for ${it.unitName}"
                         }
                         it.restoreFormationIfMissing()
                     }

@@ -12,7 +12,6 @@ object TroopFactory {
         source: ITroopDefinitionSource
     ): Troop = createWithId(nextId++, unitName, amount, source)
 
-    /** Creates a troop with an ID owned by the caller, without accessing the global counter. */
     fun createWithId(
         id: Int,
         unitName: String,
@@ -37,5 +36,10 @@ object TroopFactory {
         it.flanking = source.getFlankingProfile(unitName)
         it.rangedShot = source.getRangedShotProfile(unitName)
         it.ignoresMovementFormationPenalty = source.ignoresMovementFormationPenalty(unitName)
+        it.isCavalry = source.isCavalry(unitName)
+        it.antiCavalryDamageBonusPercent =
+                source.getAntiCavalryDamageBonusPercent(unitName).also { bonus ->
+                    require(bonus >= 0) { "Negative anti-cavalry damage bonus for $unitName" }
+                }
     }
 }
