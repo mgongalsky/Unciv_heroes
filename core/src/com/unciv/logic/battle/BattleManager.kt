@@ -734,7 +734,7 @@ open class BattleManager(
     /** Position of the next round boundary in the turn forecast. */
     fun getRemainingTurnsInRound(): Int = turnQueue.remainingInRound()
 
-    /** Read-only shot classification shared by execution, AI and future previews. */
+    /** Read-only shot classification shared by execution, AI and previews. */
     fun getRangedShot(
         attacker: Troop,
         defender: Troop
@@ -756,11 +756,11 @@ open class BattleManager(
             }.map { other ->
                 com.unciv.pure.domain.battle.RangedShotRules.Blocker(isMelee = !other.isRanged)
             }
-        return com.unciv.pure.domain.battle.RangedShotRules.evaluate(
-            true,
-            profile,
-            distance,
-            blockers
+        val shot = com.unciv.pure.domain.battle.RangedShotRules.evaluate(
+            true, profile, distance, blockers
+        )
+        return com.unciv.pure.domain.battle.RangedShotRules.afterMovement(
+            shot, attacker in moveAndShootGranted
         )
     }
     private fun damageSnapshot(

@@ -20,7 +20,7 @@ data class WireFlanking(
 )
 
 enum class WireShotType { DIRECT, INDIRECT }
-enum class WireIndirectReason { DISTANCE, BLOCKED_LINE }
+enum class WireIndirectReason { DISTANCE, BLOCKED_LINE, MOVEMENT }
 
 data class WireRangedShot(
     val shotType: WireShotType,

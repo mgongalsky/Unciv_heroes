@@ -247,4 +247,101 @@ class MoveAndShootIntegrationTest {
         assertEquals(first.events, second.events)
         assertEquals(first.winnerIsAttacker, second.winnerIsAttacker)
     }
+
+    @Test
+    fun `formed archer retreat shows broken arrow with half damage until next activation`() {
+        for (distance in 1..2) {
+            val f = Fixture()
+            f.archer.formation.current = f.archer.formation.maximum
+            f.archer.rangedShot = com.unciv.pure.domain.battle.RangedShotProfile(8, 50)
+            f.place(f.archer, 2)
+            f.place(f.enemy, 4)
+            val formation = f.archer.formation.current
+            assertEquals(
+                com.unciv.pure.domain.battle.RangedShotRules.ShotType.DIRECT,
+                f.manager.getRangedShot(f.archer, f.enemy)!!.shotType
+            )
+            val move = f.move(2 - distance)
+            assertTrue(move.success)
+            assertTrue(move.hasFollowUpShot)
+            f.manager.completeAction(move)
+            assertEquals(formation, f.archer.formation.current)
+            val preview = requireNotNull(f.manager.getAttackPreview(f.archer, f.enemy))
+            assertEquals(
+                com.unciv.pure.domain.battle.RangedShotRules.ShotType.INDIRECT,
+                preview.rangedShot!!.shotType
+            )
+            assertEquals(
+                com.unciv.pure.domain.battle.RangedShotRules.IndirectReason.MOVEMENT,
+                preview.rangedShot!!.reason
+            )
+            assertEquals(50, preview.attack.result.damageDealt)
+            assertEquals(
+                BattleCommand.Shoot(1, Point(4, 0)),
+                AIBattlePolicy(f.manager).chooseCommand(1)
+            )
+            assertTrue(f.manager.hasPendingFollowUpShot(f.archer))
+            val before = f.health(f.enemy)
+            val events = mutableListOf<BattleEvent>()
+            val shot = f.manager.execute(BattleCommand.Shoot(1, Point(4, 0))) { events.add(it) }
+            assertTrue(shot.success)
+            assertEquals(preview.rangedShot, shot.rangedShot)
+            assertEquals(
+                shot.rangedShot,
+                events.filterIsInstance<BattleEvent.TroopShot>().single().rangedShot
+            )
+            assertEquals(50, before - f.health(f.enemy))
+            f.manager.completeAction(shot)
+            f.manager.completeAction(f.manager.execute(BattleCommand.Skip(2)))
+            assertSame(f.archer, f.manager.getCurrentTroop())
+            val next = requireNotNull(f.manager.getAttackPreview(f.archer, f.enemy))
+            assertEquals(
+                com.unciv.pure.domain.battle.RangedShotRules.ShotType.DIRECT,
+                next.rangedShot!!.shotType
+            )
+            assertEquals(100, next.attack.result.damageDealt)
+        }
+    }
+
+    @Test
+    fun `formed retreat simulation records broken arrow and reproduces the battle`() {
+        fun run(): BattleSimulationResult {
+            val f = Fixture()
+            f.archer.formation.current = f.archer.formation.maximum
+            f.archer.rangedShot = com.unciv.pure.domain.battle.RangedShotProfile(8, 50)
+            f.place(f.archer, 2)
+            f.place(f.enemy, 4)
+            var first = true
+            val ai = AIBattlePolicy(f.manager)
+            val policy = BattlePolicy { id ->
+                if (first) {
+                    first = false
+                    BattleCommand.Move(id, Point(1, 0))
+                } else ai.chooseCommand(id)
+            }
+            return BattleSimulationRunner(
+                f.manager, policy, ai,
+                maxTurns = 100, maxTurnsWithoutProgress = 20, seed = 42L
+            ).run()
+        }
+
+        val first = run()
+        val second = run()
+        assertEquals(BattleCommand.Move(1, Point(1, 0)), first.commands[0])
+        assertEquals(BattleCommand.Shoot(1, Point(4, 0)), first.commands[1])
+        val shot = first.events.filterIsInstance<BattleEvent.TroopShot>().first()
+        assertEquals(
+            com.unciv.pure.domain.battle.RangedShotRules.ShotType.INDIRECT,
+            shot.rangedShot!!.shotType
+        )
+        assertEquals(
+            com.unciv.pure.domain.battle.RangedShotRules.IndirectReason.MOVEMENT,
+            shot.rangedShot!!.reason
+        )
+        assertEquals(BattleTermination.VICTORY, first.termination)
+        assertTrue(first.events.last() is BattleEvent.BattleEnded)
+        assertEquals(first.commands, second.commands)
+        assertEquals(first.events, second.events)
+        assertEquals(first.winnerIsAttacker, second.winnerIsAttacker)
+    }
 }

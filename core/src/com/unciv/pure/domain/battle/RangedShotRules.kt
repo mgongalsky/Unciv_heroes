@@ -3,7 +3,7 @@ package com.unciv.pure.domain.battle
 /** Deterministic shot classification, independent of targeting, UI and randomness. */
 object RangedShotRules {
     enum class ShotType { DIRECT, INDIRECT }
-    enum class IndirectReason { DISTANCE, BLOCKED_LINE }
+    enum class IndirectReason { DISTANCE, BLOCKED_LINE, MOVEMENT }
 
     /** Only intermediate cells belong here; the shooter and target are excluded by geometry. */
     data class Blocker(
@@ -59,4 +59,12 @@ object RangedShotRules {
         require(modifier in -100..0)
         return (baseDamage.toLong() * (100 + modifier) / 100).toInt()
     }
+
+    /** Marks a clear follow-up shot as indirect. Movement damage is applied separately,
+     * so this classification preserves the existing modifier and any line or distance penalty.
+     */
+    fun afterMovement(shot: Result?, afterMovement: Boolean): Result? =
+            if (afterMovement && shot?.shotType == ShotType.DIRECT)
+                shot.copy(shotType = ShotType.INDIRECT, reason = IndirectReason.MOVEMENT)
+            else shot
 }
