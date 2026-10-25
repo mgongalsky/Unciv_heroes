@@ -937,7 +937,8 @@ class BattleScreen private constructor(
                     initialState = initialBattleState,
                     attackerArmy = manager.getAttackerArmy(),
                     defenderArmy = manager.getDefenderArmy(),
-                    winnerIsAttacker = event.winnerIsAttacker
+                    winnerIsAttacker = event.winnerIsAttacker,
+                    unitPrice = { name -> ruleset.units[name]?.battleCost }
                 )
                 standaloneResult = report
                 Gdx.app.postRunnable {

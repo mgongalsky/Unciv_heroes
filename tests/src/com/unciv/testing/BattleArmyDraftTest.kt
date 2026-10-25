@@ -13,7 +13,7 @@ class BattleArmyDraftTest {
 
     @Test fun additionsAndMaximumRespectMoneySpentInOtherSlots() {
         val draft = draft()
-        draft.adjust(0, 295)
+        draft.adjust(0, 495)
         draft.choose(1, "Archer")
         draft.adjust(1, 10)
         assertEquals(1, draft.count(1))
@@ -23,7 +23,7 @@ class BattleArmyDraftTest {
         draft.adjust(0, -10)
         draft.fill(1)
         assertEquals(5, draft.count(1))
-        assertEquals(300L, draft.cost())
+        assertEquals(500L, draft.cost())
         draft.adjust(1, Int.MAX_VALUE)
         assertEquals(5, draft.count(1))
         draft.adjust(1, Int.MIN_VALUE)
@@ -34,15 +34,15 @@ class BattleArmyDraftTest {
     @Test fun switchingToExpensiveUnitClampsCountWithoutChangingOtherStacks() {
         val draft = draft()
         draft.adjust(0, 100)
-        draft.adjust(1, 200)
+        draft.adjust(1, 400)
         draft.choose(0, "Horseman")
         assertEquals(9, draft.count(0))
-        assertEquals(200, draft.count(1))
-        assertEquals(299L, draft.cost())
+        assertEquals(400, draft.count(1))
+        assertEquals(499L, draft.cost())
         draft.clear(1)
         draft.fill(0)
-        assertEquals(27, draft.count(0))
-        assertEquals(3L, draft.remaining())
+        assertEquals(45, draft.count(0))
+        assertEquals(5L, draft.remaining())
         draft.selection.validate(draft.stacks())
     }
 
@@ -56,8 +56,8 @@ class BattleArmyDraftTest {
         draft.fill(1)
         draft.clear(1)
         assertEquals(army, draft.stacks())
-        draft.restore(listOf(BattleArmyStack("Peasant", 300)))
-        assertEquals(300L, draft.cost())
+        draft.restore(listOf(BattleArmyStack("Peasant", 500)))
+        assertEquals(500L, draft.cost())
         assertTrue(draft.locked)
     }
 
@@ -66,12 +66,12 @@ class BattleArmyDraftTest {
         draft.adjust(0, 20)
         val before = draft.stacks()
         try {
-            draft.restore(listOf(BattleArmyStack("Peasant", 301)))
+            draft.restore(listOf(BattleArmyStack("Peasant", 501)))
             fail("Over-budget army accepted")
         } catch (_: IllegalArgumentException) { }
         assertEquals(before, draft.stacks())
         draft.clear(0)
         assertTrue(draft.stacks().isEmpty())
-        assertEquals(300L, draft.remaining())
+        assertEquals(500L, draft.remaining())
     }
 }

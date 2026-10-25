@@ -52,7 +52,7 @@ class BattleSandboxScreen(
         val content = Table().apply {
             defaults().pad(8f)
             add("Battle sandbox".toLabel()).colspan(2).padBottom(20f).row()
-            add("Build army — 300 coins".toTextButton().apply {
+            add("Build army — 500 coins".toTextButton().apply {
                 onClick { game.pushScreen(BattleArmySetupScreen()) }
             }).colspan(2).height(55f).row()
             add("Network battle".toTextButton().onClick {

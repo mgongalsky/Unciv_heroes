@@ -26,16 +26,31 @@ object CreateBattleReportUseCase {
         initialState: InitialState,
         attackerArmy: IArmy,
         defenderArmy: IArmy,
-        winnerIsAttacker: Boolean?
-    ): BattleReport = BattleReport(
-        winner = when (winnerIsAttacker) {
-            true -> BattleSide.ATTACKER
-            false -> BattleSide.DEFENDER
-            null -> null
-        },
-        attackerLosses = losses(initialState.attackers, attackerArmy),
-        defenderLosses = losses(initialState.defenders, defenderArmy)
-    )
+        winnerIsAttacker: Boolean?,
+        unitPrice: (String) -> Int? = { null }
+    ): BattleReport {
+        val score = if (winnerIsAttacker == null) {
+            com.unciv.pure.domain.battle.BattleScore(0, 0)
+        } else {
+            val initial = if (winnerIsAttacker) initialState.attackers else initialState.defenders
+            val army = if (winnerIsAttacker) attackerArmy else defenderArmy
+            val remaining =
+                army.getAllTroops().filterNotNull().associate { it.id to it.currentAmount }
+            CalculateBattleScoreUseCase.execute(initial.map {
+                CalculateBattleScoreUseCase.Stack(it.unitName, it.amount, remaining[it.id] ?: 0)
+            }, unitPrice)
+        }
+        return BattleReport(
+            winner = when (winnerIsAttacker) {
+                true -> BattleSide.ATTACKER
+                false -> BattleSide.DEFENDER
+                null -> null
+            },
+            attackerLosses = losses(initialState.attackers, attackerArmy),
+            defenderLosses = losses(initialState.defenders, defenderArmy),
+            winnerScore = score
+        )
+    }
 
     private fun losses(initial: List<TroopSnapshot>, currentArmy: IArmy): List<BattleLoss> {
         val remainingById = currentArmy.getAllTroops()

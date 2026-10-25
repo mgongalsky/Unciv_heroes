@@ -13,6 +13,7 @@ import com.unciv.utils.Log
 
 /** Main stage for the game. Catches all exceptions or errors thrown by event handlers, calling [com.unciv.UncivGame.handleUncaughtThrowable] with the thrown exception or error. */
 class UncivStage(viewport: Viewport) : Stage(viewport) {
+    private val keyboardModifiers = com.unciv.ui.utils.KeyboardEventModifiers()
 
     /**
      * Enables/disables sending pointer enter/exit events to actors on this stage.
@@ -78,10 +79,12 @@ class UncivStage(viewport: Viewport) : Stage(viewport) {
             { super.scrolled(amountX, amountY) }.wrapCrashHandling()() ?: true
 
     override fun keyDown(keyCode: Int) =
-            { super.keyDown(keyCode) }.wrapCrashHandling()() ?: true
+            { keyboardModifiers.dispatch(keyCode, true) { super.keyDown(keyCode) } }
+                .wrapCrashHandling()() ?: true
 
     override fun keyUp(keyCode: Int) =
-            { super.keyUp(keyCode) }.wrapCrashHandling()() ?: true
+            { keyboardModifiers.dispatch(keyCode, false) { super.keyUp(keyCode) } }
+                .wrapCrashHandling()() ?: true
 
     override fun keyTyped(character: Char) =
             { super.keyTyped(character) }.wrapCrashHandling()() ?: true

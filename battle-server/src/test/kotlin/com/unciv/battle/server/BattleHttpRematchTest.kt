@@ -99,4 +99,57 @@ class BattleHttpRematchTest {
             assertFalse(nextB.room().defenderRematch)
         } finally { server.close() }
     }
+
+    @Test
+    fun purchasedBattleScoreIsSharedAndResetForRematch() = runBlocking {
+        val selection = com.unciv.pure.application.battle.recruitment.BattleArmySelection(
+            listOf(
+                com.unciv.pure.application.battle.recruitment.BattleRecruitmentUnit(
+                    "Spearman",
+                    8
+                )
+            )
+        )
+        val rooms = BattleRooms(
+            createSession = { OrderedBattleSession(Engine()) },
+            recruitment = selection,
+            createPurchasedSession = { _, _ -> OrderedBattleSession(Engine()) }
+        )
+        val server = BattleHttpServer(
+            InetSocketAddress("127.0.0.1", 0), rooms,
+            listOf(WireScenario(BattleRooms.RECRUITMENT_SCENARIO, "Build army", ""))
+        )
+        try {
+            server.start()
+            val lobby = RemoteBattleLobby(UrlBattleHttpTransport("http://127.0.0.1:${server.port}"))
+            val a = lobby.create(BattleRooms.RECRUITMENT_SCENARIO)
+            val b = lobby.join(a.roomCode, "s".repeat(32))
+            val army = listOf(
+                com.unciv.pure.application.battle.recruitment.BattleArmyStack(
+                    "Spearman",
+                    3
+                )
+            )
+            a.ready(army)
+            b.ready(army)
+            val controller = BattleClientController(a, a.side)
+            controller.refresh()
+            controller.submit(BattleCommand.Skip(1))
+            val report = requireNotNull(a.room().report)
+            val score = requireNotNull(report.winnerScore)
+            assertEquals(24L, score.initialValue)
+            assertEquals(8L, score.remainingValue)
+            assertEquals(100.0 / 3.0, score.percent, 0.0001)
+            assertEquals(report, b.room().report)
+            a.rematch()
+            val next = b.rematch()
+            assertEquals(2, next.battleNumber)
+            assertNull(next.report)
+            assertFalse(next.attackerReady)
+            assertFalse(next.defenderReady)
+            assertNull(a.room().report)
+        } finally {
+            server.close()
+        }
+    }
 }

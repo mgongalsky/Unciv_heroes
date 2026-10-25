@@ -6,13 +6,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class BattleArmyTemplatesTest {
-    private fun selection(budget: Int = 300, slots: Int = 4) = BattleArmySelection(
+    private fun selection(budget: Int = 500, slots: Int = 5) = BattleArmySelection(
         listOf(
             BattleRecruitmentUnit("Peasant", 1),
-            BattleRecruitmentUnit("Archer", 3),
+            BattleRecruitmentUnit("Archer", 4),
             BattleRecruitmentUnit("Spearman", 8),
             BattleRecruitmentUnit("Swordsman", 11),
-            BattleRecruitmentUnit("Horseman", 11)
+            BattleRecruitmentUnit("Horseman", 16)
         ), budget, slots
     )
 
@@ -22,19 +22,19 @@ class BattleArmyTemplatesTest {
         BattleArmyTemplate.values().forEach { template ->
             val army = BattleArmyTemplates.create(rules, template)
             assertEquals(army, rules.validate(army))
-            assertEquals(4, army.size)
-            assertTrue(rules.cost(army) <= 300L)
+            assertEquals(5, army.size)
+            assertTrue(rules.cost(army) <= 500L)
             when (template) {
                 BattleArmyTemplate.CAVALRY -> {
                     assertTrue(army.all { it.unitName == "Horseman" })
-                    assertEquals(27, army.sumOf { it.count })
+                    assertEquals(31, army.sumOf { it.count })
                 }
                 BattleArmyTemplate.NO_ARCHERS -> assertTrue(army.none { it.unitName == "Archer" })
                 BattleArmyTemplate.ARCHERS -> assertTrue(
-                    rules.cost(army.filter { it.unitName == "Archer" }) > 150L
+                    rules.cost(army.filter { it.unitName == "Archer" }) > 250L
                 )
                 BattleArmyTemplate.MILITIA -> assertTrue(
-                    rules.cost(army.filter { it.unitName == "Peasant" }) > 150L
+                    rules.cost(army.filter { it.unitName == "Peasant" }) > 250L
                 )
                 BattleArmyTemplate.BALANCED -> assertEquals(4, army.map { it.unitName }.distinct().size)
             }
@@ -55,7 +55,7 @@ class BattleArmyTemplatesTest {
 
     @Test
     fun usesCatalogPricesAndSlotLimits() {
-        for (slots in 1..4) {
+        for (slots in 1..5) {
             val rules = BattleArmySelection(listOf(BattleRecruitmentUnit("Horseman", 17)), 91, slots)
             val army = BattleArmyTemplates.create(rules, BattleArmyTemplate.CAVALRY)
             assertTrue(army.size <= slots)
@@ -70,7 +70,7 @@ class BattleArmyTemplatesTest {
 
     @Test
     fun unavailableTemplateDoesNotSilentlyIntroduceForbiddenUnits() {
-        val rules = BattleArmySelection(listOf(BattleRecruitmentUnit("Archer", 3)))
+        val rules = BattleArmySelection(listOf(BattleRecruitmentUnit("Archer", 4)))
         for (template in listOf(BattleArmyTemplate.CAVALRY, BattleArmyTemplate.NO_ARCHERS)) {
             try {
                 BattleArmyTemplates.create(rules, template)

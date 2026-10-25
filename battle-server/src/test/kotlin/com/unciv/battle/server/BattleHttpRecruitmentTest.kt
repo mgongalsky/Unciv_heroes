@@ -14,13 +14,13 @@ import java.net.InetSocketAddress
 class BattleHttpRecruitmentTest {
     @Test fun purchasesRulesetArmiesAndRecoversLostReadyResponse() = runBlocking {
         val catalog = BattleScenarioCatalog(File(requireNotNull(System.getProperty("battle.assets"))))
-        assertEquals(mapOf("Peasant" to 1, "Archer" to 3, "Spearman" to 8,
-            "Swordsman" to 11, "Horseman" to 11), catalog.recruitment.units.associate { it.unitName to it.cost })
+        assertEquals(mapOf("Peasant" to 1, "Archer" to 4, "Spearman" to 8,
+            "Swordsman" to 11, "Horseman" to 16), catalog.recruitment.units.associate { it.unitName to it.cost })
         var created = 0
         val rooms = BattleRooms({ catalog.create(it, 42L) }, recruitment = catalog.recruitment,
             createPurchasedSession = { a, d -> catalog.createPurchased(a, d).also { created++ } })
         val server = BattleHttpServer(InetSocketAddress("127.0.0.1", 0), rooms,
-            listOf(WireScenario(BattleRooms.RECRUITMENT_SCENARIO, "Build army", "300 coins")))
+            listOf(WireScenario(BattleRooms.RECRUITMENT_SCENARIO, "Build army", "500 coins")))
         try {
             server.start()
             val url = "http://127.0.0.1:${server.port}"
@@ -40,19 +40,19 @@ class BattleHttpRecruitmentTest {
             val d = RemoteBattleLobby(transport).join(a.roomCode, "r".repeat(32))
             val waiting = a.room()
             assertEquals(RemoteRoomPhase.WAITING, waiting.phase)
-            assertEquals(300, requireNotNull(waiting.recruitment).budget)
-            assertEquals(4, requireNotNull(waiting.recruitment).maxStacks)
+            assertEquals(500, requireNotNull(waiting.recruitment).budget)
+            assertEquals(5, requireNotNull(waiting.recruitment).maxStacks)
             assertTrue(waiting.battle.state.troops.isEmpty())
             assertEquals(0, created)
             try {
-                a.ready(listOf(BattleArmyStack("Peasant", 301)))
+                a.ready(listOf(BattleArmyStack("Peasant", 501)))
                 fail("Over-budget army accepted")
             } catch (failure: BattleHttpException) { assertEquals(400, failure.status) }
             assertFalse(a.room().attackerReady)
             val armyA = listOf(BattleArmyStack("Swordsman", 10), BattleArmyStack("Spearman", 10),
-                BattleArmyStack("Archer", 10), BattleArmyStack("Peasant", 80))
+                BattleArmyStack("Archer", 10), BattleArmyStack("Peasant", 110), BattleArmyStack("Horseman", 10))
             val armyD = listOf(BattleArmyStack("Horseman", 20), BattleArmyStack("Archer", 20),
-                BattleArmyStack("Peasant", 20))
+                BattleArmyStack("Peasant", 20), BattleArmyStack("Peasant", 40), BattleArmyStack("Peasant", 40))
             a.ready(armyA)
             assertEquals(RemoteRoomPhase.WAITING, a.room().phase)
             assertTrue(d.room().ownArmy.isEmpty())

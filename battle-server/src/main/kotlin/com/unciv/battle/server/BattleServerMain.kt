@@ -19,7 +19,7 @@ object BattleServerMain {
         val rooms = BattleRooms({ scenario -> catalog.create(scenario) }, recruitment = catalog.recruitment, createPurchasedSession = catalog::createPurchased)
         val server = BattleHttpServer(
             InetSocketAddress(bind, port), rooms,
-            listOf(WireScenario(BattleRooms.RECRUITMENT_SCENARIO, "Build army — 300 coins", "Choose up to four stacks. Both players receive 300 coins.")) + catalog.scenarios.map { WireScenario(it.id, it.title, it.description) }
+            listOf(WireScenario(BattleRooms.RECRUITMENT_SCENARIO, "Build army — 500 coins", "Choose up to five stacks. Both players receive 500 coins.")) + catalog.scenarios.map { WireScenario(it.id, it.title, it.description) }
         )
         val stopped = CountDownLatch(1)
         Runtime.getRuntime().addShutdownHook(Thread({

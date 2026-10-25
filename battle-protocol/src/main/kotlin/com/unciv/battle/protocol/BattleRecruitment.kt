@@ -23,7 +23,7 @@ data class ReadyBattleArmyRequest(
     fun validate() {
         BattleProtocol.requireVersion(protocolVersion)
         require(battleNumber > 0) { "Invalid battle number" }
-        require(stacks.size in 1..4) { "Expected one to four stacks" }
+        require(stacks.size in 1..5) { "Expected one to five stacks" }
         require(stacks.all { it.unitName.isNotBlank() && it.unitName.length <= 128 && it.count > 0 }) {
             "Invalid army stack"
         }

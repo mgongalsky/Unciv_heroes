@@ -16,6 +16,7 @@ import com.unciv.ui.utils.extensions.onActivation
 import com.unciv.ui.utils.extensions.toTextButton
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Cursor.SystemCursor
+import com.unciv.ui.utils.extensions.toLabel
 
 class BattleResultPopup(
     screen: BaseScreen,
@@ -25,25 +26,44 @@ class BattleResultPopup(
 
     init {
         Gdx.graphics.setSystemCursor(SystemCursor.Arrow)
-
         defaults().pad(8f)
         add(fantasyLabel(resultTitle(), scale = 0.4f))
-            .colspan(2).padTop(24f).padBottom(16f)
+            .colspan(2).padTop(24f).padBottom(8f)
         row()
+        val score = report.winnerScore
+        val resultText = when {
+            report.winner == null -> "Result: 0%"
+            score == null -> "Result unavailable: recruitment prices are missing."
+            else -> "Winner result: ${
+                String.format(
+                    java.util.Locale.getDefault(),
+                    "%.1f",
+                    score.percent
+                )
+            }%"
+        }
+        add(resultText.toLabel(fontColor = Color.GOLD, fontSize = 24).apply {
+            setAlignment(Align.center)
+            setWrap(true)
+        }).colspan(2).width(740f).row()
+        if (score != null && report.winner != null) {
+            add(
+                "Army value remaining: ${score.remainingValue} / ${score.initialValue} coins"
+                    .toLabel(fontSize = 18).apply {
+                        setAlignment(Align.center)
+                        setWrap(true)
+                    }).colspan(2).width(740f).padBottom(8f).row()
+        }
         add(
             sideTable(
-                title = "Attacker",
-                losses = report.attackerLosses,
-                isWinner = report.winner == BattleSide.ATTACKER,
-                isAttacker = true
+                "Attacker", report.attackerLosses,
+                report.winner == BattleSide.ATTACKER, true
             )
         ).top().width(390f)
         add(
             sideTable(
-                title = "Defender",
-                losses = report.defenderLosses,
-                isWinner = report.winner == BattleSide.DEFENDER,
-                isAttacker = false
+                "Defender", report.defenderLosses,
+                report.winner == BattleSide.DEFENDER, false
             )
         ).top().width(390f)
         row()

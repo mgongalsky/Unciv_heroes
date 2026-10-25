@@ -192,24 +192,37 @@ class BattleRooms(
     }
 
     private fun view(room: Room, side: BattleSide): RoomView {
-        // Empty waiting-state value preserves the snapshot contract without constructing a battle.
         val snapshot = room.session?.read(side) ?: BattleSessionSnapshot(
             0L, 0L, null,
             BattleStateSnapshot(emptyList(), emptyList(), 0, null, null, false, null)
         )
         val report = if (!snapshot.state.finished) null else {
             val remaining = snapshot.state.troops.associateBy { it.id }
-            fun losses(seat: BattleSide) = room.initialTroops.filter { it.side == seat }.mapNotNull {
-                val lost = (it.currentAmount - (remaining[it.id]?.currentAmount ?: 0)).coerceAtLeast(0)
-                if (lost == 0) null else BattleLoss(it.id, it.unitName, lost)
-            }
-            BattleReport(snapshot.state.winner, losses(BattleSide.ATTACKER), losses(BattleSide.DEFENDER))
+            fun losses(seat: BattleSide) =
+                    room.initialTroops.filter { it.side == seat }.mapNotNull {
+                        val lost = (it.currentAmount - (remaining[it.id]?.currentAmount
+                            ?: 0)).coerceAtLeast(0)
+                        if (lost == 0) null else BattleLoss(it.id, it.unitName, lost)
+                    }
+
+            val winner = snapshot.state.winner
+            val score = if (winner == null) com.unciv.pure.domain.battle.BattleScore(0, 0)
+            else com.unciv.pure.application.battle.CalculateBattleScoreUseCase.execute(
+                room.initialTroops.filter { it.side == winner }.map {
+                    com.unciv.pure.application.battle.CalculateBattleScoreUseCase.Stack(
+                        it.unitName, it.currentAmount, remaining[it.id]?.currentAmount ?: 0
+                    )
+                }
+            ) { name -> recruitment?.units?.firstOrNull { it.unitName == name }?.cost }
+            BattleReport(winner, losses(BattleSide.ATTACKER), losses(BattleSide.DEFENDER), score)
         }
-        return RoomView(room.scenario, side, room.defender != null,
+        return RoomView(
+            room.scenario, side, room.defender != null,
             room.attackerReady, room.defenderReady, snapshot, room.battleNumber,
             room.attackerRematch, room.defenderRematch, report,
             if (room.purchased) recruitment else null,
-            (if (side == BattleSide.ATTACKER) room.attackerArmy else room.defenderArmy).toList())
+            (if (side == BattleSide.ATTACKER) room.attackerArmy else room.defenderArmy).toList()
+        )
     }
 
     private fun room(code: String): Room {

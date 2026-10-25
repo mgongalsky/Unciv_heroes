@@ -63,7 +63,8 @@ object BattleSnapshotWireMapper {
             fun losses(values: List<com.unciv.pure.domain.battle.BattleLoss>) = values.map {
                 WireBattleLoss(it.troopId, it.unitName, it.amount)
             }
-            WireBattleReport(report.winner?.wire(), losses(report.attackerLosses), losses(report.defenderLosses))
+            WireBattleReport(report.winner?.wire(), losses(report.attackerLosses), losses(report.defenderLosses),
+                report.winnerScore?.let { WireBattleScore(it.initialValue, it.remainingValue) })
         },
         view.recruitment?.let { selection ->
             WireArmyLobby(

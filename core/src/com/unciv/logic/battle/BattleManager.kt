@@ -33,31 +33,21 @@ open class BattleManager(
         val attackerTroops = attackerArmy.getAllTroops().filterNotNull()
         val defenderTroops = defenderArmy.getAllTroops().filterNotNull()
         fun startingPosition(x: Float, index: Int, count: Int): Vector2 {
-            val y = if (count == 5) listOf(3f, 1f, 0f, -1f, -3f)[index]
-            else 3f - index.toFloat() * 2
+            // Consecutive offset rows form a compact column around the field's middle.
+            val y = ((count - 1) / 2 - index).toFloat()
             return HexMath.evenQ2HexCoords(Vector2(x, y))
         }
         attackerTroops.forEachIndexed { index, troop ->
             val tile = battleField.getTileAt(
-                startingPosition(
-                    -7f,
-                    index,
-                    attackerTroops.size
-                )
-            ) as? IBattleTile
-                ?: return@forEachIndexed
+                startingPosition(-5f, index, attackerTroops.size)
+            ) as? IBattleTile ?: return@forEachIndexed
             troopPositions[troop] = tile
             tile.receiveTroop(troop)
         }
         defenderTroops.forEachIndexed { index, troop ->
             val tile = battleField.getTileAt(
-                startingPosition(
-                    6f,
-                    index,
-                    defenderTroops.size
-                )
-            ) as? IBattleTile
-                ?: return@forEachIndexed
+                startingPosition(4f, index, defenderTroops.size)
+            ) as? IBattleTile ?: return@forEachIndexed
             troopPositions[troop] = tile
             tile.receiveTroop(troop)
         }

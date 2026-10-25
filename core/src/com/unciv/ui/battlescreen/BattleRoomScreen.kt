@@ -28,7 +28,7 @@ import java.util.UUID
 /** Room operations run through the remote API; all widget updates run on Dispatcher.GL. */
 class BattleRoomScreen(
     private val onBattleReady: (RemoteBattleClient, RemoteRoomState) -> Unit,
-    initialAddress: String = "http://127.0.0.1:8081"
+    initialAddress: String = "https://heroic-civs.duckdns.org"
 ) : BaseScreen() {
     private val pasteCodeButton = "Paste".toTextButton().apply {
         onClick { roomCode.pasteCode() }
@@ -101,16 +101,7 @@ class BattleRoomScreen(
             setFillParent(true)
             add(com.unciv.ui.utils.AutoScrollPane(content)).grow()
         })
-        loadButton.onClick {
-            val server = address.text.trim()
-            perform {
-                val loaded = RemoteBattleLobby(UrlBattleHttpTransport(server)).scenarios()
-                catalog = loaded
-                catalogAddress = server
-                scenarios.setItems(*loaded.map { it.title }.toTypedArray())
-                status.setText(if (loaded.isEmpty()) "No scenarios available." else "Choose a scenario or join a room.")
-            }
-        }
+        loadButton.onClick { loadScenarios() }
         createButton.onClick {
             val server = address.text.trim()
             val selected = catalog.getOrNull(scenarios.selectedIndex)
@@ -153,7 +144,8 @@ class BattleRoomScreen(
         if (scope == null) scope = CoroutineScope(SupervisorJob() + Dispatcher.GL)
         busy = false
         updateControls()
-        startPolling()
+        if (client == null && catalogAddress == null && !handedOff) loadScenarios()
+        else startPolling()
     }
 
     override fun hide() {
@@ -264,5 +256,17 @@ class BattleRoomScreen(
         readyButton.isDisabled =
                 busy || !connected || handedOff || lastRoom?.phase == RemoteRoomPhase.CLOSED
         refreshButton.isDisabled = busy || !connected || handedOff
+    }
+    private fun loadScenarios() {
+        val server = address.text.trim()
+        perform {
+            val loaded = RemoteBattleLobby(UrlBattleHttpTransport(server)).scenarios()
+            catalog = loaded
+            catalogAddress = server
+            scenarios.setItems(*loaded.map { it.title }.toTypedArray())
+            val recruitmentIndex = loaded.indexOfFirst { it.id == "army-budget" }
+            if (recruitmentIndex >= 0) scenarios.selectedIndex = recruitmentIndex
+            status.setText(if (loaded.isEmpty()) "No scenarios available." else "Create a room or paste a room code to join.")
+        }
     }
 }

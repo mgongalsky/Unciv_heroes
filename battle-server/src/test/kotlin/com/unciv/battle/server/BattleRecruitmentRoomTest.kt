@@ -25,7 +25,7 @@ class BattleRecruitmentRoomTest {
 
     @Test fun createsOneBattleAfterBothPlayersConfirmAndReturnsToRecruitment() {
         val selection = BattleArmySelection(listOf(
-            BattleRecruitmentUnit("Peasant", 1), BattleRecruitmentUnit("Archer", 3)
+            BattleRecruitmentUnit("Peasant", 1), BattleRecruitmentUnit("Archer", 4)
         ))
         val created = mutableListOf<Session>()
         val received = mutableListOf<Pair<List<BattleArmyStack>, List<BattleArmyStack>>>()
@@ -39,11 +39,11 @@ class BattleRecruitmentRoomTest {
         )
         val a = rooms.create(BattleRooms.RECRUITMENT_SCENARIO)
         val d = rooms.join(a.roomCode, "x".repeat(32))
-        val armyA = listOf(BattleArmyStack("Peasant", 300))
-        val armyD = listOf(BattleArmyStack("Archer", 100))
+        val armyA = List(5) { BattleArmyStack("Peasant", 100) }
+        val armyD = List(5) { BattleArmyStack("Archer", 25) }
         assertTrue(created.isEmpty())
         invalid { rooms.ready(a.roomCode, a.token) }
-        invalid { rooms.ready(a.roomCode, a.token, stacks = listOf(BattleArmyStack("Peasant", 301))) }
+        invalid { rooms.ready(a.roomCode, a.token, stacks = listOf(BattleArmyStack("Peasant", 501))) }
         assertFalse(rooms.read(a.roomCode, a.token).attackerReady)
         val readyA = rooms.ready(a.roomCode, a.token, stacks = armyA)
         assertTrue(readyA.attackerReady)

@@ -73,4 +73,49 @@ class CreateBattleReportUseCaseTest {
 
         assertNull(report.winner)
     }
+
+    @Test
+    fun winnerScoreIncludesDestroyedStacksAndActualInitialValue() {
+        val surviving = troop("Spearman", 10)
+        val destroyed = troop("Archer", 5)
+        val attackers = FakeArmy(surviving, destroyed)
+        val defenders = FakeArmy(troop("Archer", 8))
+        val initial = CreateBattleReportUseCase.capture(attackers, defenders)
+        surviving.currentAmount = 6
+        attackers.removeTroop(destroyed)
+        val report = CreateBattleReportUseCase.execute(initial, attackers, defenders, true) {
+            when (it) {
+                "Spearman" -> 8; "Archer" -> 4; else -> null
+            }
+        }
+        val score = requireNotNull(report.winnerScore)
+        assertEquals(100L, score.initialValue)
+        assertEquals(48L, score.remainingValue)
+        assertEquals(48.0, score.percent, 0.0001)
+    }
+
+    @Test
+    fun scoresDefenderAndHandlesUnavailablePricesAndMutualDefeat() {
+        val attackers = FakeArmy(troop("Spearman", 10))
+        val defender = troop("Archer", 8)
+        val defenders = FakeArmy(defender)
+        val initial = CreateBattleReportUseCase.capture(attackers, defenders)
+        defender.currentAmount = 2
+        val report = CreateBattleReportUseCase.execute(initial, attackers, defenders, false) { 4 }
+        assertEquals(BattleSide.DEFENDER, report.winner)
+        val score = requireNotNull(report.winnerScore)
+        assertEquals(32L, score.initialValue)
+        assertEquals(8L, score.remainingValue)
+        assertEquals(25.0, score.percent, 0.0001)
+        assertNull(
+            CreateBattleReportUseCase.execute(
+                initial,
+                attackers,
+                defenders,
+                false
+            ).winnerScore
+        )
+        val mutual = CreateBattleReportUseCase.execute(initial, attackers, defenders, null)
+        assertEquals(0.0, requireNotNull(mutual.winnerScore).percent, 0.0001)
+    }
 }

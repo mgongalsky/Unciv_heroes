@@ -12,8 +12,8 @@ class BattleArmySelection(
     val maxStacks: Int = DEFAULT_MAX_STACKS
 ) {
     companion object {
-        const val DEFAULT_BUDGET = 300
-        const val DEFAULT_MAX_STACKS = 4
+        const val DEFAULT_BUDGET = 500
+        const val DEFAULT_MAX_STACKS = 5
     }
 
     val units: List<BattleRecruitmentUnit> = units.toList()
@@ -21,7 +21,7 @@ class BattleArmySelection(
 
     init {
         require(budget > 0)
-        require(maxStacks in 1..4)
+        require(maxStacks in 1..5)
         require(this.units.isNotEmpty()) { "No units available for recruitment" }
         require(prices.size == this.units.size) { "Duplicate recruitment unit" }
         require(this.units.all { it.unitName.isNotBlank() && it.cost > 0 }) {

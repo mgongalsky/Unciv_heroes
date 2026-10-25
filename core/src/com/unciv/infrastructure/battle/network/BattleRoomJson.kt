@@ -92,7 +92,16 @@ internal object BattleRoomJson {
             }
             com.unciv.pure.domain.battle.BattleReport(
                 value.optional("winner")?.let(::side),
-                losses("attackerLosses"), losses("defenderLosses")
+                losses("attackerLosses"), losses("defenderLosses"),
+                winnerScore = value.optional("winnerScore")?.let { score ->
+                    require(score.isObject)
+                    com.unciv.pure.domain.battle.BattleScore(
+                        score.long("initialValue"), score.long("remainingValue")
+                    ).also {
+                        if (value.optional("winner") == null) require(it.remainingValue == 0L)
+                        else require(it.initialValue > 0L)
+                    }
+                }
             ).also {
                 require(it.winner == state.optional("winner")?.let(::side))
             }
