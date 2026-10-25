@@ -1,0 +1,83 @@
+Tactical recruitment repricing — 2026-10-25
+
+Selected battleCost values:
+Peasant: 1 -> 1
+Archer: 4 -> 4
+Spearman: 8 -> 9
+Swordsman: 11 -> 12
+Horseman: 16 -> 15
+
+Scope: tactical recruitment prices in Civ V - Gods & Kings/Units.json.
+Strategic production costs and combat statistics were not changed.
+
+Method
+Use production BattleManager, StandaloneBattleSetup and AI, seven evenly
+split stacks per army (fewer when the soldier count is below seven).
+Budget: 500. Field: default 14x8, terrain seed 42, default climates.
+Luck and morale probabilities: 0.15. Limits: 1000 turns, 100 without progress.
+
+First measure all 25 directed matchups at the original budget-scale attacker
+counts: Peasant 500, Archer 125, Spearman 62, Swordsman 45, Horseman 31.
+Search defender counts 1..5000 with seeds 200..207.
+Fit log(price_attacker)-log(price_defender)=log(defendersPerAttacker)
+over the 20 non-mirror pairs by least squares, anchoring Peasant=1.
+The fit gave Archer 4.2928, Spearman 9.5172, Swordsman 12.5401,
+Horseman 15.9010. Boundary estimates assume a decreasing crossing.
+
+Boundary report: tests/balance-results/repricing-seven-500-1792932511889
+Input Units.json SHA256:
+ef0bb9d3eac40c0a50f61fa97a7d18ddac4288fb30482f8254e5fe43c7c8799a
+2384 battles; no mutual defeats, stalemates or turn-limit terminations.
+
+Validation
+Test four candidate price vectors with identical seeds 1000..1031,
+32 battles per directed pair, all 25 pairs. Soldier counts are floor(500/price);
+remaining coins are unspent. This adds 3200 battles, for 5584 total.
+These seeds are independent of the boundary search, but reused for candidate
+selection; this is not a separate final holdout evaluation.
+
+Price order: Peasant, Archer, Spearman, Swordsman, Horseman.
+Previous:     1,4,8,11,16
+Rounded fit:  1,4,10,13,16
+Intermediate: 1,4,9,12,16
+Selected:     1,4,9,12,15
+
+Validation reports:
+tests/balance-results/repricing-validation-1792932711755
+  previous and rounded fit
+tests/balance-results/repricing-validation-1792932910165
+  intermediate and selected
+Each report contains parameters.txt, input Units.json, results.csv and battles.csv.
+Candidate prices are recorded in parameters.txt; the input JSON snapshot still
+contains the old prices because validation supplies candidate counts explicitly.
+
+Selected candidate score against other unit types, averaging both roles:
+Peasant:   55.47% (142 wins, 114 losses)
+Archer:    51.56% (132 wins, 124 losses)
+Spearman:  46.09% (118 wins, 138 losses)
+Swordsman: 41.02% (105 wins, 151 losses)
+Horseman:  55.86% (143 wins, 113 losses)
+Mirror pairs excluded. Mutual defeat counts as half a win.
+RMS deviation from 50%: 5.70 percentage points, versus 12.42 for intermediate.
+No unresolved validation battles. Selected non-mirror pairs had no mutual defeats.
+Spearman beat Horseman in 63 of 64 battles across both roles, preserving its
+anti-cavalry role. The selected candidate had the smallest aggregate deviation
+among the four tested vectors; this does not establish a global optimum.
+
+Limits
+Results describe homogeneous armies, this budget, one terrain setup and the
+current AI. They do not establish balance for mixed armies, other budgets,
+other terrain or human play. Strong matchup counters and role asymmetry remain.
+
+Reproduction
+Run BattleRepricingSevenStacksTest.measureCurrentBudgetScaleBoundaries for
+fresh boundary measurements. It reads current JSON prices to choose army sizes,
+so rerunning after this update uses different attacker counts.
+BattleRepricingValidationTest.compareEqualBudgetPrices currently compares the
+intermediate and selected candidates using the documented validation seeds.
+Historical candidate inputs and results remain in their respective reports.
+
+Implementation checks
+ArenaArmyDistribution and StandaloneBattleSetup had stale five-stack limits;
+both now accept up to seven. ArenaArmyDistributionTest covers seven and rejects
+eight. Recruitment, template and HTTP catalog checks passed (15 tests).

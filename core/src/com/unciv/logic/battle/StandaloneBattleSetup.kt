@@ -15,7 +15,7 @@ object StandaloneBattleSetup {
     data class Stack(val unitName: String, val count: Int)
 
     fun army(stacks: List<Stack>, ruleset: Ruleset): Army {
-        require(stacks.isNotEmpty() && stacks.size <= 5)
+        require(stacks.isNotEmpty() && stacks.size <= 7)
         val source = RulesetTroopDefinitionSource(ruleset)
         return Army(stacks.size).apply {
             stacks.forEachIndexed { index, stack ->

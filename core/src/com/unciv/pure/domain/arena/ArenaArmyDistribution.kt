@@ -4,7 +4,7 @@ package com.unciv.pure.domain.arena
 object ArenaArmyDistribution {
     fun split(total: Int, requestedSlots: Int): List<Int> {
         require(total > 0)
-        require(requestedSlots in 1..5)
+        require(requestedSlots in 1..7)
         val slots = minOf(total, requestedSlots)
         val base = total / slots
         val remainder = total % slots

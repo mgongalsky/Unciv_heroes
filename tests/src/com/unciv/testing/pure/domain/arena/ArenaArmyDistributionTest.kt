@@ -7,8 +7,8 @@ import org.junit.Test
 class ArenaArmyDistributionTest {
     @Test
     fun splitsPreserveTotalsAndHaveNoEmptyStacks() {
-        for (total in listOf(1, 2, 3, 4, 5, 26, 221, Int.MAX_VALUE)) {
-            for (slots in 1..5) {
+        for (total in listOf(1, 2, 3, 4, 5, 6, 7, 26, 221, Int.MAX_VALUE)) {
+            for (slots in 1..7) {
                 val stacks = ArenaArmyDistribution.split(total, slots)
                 assertEquals(minOf(total, slots), stacks.size)
                 assertEquals(total.toLong(), stacks.sumOf { it.toLong() })
@@ -18,6 +18,7 @@ class ArenaArmyDistributionTest {
         }
         assertEquals(listOf(7, 7, 6, 6), ArenaArmyDistribution.split(26, 4))
         assertEquals(listOf(6, 5, 5, 5, 5), ArenaArmyDistribution.split(26, 5))
+        assertEquals(listOf(4, 4, 4, 4, 4, 3, 3), ArenaArmyDistribution.split(26, 7))
     }
 
     @Test
@@ -39,7 +40,7 @@ class ArenaArmyDistributionTest {
 
     @Test
     fun invalidCountsAndSlotsAreRejected() {
-        for ((total, slots) in listOf(0 to 4, -1 to 4, 26 to 0, 26 to 6)) {
+        for ((total, slots) in listOf(0 to 4, -1 to 4, 26 to 0, 26 to 8)) {
             try {
                 ArenaArmyDistribution.split(total, slots)
                 fail("Accepted total=$total slots=$slots")

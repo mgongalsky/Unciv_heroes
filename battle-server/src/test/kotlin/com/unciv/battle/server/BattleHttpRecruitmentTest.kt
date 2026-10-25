@@ -18,8 +18,8 @@ class BattleHttpRecruitmentTest {
                 BattleScenarioCatalog(File(requireNotNull(System.getProperty("battle.assets"))))
         assertEquals(
             mapOf(
-                "Peasant" to 1, "Archer" to 4, "Spearman" to 8,
-                "Swordsman" to 11, "Horseman" to 16
+                "Peasant" to 1, "Archer" to 4, "Spearman" to 9,
+                "Swordsman" to 12, "Horseman" to 15
             ), catalog.recruitment.units.associate { it.unitName to it.cost })
         var created = 0
         val rooms = BattleRooms(
@@ -84,12 +84,12 @@ class BattleHttpRecruitmentTest {
                 BattleArmyStack("Spearman", 10),
                 BattleArmyStack("Archer", 10),
                 BattleArmyStack("Horseman", 10),
-                BattleArmyStack("Peasant", 30),
+                BattleArmyStack("Peasant", 20),
                 BattleArmyStack("Peasant", 40),
                 BattleArmyStack("Peasant", 40)
             )
             val armyD = listOf(BattleArmyStack("Horseman", 20), BattleArmyStack("Archer", 20)) +
-                    List(5) { BattleArmyStack("Peasant", 20) }
+                    List(5) { BattleArmyStack("Peasant", 24) }
             assertEquals(500L, catalog.recruitment.cost(armyA))
             assertEquals(500L, catalog.recruitment.cost(armyD))
             a.ready(armyA)
