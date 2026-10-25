@@ -51,4 +51,7 @@ class Troop(
 
     /** Applied only to ranged attacks; null preserves legacy shooting. */
     var rangedShot: com.unciv.pure.domain.battle.RangedShotProfile? = null
+
+    /** Ruleset capability cancelling formation fatigue from movement only. */
+    var ignoresMovementFormationPenalty: Boolean = false
 }

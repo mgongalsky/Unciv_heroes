@@ -72,6 +72,22 @@ fun openBattleTileHighlightPreview(screen: BaseScreen) {
     pointer(changingTile, InputEvent.Type.exit)
     check(changingTile.baseLayerGroup.color.a == 0.5f)
     check(marker.isVisible)
+
+    // Long moves use the same dark fill for immune riders and troops without formation.
+    for ((hasFormation, immune) in listOf(true to true, false to false)) {
+        val appearance = BattleTileAppearanceUseCase.execute(
+            true, 4, 4, Strength.NORMAL, true,
+            hasFormation = hasFormation, ignoresMovementFormationPenalty = immune
+        )
+        renderer.update(changingTile, appearance)
+        check(changingTile.baseLayerGroup.color.a == 0.5f)
+        check(marker.isVisible)
+        pointer(changingTile, InputEvent.Type.enter)
+        renderer.update(changingTile, appearance)
+        check(changingTile.baseLayerGroup.color.a == 0.3f)
+        pointer(changingTile, InputEvent.Type.exit)
+        check(changingTile.baseLayerGroup.color.a == 0.5f)
+    }
     renderer.update(changingTile, Appearance())
     check(!marker.isVisible)
     check(changingTile.baseLayerGroup.color.a == 1f)

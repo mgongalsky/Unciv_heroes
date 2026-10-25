@@ -24,28 +24,38 @@ object BattlePresentationReader {
         fun tile(point: Point): IBattleTile? = manager.battleField.getTileAt(
             Vector2(point.x.toFloat(), point.y.toFloat())
         ) as? IBattleTile
+
         val enemies = manager.getEnemies(active).toSet()
         val context = TroopMovementContext(active) { it in enemies }
         val living = (manager.getAttackerArmy().getAllTroops() +
-            manager.getDefenderArmy().getAllTroops()).filterNotNull().filter { it.currentAmount > 0 }
+                manager.getDefenderArmy().getAllTroops()).filterNotNull()
+            .filter { it.currentAmount > 0 }
         val ranges = living.associate { troop -> troop.id to manager.getReachableTiles(troop) }
         val appearances = ranges[active.id].orEmpty().map { target ->
-            BattleTilePresentation(target.point(), BattleTileAppearanceUseCase.execute(
-                isReachable = true,
-                movementDistance = HexMath.getDistance(origin.position, target.position),
-                maximumMovement = active.speed,
-                control = context.controlStrength(target),
-                canDisplayControl = manager.isTileFree(target) || target == origin
-            ))
+            BattleTilePresentation(
+                target.point(), BattleTileAppearanceUseCase.execute(
+                    isReachable = true,
+                    movementDistance = HexMath.getDistance(origin.position, target.position),
+                    maximumMovement = active.speed,
+                    control = context.controlStrength(target),
+                    canDisplayControl = manager.isTileFree(target) || target == origin,
+                    hasFormation = active.hasFormation,
+                    ignoresMovementFormationPenalty = active.ignoresMovementFormationPenalty
+                )
+            )
         }
         val movements = living.mapNotNull { troop ->
             val start = manager.getTroopTile(troop) ?: return@mapNotNull null
             BattleTroopMovementPresentation(troop.id, ranges[troop.id].orEmpty().map { target ->
-                BattleMovementTilePresentation(target.point(), BattleMovementPreviewUseCase.execute(
-                    isReachable = true,
-                    movementDistance = HexMath.getDistance(start.position, target.position),
-                    maximumMovement = troop.speed
-                ))
+                BattleMovementTilePresentation(
+                    target.point(), BattleMovementPreviewUseCase.execute(
+                        isReachable = true,
+                        movementDistance = HexMath.getDistance(start.position, target.position),
+                        maximumMovement = troop.speed,
+                        hasFormation = troop.hasFormation,
+                        ignoresMovementFormationPenalty = troop.ignoresMovementFormationPenalty
+                    )
+                )
             })
         }
         val attacks = commands.mapNotNull { command ->
@@ -56,7 +66,8 @@ object BattlePresentationReader {
             }
             val target = tile(targetPoint)?.let(manager::getTroopOnTile) ?: return@mapNotNull null
             val approach = (command as? BattleCommand.Attack)?.attackFrom?.let(::tile)
-            val preview = manager.getAttackPreview(active, target, approach) ?: return@mapNotNull null
+            val preview =
+                manager.getAttackPreview(active, target, approach) ?: return@mapNotNull null
             BattleAttackPresentation(command, preview)
         }
         return BattlePresentationSnapshot(appearances, movements, attacks)

@@ -11,13 +11,15 @@ object BattleTileAppearanceUseCase {
         movementDistance: Int,
         maximumMovement: Int,
         control: Strength,
-        canDisplayControl: Boolean
+        canDisplayControl: Boolean,
+        hasFormation: Boolean = true,
+        ignoresMovementFormationPenalty: Boolean = false
     ): Appearance {
-        val safe = isReachable && movementDistance > 0 &&
-                !ApplyMovementFormationPenaltyUseCase.wouldApplyPenalty(
-                    movementDistance,
-                    maximumMovement
-                )
+        val style = BattleMovementPreviewUseCase.execute(
+            isReachable, movementDistance, maximumMovement,
+            hasFormation, ignoresMovementFormationPenalty
+        )
+        val safe = movementDistance > 0 && style == BattleMovementPreviewUseCase.TileStyle.SAFE
         return Appearance(
             terrainAlpha = when {
                 safe -> 0.5f

@@ -18,7 +18,8 @@ data class BalanceUnit(
     val formationHealthPercent: Int = 0,
     val formationDamageReductionPercent: Int = 0,
     val flanking: FlankingProfile? = null,
-    val rangedShot: RangedShotProfile? = null
+    val rangedShot: RangedShotProfile? = null,
+    val ignoresMovementFormationPenalty: Boolean = false
 ) {
     init {
         require(name.isNotBlank())
@@ -72,7 +73,7 @@ object BalanceUnitSources {
                 BalanceUnit(
                     name, unit.speed, unit.health, unit.damage, unit.rangedStrength,
                     unit.formationHealthPercent, unit.formationDamageReductionPercent, unit.flanking,
-                    unit.rangedShot
+                    unit.rangedShot, unit.ignoresMovementFormationPenalty
                 )
             }
         }
@@ -109,7 +110,8 @@ object BalanceUnitSources {
             BalanceUnit(
                 name, number("speed"), number("health"), number("damage"),
                 number("rangedStrength", "0"), number("formationHealthPercent", "0"),
-                number("formationDamageReductionPercent", "0"), profile, shotProfile
+                number("formationDamageReductionPercent", "0"), profile, shotProfile,
+                node.getBoolean("ignoresMovementFormationPenalty", false)
             )
         }
     }
@@ -126,6 +128,7 @@ object BalanceUnitSources {
             unit.formationDamageReductionPercent = definition.formationDamageReductionPercent
             unit.flanking = definition.flanking
             unit.rangedShot = definition.rangedShot
+            unit.ignoresMovementFormationPenalty = definition.ignoresMovementFormationPenalty
         }
     }
 }

@@ -115,4 +115,26 @@ class FormationCommandIntegrationTest {
         assertFalse(result.success)
         assertEquals(100, troop.formation.current)
     }
+
+    @Test
+    fun `immune troop preserves formation and shows safe long movement before event`() {
+        troop.ignoresMovementFormationPenalty = true
+        troop.formation.current = 60
+        val presentation =
+            com.unciv.logic.battle.session.BattlePresentationReader.capture(manager, emptyList())
+        val destination = presentation.tiles.single { it.position == Point(3, 0) }
+        assertEquals(0.5f, destination.appearance.terrainAlpha, 0f)
+        val range = presentation.movementRanges.single { it.troopId == troop.id }
+        assertEquals(
+            com.unciv.pure.application.battle.BattleMovementPreviewUseCase.TileStyle.SAFE,
+            range.tiles.single { it.position == Point(3, 0) }.style
+        )
+        var observed = -1
+        val result = manager.execute(BattleCommand.Move(troop.id, Point(3, 0))) {
+            observed = troop.formation.current
+        }
+        assertTrue(result.success)
+        assertEquals(60, troop.formation.current)
+        assertEquals(60, observed)
+    }
 }

@@ -9,7 +9,8 @@ object UpdateFormationAfterMoveUseCase {
         val maximumMovement: Int,
         val turnEndsWithoutAttack: Boolean,
         val recoveryNumerator: Int = 15,
-        val recoveryDenominator: Int = 100
+        val recoveryDenominator: Int = 100,
+        val ignoresMovementFormationPenalty: Boolean = false
     )
 
     data class Output(
@@ -40,7 +41,8 @@ object UpdateFormationAfterMoveUseCase {
                 currentFormation = input.currentFormation,
                 maximumFormation = input.maximumFormation,
                 movementDistance = input.movementDistance,
-                maximumMovement = input.maximumMovement
+                maximumMovement = input.maximumMovement,
+                ignoresMovementFormationPenalty = input.ignoresMovementFormationPenalty
             )
         )
         return Output(

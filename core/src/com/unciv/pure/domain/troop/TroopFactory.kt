@@ -36,5 +36,6 @@ object TroopFactory {
     ).also {
         it.flanking = source.getFlankingProfile(unitName)
         it.rangedShot = source.getRangedShotProfile(unitName)
+        it.ignoresMovementFormationPenalty = source.ignoresMovementFormationPenalty(unitName)
     }
 }

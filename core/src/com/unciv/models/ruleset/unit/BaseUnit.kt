@@ -723,4 +723,7 @@ class BaseUnit : RulesetObject(), INonPerpetualConstruction {
 
     /** Price per soldier in budget-based tactical battles; zero excludes the unit from recruitment. */
     var battleCost: Int = 0
+
+    /** Tactical movement never reduces formation when enabled. */
+    var ignoresMovementFormationPenalty: Boolean = false
 }

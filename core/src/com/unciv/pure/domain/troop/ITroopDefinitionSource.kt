@@ -12,4 +12,5 @@ interface ITroopDefinitionSource {
     fun getFlankingProfile(unitName: String): com.unciv.pure.domain.battle.FlankingProfile? = null
     fun getRangedShotProfile(unitName: String): com.unciv.pure.domain.battle.RangedShotProfile? =
             null
+    fun ignoresMovementFormationPenalty(unitName: String): Boolean = false
 }

@@ -134,6 +134,10 @@ open class ArmyInfo(
                         if (!troopData.has("rangedShot")) {
                             it.rangedShot = troopSource.getRangedShotProfile(it.unitName)
                         }
+                        if (!troopData.has("ignoresMovementFormationPenalty")) {
+                            it.ignoresMovementFormationPenalty =
+                                troopSource.ignoresMovementFormationPenalty(it.unitName)
+                        }
                         it.restoreFormationIfMissing()
                     }
                 }

@@ -1,6 +1,6 @@
 package com.unciv.pure.application.battle
 
-/** Reduces formation after a troop moves strictly more than half of its movement allowance. */
+/** Reduces formation beyond half movement unless the troop has movement immunity. */
 object ApplyMovementFormationPenaltyUseCase {
     data class Input(
         val currentFormation: Int,
@@ -8,7 +8,8 @@ object ApplyMovementFormationPenaltyUseCase {
         val movementDistance: Int,
         val maximumMovement: Int,
         val penaltyNumerator: Int = 1,
-        val penaltyDenominator: Int = 4
+        val penaltyDenominator: Int = 4,
+        val ignoresMovementFormationPenalty: Boolean = false
     )
 
     data class Output(
@@ -31,7 +32,8 @@ object ApplyMovementFormationPenaltyUseCase {
         require(input.penaltyNumerator >= 0) { "penaltyNumerator must not be negative" }
         require(input.penaltyDenominator > 0) { "penaltyDenominator must be positive" }
 
-        if (!wouldApplyPenalty(input.movementDistance, input.maximumMovement)) {
+        val exceedsHalfMovement = wouldApplyPenalty(input.movementDistance, input.maximumMovement)
+        if (!exceedsHalfMovement || input.ignoresMovementFormationPenalty) {
             return Output(input.currentFormation, penaltyApplied = false)
         }
 

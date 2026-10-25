@@ -1035,7 +1035,9 @@ class BattleScreen private constructor(
                         currentTile.position,
                         tileGroup.tileInfo.position
                     ),
-                    maximumMovement = enemy.speed
+                    maximumMovement = enemy.speed,
+                    hasFormation = enemy.hasFormation,
+                    ignoresMovementFormationPenalty = enemy.ignoresMovementFormationPenalty
                 )
                 if (style != BattleMovementPreviewUseCase.TileStyle.HIDDEN) {
                     movementRangeOverlays.getOrPut(tileGroup) {

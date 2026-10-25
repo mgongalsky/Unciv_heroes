@@ -20,4 +20,6 @@ class RulesetTroopDefinitionSource(private val ruleset: Ruleset) : ITroopDefinit
         ruleset.units[unitName]?.flanking
     override fun getRangedShotProfile(unitName: String): com.unciv.pure.domain.battle.RangedShotProfile? =
             ruleset.units[unitName]?.rangedShot
+    override fun ignoresMovementFormationPenalty(unitName: String): Boolean =
+        ruleset.units[unitName]?.ignoresMovementFormationPenalty ?: false
 }

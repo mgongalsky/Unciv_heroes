@@ -11,14 +11,16 @@ object BattleMovementPreviewUseCase {
     fun execute(
         isReachable: Boolean,
         movementDistance: Int,
-        maximumMovement: Int
+        maximumMovement: Int,
+        hasFormation: Boolean = true,
+        ignoresMovementFormationPenalty: Boolean = false
     ): TileStyle {
         if (!isReachable) return TileStyle.HIDDEN
-        return if (ApplyMovementFormationPenaltyUseCase.wouldApplyPenalty(
-                movementDistance = movementDistance,
-                maximumMovement = maximumMovement
-            )
-        ) TileStyle.FORMATION_PENALTY
+        val exceedsHalfMovement = ApplyMovementFormationPenaltyUseCase.wouldApplyPenalty(
+            movementDistance, maximumMovement
+        )
+        return if (hasFormation && !ignoresMovementFormationPenalty && exceedsHalfMovement)
+            TileStyle.FORMATION_PENALTY
         else TileStyle.SAFE
     }
 }

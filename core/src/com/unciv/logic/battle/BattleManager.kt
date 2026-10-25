@@ -317,7 +317,8 @@ open class BattleManager(
                     maximumFormation = troop.formation.maximum,
                     movementDistance = movementDistance,
                     maximumMovement = troop.speed,
-                    turnEndsWithoutAttack = !isMorale && !grantsShot
+                    turnEndsWithoutAttack = !isMorale && !grantsShot,
+                    ignoresMovementFormationPenalty = troop.ignoresMovementFormationPenalty
                 )
             )
             troop.formation.current = formation.remainingFormation
