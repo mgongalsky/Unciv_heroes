@@ -14,6 +14,7 @@ import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toTextButton
 import com.unciv.utils.concurrency.Dispatcher
 import kotlinx.coroutines.*
+import com.unciv.ui.utils.extensions.setFontSize
 
 /** Retains one immutable Ready payload until the server confirms it. */
 class NetworkArmySetupScreen(
@@ -38,18 +39,34 @@ class NetworkArmySetupScreen(
     init {
         require(initial.battleNumber == client.battleNumber)
         picker.setArmy(initial.ownArmy)
-        val content = Table().apply {
-            defaults().pad(8f)
-            add("Room: ${client.roomCode} — ${client.side}".toLabel()).row()
+        ready.style = com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle(
+            skin.get(
+                "positive",
+                com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle::class.java
+            )
+        )
+        ready.label.setFontSize(24)
+        ready.name = "armyReadyButton"
+        val header = Table().apply {
+            defaults().pad(6f)
+            add("Room: ${client.roomCode} — ${client.side}".toLabel()).expandX().left()
             add("Copy room code".toTextButton().apply {
                 onClick { com.badlogic.gdx.Gdx.app.clipboard.contents = client.roomCode }
-            }).height(44f).row()
-            add(picker).row()
-            add(ready).height(48f).row()
-            add(status).width(460f).minHeight(60f).row()
-            add("Leave room".toTextButton().apply { onClick { leave() } }).height(44f)
+            }).height(40f)
+            add(ready).width(240f).height(60f)
         }
-        stage.addActor(Table().apply { setFillParent(true); add(AutoScrollPane(content)).grow() })
+        val footer = Table().apply {
+            defaults().pad(6f)
+            add(status).growX().minHeight(44f)
+            add("Leave room".toTextButton().apply { onClick { leave() } }).height(40f)
+        }
+        stage.addActor(Table().apply {
+            setFillParent(true)
+            pad(12f)
+            add(header).growX().row()
+            add(AutoScrollPane(picker)).grow().row()
+            add(footer).growX()
+        })
         ready.onClick {
             if (!ready.isDisabled && pending == null && !confirmed && valid) {
                 val chosen = picker.trySelectedArmy()

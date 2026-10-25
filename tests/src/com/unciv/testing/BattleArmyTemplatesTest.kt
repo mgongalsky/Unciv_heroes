@@ -96,4 +96,22 @@ class BattleArmyTemplatesTest {
         draft.clear(1)
         assertEquals(before, draft.stacks())
     }
+    @Test
+    fun sevenStackTemplatesStayEditableAndWithinBudget() {
+        val rules = selection(slots = 7)
+        for (template in BattleArmyTemplate.values()) {
+            val army = BattleArmyTemplates.create(rules, template)
+            assertEquals(7, army.size)
+            assertEquals(army, rules.validate(army))
+            val draft = BattleArmyDraft(rules)
+            draft.restore(army)
+            draft.clear(6)
+            assertEquals(6, draft.stacks().size)
+        }
+        for (seed in 0..19) {
+            val army = BattleArmyTemplates.create(rules, random = Random(seed))
+            assertEquals(army, rules.validate(army))
+            assertEquals(army, BattleArmyTemplates.create(rules, random = Random(seed)))
+        }
+    }
 }

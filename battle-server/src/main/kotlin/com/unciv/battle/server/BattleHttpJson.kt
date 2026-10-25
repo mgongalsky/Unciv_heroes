@@ -62,7 +62,11 @@ internal object BattleHttpJson {
     fun readyArmy(root: JsonValue): ReadyBattleArmyRequest {
         fields(root, setOf("protocolVersion", "battleNumber", "stacks"))
         val entries = requireNotNull(root.get("stacks")) { "Army stacks are required" }
-        require(entries.isArray && entries.size in 1..5) { "Expected one to five stacks" }
+        val maximum =
+                com.unciv.pure.application.battle.recruitment.BattleArmySelection.DEFAULT_MAX_STACKS
+        require(entries.isArray && entries.size in 1..maximum) {
+            "Expected between 1 and $maximum stacks"
+        }
         val stacks = entries.map { node ->
             require(node.isObject)
             fields(node, setOf("unitName", "count"))

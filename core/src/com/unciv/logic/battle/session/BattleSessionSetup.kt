@@ -26,11 +26,12 @@ object BattleSessionSetup {
         require(luckProbability in 0.0..1.0 && moraleProbability in 0.0..1.0)
         var nextId = 1
         fun army(side: Side): IArmy {
-            require(side.stacks.size in 1..5)
+            require(side.stacks.size in 1..com.unciv.pure.application.battle.recruitment.BattleArmySelection.DEFAULT_MAX_STACKS)
             val army = Army(side.stacks.size)
             side.stacks.forEachIndexed { index, stack ->
                 require(stack.unitName.isNotBlank() && stack.count > 0)
-                val troop = TroopFactory.createWithId(nextId++, stack.unitName, stack.count, definitions)
+                val troop =
+                    TroopFactory.createWithId(nextId++, stack.unitName, stack.count, definitions)
                 require(troop.speed > 0 && troop.maxHealth > 0 && troop.damage >= 0) {
                     "Invalid battle unit: ${stack.unitName}"
                 }
@@ -41,6 +42,7 @@ object BattleSessionSetup {
                 override fun getBattleMorale(): Int = side.morale
             }
         }
+
         val manager = BattleManager(
             army(attacker), army(defender), field, random,
             moraleProbability = moraleProbability, luckProbability = luckProbability

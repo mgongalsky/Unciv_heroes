@@ -69,4 +69,9 @@ class UiGoldenTest {
     fun networkBattle() {
         UiGoldenTestRunner.main(arrayOf("--scenario=network-room", "--scenario=network-battle"))
     }
+
+    @Test
+    fun armySetupLaptop() {
+        UiGoldenTestRunner.main(arrayOf("--scenario=army-setup-laptop"))
+    }
 }

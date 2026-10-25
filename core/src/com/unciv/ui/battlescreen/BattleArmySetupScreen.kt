@@ -27,23 +27,28 @@ class BattleArmySetupScreen : BaseScreen() {
 
     init {
         title.setFontSize(24)
-        next.label.setFontSize(18)
-        val content = Table().apply {
-            defaults().pad(4f)
-            add(title).row()
-            add(picker).row()
-            add(Table().apply {
-                defaults().pad(6f).minHeight(42f)
-                add("Back".toTextButton().apply {
-                    label.setFontSize(18)
-                    onClick { back() }
-                }).minWidth(100f)
-                add(next).minWidth(230f)
-            }).row()
+        next.style = com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle(
+            skin.get(
+                "positive",
+                com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle::class.java
+            )
+        )
+        next.label.setFontSize(22)
+        next.name = "armyReadyButton"
+        val header = Table().apply {
+            defaults().pad(6f)
+            add("Back".toTextButton().apply {
+                label.setFontSize(18)
+                onClick { back() }
+            }).width(100f).height(40f)
+            add(title).expandX().left()
+            add(next).minWidth(280f).height(60f)
         }
         stage.addActor(Table().apply {
             setFillParent(true)
-            add(AutoScrollPane(content)).grow()
+            pad(12f)
+            add(header).growX().row()
+            add(AutoScrollPane(picker)).grow()
         })
         next.onClick {
             if (!next.isDisabled) {
@@ -54,7 +59,11 @@ class BattleArmySetupScreen : BaseScreen() {
                         attacker = chosen
                         title.setText("Choose opponent army")
                         next.setText("Start battle")
-                        picker.useTemplate()
+                        picker.setArmy(
+                            com.unciv.pure.application.battle.recruitment.BattleArmyTemplates.create(
+                                selection
+                            )
+                        )
                     } else {
                         next.isDisabled = true
                         val battle = BattleScreen.forTesting(

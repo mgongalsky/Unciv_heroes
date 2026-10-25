@@ -41,8 +41,12 @@ object UiGoldenTestRunner {
         val update = args.contains("--update")
         val requestedScenarios = args.filter { it.startsWith("--scenario=") }
             .map { it.substringAfter('=') }.toSet()
+        val armySetup = requestedScenarios == setOf("army-setup-laptop")
+        require("army-setup-laptop" !in requestedScenarios || armySetup) {
+            "Run army-setup-laptop separately at its laptop resolution"
+        }
         val projectRoot = File(System.getProperty("golden.projectRoot") ?: "../..").canonicalFile
-        val allScenarios = scenarios()
+        val allScenarios = if (armySetup) listOf(Scenario("army-setup-laptop") {}) else scenarios()
         val selectedScenarios = if (requestedScenarios.isEmpty()) allScenarios
         else allScenarios.filter { it.name in requestedScenarios }
         val unknownScenarios = requestedScenarios - allScenarios.map { it.name }.toSet()
@@ -62,7 +66,7 @@ object UiGoldenTestRunner {
             val config = Lwjgl3ApplicationConfiguration().apply {
                 setTitle("Heroic Civs UI golden tests")
                 setHdpiMode(HdpiMode.Logical)
-                setWindowedMode(WIDTH, HEIGHT)
+                setWindowedMode(if (armySetup) 1366 else WIDTH, if (armySetup) 768 else HEIGHT)
                 setInitialVisible(false)
                 setForegroundFPS(60)
                 setIdleFPS(60)
@@ -163,7 +167,9 @@ object UiGoldenTestRunner {
             }
             stableFrames++
             if (stableFrames < STABLE_FRAMES_BEFORE_CAPTURE) return
-            val framebuffer = ScreenUtils.getFrameBufferPixmap(0, 0, WIDTH, HEIGHT)
+            val framebuffer = ScreenUtils.getFrameBufferPixmap(
+                0, 0, Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight
+            )
             val actual = flipVertically(framebuffer)
             framebuffer.dispose()
             allPassed = compareOrUpdate(
@@ -186,6 +192,7 @@ object UiGoldenTestRunner {
         private fun scenarioScreen(scenario: Scenario): BaseScreen = when (scenario.name) {
             "network-room" -> NetworkBattleGoldenScreens.room()
             "network-battle" -> NetworkBattleGoldenScreens.battle()
+            "army-setup-laptop" -> ArmySetupGoldenChecks.screen()
             else -> GoldenScenarioScreen(scenario.open)
         }.also { expectedScreen = it }
 

@@ -35,8 +35,8 @@ class BattleArmyPicker(
     private val templates = SelectBox<String>(BaseScreen.skin).apply {
         setItems(*BattleArmyTemplate.values().map { it.title }.toTypedArray())
     }
-    private val applyTemplate = "Apply".toTextButton()
-    private val randomArmy = "Random".toTextButton()
+    private val applyTemplate = "Replace army with preset".toTextButton()
+    private val randomArmy = "Replace with random army".toTextButton()
     private var updating = false
     private var layoutWidth = -1
     private data class Card(
@@ -161,17 +161,49 @@ class BattleArmyPicker(
     private fun arrange(available: Int) {
         if (layoutWidth == available) return
         layoutWidth = available
-        val columns = if (available >= 840) 2 else 1
-        val cardWidth = if (columns == 2) (available - 16f) / 2f else minOf(available.toFloat(), 520f)
-        val totalWidth = cardWidth * columns + if (columns == 2) 16f else 0f
+        val rowWidth = available.toFloat() - 8f
+        val wide = available >= 900
         grid.clearChildren()
         cards.forEachIndexed { index, card ->
-            card.typeCell.width(cardWidth - 128f)
-            grid.add(card.panel).width(cardWidth).pad(4f).top()
-            if ((index + 1) % columns == 0) grid.row()
+            card.panel.clearChildren()
+            card.panel.background = BaseScreen.skin.newDrawable(
+                "RoundedEdgeRectangle", Color(0.10f, 0.15f, 0.25f, 1f)
+            ).apply {
+                minHeight = 0f
+                minWidth = 0f
+            }
+            card.panel.pad(2f)
+            card.portrait.setScale(32f / 88f)
+            val controls = Table().apply {
+                defaults().pad(1f).height(30f)
+                add(card.minusTen).width(44f)
+                add(card.minus).width(32f)
+                add(card.amount).width(44f)
+                add(card.plus).width(32f)
+                add(card.plusTen).width(44f)
+                add(card.maximum).width(48f)
+                add(card.clear).width(48f)
+            }
+            val identity = Table().apply {
+                defaults().pad(1f)
+                add(label("${index + 1}")).width(24f)
+                add(card.portrait).size(32f)
+                add(card.type).width(if (wide) rowWidth - 582f else rowWidth - 80f).height(30f)
+            }
+            if (wide) {
+                card.panel.add(identity).left()
+                card.panel.add(card.price).width(180f).padLeft(6f).padRight(6f)
+                card.panel.add(controls).right()
+            } else {
+                card.panel.add(identity).growX().row()
+                card.panel.add(card.price).growX().minHeight(22f).row()
+                card.panel.add(controls).center()
+            }
+            card.panel.name = "armyStack${index + 1}"
+            grid.add(card.panel).width(rowWidth).pad(2f).row()
         }
-        getCell(summary).width(totalWidth)
-        getCell(feedback).width(totalWidth)
+        getCell(summary).width(rowWidth)
+        getCell(feedback).width(rowWidth)
         invalidateHierarchy()
     }
 
@@ -179,13 +211,36 @@ class BattleArmyPicker(
         if (!draft.locked) generate(template)
     }
 
-    private fun generate(template: BattleArmyTemplate = BattleArmyTemplate.BALANCED, random: Random? = null) {
-        try {
-            setArmy(BattleArmyTemplates.create(selection, template, random))
-            feedback.setText(if (random == null) "${template.title} — edit any stack below."
-                else "Random army — edit it or roll again.")
+    private fun generate(
+        template: BattleArmyTemplate = BattleArmyTemplate.BALANCED,
+        random: Random? = null
+    ) {
+        if (draft.locked) return
+        val replacement = try {
+            BattleArmyTemplates.create(selection, template, random)
         } catch (failure: IllegalArgumentException) {
             feedback.setText(failure.message ?: "Template unavailable")
+            return
+        }
+        val replace: () -> Unit = {
+            if (!draft.locked) {
+                setArmy(replacement)
+                feedback.setText(
+                    if (random == null) "${template.title} — edit any stack below."
+                    else "Random army — edit any stack below."
+                )
+            }
+        }
+        if (draft.stacks().isEmpty()) {
+            replace()
+        } else {
+            val owner = stage ?: return
+            com.unciv.ui.popup.ConfirmPopup(
+                owner,
+                "Replace your entire army with ${if (random == null) "the selected preset" else "a random army"}?\nYour current selection will be lost.",
+                "Replace army",
+                action = replace
+            ).open()
         }
     }
 
@@ -222,7 +277,13 @@ class BattleArmyPicker(
                 card.type.isDisabled = draft.locked
                 val count = draft.count(slot)
                 card.amount.setText(count.toString())
-                card.price.setText("${draft.unitCost(slot)} / soldier · ${count.toLong() * draft.unitCost(slot)} coins")
+                card.price.setText(
+                    "${draft.unitCost(slot)} × $count = ${
+                        count.toLong() * draft.unitCost(
+                            slot
+                        )
+                    }"
+                )
                 val canAdd = count < draft.maximum(slot)
                 card.minusTen.isDisabled = draft.locked || count == 0
                 card.minus.isDisabled = draft.locked || count == 0
@@ -232,7 +293,12 @@ class BattleArmyPicker(
                 card.maximum.isDisabled = draft.locked || !canAdd
                 if (card.shownUnit != name) {
                     card.portrait.clearChildren()
-                    ImageGetter.getLayeredImageColored("TileSets/AbsoluteUnits/Units/$name", null, null, null)
+                    ImageGetter.getLayeredImageColored(
+                        "TileSets/AbsoluteUnits/Units/$name",
+                        null,
+                        null,
+                        null
+                    )
                         .forEach { layer ->
                             layer.setSize(88f, 88f)
                             card.portrait.addActor(layer)
@@ -244,6 +310,8 @@ class BattleArmyPicker(
             val stacks = draft.stacks()
             summary.setText("Coins: ${draft.remaining()} / ${selection.budget}     Stacks: ${stacks.size}/${selection.maxStacks}")
             onChanged(stacks.isNotEmpty() && draft.cost() <= selection.budget)
-        } finally { updating = false }
+        } finally {
+            updating = false
+        }
     }
 }
