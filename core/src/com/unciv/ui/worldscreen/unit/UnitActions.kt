@@ -178,7 +178,20 @@ object UnitActions {
      * The [action][UnitAction.action] field will be null if the action cannot be done here and now
      * (no movement left, too close to another city).
       */
-    fun getFoundCityAction(unit: MapUnit, tile: TileInfo): UnitAction? {
+    fun getFoundCityAction(
+        unit: MapUnit,
+        tile: TileInfo,
+        onFoundingTutorial: () -> Unit = {
+            UncivGame.Current.settings.addCompletedTutorialTask("Found city")
+        },
+        onWorldUpdated: () -> Unit = {
+            UncivGame.Current.worldScreen!!.shouldUpdate = true
+        },
+        confirmBrokenPromise: (String, () -> Unit) -> Unit = { leaders, foundAction ->
+            val text = "Do you want to break your promise to [$leaders]?"
+            ConfirmPopup(UncivGame.Current.worldScreen!!, text, "Break promise", action = foundAction).open(force = true)
+        }
+    ): UnitAction? {
         if (!unit.hasUnique(UniqueType.FoundCity)
                 || tile.isWater || tile.isImpassible()) return null
         // Spain should still be able to build Conquistadors in a one city challenge - but can't settle them
@@ -192,7 +205,7 @@ object UnitActions {
             return UnitAction(UnitActionType.FoundCity, action = null)
 
         val foundAction = {
-            UncivGame.Current.settings.addCompletedTutorialTask("Found city")
+            onFoundingTutorial()
             unit.civInfo.addCity(tile.position, unit)
             if (tile.ruleset.tileImprovements.containsKey("City center")) {
                 if(unit.civInfo.isMajorCiv())
@@ -205,7 +218,7 @@ object UnitActions {
                 tile.removeRoad()
 
             unit.destroy()
-            UncivGame.Current.worldScreen!!.shouldUpdate = true
+            onWorldUpdated()
         }
 
         if (unit.civInfo.playerType == PlayerType.AI)
@@ -221,8 +234,8 @@ object UnitActions {
                         foundAction()
                     else {
                         // ask if we would be breaking a promise
-                        val text = "Do you want to break your promise to [$leaders]?"
-                        ConfirmPopup(UncivGame.Current.worldScreen!!, text, "Break promise", action = foundAction).open(force = true)
+
+                        confirmBrokenPromise(leaders, foundAction)
                     }
                 }
             )
