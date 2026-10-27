@@ -1,124 +1,83 @@
 package com.unciv.testing
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.Input
+import com.badlogic.gdx.backends.headless.mock.input.MockInput
 import com.unciv.UncivGame
 import com.unciv.json.json
 import com.unciv.logic.GameInfo
-import com.unciv.logic.UncivFiles
-import com.unciv.logic.GameStarter
-import com.unciv.logic.civilization.PlayerType
-import com.unciv.logic.map.MapParameters
-import com.unciv.logic.map.MapSize
-import com.unciv.logic.map.MapSizeNew
-import com.unciv.models.metadata.GameParameters
-import com.unciv.models.metadata.GameSettings
-import com.unciv.models.metadata.Player
-import com.unciv.models.ruleset.RulesetCache
-import com.unciv.models.metadata.GameSetupInfo
-import com.unciv.models.ruleset.unique.UniqueType
-import com.unciv.utils.debug
+import com.unciv.logic.civilization.CivilizationInfo
+import com.unciv.testing.city.CityTestFixture
 import org.junit.After
-import org.junit.Assert
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
 
-
-@RunWith(GdxTestRunner::class)
 class SerializationTests {
+    private lateinit var game: GameInfo
+    private var fixture: CityTestFixture? = null
+    private var previousMonsterGame: GameInfo? = null
+    private var previousInput: Input? = null
+    private var inputReplaced = false
 
-    private var game = GameInfo()
-    private var settingsBackup = GameSettings()
-
-    /** A runtime Class object for [kotlin.SynchronizedLazyImpl] to enable helping Gdx.Json to
-     * not StackOverflow on them, as a direct compile time retrieval is forbidden */
     private val classSynchronizedLazyImpl: Class<*> by lazy {
-        // I hope you get the irony...
-        @Suppress("unused") // No, test is not _directly_ used, only reflected on
         class TestWithLazy { val test: Int by lazy { 0 } }
-        val badInstance = TestWithLazy()
-        val badField = badInstance::class.java.declaredFields[0]
-        badField.isAccessible = true
-        badField.get(badInstance)::class.java
+        val instance = TestWithLazy()
+        val field = instance::class.java.declaredFields.first { it.name.endsWith("\$delegate") }
+        field.isAccessible = true
+        field.get(instance)::class.java
     }
 
     @Before
     fun prepareGame() {
-        RulesetCache.loadRulesets(noMods = true)
+        val environment = CityTestFixture()
+        fixture = environment
+        previousMonsterGame = CivilizationInfo.monsterGameInfo
+        CivilizationInfo.monsterGameInfo = GameInfo()
+        previousInput = Gdx.input
+        inputReplaced = true
+        Gdx.input = MockInput()
 
-        // Create a tiny game with just 1 human player and the barbarians
-        // Must be 1 human otherwise GameInfo.setTransients crashes on the `if (currentPlayer == "")` line
-        val param = GameParameters().apply {
-            numberOfCityStates = 0
-            players.clear()
-            players.add(Player("Rome").apply { playerType = PlayerType.Human })
-            players.add(Player("Greece"))
+        environment.foundCity()
+        game = environment.game.clone()
+        val other = CivilizationInfo("Greece").apply {
+            tech.techsResearched.addAll(environment.civilization.tech.techsResearched)
         }
-        val mapParameters = MapParameters().apply {
-            mapSize = MapSizeNew(MapSize.Tiny)
-            seed = 42L
-        }
-        val setup = GameSetupInfo(param, mapParameters)
-        UncivGame.Current = UncivGame()
-        UncivGame.Current.files = UncivFiles(Gdx.files)
-
-        // Both startNewGame and makeCivilizationsMeet will cause a save to storage of our empty settings
-        settingsBackup = UncivGame.Current.files.getGeneralSettings()
-
-        UncivGame.Current.settings = GameSettings()
-        game = GameStarter.startNewGame(setup)
+        game.civilizations.add(other)
+        game.setTransients()
         UncivGame.Current.startSimulation(game)
-
-        // Found a city otherwise too many classes have no instance and are not tested
+        // Meeting remains real, but the already completed tutorial cannot write settings.
+        UncivGame.Current.settings.tutorialTasksCompleted.add("Meet another civilization")
         val civ = game.getCurrentPlayerCivilization()
-        val unit = civ.getCivUnits().first { it.hasUnique(UniqueType.FoundCity) }
-        val tile = unit.getTile()
-        unit.civInfo.addCity(tile.position, unit)
-        if (tile.ruleset.tileImprovements.containsKey("City center"))
-            tile.changeImprovement("City center")
-        unit.destroy()
-
-        // Ensure some diplomacy objects are instantiated
-        val otherCiv = game.getCivilization("Greece")
-        civ.makeCivilizationsMeet(otherCiv)
+        civ.makeCivilizationsMeet(other)
+        assertNotNull(civ.placeUnitNearTile(civ.cities.single().location, "Warrior"))
     }
 
     @Test
     fun canSerializeGame() {
-        val json = try {
-            json().toJson(game)
-        } catch (ex: Exception) {
-            ""
-        }
-        Assert.assertTrue("This test will only pass when a game can be serialized", json.isNotEmpty())
+        val encoded = json().toJson(game)
+        assertTrue("The game must serialize without swallowing exceptions", encoded.isNotEmpty())
+        assertFalse(encoded.contains("FakeCivilizationInfo"))
     }
 
     @Test
     fun serializedLaziesTest() {
-        val jsonSerializer = com.badlogic.gdx.utils.Json().apply {
-            setIgnoreDeprecated(true)
+        val serializer = json().apply {
             setDeprecated(classSynchronizedLazyImpl, "initializer", true)
-            setDeprecated(classSynchronizedLazyImpl, "lock", true)  // this is the culprit as kotlin initializes it to `this@SynchronizedLazyImpl`
+            setDeprecated(classSynchronizedLazyImpl, "lock", true)
         }
-
-        val json = try {
-            jsonSerializer.toJson(game)
-        } catch (ex: Throwable) {
-            ex.printStackTrace()
-            return
-        }
-
-        val pattern = """\{(\w+)\${'$'}delegate:\{class:kotlin.SynchronizedLazyImpl,"""
-        val matches = Regex(pattern).findAll(json)
-        matches.forEach {
-            debug("Lazy missing `@delegate:Transient` annotation: %s", it.groups[1]!!.value)
-        }
-        val result = matches.any()
-        Assert.assertFalse("This test will only pass when no serializable lazy fields are found", result)
+        val encoded = serializer.toJson(game)
+        assertFalse("Lazy implementation objects must not enter saves",
+            encoded.contains("kotlin.SynchronizedLazyImpl"))
     }
 
     @After
     fun cleanup() {
-        settingsBackup.save()
+        try {
+            previousMonsterGame?.let { CivilizationInfo.monsterGameInfo = it }
+            if (inputReplaced) Gdx.input = previousInput
+        } finally {
+            fixture?.close()
+        }
     }
 }

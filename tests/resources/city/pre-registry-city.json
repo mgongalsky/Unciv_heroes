@@ -1,0 +1,26 @@
+{
+  "id": "legacy-city-rome-001",
+  "name": "Rome",
+  "location": { "x": 0, "y": 0 },
+  "foundingCiv": "Rome",
+  "previousOwner": "Greece",
+  "turnAcquired": 7,
+  "isOriginalCapital": true,
+  "health": 120,
+  "population": { "population": 2, "foodStored": 3 },
+  "currConscription": 17,
+  "tiles": [{ "x": 0, "y": 0 }, { "x": 1, "y": 0 }],
+  "cityConstructions": {
+    "builtBuildings": ["Palace"],
+    "constructionQueue": ["Scout"]
+  },
+  "garrison": [],
+  "garrisonInfo": {
+    "slots": [
+      { "unitName": "Archer", "amount": 35 },
+      { "unitName": "Peasant", "amount": 20 },
+      null,
+      null
+    ]
+  }
+}
