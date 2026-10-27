@@ -164,8 +164,25 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     @Transient var currentGPPBonus: Int = 0  // temporary variable saved for rankSpecialist()
 
     var garrison = mutableListOf<TroopInfo>()
-    // TODO: need to get rid of those lateinits
-    lateinit var garrisonInfo : ArmyInfo
+    @Transient
+    private var garrisonAdapter: ArmyInfo? = null
+
+    /** Legacy services operate on the same army as the pure city state. */
+    var garrisonInfo: ArmyInfo
+        get() {
+            val army = state.garrison
+                ?: throw UninitializedPropertyAccessException("lateinit property garrisonInfo has not been initialized")
+            val current = garrisonAdapter
+            if (current != null && current.army === army) return current
+            return ArmyInfo(current?.civInfo ?: civInfo, army.maxSlots, army).also {
+                it.hero = current?.hero
+                garrisonAdapter = it
+            }
+        }
+        set(value) {
+            state.garrison = value.army
+            garrisonAdapter = value
+        }
 
 
 
@@ -188,9 +205,13 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         json.writeValue("previousOwner", previousOwner)
         json.writeValue("turnAcquired", turnAcquired)
         json.writeValue("health", health)
+        if (state.garrison != null) json.writeValue("garrisonInfo", garrisonInfo, ArmyInfo::class.java)
     }
 
     override fun read(json: Json, jsonData: JsonValue) {
+        jsonData.get("garrisonInfo")?.takeUnless { it.isNull }?.let {
+            garrisonInfo = json.readValue(ArmyInfo::class.java, it)
+        }
         id = jsonData.getString("id", id)
         name = jsonData.getString("name", name)
         foundingCiv = jsonData.getString("foundingCiv", foundingCiv)
@@ -199,7 +220,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         health = jsonData.getInt("health", health)
         // These properties have no backing fields. Hide them from reflective field reading,
         // then restore the input tree so other consumers can still inspect it.
-        val stateFields = listOf("id", "name", "foundingCiv", "previousOwner", "turnAcquired", "health")
+        val stateFields = listOf("id", "name", "foundingCiv", "previousOwner", "turnAcquired", "health", "garrisonInfo")
             .mapNotNull { fieldName ->
                 jsonData.remove(fieldName)?.let {
                     // JsonValue.remove unlinks the node but retains its sibling references.

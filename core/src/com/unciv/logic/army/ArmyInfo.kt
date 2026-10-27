@@ -21,6 +21,7 @@ import org.koin.core.component.inject
 open class ArmyInfo(
     @Transient var civInfo: CivilizationInfo = CivilizationInfo(),
     val maxSlots: Int = _defaultMaxSlots ?: GameConstants.armySize,
+    val army: Army = Army(maxSlots),
 ) : IsPartOfGameInfoSerialization, Json.Serializable, IArmy, KoinComponent {
 
     companion object {
@@ -34,7 +35,9 @@ open class ArmyInfo(
         }
     }
 
-    private val army = Army(maxSlots)
+    init {
+        require(army.maxSlots == maxSlots) { "Army slot count must match its adapter" }
+    }
 
     @delegate:Transient
     private val troopSource: ITroopDefinitionSource by inject()

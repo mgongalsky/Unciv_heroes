@@ -1,5 +1,8 @@
 package com.unciv.pure.domain.city
 
+import com.unciv.pure.domain.army.Army
+import com.unciv.pure.domain.army.deepCopy
+
 /** Stable identity supplied by the world or scenario boundary. */
 data class CityId(val value: String)
 
@@ -22,5 +25,9 @@ data class CityState(
     var id: CityId,
     var name: String = "",
     var history: CityHistory = CityHistory(),
-    var health: Int = 200
-)
+    var health: Int = 200,
+    var garrison: Army? = null
+) {
+    /** Independent snapshot, including mutable troops and formations. */
+    fun deepCopy(): CityState = copy(garrison = garrison?.deepCopy())
+}
