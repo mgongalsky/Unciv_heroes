@@ -1,5 +1,8 @@
 package com.unciv.testing.city
 
+import com.badlogic.gdx.utils.JsonReader
+import com.badlogic.gdx.utils.JsonValue
+import com.badlogic.gdx.utils.JsonWriter
 import com.unciv.json.json
 import com.unciv.logic.GameInfo
 import com.unciv.logic.UncivFiles
@@ -35,7 +38,18 @@ class CityLegacyFixtureTest {
                 source.turns = 7
                 source.civilizations.single().cities = arrayListOf(city)
                 source.civilizations.single().hasEverOwnedOriginalCapital = true
-                val loaded = UncivFiles.gameInfoFromString(UncivFiles.gameInfoToString(source, false))
+                // Embed the untouched old payload: do not rewrite its legacy army slots first.
+                val legacyGame = JsonReader().parse(UncivFiles.gameInfoToString(source, false))
+                legacyGame.remove("cities")
+                val legacyCities = JsonValue(JsonValue.ValueType.array)
+                legacyCities.addChild(JsonReader().parse(text))
+                legacyGame.get("civilizations").get(0).addChild("cities", legacyCities)
+                legacyGame.get("version").apply {
+                    remove("number")
+                    addChild("number", JsonValue(4L))
+                }
+                val loaded = UncivFiles.gameInfoFromString(legacyGame.toJson(JsonWriter.OutputType.json))
+                assertEquals(GameInfo.CURRENT_COMPATIBILITY_VERSION, loaded.version)
                 val restored = loaded.getCities().single()
                 assertEquals(city.id, restored.id)
                 assertEquals("Greece", restored.previousOwner)
