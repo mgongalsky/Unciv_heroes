@@ -20,7 +20,7 @@ class CityGarrisonStateTest {
             assertSame(guard, army.getTroopAt(0))
             army.setTroopAt(1, null)
             assertNull(city.garrisonInfo.getTroopAt(1))
-            assertSame(city.garrisonInfo, city.clone().garrisonInfo)
+            assertNotSame(city.garrisonInfo, city.clone().garrisonInfo)
         }
     }
 

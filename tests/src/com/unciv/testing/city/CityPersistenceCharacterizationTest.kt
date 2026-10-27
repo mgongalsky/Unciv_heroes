@@ -11,7 +11,7 @@ import org.junit.Test
 
 class CityPersistenceCharacterizationTest {
     @Test
-    fun cloneCurrentlySharesTerritoryAndGarrisonsAndDropsPreviousOwner() {
+    fun cloneCopiesTerritoryAndActiveGarrisonAndPreservesPreviousOwner() {
         CityTestFixture().use { fixture ->
             val city = fixture.foundCity()
             city.previousOwner = "Greece"
@@ -22,13 +22,13 @@ class CityPersistenceCharacterizationTest {
 
             assertNotSame(city, copy)
             assertEquals(city.id, copy.id)
-            assertEquals("", copy.previousOwner)
+            assertEquals("Greece", copy.previousOwner)
             assertEquals(city.location, copy.location)
-            assertSame(city.tiles, copy.tiles)
-            assertSame(city.workedTiles, copy.workedTiles)
-            assertSame(city.lockedTiles, copy.lockedTiles)
+            assertNotSame(city.tiles, copy.tiles)
+            assertNotSame(city.workedTiles, copy.workedTiles)
+            assertNotSame(city.lockedTiles, copy.lockedTiles)
             assertSame(city.garrison, copy.garrison)
-            assertSame(city.garrisonInfo, copy.garrisonInfo)
+            assertNotSame(city.garrisonInfo, copy.garrisonInfo)
             assertNotSame(city.population, copy.population)
             assertNotSame(city.cityConstructions, copy.cityConstructions)
             assertEquals(17, copy.currConscription)

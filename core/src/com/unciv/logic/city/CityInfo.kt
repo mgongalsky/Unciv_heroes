@@ -7,6 +7,7 @@ import com.unciv.pure.domain.city.CityOwnership
 import com.unciv.pure.domain.city.CityPosition
 import com.unciv.pure.domain.city.CityId
 import com.unciv.pure.domain.city.CityState
+import com.unciv.pure.domain.army.deepCopy
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.battle.CityCombatant
@@ -345,17 +346,18 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         toReturn.name = name
         toReturn.health = health
         toReturn.garrison = garrison
-        toReturn.garrisonInfo = garrisonInfo
+        toReturn.garrisonInfo = ArmyInfo(garrisonInfo.civInfo, garrisonInfo.maxSlots, garrisonInfo.army.deepCopy())
         toReturn.population = population.clone()
         toReturn.cityConstructions = cityConstructions.clone()
         toReturn.expansion = expansion.clone()
         toReturn.religion = religion.clone()
-        toReturn.tiles = tiles
-        toReturn.workedTiles = workedTiles
-        toReturn.lockedTiles = lockedTiles
+        toReturn.tiles = tiles.mapTo(HashSet()) { it.cpy() }
+        toReturn.workedTiles = workedTiles.mapTo(HashSet()) { it.cpy() }
+        toReturn.lockedTiles = lockedTiles.mapTo(HashSet()) { it.cpy() }
         toReturn.isBeingRazed = isBeingRazed
         toReturn.attackedThisTurn = attackedThisTurn
         toReturn.foundingCiv = foundingCiv
+        toReturn.previousOwner = previousOwner
         toReturn.turnAcquired = turnAcquired
         toReturn.isPuppet = isPuppet
         toReturn.isOriginalCapital = isOriginalCapital

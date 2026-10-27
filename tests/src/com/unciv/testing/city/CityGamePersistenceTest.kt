@@ -30,10 +30,8 @@ class CityGamePersistenceTest {
                 assertNotSame(fixture.game.tileMap, copy.tileMap)
                 assertNotSame(original, copiedCity)
                 assertSame(fixture.game.gameParameters, copy.gameParameters)
-                assertSame(original.garrisonInfo, copiedCity.garrisonInfo)
-                assertEquals("", copiedCity.previousOwner)
-                // Restore this deliberately omitted clone field before testing JSON separately.
-                copiedCity.previousOwner = original.previousOwner
+                assertNotSame(original.garrisonInfo, copiedCity.garrisonInfo)
+                assertEquals("Greece", copiedCity.previousOwner)
 
                 val encoded = json().toJson(copy)
                 assertFalse(encoded.contains("FakeCivilizationInfo"))
