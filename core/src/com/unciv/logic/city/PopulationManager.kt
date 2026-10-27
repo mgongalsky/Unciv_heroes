@@ -7,11 +7,10 @@ import com.unciv.logic.map.TileInfo
 import com.unciv.models.Counter
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.stats.Stat
+import com.unciv.pure.domain.city.CityPopulationRules
 import com.unciv.ui.utils.extensions.toPercent
 import com.unciv.ui.utils.extensions.withItem
 import com.unciv.ui.utils.extensions.withoutItem
-import kotlin.math.floor
-import kotlin.math.pow
 
 open class PopulationManager : IsPartOfGameInfoSerialization {
     @Transient
@@ -44,16 +43,12 @@ open class PopulationManager : IsPartOfGameInfoSerialization {
         return population - workingPopulation - getNumberOfSpecialists()
     }
 
-    fun getFoodToNextPopulation(): Int {
-        // civ v math, civilization.wikia
-        // var foodRequired = 15 + 6 * (population - 1) + floor((population - 1).toDouble().pow(1.8))
-         var foodRequired = 5 + 3 * (population - 1) + floor((population - 1).toDouble().pow(1.8))
-        if (cityInfo.civInfo.isCityState())
-            foodRequired *= 1.5f
-        if (!cityInfo.civInfo.isPlayerCivilization())
-            foodRequired *= cityInfo.civInfo.gameInfo.getDifficulty().aiCityGrowthModifier
-        return foodRequired.toInt()
-    }
+    fun getFoodToNextPopulation(): Int = CityPopulationRules.foodToNextPopulation(
+        population,
+        cityInfo.civInfo.isCityState(),
+        if (cityInfo.civInfo.isPlayerCivilization()) null
+        else cityInfo.civInfo.gameInfo.getDifficulty().aiCityGrowthModifier
+    )
 
     //endregion
 
@@ -98,9 +93,7 @@ open class PopulationManager : IsPartOfGameInfoSerialization {
     private fun getStatsOfSpecialist(name: String) = cityInfo.cityStats.getStatsOfSpecialist(name)
 
     fun addPopulation(count: Int) {
-        val changedAmount =
-            if (population + count < 0) -population
-            else count
+        val changedAmount = CityPopulationRules.populationChange(population, count)
         population += changedAmount
         val freePopulation = getFreePopulation()
         if (freePopulation < 0) {
