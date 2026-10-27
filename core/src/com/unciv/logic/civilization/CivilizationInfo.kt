@@ -345,7 +345,7 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization, Json.Serializable {
             toReturn.diplomacy[diplomacyManager.otherCivName] = diplomacyManager
         toReturn.proximity.putAll(proximity)
         toReturn.cities = cities.map { it.clone() }
-        toReturn.neutralRoads = neutralRoads
+        toReturn.neutralRoads = neutralRoads.mapTo(HashSet()) { it.cpy() }
 
         // This is the only thing that is NOT switched out, which makes it a source of ConcurrentModification errors.
         // Cloning it by-pointer is a horrific move, since the serialization would go over it ANYWAY and still lead to concurrency problems.

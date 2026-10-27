@@ -1,4 +1,4 @@
-﻿package com.unciv.logic.map
+package com.unciv.logic.map
 
 import com.badlogic.gdx.math.Vector2
 import com.unciv.Constants
@@ -1378,7 +1378,7 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
     }
 
     fun setOwnerTransients() {
-        if (owningCity == null && roadOwner != "")
+        if (owningCity == null && roadStatus != RoadStatus.None && roadOwner != "")
             getRoadOwner()!!.neutralRoads.add(this.position)
     }
 
