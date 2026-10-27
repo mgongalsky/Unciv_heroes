@@ -32,6 +32,29 @@ class WorldCityRegistry(private val game: GameInfo) {
         civ.attachCityRegistry(this)
     }
 
+    /** Validate the complete save before publishing membership or binding any city. */
+    internal fun restore(cities: List<CityInfo>) {
+        check(attached.isEmpty() && registry.all().isEmpty()) { "City registry is already attached" }
+        require(game.civilizations.map { it.civName }.distinct().size == game.civilizations.size) {
+            "Duplicate civilization names in city save"
+        }
+        val owners = game.civilizations.associateBy { it.civName }
+        val bindings = cities.map { city ->
+            val ownership = city.state.ownership
+            require(ownership is CityOwnership.Player) {
+                "City ${city.id}: neutral or unbound cities are not yet supported in a running game"
+            }
+            city to requireNotNull(owners[ownership.playerId]) {
+                "City ${city.id}: unknown owner ${ownership.playerId}"
+            }
+        }
+        registry.replaceAll(cities)
+        for ((city, owner) in bindings) city.civInfo = owner
+        for (civ in game.civilizations) {
+            civ.attachCityRegistry(this)
+            attached.add(civ)
+        }
+    }
     fun ownedBy(civ: CivilizationInfo): List<CityInfo> =
         registry.ownedBy(CityOwnership.Player(civ.civName))
 

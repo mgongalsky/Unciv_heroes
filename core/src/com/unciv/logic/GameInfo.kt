@@ -1,5 +1,9 @@
 package com.unciv.logic
 
+import com.badlogic.gdx.utils.Json
+import com.badlogic.gdx.utils.JsonValue
+import com.unciv.logic.city.CitySaveEntry
+import com.unciv.pure.domain.city.CityOwnership
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.UncivGame.Version
@@ -68,11 +72,11 @@ data class CompatibilityVersion(
 
 }
 
-class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion {
+class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion, Json.Serializable {
     companion object {
         /** The current compatibility version of [GameInfo]. This number is incremented whenever changes are made to the save file structure that guarantee that
          * previous versions of the game will not be able to load or play a game normally. */
-        const val CURRENT_COMPATIBILITY_NUMBER = 4
+        const val CURRENT_COMPATIBILITY_NUMBER = 5
 
         val CURRENT_COMPATIBILITY_VERSION = CompatibilityVersion(CURRENT_COMPATIBILITY_NUMBER, UncivGame.VERSION)
 
@@ -86,8 +90,10 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     }
     //region Fields - Serialized
 
+    @Transient
     override var version = FIRST_WITHOUT
 
+    @Transient
     var civilizations = mutableListOf<CivilizationInfo>()
     var barbarians = BarbarianManager()
     var religions: HashMap<String, Religion> = hashMapOf()
@@ -147,6 +153,69 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     //endregion
     //region Pure functions
 
+    /** Version 5 stores cities once, independently of civilization containers. */
+    override fun write(json: Json) {
+        val savedCities = getCities().toList()
+        json.writeFields(this)
+        json.writeValue("version", CURRENT_COMPATIBILITY_VERSION, CompatibilityVersion::class.java)
+        json.writeArrayStart("civilizations")
+        for (civ in civilizations) {
+            json.writeObjectStart(civ.javaClass, CivilizationInfo::class.java)
+            // cities has no backing field; standalone CivilizationInfo.write retains its legacy contract.
+            json.writeFields(civ)
+            json.writeObjectEnd()
+        }
+        json.writeArrayEnd()
+        json.writeValue("cities", ArrayList(savedCities.map { CitySaveEntry(it) }),
+            ArrayList::class.java, CitySaveEntry::class.java)
+    }
+
+    override fun read(json: Json, jsonData: JsonValue) {
+        version = jsonData.get("version")?.let {
+            json.readValue(CompatibilityVersion::class.java, it)
+        } ?: FIRST_WITHOUT
+        require(version.number <= CURRENT_COMPATIBILITY_NUMBER) {
+            "Unsupported game save version: ${version.number}"
+        }
+        val cityData = jsonData.get("cities")
+        val civData = jsonData.get("civilizations")
+        require(civData == null || civData.isArray) { "civilizations must be an array" }
+        require(cityData == null || cityData.isArray) { "cities must be an array" }
+        require(version.number < 5 || cityData != null) { "Version 5 game save has no cities collection" }
+        if (cityData != null && civData != null) {
+            require(civData.none { it.has("cities") }) {
+                "Game save mixes canonical cities with legacy civilization city containers"
+            }
+        }
+        val explicitFields = listOf("version", "civilizations", "cities").mapNotNull { name ->
+            jsonData.remove(name)?.let {
+                it.next = null
+                it.prev = null
+                name to it
+            }
+        }
+        try {
+            json.readFields(this, jsonData)
+            civilizations = ArrayList()
+            if (civData != null) {
+                for (entry in civData) civilizations.add(json.readValue(CivilizationInfo::class.java, entry))
+            }
+            val loadedCities = ArrayList<CityInfo>()
+            if (cityData != null) {
+                for (entry in cityData) loadedCities.add(json.readValue(CitySaveEntry::class.java, entry).city)
+            } else {
+                for (civ in civilizations) {
+                    for (city in civ.cities) {
+                        city.state.ownership = CityOwnership.Player(civ.civName)
+                        loadedCities.add(city)
+                    }
+                }
+            }
+            worldCityRegistry.restore(loadedCities)
+        } finally {
+            for ((name, value) in explicitFields) jsonData.addChild(name, value)
+        }
+    }
     fun clone(): GameInfo {
         val toReturn = GameInfo()
         toReturn.tileMap = tileMap.clone()
