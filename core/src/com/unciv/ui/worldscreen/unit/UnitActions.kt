@@ -4,6 +4,7 @@ import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.automation.unit.UnitAutomation
 import com.unciv.logic.automation.unit.WorkerAutomation
+import com.unciv.logic.city.CityFounding
 import com.unciv.logic.city.CityInfo
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.NotificationIcon
@@ -11,7 +12,6 @@ import com.unciv.logic.civilization.PlayerType
 import com.unciv.logic.civilization.diplomacy.DiplomacyFlags
 import com.unciv.logic.civilization.diplomacy.DiplomaticModifiers
 import com.unciv.logic.map.MapUnit
-import com.unciv.logic.map.RoadStatus
 import com.unciv.logic.map.TileInfo
 import com.unciv.models.Counter
 import com.unciv.models.UncivSound
@@ -206,18 +206,7 @@ object UnitActions {
 
         val foundAction = {
             onFoundingTutorial()
-            unit.civInfo.addCity(tile.position, unit)
-            if (tile.ruleset.tileImprovements.containsKey("City center")) {
-                if(unit.civInfo.isMajorCiv())
-                    tile.changeImprovement("City center")
-                else
-                    tile.changeImprovement("Village City center")
-
-            }
-            if(tile.roadStatus != RoadStatus.None)
-                tile.removeRoad()
-
-            unit.destroy()
+            CityFounding.complete(unit, tile)
             onWorldUpdated()
         }
 
