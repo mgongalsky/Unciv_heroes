@@ -2,6 +2,7 @@ package com.unciv.logic
 
 import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
+import com.unciv.logic.city.CitySaveValidation
 import com.unciv.logic.city.CitySaveEntry
 import com.unciv.pure.domain.city.CityOwnership
 import com.unciv.Constants
@@ -593,6 +594,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
     // All cross-game data which needs to be altered (e.g. when removing or changing a name of a building/tech)
     // will be done here, and not in CivInfo.setTransients or CityInfo
     fun setTransients() {
+        CitySaveValidation.validateTerritory(getCities().toList(), tileMap)
 
         // Load only the part, which is necessary for loading maps in the editor, not for the whole game.
         loadRulesetForMap()
