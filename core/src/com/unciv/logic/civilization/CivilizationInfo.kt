@@ -9,6 +9,7 @@ import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.UncivShowableException
 import com.unciv.logic.automation.civilization.NextTurnAutomation
 import com.unciv.logic.automation.unit.WorkerAutomation
+import com.unciv.logic.city.CityFounding
 import com.unciv.logic.city.CityInfo
 import com.unciv.logic.civilization.RuinsManager.RuinsManager
 import com.unciv.logic.civilization.diplomacy.DiplomacyFlags
@@ -1309,7 +1310,7 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization {
     }
 
     fun addCity(location: Vector2, foundingUnit: MapUnit) {
-        val newCity = CityInfo(this, location, foundingUnit)
+        val newCity = CityFounding.create(this, location, foundingUnit)
         newCity.cityConstructions.chooseNextConstruction()
     }
 
