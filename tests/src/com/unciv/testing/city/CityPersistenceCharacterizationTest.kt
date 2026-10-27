@@ -23,7 +23,7 @@ class CityPersistenceCharacterizationTest {
             assertNotSame(city, copy)
             assertEquals(city.id, copy.id)
             assertEquals("", copy.previousOwner)
-            assertSame(city.location, copy.location)
+            assertEquals(city.location, copy.location)
             assertSame(city.tiles, copy.tiles)
             assertSame(city.workedTiles, copy.workedTiles)
             assertSame(city.lockedTiles, copy.lockedTiles)

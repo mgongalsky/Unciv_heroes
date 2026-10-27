@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
 import com.unciv.pure.domain.city.CityOwnership
+import com.unciv.pure.domain.city.CityPosition
 import com.unciv.pure.domain.city.CityId
 import com.unciv.pure.domain.city.CityState
 import com.unciv.logic.IsPartOfGameInfoSerialization
@@ -122,7 +123,10 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     // This is so that military units can enter the city, even before we decide what to do with it
     var hasJustBeenConquered = false
 
-    var location: Vector2 = Vector2.Zero
+    /** Coordinates are owned by the core; returned vectors are boundary values. */
+    var location: Vector2
+        get() = Vector2(state.position.x, state.position.y)
+        set(value) { state.position = CityPosition(value.x, value.y) }
     @Transient
     val state = CityState(CityId(UUID.randomUUID().toString()))
 
@@ -222,10 +226,12 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         json.writeValue("previousOwner", previousOwner)
         json.writeValue("turnAcquired", turnAcquired)
         json.writeValue("health", health)
+        json.writeValue("location", location, Vector2::class.java)
         if (state.garrison != null) json.writeValue("garrisonInfo", garrisonInfo, ArmyInfo::class.java)
     }
 
     override fun read(json: Json, jsonData: JsonValue) {
+        jsonData.get("location")?.let { location = json.readValue(Vector2::class.java, it) }
         jsonData.get("garrisonInfo")?.takeUnless { it.isNull }?.let {
             garrisonInfo = json.readValue(ArmyInfo::class.java, it)
         }
@@ -237,7 +243,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         health = jsonData.getInt("health", health)
         // These properties have no backing fields. Hide them from reflective field reading,
         // then restore the input tree so other consumers can still inspect it.
-        val stateFields = listOf("id", "name", "foundingCiv", "previousOwner", "turnAcquired", "health", "garrisonInfo")
+        val stateFields = listOf("id", "name", "foundingCiv", "previousOwner", "turnAcquired", "health", "garrisonInfo", "location")
             .mapNotNull { fieldName ->
                 jsonData.remove(fieldName)?.let {
                     // JsonValue.remove unlinks the node but retains its sibling references.
