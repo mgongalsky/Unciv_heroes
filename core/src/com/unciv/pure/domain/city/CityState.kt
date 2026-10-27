@@ -26,7 +26,9 @@ data class CityState(
     var name: String = "",
     var history: CityHistory = CityHistory(),
     var health: Int = 200,
-    var garrison: Army? = null
+    var garrison: Army? = null,
+    /** Null means not yet bound, for example while reading the legacy city container. */
+    var ownership: CityOwnership? = null
 ) {
     /** Independent snapshot, including mutable troops and formations. */
     fun deepCopy(): CityState = copy(garrison = garrison?.deepCopy())

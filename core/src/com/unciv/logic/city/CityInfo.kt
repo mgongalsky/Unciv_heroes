@@ -3,6 +3,7 @@ package com.unciv.logic.city
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonValue
+import com.unciv.pure.domain.city.CityOwnership
 import com.unciv.pure.domain.city.CityId
 import com.unciv.pure.domain.city.CityState
 import com.unciv.logic.IsPartOfGameInfoSerialization
@@ -85,9 +86,25 @@ enum class CityFocus(val label: String, val tableEnabled: Boolean, val stat: Sta
 
 
 open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
-    @Suppress("JoinDeclarationAndAssignment")
     @Transient
-    lateinit var civInfo: CivilizationInfo
+    private var ownerAdapter: CivilizationInfo? = null
+
+    /** Resolves the core owner through the legacy world; does not register or transfer cities. */
+    var civInfo: CivilizationInfo
+        get() {
+            val owner = state.ownership as? CityOwnership.Player
+                ?: throw UninitializedPropertyAccessException("City has no bound civilization owner")
+            val current = ownerAdapter
+                ?: throw UninitializedPropertyAccessException("lateinit property civInfo has not been initialized")
+            if (current.civName == owner.playerId) return current
+            return current.gameInfo.civilizations.first { it.civName == owner.playerId }.also {
+                ownerAdapter = it
+            }
+        }
+        set(value) {
+            state.ownership = CityOwnership.Player(value.civName)
+            ownerAdapter = value
+        }
 
     @Transient
     private lateinit var centerTileInfo: TileInfo  // cached for better performance
