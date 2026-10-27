@@ -6,7 +6,6 @@ import com.unciv.logic.UncivFiles
 import com.unciv.logic.city.CityFlags
 import com.unciv.logic.city.CityInfo
 import com.unciv.logic.civilization.CivilizationInfo
-import com.unciv.logic.map.MapUnit
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
@@ -44,7 +43,7 @@ class CityLegacyFixtureTest {
                 assertEquals(listOf("Scout"), restored.cityConstructions.constructionQueue)
                 assertSame(loaded.currentPlayerCiv, restored.civInfo)
                 assertSame(restored, loaded.tileMap[restored.location].getCity())
-                assertSame(MapUnit.monsterCivInfo, restored.garrisonInfo.civInfo)
+                assertSame(loaded.currentPlayerCiv, restored.garrisonInfo.civInfo)
                 restored.setFlag(CityFlags.ResourceDemand, 20)
                 loaded.nextTurn()
                 assertEquals(8, loaded.turns)

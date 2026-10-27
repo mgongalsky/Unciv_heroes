@@ -78,9 +78,9 @@ class CityOwnershipCharacterizationTest {
                 assertSame(next, tile.getOwner())
             }
 
-            // Existing inconsistencies: characterize here, fix separately during ownership work.
+            // Garrison ownership follows the city; legacy defeat conditions remain unchanged.
             assertSame(originalGarrison, city.garrisonInfo)
-            assertSame(fixture.civilization, city.garrisonInfo.civInfo)
+            assertSame(next, city.garrisonInfo.civInfo)
             assertTrue(fixture.civilization.isDefeated())
             assertNull(next.hasEverOwnedOriginalCapital)
             assertTrue(next.isDefeated())

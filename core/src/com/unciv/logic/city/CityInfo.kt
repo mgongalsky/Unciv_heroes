@@ -106,6 +106,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         set(value) {
             state.ownership = CityOwnership.Player(value.civName)
             ownerAdapter = value
+            garrisonAdapter?.setTransients(value, null)
         }
 
     @Transient
@@ -204,6 +205,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         set(value) {
             state.garrison = value.army
             garrisonAdapter = value
+            ownerAdapter?.let { value.setTransients(civInfo, null) }
         }
 
 

@@ -4,7 +4,6 @@ import com.unciv.json.json
 import com.unciv.logic.GameInfo
 import com.unciv.logic.city.CityFlags
 import com.unciv.logic.civilization.CivilizationInfo
-import com.unciv.logic.map.MapUnit
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -59,9 +58,9 @@ class CityGamePersistenceTest {
                     city.garrison.map { it.unitName to it.amount })
                 assertEquals(original.garrisonInfo.getAllTroops().map { it?.let { it.unitName to it.amount } },
                     city.garrisonInfo.getAllTroops().map { it?.let { it.unitName to it.amount } })
-                // Characterize the missing city army ownership restoration independently of tile ownership.
-                assertSame(MapUnit.monsterCivInfo, city.garrisonInfo.civInfo)
-                assertNotSame(owner, city.garrisonInfo.civInfo)
+                // Full restoration binds the army to the same owner as the city.
+                assertSame(owner, city.garrisonInfo.civInfo)
+                assertSame(city.state.garrison, city.garrisonInfo.army)
 
                 val territoryBefore = city.tiles.size
                 assertNotNull(city.expansion.addNewTileForFree())

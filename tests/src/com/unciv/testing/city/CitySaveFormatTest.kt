@@ -4,7 +4,6 @@ import com.unciv.logic.GameInfo
 import com.unciv.logic.UncivFiles
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.PlayerType
-import com.unciv.logic.map.MapUnit
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -37,7 +36,7 @@ class CitySaveFormatTest {
                     assertEquals(original.id, city.id)
                     assertEquals("Egypt", city.previousOwner)
                     assertSame(rome, city.civInfo)
-                    assertSame(MapUnit.monsterCivInfo, city.garrisonInfo.civInfo)
+                    assertSame(rome, city.garrisonInfo.civInfo)
                     val army = city.garrisonInfo
                     val territory = city.tiles.toSet()
 
@@ -56,7 +55,7 @@ class CitySaveFormatTest {
                         assertSame(greece, loaded.tileMap[position].getOwner())
                     }
                     assertSame(army, city.garrisonInfo)
-                    assertSame(MapUnit.monsterCivInfo, army.civInfo)
+                    assertSame(greece, army.civInfo)
                 }
             } finally {
                 CivilizationInfo.monsterGameInfo = previousMonsterGame
