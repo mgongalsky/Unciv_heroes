@@ -60,7 +60,7 @@ object CityFounding {
             }
             civInfo.citiesCreated++
 
-            civInfo.cities = civInfo.cities.toMutableList().apply { add(city) }
+            civInfo.gameInfo.cityRegistry.register(city)
 
             val startingEra = civInfo.gameInfo.gameParameters.startingEra
 

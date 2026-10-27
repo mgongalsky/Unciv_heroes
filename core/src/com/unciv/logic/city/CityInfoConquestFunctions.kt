@@ -1,4 +1,4 @@
-﻿package com.unciv.logic.city
+package com.unciv.logic.city
 
 import com.unciv.Constants
 import com.unciv.UncivGame
@@ -275,9 +275,7 @@ class CityInfoConquestFunctions(val city: CityInfo){
             //  civs so the capitalCityIndicator recognizes the unique buildings of the conquered civ
             if (oldCiv.getCapital() == this)  oldCiv.moveCapitalToNextLargest()
 
-            civInfo.cities = civInfo.cities.toMutableList().apply { remove(city) }
-            newCivInfo.cities = newCivInfo.cities.toMutableList().apply { add(city) }
-            civInfo = newCivInfo
+            oldCiv.gameInfo.cityRegistry.transfer(city, newCivInfo)
             hasJustBeenConquered = false
             turnAcquired = civInfo.gameInfo.turns
             previousOwner = oldCiv.civName

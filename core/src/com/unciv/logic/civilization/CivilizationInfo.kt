@@ -12,6 +12,7 @@ import com.unciv.logic.UncivShowableException
 import com.unciv.logic.automation.civilization.NextTurnAutomation
 import com.unciv.logic.automation.unit.WorkerAutomation
 import com.unciv.logic.city.CityFounding
+import com.unciv.logic.city.WorldCityRegistry
 import com.unciv.logic.city.CityInfo
 import com.unciv.logic.civilization.RuinsManager.RuinsManager
 import com.unciv.logic.civilization.diplomacy.DiplomacyFlags
@@ -219,9 +220,22 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     @Transient
     private var pendingCities: List<CityInfo> = emptyList()
 
+    @Transient
+    private var attachedCityRegistry: WorldCityRegistry? = null
+
     var cities: List<CityInfo>
-        get() = pendingCities
-        set(value) { pendingCities = value.toList() }
+        get() = attachedCityRegistry?.ownedBy(this) ?: pendingCities
+        set(value) {
+            val registry = attachedCityRegistry
+            if (registry == null) pendingCities = value.toList()
+            else registry.replaceOwned(this, value)
+        }
+
+    internal fun attachCityRegistry(registry: WorldCityRegistry) {
+        check(attachedCityRegistry == null || attachedCityRegistry === registry)
+        attachedCityRegistry = registry
+        pendingCities = emptyList()
+    }
 
     /** Explicit legacy container mapping, independent of the runtime city storage. */
     override fun write(json: Json) {

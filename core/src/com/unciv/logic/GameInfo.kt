@@ -11,6 +11,7 @@ import com.unciv.logic.BackwardCompatibility.removeMissingModReferences
 import com.unciv.logic.GameInfo.Companion.CURRENT_COMPATIBILITY_NUMBER
 import com.unciv.logic.GameInfo.Companion.FIRST_WITHOUT
 import com.unciv.logic.automation.civilization.NextTurnAutomation
+import com.unciv.logic.city.WorldCityRegistry
 import com.unciv.logic.city.CityInfo
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.civilization.CivilizationInfoPreview
@@ -192,7 +193,16 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
      *  @throws NoSuchElementException in no-barbarians games! */
     fun getBarbarianCivilization() = getCivilization(Constants.barbarians)
     fun getDifficulty() = difficultyObject
-    fun getCities() = civilizations.asSequence().flatMap { it.cities }
+    @Transient
+    private val worldCityRegistry = WorldCityRegistry(this)
+
+    val cityRegistry: WorldCityRegistry
+        get() {
+            worldCityRegistry.attachCivilizations()
+            return worldCityRegistry
+        }
+
+    fun getCities() = cityRegistry.all().asSequence()
     fun getAliveCityStates() = civilizations.filter { it.isAlive() && it.isCityState() }
     fun getAliveMajorCivs() = civilizations.filter { it.isAlive() && it.isMajorCiv() }
 

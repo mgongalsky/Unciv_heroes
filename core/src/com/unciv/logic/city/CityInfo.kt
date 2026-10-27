@@ -790,7 +790,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         for (tile in getTiles()) {
             expansion.relinquishOwnership(tile)
         }
-        civInfo.cities = civInfo.cities.toMutableList().apply { remove(this@CityInfo) }
+        civInfo.gameInfo.cityRegistry.remove(this)
         getCenterTile().changeImprovement("City ruins")
 
         // Edge case! What if a water unit is in a city, and you raze the city?
