@@ -1,6 +1,10 @@
 package com.unciv.logic.city
 
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.utils.Json
+import com.badlogic.gdx.utils.JsonValue
+import com.unciv.pure.domain.city.CityId
+import com.unciv.pure.domain.city.CityState
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.battle.CityCombatant
@@ -80,7 +84,7 @@ enum class CityFocus(val label: String, val tableEnabled: Boolean, val stat: Sta
 }
 
 
-open class CityInfo : IsPartOfGameInfoSerialization {
+open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     @Suppress("JoinDeclarationAndAssignment")
     @Transient
     lateinit var civInfo: CivilizationInfo
@@ -102,13 +106,28 @@ open class CityInfo : IsPartOfGameInfoSerialization {
     var hasJustBeenConquered = false
 
     var location: Vector2 = Vector2.Zero
-    var id: String = UUID.randomUUID().toString()
-    var name: String = ""
-    var foundingCiv = ""
-    // This is so that cities in resistance that are recaptured aren't in resistance anymore
-    var previousOwner = ""
-    var turnAcquired = 0
-    var health = 200
+    @Transient
+    val state = CityState(CityId(UUID.randomUUID().toString()))
+
+    var id: String
+        get() = state.id.value
+        set(value) { state.id = CityId(value) }
+    var name: String
+        get() = state.name
+        set(value) { state.name = value }
+    var foundingCiv: String
+        get() = state.history.foundingPlayerId
+        set(value) { state.history = state.history.copy(foundingPlayerId = value) }
+    // Used to end resistance when the previous owner recaptures this city.
+    var previousOwner: String
+        get() = state.history.previousPlayerId
+        set(value) { state.history = state.history.copy(previousPlayerId = value) }
+    var turnAcquired: Int
+        get() = state.history.turnAcquired
+        set(value) { state.history = state.history.copy(turnAcquired = value) }
+    var health: Int
+        get() = state.health
+        set(value) { state.health = value }
 
 
     var population = PopulationManager()
@@ -159,6 +178,42 @@ open class CityInfo : IsPartOfGameInfoSerialization {
     var demandedResource = ""
 
     private var flagsCountdown = HashMap<String, Int>()
+
+    /** Keep the legacy flat save format while the runtime fields delegate to pure state. */
+    override fun write(json: Json) {
+        json.writeFields(this)
+        json.writeValue("id", id)
+        json.writeValue("name", name)
+        json.writeValue("foundingCiv", foundingCiv)
+        json.writeValue("previousOwner", previousOwner)
+        json.writeValue("turnAcquired", turnAcquired)
+        json.writeValue("health", health)
+    }
+
+    override fun read(json: Json, jsonData: JsonValue) {
+        id = jsonData.getString("id", id)
+        name = jsonData.getString("name", name)
+        foundingCiv = jsonData.getString("foundingCiv", foundingCiv)
+        previousOwner = jsonData.getString("previousOwner", previousOwner)
+        turnAcquired = jsonData.getInt("turnAcquired", turnAcquired)
+        health = jsonData.getInt("health", health)
+        // These properties have no backing fields. Hide them from reflective field reading,
+        // then restore the input tree so other consumers can still inspect it.
+        val stateFields = listOf("id", "name", "foundingCiv", "previousOwner", "turnAcquired", "health")
+            .mapNotNull { fieldName ->
+                jsonData.remove(fieldName)?.let {
+                    // JsonValue.remove unlinks the node but retains its sibling references.
+                    it.next = null
+                    it.prev = null
+                    fieldName to it
+                }
+            }
+        try {
+            json.readFields(this, jsonData)
+        } finally {
+            for ((fieldName, value) in stateFields) jsonData.addChild(fieldName, value)
+        }
+    }
 
     fun hasDiplomaticMarriage(): Boolean = foundingCiv == ""
 
