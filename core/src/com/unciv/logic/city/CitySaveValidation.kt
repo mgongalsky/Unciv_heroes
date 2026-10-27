@@ -5,6 +5,27 @@ import com.unciv.pure.domain.city.CityPosition
 
 /** Checks serialized territory without requiring initialized tile or city adapters. */
 object CitySaveValidation {
+    /** Reject unresolved construction references without deleting saved progress. */
+    fun validateDefinitions(cities: List<CityInfo>, ruleset: com.unciv.models.ruleset.Ruleset) {
+        fun knownConstruction(name: String) = name.isEmpty() || name in ruleset.buildings ||
+            name in ruleset.units || name in ruleset.cityEvents ||
+            name in PerpetualConstruction.perpetualConstructionsMap
+        for (city in cities) {
+            val constructions = city.cityConstructions
+            for (name in constructions.builtBuildings) {
+                require(name in ruleset.buildings) { "City ${city.id}: unknown building $name" }
+            }
+            for (name in constructions.preparedCityEvents) {
+                require(name in ruleset.cityEvents) { "City ${city.id}: unknown city event $name" }
+            }
+            for (name in constructions.constructionQueue) {
+                require(knownConstruction(name)) { "City ${city.id}: unknown queued construction $name" }
+            }
+            for (name in constructions.inProgressConstructions.keys) {
+                require(knownConstruction(name)) { "City ${city.id}: unknown construction with stored production $name" }
+            }
+        }
+    }
     fun validateTerritory(cities: List<CityInfo>, tileMap: TileMap) {
         val positions = tileMap.values.mapTo(HashSet()) { CityPosition(it.position.x, it.position.y) }
         val claimed = HashMap<CityPosition, String>()

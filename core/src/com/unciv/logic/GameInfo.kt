@@ -598,6 +598,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
 
         // Load only the part, which is necessary for loading maps in the editor, not for the whole game.
         loadRulesetForMap()
+        CitySaveValidation.validateDefinitions(getCities().toList(), ruleSet)
 
         // This needs to go before tileMap.setTransients, as units need to access
         // the nation of their civilization when setting transients
