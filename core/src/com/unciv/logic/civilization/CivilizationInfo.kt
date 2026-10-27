@@ -1,6 +1,8 @@
 package com.unciv.logic.civilization
 
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.utils.Json
+import com.badlogic.gdx.utils.JsonValue
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.json.HashMapVector2
@@ -60,7 +62,7 @@ enum class Proximity : IsPartOfGameInfoSerialization {
     Distant
 }
 
-open class CivilizationInfo : IsPartOfGameInfoSerialization {
+open class CivilizationInfo : IsPartOfGameInfoSerialization, Json.Serializable {
 
 
     @Transient
@@ -214,7 +216,36 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization {
     // if we only use lists, and change the list each time the cities are changed,
     // we won't get concurrent modification exceptions.
     // This is basically a way to ensure our lists are immutable.
-    var cities = listOf<CityInfo>()
+    @Transient
+    private var pendingCities: List<CityInfo> = emptyList()
+
+    var cities: List<CityInfo>
+        get() = pendingCities
+        set(value) { pendingCities = value.toList() }
+
+    /** Explicit legacy container mapping, independent of the runtime city storage. */
+    override fun write(json: Json) {
+        json.writeFields(this)
+        json.writeValue("cities", ArrayList(cities), ArrayList::class.java, CityInfo::class.java)
+    }
+
+    override fun read(json: Json, jsonData: JsonValue) {
+        val cityData = jsonData.remove("cities")
+        if (cityData != null) {
+            cityData.next = null
+            cityData.prev = null
+        }
+        try {
+            json.readFields(this, jsonData)
+            if (cityData != null) {
+                val loadedCities = ArrayList<CityInfo>()
+                for (entry in cityData) loadedCities.add(json.readValue(CityInfo::class.java, entry))
+                cities = loadedCities
+            }
+        } finally {
+            if (cityData != null) jsonData.addChild("cities", cityData)
+        }
+    }
     var citiesCreated = 0
     var exploredTiles = HashSet<Vector2>()
 
