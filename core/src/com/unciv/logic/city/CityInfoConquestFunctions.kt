@@ -276,6 +276,8 @@ class CityInfoConquestFunctions(val city: CityInfo){
             if (oldCiv.getCapital() == this)  oldCiv.moveCapitalToNextLargest()
 
             oldCiv.gameInfo.cityRegistry.transfer(city, newCivInfo)
+            // Keep road ownership consistent with the city's new owner before updating stats.
+            for (tile in getTiles()) tile.setOwningCity(city)
             hasJustBeenConquered = false
             turnAcquired = civInfo.gameInfo.turns
             previousOwner = oldCiv.civName
