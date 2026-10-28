@@ -3,7 +3,7 @@ package com.unciv.testing.city
 import com.unciv.json.json
 import com.unciv.logic.city.CityFlags
 import com.unciv.logic.city.CityInfo
-import com.unciv.logic.map.MapUnit
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
@@ -40,7 +40,7 @@ class CityPersistenceCharacterizationTest {
     }
 
     @Test
-    fun cityJsonPreservesLocalStateAndBothGarrisonsButUsesPlaceholderArmyOwner() {
+    fun cityJsonPreservesLocalStateAndBothGarrisonsUntilExplicitOwnerBinding() {
         CityTestFixture().use { fixture ->
             val city = fixture.foundCity()
             city.previousOwner = "Greece"
@@ -62,8 +62,17 @@ class CityPersistenceCharacterizationTest {
                 copy.garrisonInfo.getAllTroops().map { it?.let { "${it.unitName}:${it.amount}" } })
             assertNotSame(city.garrisonInfo, copy.garrisonInfo)
             assertNotSame(city.garrisonInfo.getTroopAt(0), copy.garrisonInfo.getTroopAt(0))
-            assertSame(MapUnit.monsterCivInfo, copy.garrisonInfo.civInfo)
-            assertNotSame(fixture.civilization, copy.garrisonInfo.civInfo)
+            assertNull(copy.garrisonInfo.ownerOrNull)
+            val detachedClone = copy.clone()
+            assertNull(detachedClone.garrisonInfo.ownerOrNull)
+            assertNotSame(copy.state.garrison, detachedClone.state.garrison)
+            assertNotSame(copy.garrisonInfo.getTroopAt(0), detachedClone.garrisonInfo.getTroopAt(0))
+            assertEquals(copy.garrisonInfo.getAllTroops().map { it?.amount },
+                detachedClone.garrisonInfo.getAllTroops().map { it?.amount })
+            val savedArmy = copy.state.garrison
+            copy.civInfo = fixture.civilization
+            assertSame(fixture.civilization, copy.garrisonInfo.civInfo)
+            assertSame(savedArmy, copy.state.garrison)
         }
     }
 }

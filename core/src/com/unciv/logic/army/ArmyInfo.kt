@@ -19,11 +19,22 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 open class ArmyInfo(
-    @Transient var civInfo: CivilizationInfo = CivilizationInfo(),
+    civInfo: CivilizationInfo? = null,
     val maxSlots: Int = _defaultMaxSlots ?: GameConstants.armySize,
     val army: Army = Army(maxSlots),
 ) : IsPartOfGameInfoSerialization, Json.Serializable, IArmy, KoinComponent {
 
+    @Transient
+    private var ownerAdapter: CivilizationInfo? = civInfo
+
+    /** Null is an explicitly ownerless adapter, not a substitute civilization. */
+    val ownerOrNull: CivilizationInfo?
+        get() = ownerAdapter
+
+    var civInfo: CivilizationInfo
+        get() = ownerAdapter
+            ?: throw UninitializedPropertyAccessException("Army has no bound civilization owner")
+        set(value) { ownerAdapter = value }
     companion object {
         private var _defaultMaxSlots: Int? = null
         fun setTestingMaxSlots(slots: Int) {
@@ -53,15 +64,15 @@ open class ArmyInfo(
     }
 
     /** Side-effect-free constructor used by GDX Json; real ownership is restored by setTransients. */
-    constructor() : this(MapUnit.monsterCivInfo, _defaultMaxSlots ?: GameConstants.armySize)
+    constructor() : this(null, _defaultMaxSlots ?: GameConstants.armySize)
 
     constructor(civInfo: CivilizationInfo, unitName: String, totalCount: Int) :
             this(civInfo, GameConstants.armySize) {
         fillArmy(unitName, totalCount)
     }
 
-    fun setTransients(civInfo0: CivilizationInfo, hero0: MapUnit?) {
-        civInfo = civInfo0
+    fun setTransients(civInfo0: CivilizationInfo?, hero0: MapUnit?) {
+        ownerAdapter = civInfo0
         hero = hero0
     }
 
@@ -168,7 +179,7 @@ open class ArmyInfo(
     fun copySlots(): Array<Troop?> = troops
 
     fun clone(): ArmyInfo {
-        val copy = ArmyInfo(civInfo, maxSlots)
+        val copy = ArmyInfo(ownerOrNull, maxSlots)
         for (index in troops.indices) copy.setTroopAt(index, troops[index])
         return copy
     }

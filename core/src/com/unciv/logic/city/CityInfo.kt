@@ -348,7 +348,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         toReturn.name = name
         toReturn.health = health
         toReturn.garrison = garrison
-        toReturn.garrisonInfo = ArmyInfo(garrisonInfo.civInfo, garrisonInfo.maxSlots, garrisonInfo.army.deepCopy())
+        toReturn.garrisonInfo = ArmyInfo(garrisonInfo.ownerOrNull, garrisonInfo.maxSlots, garrisonInfo.army.deepCopy())
         toReturn.population = population.clone()
         toReturn.cityConstructions = cityConstructions.clone()
         toReturn.expansion = expansion.clone()

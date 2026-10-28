@@ -34,7 +34,7 @@ class CityReligionManager : IsPartOfGameInfoSerialization {
 
     fun clone(): CityReligionManager {
         val toReturn = CityReligionManager()
-        toReturn.cityInfo = cityInfo
+        if (this::cityInfo.isInitialized) toReturn.cityInfo = cityInfo
         toReturn.religionsAtSomePointAdopted.addAll(religionsAtSomePointAdopted)
         toReturn.pressures.putAll(pressures)
         toReturn.followers.putAll(followers)
