@@ -429,8 +429,10 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
         toReturn.originalOwner = originalOwner
         toReturn.instanceName = instanceName
         toReturn.currentMovement = currentMovement
-        toReturn.heroAttackSkill = heroAttackSkill
-        toReturn.heroDefenseSkill = heroDefenseSkill
+        toReturn.hero = Hero(
+            hero.baseAttackSkill, hero.baseDefenseSkill, hero.baseFoodCapacity,
+            hero.currentFood, hero.morale, hero.luck
+        )
         toReturn.protectedTiles = protectedTiles
         toReturn.basicFoodCapacity = basicFoodCapacity
         toReturn.currentFood = currentFood
