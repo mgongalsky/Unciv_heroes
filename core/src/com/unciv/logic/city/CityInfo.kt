@@ -674,6 +674,11 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         espionage.setTransients(this)
     }
 
+    /** Static neutral policy: preserve all local state and invoke no player systems. */
+    open fun completeNeutralRound() {
+        require(state.ownership == CityOwnership.Neutral) { "City $id is not neutral" }
+    }
+
     fun startTurn() {
         // Construct units at the beginning of the turn,
         // so they won't be generated out in the open and vulnerable to enemy attacks before you can control them

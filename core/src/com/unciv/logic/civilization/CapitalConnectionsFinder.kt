@@ -12,7 +12,9 @@ class CapitalConnectionsFinder(private val civInfo: CivilizationInfo) {
     private var citiesToCheck = mutableListOf(civInfo.getCapital()!!)
     private lateinit var newCitiesToCheck: MutableList<CityInfo>
 
-    private val openBordersCivCities = civInfo.gameInfo.getCities().filter { civInfo.canEnterBordersOf(it.civInfo) }
+    private val openBordersCivCities = civInfo.gameInfo.getCities().filter { city ->
+        city.ownerOrNull?.let { civInfo.canEnterBordersOf(it) } == true
+    }
 
     private val harbor = "Harbor"   // hardcoding at least centralized for this class for now
     private val road = RoadStatus.Road.name

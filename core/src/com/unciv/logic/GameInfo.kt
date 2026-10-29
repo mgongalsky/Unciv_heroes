@@ -345,6 +345,8 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
             currentPlayerIndex = (currentPlayerIndex + 1) % civilizations.size
             if (currentPlayerIndex == 0) {
                 turns++
+                for (city in getCities().filter { it.state.ownership == CityOwnership.Neutral })
+                    city.completeNeutralRound()
                 if (UncivGame.Current.simulateUntilTurnForDebug != 0)
                     debug("Starting simulation of turn %s", turns)
             }
