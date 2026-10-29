@@ -91,6 +91,13 @@ class WorldCityRegistry(private val game: GameInfo) {
         check(registry.remove(city)) { "City ${city.id} is not registered" }
     }
 
+    /** Membership only, like transfer; world effects belong to the ownership operation. */
+    fun neutralize(city: CityInfo) {
+        check(registry.contains(city)) { "City ${city.id} is not registered" }
+        require(city.gameInfo === game) { "City belongs to another game" }
+        city.state.ownership = CityOwnership.Neutral
+        city.bindNeutralWorld(game)
+    }
     fun transfer(city: CityInfo, newOwner: CivilizationInfo) {
         require(newOwner.gameInfo === game) { "New owner belongs to another game" }
         attach(newOwner)

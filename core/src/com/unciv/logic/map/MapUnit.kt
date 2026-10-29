@@ -1182,6 +1182,7 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
         // addPromotion requires currentTile to be valid because it accesses ruleset through it.
         // getAncientRuinBonus, if it places a new unit, does too
         currentTile = tile
+        com.unciv.logic.city.NeutralCityEntry.tryAcquireOnEntry(this, tile)
         if (civInfo.isMajorCiv()
                 && tile.improvement != null
                 && tile.getTileImprovement()!!.isAncientRuinsEquivalent()

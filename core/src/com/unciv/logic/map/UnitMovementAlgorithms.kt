@@ -110,7 +110,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         //println("Checking ZoC for unit ${unit.baseUnit.name} at ${tileInfo.position}")
 
         for (tile in tileInfo.neighbors) {
-            if (tile.isCityCenter() && civInfo.isAtWarWith(tile.getOwner()!!)) {
+            if (tile.isCityCenter() && tile.getOwner()?.let { civInfo.isAtWarWith(it) } == true) {
                 yield(tile)
             }
             else if (tile.militaryUnit != null && civInfo.isAtWarWith(tile.militaryUnit!!.civInfo)) {
@@ -653,8 +653,12 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             return false
 
         // even if they'll let us pass through, we can't enter their city - unless we just captured it
-        if (tile.isCityCenter() && tile.getOwner() != unit.civInfo && !tile.getCity()!!.hasJustBeenConquered)
-            return false
+        if (tile.isCityCenter() && tile.getOwner() != unit.civInfo && !tile.getCity()!!.hasJustBeenConquered) {
+            val canAcquire = unit is MapUnit && com.unciv.logic.city.NeutralCityEntry.decision(
+                tile.getCity()!!, unit
+            ) == com.unciv.pure.domain.city.NeutralCityEntryRules.Decision.ACQUIRE
+            if (!canAcquire) return false
+        }
 
         return if (unit is MapUnit && unit.isCivilian())
             tile.civilianUnit == null && (tile.militaryUnit == null || tile.militaryUnit!!.owner == unit.owner)
@@ -667,7 +671,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         if (unit.hasUnique(UniqueType.CannotMove)) return false
         // landing in the city
         if (tile.isCityCenter()) {
-            if (tile.airUnits.filter { !it.isTransported }.size < 6 && tile.getCity()?.civInfo == unit.civInfo)
+            if (tile.airUnits.filter { !it.isTransported }.size < 6 && tile.getCity()?.ownerOrNull == unit.civInfo)
                 return true // if city is free - no problem, get in
         } // let's check whether it enters city on carrier now...
 
@@ -698,6 +702,12 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
      */
     fun canPassThrough(tile: TileInfo): Boolean {
         if (unit is MapUnit && unit.hasUnique(UniqueType.CannotMove)) return false
+        val neutralCity = tile.getCity()?.takeIf {
+            tile.isCityCenter() && it.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
+        }
+        if (neutralCity != null && (unit !is MapUnit ||
+                com.unciv.logic.city.NeutralCityEntry.decision(neutralCity, unit) !=
+                com.unciv.pure.domain.city.NeutralCityEntryRules.Decision.ACQUIRE)) return false
         if (tile.isImpassible()) {
             // special exception - ice tiles are technically impassible, but some units can move through them anyway
             // helicopters can pass through impassable tiles like mountains
