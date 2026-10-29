@@ -52,6 +52,7 @@ class CityExpansionManager : IsPartOfGameInfoSerialization {
     }
 
     fun buyTile(tileInfo: TileInfo) {
+        requireNotNeutralTerritory(tileInfo)
         val goldCost = getGoldCostOfTile(tileInfo)
 
         class NotEnoughGoldToBuyTileException : Exception()
@@ -75,7 +76,7 @@ class CityExpansionManager : IsPartOfGameInfoSerialization {
     }
 
     fun getChoosableTiles() = cityInfo.getCenterTile().getTilesInDistance(5)
-        .filter { it.getOwner() == null }
+        .filter { it.getCity() == null }
 
     fun chooseNewTileToOwn(): TileInfo? {
         // Technically, in the original a random tile with the lowest score was selected
@@ -171,7 +172,14 @@ class CityExpansionManager : IsPartOfGameInfoSerialization {
      *
      * @param tileInfo The tile to take over
      */
+    private fun requireNotNeutralTerritory(tileInfo: TileInfo) {
+        require(tileInfo.getCity()?.state?.ownership != com.unciv.pure.domain.city.CityOwnership.Neutral) {
+            "Neutral city territory requires a city ownership operation"
+        }
+    }
+
     fun takeOwnership(tileInfo: TileInfo) {
+        requireNotNeutralTerritory(tileInfo)
         if (tileInfo.isCityCenter()) throw Exception("What?!")
         if (tileInfo.getCity() != null)
             tileInfo.getCity()!!.expansion.relinquishOwnership(tileInfo)

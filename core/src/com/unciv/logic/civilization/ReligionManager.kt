@@ -412,13 +412,13 @@ class ReligionManager : IsPartOfGameInfoSerialization {
     fun numberOfCitiesFollowingThisReligion(): Int {
         if (religion == null) return 0
         return civInfo.gameInfo.getCities()
-            .count { it.religion.getMajorityReligion() == religion }
+            .count { it.ownerOrNull != null && it.religion.getMajorityReligion() == religion }
     }
 
     fun numberOfFollowersFollowingThisReligion(cityFilter: String): Int {
         if (religion == null) return 0
         return civInfo.gameInfo.getCities()
-            .filter { it.matchesFilter(cityFilter, civInfo) }
+            .filter { it.ownerOrNull != null && it.matchesFilter(cityFilter, civInfo) }
             .sumOf { it.religion.getFollowersOf(religion!!.name)!! }
     }
 

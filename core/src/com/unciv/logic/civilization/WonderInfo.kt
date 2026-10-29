@@ -152,14 +152,14 @@ class WonderInfo {
             for (wonderName in city.cityConstructions.builtBuildings.intersect(wonderIndexMap.keys)) {
                 val index = wonderIndexMap[wonderName]!!
                 val status = when {
-                    viewingPlayer == city.civInfo -> WonderStatus.Owned
+                    viewingPlayer == city.ownerOrNull -> WonderStatus.Owned
                     viewingPlayer.hasExplored(city.location) -> WonderStatus.Known
                     else -> WonderStatus.NotFound
                 }
                 wonders[index] = WonderInfo(
                     wonderName, CivilopediaCategories.Wonder,
                     wonders[index].groupName, wonders[index].groupColor,
-                    status, city.civInfo, city, city.getCenterTile()
+                    status, city.ownerOrNull, city, city.getCenterTile()
                 )
             }
         }
@@ -176,7 +176,7 @@ class WonderInfo {
             val city = if (status == WonderStatus.NotFound) null
             else tile.getTilesInDistance(5)
                 .filter { it.isCityCenter() }
-                .filter { viewingPlayer.knows(it.getOwner()!!) }
+                .filter { it.getOwner()?.let { owner -> viewingPlayer.knows(owner) } == true }
                 .filter { viewingPlayer.hasExplored(it) }
                 .sortedBy { it.aerialDistanceTo(tile) }
                 .firstOrNull()?.getCity()

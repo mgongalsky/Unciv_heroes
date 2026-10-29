@@ -562,6 +562,8 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
     fun getTileStats(city: CityInfo?, observingCiv: CivilizationInfo?,
                      localUniqueCache: LocalUniqueCache = LocalUniqueCache(false)
     ): Stats {
+        if (city != null && city.ownerOrNull == null)
+            return getTileStats(null, observingCiv, localUniqueCache)
         var stats = getBaseTerrain().cloneStats()
 
         val stateForConditionals = StateForConditionals(civInfo = observingCiv, cityInfo = city, tile = this)

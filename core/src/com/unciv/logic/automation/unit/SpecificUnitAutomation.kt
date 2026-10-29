@@ -1,4 +1,4 @@
-﻿package com.unciv.logic.automation.unit
+package com.unciv.logic.automation.unit
 
 import com.unciv.Constants
 import com.unciv.logic.automation.Automation
@@ -157,9 +157,10 @@ object SpecificUnitAutomation {
         val tilesNearCities = sequence {
             for (city in unit.civInfo.gameInfo.getCities()) {
                 val center = city.getCenterTile()
-                if (unit.civInfo.knows(city.civInfo) &&
+                val cityOwner = city.ownerOrNull
+                if (cityOwner != null && unit.civInfo.knows(cityOwner) &&
                     // If the CITY OWNER knows that the UNIT OWNER agreed not to settle near them
-                    city.civInfo.getDiplomacyManager(unit.civInfo).hasFlag(DiplomacyFlags.AgreedToNotSettleNearUs)
+                    cityOwner.getDiplomacyManager(unit.civInfo).hasFlag(DiplomacyFlags.AgreedToNotSettleNearUs)
                 ) {
                     yieldAll(center.getTilesInDistance(6))
                     continue
@@ -313,6 +314,7 @@ object SpecificUnitAutomation {
             if (ourCitiesWithoutReligion.any())
                 ourCitiesWithoutReligion.minByOrNull { it.getCenterTile().aerialDistanceTo(unit.getTile()) }
             else unit.civInfo.gameInfo.getCities().asSequence()
+                .filter { it.ownerOrNull != null }
                 .filter { it.religion.getMajorityReligion() != unit.civInfo.religionManager.religion }
                 .filter { it.civInfo.knows(unit.civInfo) && !it.civInfo.isAtWarWith(unit.civInfo) }
                 .filterNot { it.religion.isProtectedByInquisitor(unit.religion) }

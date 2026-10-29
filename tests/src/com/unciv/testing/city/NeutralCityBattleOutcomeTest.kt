@@ -33,7 +33,15 @@ class NeutralCityBattleOutcomeTest {
             val city = city(fixture)
             val hero = fixture.civilization.placeUnitNearTile(Vector2(3f, 0f), "Warrior")!!
             val gold = fixture.civilization.gold
+            val previousTile = hero.currentTile
+            val movement = hero.currentMovement
+            val attacks = hero.attacksThisTurn
             BattleWorldOutcomeHandler(MapUnitCombatant(hero), CityCombatant(city)).apply(true)
+            assertSame(city.getCenterTile(), hero.currentTile)
+            assertSame(hero, city.getCenterTile().militaryUnit)
+            assertNull(previousTile.militaryUnit)
+            assertEquals(movement, hero.currentMovement, 0f)
+            assertEquals(attacks, hero.attacksThisTurn)
             assertSame(fixture.civilization, city.ownerOrNull)
             assertSame(fixture.civilization, city.garrisonInfo.ownerOrNull)
             assertEquals(91, city.health)

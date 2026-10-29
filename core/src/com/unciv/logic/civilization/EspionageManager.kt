@@ -42,6 +42,10 @@ class Spy() : IsPartOfGameInfoSerialization {
     }
 
     fun endTurn() {
+        if (location != null && getLocation()?.ownerOrNull == null) {
+            moveTo(null)
+            return
+        }
         --timeTillActionFinish
         if (timeTillActionFinish != 0) return
 
@@ -68,6 +72,9 @@ class Spy() : IsPartOfGameInfoSerialization {
     }
 
     fun moveTo(cityInfo: CityInfo?) {
+        require(cityInfo == null || cityInfo.ownerOrNull != null) {
+            "A spy requires a city with a player owner"
+        }
         location = cityInfo?.id
         if (cityInfo == null) { // Moving to spy hideout
             action = SpyAction.None

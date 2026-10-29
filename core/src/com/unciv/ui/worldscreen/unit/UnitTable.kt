@@ -267,6 +267,7 @@ class UnitTable(val worldScreen: WorldScreen) : Table() {
     }
 
     fun citySelected(cityInfo: CityInfo) : Boolean {
+        if (cityInfo.ownerOrNull == null) return false
         selectUnit()
         if (cityInfo == selectedCity) return false
         selectedCity = cityInfo

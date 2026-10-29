@@ -25,7 +25,13 @@ class BattleWorldOutcomeHandler(
                         require(NeutralCityEntry.decision(defeated.city, hero) == Decision.ACQUIRE) {
                             "Neutral city victory requires an eligible hero and no living defenders"
                         }
+                        val center = defeated.city.getCenterTile()
+                        require(hero.currentTile.aerialDistanceTo(center) == 1 && hero.movement.canMoveTo(center)) {
+                            "Neutral city victory requires an accessible adjacent center"
+                        }
                         NeutralCityOwnership.acquireUndefended(defeated.city, hero.civInfo)
+                        hero.removeFromTile()
+                        hero.putInTile(center)
                     } else {
                         val attackerCiv = attacker?.getCivInfo() ?: return
                         defeated.city.moveToCiv(attackerCiv)

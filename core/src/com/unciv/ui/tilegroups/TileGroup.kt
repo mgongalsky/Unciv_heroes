@@ -348,10 +348,9 @@ open class TileGroup(
             // so it stays consistent throughout the game
             if (!ImageGetter.imageExists(baseLocation)) continue
 
-            val locationToCheck =
-                    if (tileInfo.owningCity != null)
-                        tileSetStrings.getOwnedTileImageLocation(baseLocation, tileInfo.getOwner()!!)
-                    else baseLocation
+            val locationToCheck = tileInfo.getOwner()?.let {
+                tileSetStrings.getOwnedTileImageLocation(baseLocation, it)
+            } ?: baseLocation
 
             val existingImages = ArrayList<String>()
             existingImages.add(locationToCheck)

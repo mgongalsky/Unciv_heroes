@@ -698,7 +698,9 @@ object Battle {
         var canNuke = true
         val attackerCiv = nuke.getCivInfo()
         for (tile in targetTile.getTilesInDistance(blastRadius)) {
-            val defendingTileCiv = tile.getCity()?.civInfo
+            if (tile.isCityCenter() && tile.getCity()?.state?.ownership ==
+                com.unciv.pure.domain.city.CityOwnership.Neutral) return false
+            val defendingTileCiv = tile.getCity()?.ownerOrNull
             if (defendingTileCiv != null && attackerCiv.knows(defendingTileCiv)) {
                 canNuke = canNuke && attackerCiv.getDiplomacyManager(defendingTileCiv).canAttack()
             }
@@ -733,6 +735,8 @@ object Battle {
 
         // Calculate the tiles that are hit
         val hitTiles = targetTile.getTilesInDistance(blastRadius)
+        if (hitTiles.any { it.isCityCenter() && it.getCity()?.state?.ownership ==
+                com.unciv.pure.domain.city.CityOwnership.Neutral }) return
 
         // Declare war on the owners of all hit tiles
         for (hitCiv in hitTiles.mapNotNull { it.getOwner() }.distinct()) {

@@ -50,6 +50,28 @@ class CityButton(val city: CityInfo, private val tileGroup: WorldTileGroup): Tab
 
         clear()
         setButtonActions()
+        if (city.ownerOrNull == null) {
+            iconTable = Table().apply {
+                touchable = Touchable.enabled
+                background = BaseScreen.skinStrings.getUiBackground(
+                    "WorldScreen/CityButton/IconTable",
+                    BaseScreen.skinStrings.roundedEdgeRectangleShape, Color.DARK_GRAY
+                )
+                add(city.population.population.toString().toLabel(Color.LIGHT_GRAY)).pad(5f)
+                add(city.name.toLabel(Color.WHITE)).pad(5f)
+                if (isCityViewable) {
+                    val defenders = city.state.garrison?.getAllTroops()
+                        ?.filterNotNull()?.sumOf { it.currentAmount.coerceAtLeast(0) } ?: 0
+                    add("${Fonts.strength}$defenders".toLabel(Color.LIGHT_GRAY, 12)).pad(5f)
+                }
+            }
+            add(iconTable).row()
+            pack()
+            setOrigin(Align.center)
+            centerX(tileGroup)
+            updateHiddenUnitMarkers()
+            return
+        }
         addAirUnitTable()
         if (showAdditionalInfoTags && city.health < city.getMaxHealth().toFloat()) {
             val healthBar = ImageGetter.getHealthBar(city.health.toFloat(), city.getMaxHealth().toFloat(), 100f)
@@ -123,7 +145,7 @@ class CityButton(val city: CityInfo, private val tileGroup: WorldTileGroup): Tab
         val positionX = iconTable.width / 2 + (pos.ordinal-1)*60f
 
         val indicator = ImageGetter.getTriangle().apply {
-            color = city.civInfo.nation.getInnerColor()
+            color = city.ownerOrNull?.nation?.getInnerColor() ?: Color.LIGHT_GRAY
             setSize(12f, 8f)
             setOrigin(Align.center)
             if (!isButtonMoved) {
@@ -148,7 +170,7 @@ class CityButton(val city: CityInfo, private val tileGroup: WorldTileGroup): Tab
         add(airUnitTable).row()
     }
 
-    private fun belongsToViewingCiv() = city.civInfo == worldScreen.viewingCiv
+    private fun belongsToViewingCiv() = city.ownerOrNull == worldScreen.viewingCiv
 
     private fun setButtonActions() {
 
@@ -158,6 +180,10 @@ class CityButton(val city: CityInfo, private val tileGroup: WorldTileGroup): Tab
         touchable = Touchable.childrenOnly
 
         onClick {
+            if (city.ownerOrNull == null) {
+                if (!isButtonMoved) moveButtonDown()
+                return@onClick
+            }
             // clicking swings the button a little down to allow selection of units there.
             // this also allows to target selected units to move to the city tile from elsewhere.
             if (isButtonMoved) {

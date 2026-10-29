@@ -46,6 +46,7 @@ class NeutralCityBattleSession private constructor(
             NeutralCityEntry.decision(city, hero) == Decision.FIGHT_GARRISON &&
                 hero.currentMovement > Constants.minimumMovementEpsilon && hero.canAttack() &&
                 hero.currentTile.aerialDistanceTo(city.getCenterTile()) == 1 &&
+                city.getCenterTile().militaryUnit == null &&
                 hero.army.getAllTroops().any { it != null && it.currentAmount > 0 }
 
         fun create(hero: MapUnit, city: CityInfo, seed: Long = 42L): NeutralCityBattleSession {

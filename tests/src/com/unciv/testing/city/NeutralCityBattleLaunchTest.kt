@@ -42,6 +42,8 @@ class NeutralCityBattleLaunchTest {
             assertTrue(city.garrisonInfo.getAllTroops().all { it == null })
             assertEquals(attacks + 1, hero.attacksThisTurn)
             assertEquals(0f, hero.currentMovement, 0f)
+            assertSame(city.getCenterTile(), hero.currentTile)
+            assertSame(hero, city.getCenterTile().militaryUnit)
             assertEquals(91, city.health)
             assertEquals(17, city.population.foodStored)
             assertEquals(gold, fixture.civilization.gold)

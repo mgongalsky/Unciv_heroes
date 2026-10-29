@@ -28,7 +28,7 @@ class WorldTileGroup(internal val worldScreen: WorldScreen, tileInfo: TileInfo, 
         val showEntireMap = UncivGame.Current.viewEntireMapForDebug
 
         if (tileIsViewable && tileInfo.isWorked() && UncivGame.Current.settings.showWorkedTiles
-                && city!!.civInfo == viewingCiv)
+                && city?.ownerOrNull == viewingCiv)
             icons.addPopulationIcon()
         // update city buttons in explored tiles or entire map
         if (showEntireMap

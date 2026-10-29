@@ -52,6 +52,7 @@ class CityReligionManager : IsPartOfGameInfoSerialization {
     }
 
     fun endTurn() {
+        if (cityInfo.ownerOrNull == null) return
         getAffectedBySurroundingCities()
     }
 
@@ -74,7 +75,8 @@ class CityReligionManager : IsPartOfGameInfoSerialization {
     }
 
     fun addPressure(religionName: String, amount: Int, shouldUpdateFollowers: Boolean = true) {
-        if (!cityInfo.civInfo.gameInfo.isReligionEnabled()) return // No religion, no pressures
+        if (cityInfo.ownerOrNull == null) return
+        if (!cityInfo.gameInfo.isReligionEnabled()) return // No religion, no pressures
         pressures.add(religionName, amount)
 
         if (shouldUpdateFollowers) {
@@ -222,7 +224,7 @@ class CityReligionManager : IsPartOfGameInfoSerialization {
     }
 
     fun getMajorityReligion(): Religion? {
-        return cityInfo.civInfo.gameInfo.religions[getMajorityReligionName()]
+        return cityInfo.gameInfo.religions[getMajorityReligionName()]
     }
 
     private fun getAffectedBySurroundingCities() {
@@ -265,6 +267,7 @@ class CityReligionManager : IsPartOfGameInfoSerialization {
     /** Doesn't update the pressures, only returns what they are if the update were to happen right now */
     fun getPressuresFromSurroundingCities(): Counter<String> {
         val addedPressure = Counter<String>()
+        if (cityInfo.ownerOrNull == null) return addedPressure
         if (cityInfo.isHolyCity()) {
             addedPressure[religionThisIsTheHolyCityOf!!] = 5 * pressureFromAdjacentCities
         }
