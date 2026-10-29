@@ -12,12 +12,31 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.pure.domain.pathfinding.PathsToTilesWithinTurn
 
 object BattleHelper {
+    private fun shouldAttackNeutralGarrison(unit: MapUnit, tile: TileInfo): Boolean? {
+        val city = tile.getCity()?.takeIf {
+            tile.isCityCenter() && it.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
+        } ?: return null
+        fun snapshots(troops: List<com.unciv.pure.domain.troop.Troop?>) =
+            troops.filterNotNull().filter { it.currentAmount > 0 }.map {
+                com.unciv.pure.application.battle.AssessBattleThreatUseCase.TroopSnapshot(
+                    it.currentAmount, it.damage, it.maxHealth, it.speed,
+                    if (it.rangedStrength > 0) city.getRuleset().units[it.unitName]?.range ?: 2 else 0
+                )
+            }
+        val threat = com.unciv.pure.application.battle.AssessBattleThreatUseCase.execute(
+            snapshots(unit.army.getAllTroops().toList()), snapshots(city.garrisonInfo.getAllTroops().toList()),
+            attackerAttackSkill = unit.heroAttackSkill,
+            attackerDefenseSkill = unit.heroDefenseSkill
+        )
+        return threat.attackerPower > 0 && threat.defenderToAttackerRatio <= 1.0
+    }
 
     fun tryAttackNearbyEnemy(unit: MapUnit, stayOnTile: Boolean = false): Boolean {
         if (unit.hasUnique(UniqueType.CannotAttack)) return false
         val attackableEnemies = getAttackableEnemies(unit, unit.movement.getDistanceToTiles(), stayOnTile = stayOnTile)
             // Only take enemies we can fight without dying
             .filter {
+                shouldAttackNeutralGarrison(unit, it.tileToAttack)?.let { safe -> return@filter safe }
                 val combatant = Battle.getMapCombatantOfTile(it.tileToAttack)
                 combatant != null && // Exclude null combatants
                         BattleDamage.calculateDamageToAttacker(
@@ -88,6 +107,18 @@ object BattleHelper {
                         .asSequence()
 
             for (tile in tilesInAttackRange) {
+                val neutralCity = tile.getCity()?.takeIf {
+                    tile.isCityCenter() && it.state.ownership ==
+                        com.unciv.pure.domain.city.CityOwnership.Neutral
+                }
+                if (neutralCity != null) {
+                    if (movementLeft > Constants.minimumMovementEpsilon && unit.canAttack() &&
+                        reachableTile.aerialDistanceTo(tile) == 1 &&
+                        unit.army.getAllTroops().any { it != null && it.currentAmount > 0 } &&
+                        checkTile(unit, tile, tilesToCheck)
+                    ) attackableTiles += AttackableTile(reachableTile, tile, movementLeft)
+                    continue
+                }
                 if (tile in tilesWithEnemies) {
                     // Add previously identified attackable tiles to the list.
                     attackableTiles += AttackableTile(reachableTile, tile, movementLeft)
@@ -126,8 +157,18 @@ object BattleHelper {
         }
 
         val tileCombatant = Battle.getMapCombatantOfTile(tile) ?: return false
-        if (tileCombatant.getCivInfo() == combatant.getCivInfo()) return false
-        if (!combatant.getCivInfo().isAtWarWith(tileCombatant.getCivInfo())) return false
+        if (tileCombatant is com.unciv.logic.battle.CityCombatant &&
+            tileCombatant.city.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
+        ) {
+            if (combatant !is MapUnitCombatant || !combatant.unit.canAttack() ||
+                com.unciv.logic.city.NeutralCityEntry.decision(tileCombatant.city, combatant.unit) !=
+                    com.unciv.pure.domain.city.NeutralCityEntryRules.Decision.FIGHT_GARRISON ||
+                combatant.unit.army.getAllTroops().none { it != null && it.currentAmount > 0 }
+            ) return false
+        } else {
+            if (tileCombatant.getCivInfo() == combatant.getCivInfo()) return false
+            if (!combatant.getCivInfo().isAtWarWith(tileCombatant.getCivInfo())) return false
+        }
 
         if (combatant is MapUnitCombatant && combatant.isLandUnit() && combatant.isMelee() &&
             !combatant.hasUnique(UniqueType.LandUnitEmbarkation) && tile.isWater
@@ -162,6 +203,7 @@ object BattleHelper {
         val attackableEnemiesNextTurn = getAttackableEnemies(unit, unitDistanceToTiles)
                 // Only take enemies we can fight without dying
                 .filter {
+                    shouldAttackNeutralGarrison(unit, it.tileToAttack)?.let { safe -> return@filter safe }
                     BattleDamage.calculateDamageToAttacker(
                         MapUnitCombatant(unit),
                         Battle.getMapCombatantOfTile(it.tileToAttack)!!
@@ -184,9 +226,11 @@ object BattleHelper {
 
         // todo For air units, prefer to attack tiles with lower intercept chance
 
-        val capturableCity = cityTilesToAttack.firstOrNull { it.tileToAttack.getCity()!!.health == 1 }
+        val capturableCity = cityTilesToAttack.firstOrNull {
+            it.tileToAttack.getCity()!!.ownerOrNull != null && it.tileToAttack.getCity()!!.health == 1
+        }
         val cityWithHealthLeft =
-            cityTilesToAttack.filter { it.tileToAttack.getCity()!!.health != 1 } // don't want ranged units to attack defeated cities
+            cityTilesToAttack.filter { it.tileToAttack.getCity()!!.ownerOrNull == null || it.tileToAttack.getCity()!!.health != 1 } // don't want ranged units to attack defeated cities
                 .minByOrNull { it.tileToAttack.getCity()!!.health }
 
         if (unit.baseUnit.isMelee() && capturableCity != null)

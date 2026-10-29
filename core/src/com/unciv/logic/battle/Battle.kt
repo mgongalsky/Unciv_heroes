@@ -63,7 +63,11 @@ object Battle {
         /** Rarely, a melee unit will target a civilian then move through the civilian to get
          * to attackableTile.tileToAttackFrom, meaning that they take the civilian. This check stops
          * the melee unit from trying to capture their own unit if this happens */
-        if (getMapCombatantOfTile(attackableTile.tileToAttack)!!.getCivInfo() == attacker.getCivInfo()) return false
+        val target = getMapCombatantOfTile(attackableTile.tileToAttack) ?: return false
+        if (target is CityCombatant &&
+            target.city.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
+        ) return NeutralCityBattleSession.canStart(attacker.unit, target.city)
+        if (target.getCivInfo() == attacker.getCivInfo()) return false
         /** Alternatively, maybe we DID reach that tile, but it turned out to be a hill or something,
          * so we expended all of our movement points!
          */
@@ -89,6 +93,24 @@ object Battle {
     }
 
     fun attack(attacker: ICombatant, defender: ICombatant) {
+        if (defender is CityCombatant &&
+            defender.city.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
+        ) {
+            val hero = (attacker as? MapUnitCombatant)?.unit ?: return
+            if (!NeutralCityBattleSession.canStart(hero, defender.city)) return
+            if (hero.civInfo.isPlayerCivilization()) {
+                UncivGame.Current.pushScreen(BattleScreen.fromCombatants(attacker, defender))
+            } else {
+                val session = NeutralCityBattleSession.create(hero, defender.city)
+                val result = session.runAutomated()
+                session.consumeWorldAttack()
+                session.manager.finishBattle()
+                if (result.termination == com.unciv.pure.application.battle.BattleTermination.VICTORY ||
+                    result.termination == com.unciv.pure.application.battle.BattleTermination.MUTUAL_DEFEAT
+                ) BattleWorldOutcomeHandler(attacker, defender).apply(result.winnerIsAttacker)
+            }
+            return
+        }
         debug("%s %s attacked %s %s", attacker.getCivInfo().civName, attacker.getName(), defender.getCivInfo().civName, defender.getName())
         val attackedTile = defender.getTile()
         if (attacker is MapUnitCombatant && (defender is MapUnitCombatant || defender is CityCombatant) && attacker.getCivInfo().isPlayerCivilization()) {

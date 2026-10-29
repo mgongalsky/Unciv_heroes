@@ -130,7 +130,12 @@ class BattleTable(val worldScreen: WorldScreen): Table() {
 
 
         // If no defender or the defender is friendly and `includeFriendly` is false, return null
-        if (defender == null || (!includeFriendly && defender.getCivInfo() == attackerCiv)) {
+        val defenderOwner = when (defender) {
+            is CityCombatant -> defender.city.ownerOrNull
+            null -> null
+            else -> defender.getCivInfo()
+        }
+        if (defender == null || (!includeFriendly && defenderOwner == attackerCiv)) {
             if (verbose_protectedTiles) {
                 println("No valid defender found for tile: ${selectedTile.position}")
             }
@@ -182,7 +187,48 @@ class BattleTable(val worldScreen: WorldScreen): Table() {
         add(modifierLabel).width(quarterScreen - upOrDownLabel.minWidth)
     }
 
+    private fun simulateNeutralGarrison(attacker: MapUnitCombatant, defender: CityCombatant) {
+        clear()
+        add(attacker.getName().tr().toLabel())
+        add(defender.getName().tr().toLabel()).row()
+        add(buildBattleThreatPreview(
+            BattleThreatArmyPreview(
+                attacker.unit.heroAttackSkill, attacker.unit.heroDefenseSkill,
+                attacker.unit.army.getAllTroops().filterNotNull().filter { it.currentAmount > 0 }
+            ),
+            BattleThreatArmyPreview(
+                0, 0, defender.city.garrisonInfo.getAllTroops()
+                    .filterNotNull().filter { it.currentAmount > 0 }
+            )
+        )).colspan(2).growX().row()
+        val target = BattleHelper.getAttackableEnemies(
+            attacker.unit, attacker.unit.movement.getDistanceToTiles()
+        ).firstOrNull { it.tileToAttack == defender.getTile() }
+        val button = "Attack".toTextButton().apply { color = Color.RED }
+        if (target == null) {
+            button.disable()
+            button.label.color = Color.GRAY
+        } else button.onClick(UncivSound.Silent) {
+            worldScreen.mapHolder.removeUnitActionOverlay()
+            worldScreen.shouldUpdate = true
+            if (Battle.movePreparingAttack(attacker, target)) {
+                SoundPlayer.play(attacker.getAttackSound())
+                Battle.attackOrNuke(attacker, target)
+            }
+        }
+        add(button).colspan(2).padTop(8f)
+        pack()
+        setPosition(worldScreen.stage.width / 2 - width / 2, 5f)
+    }
+
     private fun simulateBattle(attacker: ICombatant, defender: ICombatant) {
+        if (defender is CityCombatant &&
+            defender.city.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
+        ) {
+            if (attacker is MapUnitCombatant) simulateNeutralGarrison(attacker, defender)
+            else hide()
+            return
+        }
         clear()
 
         val attackerNameWrapper = Table().apply {

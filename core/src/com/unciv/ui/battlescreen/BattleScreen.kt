@@ -109,14 +109,14 @@ class BattleScreen private constructor(
             }
             val defenderCiv = when (defender) {
                 is MapUnitCombatant -> defender.unit.civInfo
-                is CityCombatant   -> defender.city.civInfo
+                is CityCombatant   -> defender.city.ownerOrNull
                 else -> throw IllegalArgumentException()
             }
             return BattleScreen(
                 attackerArmy = attackerArmy,
                 defenderArmy = defenderArmy,
                 attackerIsPlayer = attackerCiv.isPlayerCivilization(),
-                defenderIsPlayer = defenderCiv.isPlayerCivilization(),
+                defenderIsPlayer = defenderCiv?.isPlayerCivilization() == true,
                 attackerClimate = attacker.getTile().getClimateParameters()
                     ?: ClimateParameters(0.3, 0.5, 0.6),
                 defenderClimate = defender.getTile().getClimateParameters()
@@ -200,7 +200,12 @@ class BattleScreen private constructor(
     //)
     // Предположим, что BFwidth, BFheight, attackerTile и defenderTile уже определены
     val mapGenerator = MapGenerator(ruleset)
-    val battleField: TileMap = mapGenerator.generateBattlefield(BFwidth, BFheight, attackerClimate, defenderClimate)
+    private val neutralSession = if (attacker is MapUnitCombatant && defender is CityCombatant &&
+        defender.city.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
+    ) com.unciv.logic.battle.NeutralCityBattleSession.create(attacker.unit, defender.city)
+    else null
+    val battleField: TileMap = neutralSession?.battleField
+        ?: mapGenerator.generateBattlefield(BFwidth, BFheight, attackerClimate, defenderClimate)
 
     /*private val battleField: TileMap = TileMap(
         BFwidth, BFheight,
@@ -209,7 +214,7 @@ class BattleScreen private constructor(
 
      */
 
-    private var manager = BattleManager(attackerArmy, defenderArmy, battleField)
+    private var manager = neutralSession?.manager ?: BattleManager(attackerArmy, defenderArmy, battleField)
 
 
     // Holds the mapping of tiles to their groups for visual representation
@@ -833,6 +838,7 @@ class BattleScreen private constructor(
      * @return A new instance of [BattleScreen].
      */
     override fun recreate(): BaseScreen {
+        if (neutralSession != null) return this
         val a = attacker ?: return this
         val d = defender ?: return this
         return fromCombatants(a, d)
@@ -860,6 +866,7 @@ class BattleScreen private constructor(
     private fun shutdownScreen() {
         if (screenClosed) return
         screenClosed = true
+        neutralSession?.consumeWorldAttack()
         Gdx.graphics.setSystemCursor(SystemCursor.Arrow)
         val callback = onStandaloneClosed
         onStandaloneClosed = null
@@ -943,6 +950,7 @@ class BattleScreen private constructor(
                 standaloneResult = report
                 Gdx.app.postRunnable {
                     if (screenClosed) return@postRunnable
+                    neutralSession?.consumeWorldAttack()
                     manager.finishBattle()
                     BattleWorldOutcomeHandler(attacker, defender).apply(event.winnerIsAttacker)
                     BattleResultPopup(this, report, ::shutdownScreen).open(force = true)
