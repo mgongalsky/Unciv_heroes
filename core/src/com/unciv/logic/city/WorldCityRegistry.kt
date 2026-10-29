@@ -41,15 +41,20 @@ class WorldCityRegistry(private val game: GameInfo) {
         val owners = game.civilizations.associateBy { it.civName }
         val bindings = cities.map { city ->
             val ownership = city.state.ownership
-            require(ownership is CityOwnership.Player) {
-                "City ${city.id}: neutral or unbound cities are not yet supported in a running game"
+            val owner = when (ownership) {
+                is CityOwnership.Player -> requireNotNull(owners[ownership.playerId]) {
+                    "City ${city.id}: unknown owner ${ownership.playerId}"
+                }
+                CityOwnership.Neutral -> null
+                null -> throw IllegalArgumentException("City ${city.id}: missing ownership")
             }
-            city to requireNotNull(owners[ownership.playerId]) {
-                "City ${city.id}: unknown owner ${ownership.playerId}"
-            }
+            city to owner
         }
         registry.replaceAll(cities)
-        for ((city, owner) in bindings) city.civInfo = owner
+        for ((city, owner) in bindings) {
+            if (owner == null) city.bindNeutralWorld(game)
+            else city.civInfo = owner
+        }
         for (civ in game.civilizations) {
             civ.attachCityRegistry(this)
             attached.add(civ)
@@ -71,6 +76,11 @@ class WorldCityRegistry(private val game: GameInfo) {
     fun at(position: CityPosition): CityInfo? = registry.at(position)
 
     fun register(city: CityInfo) {
+        if (city.state.ownership == CityOwnership.Neutral) {
+            require(city.gameInfo === game) { "City belongs to another game" }
+            registry.register(city)
+            return
+        }
         val owner = city.civInfo
         require(owner.gameInfo === game) { "City belongs to another game" }
         attach(owner)

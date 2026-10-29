@@ -221,6 +221,11 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         val toReturn = GameInfo()
         toReturn.tileMap = tileMap.clone()
         toReturn.civilizations.addAll(civilizations.map { it.clone() })
+        for (city in getCities().filter { it.state.ownership == CityOwnership.Neutral }) {
+            val copiedCity = city.clone()
+            copiedCity.bindNeutralWorld(toReturn)
+            toReturn.cityRegistry.register(copiedCity)
+        }
         toReturn.barbarians = barbarians.clone()
         toReturn.religions.putAll(religions.map { Pair(it.key, it.value.clone()) })
         toReturn.currentPlayer = currentPlayer
@@ -624,6 +629,9 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         for (religion in religions.values) religion.setTransients(this)
 
 
+        // Neutral cities restore their own map and manager links without a civilization.
+        for (city in getCities().filter { it.state.ownership == CityOwnership.Neutral })
+            city.setTransients()
         for (civInfo in civilizations) civInfo.setTransients()
         for (civInfo in civilizations) {
             civInfo.thingsToFocusOnForVictory =

@@ -90,11 +90,8 @@ class CityGameMigrationTest {
                 tree.get("civilizations").get(0).addChild("cities", JsonValue(JsonValue.ValueType.array))
             },
             "has no cities collection" to { tree -> tree.remove("cities"); Unit },
-            "not yet supported" to { tree ->
-                val owner = tree.get("cities").get(0).get("ownership")
-                owner.get("type").set("Neutral")
-                owner.remove("civName")
-                Unit
+            "unknown ownership type" to { tree ->
+                tree.get("cities").get(0).get("ownership").get("type").set("Invalid")
             },
             "Unsupported game save version" to { tree -> tree.get("version").apply { remove("number"); addChild("number", JsonValue(6L)) } }
         )
