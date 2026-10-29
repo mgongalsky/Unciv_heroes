@@ -107,7 +107,14 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
     }
 
     fun setOwningCity(city:CityInfo?){
-        if (city != null) {
+        if (city != null && city.ownerOrNull == null) {
+            require(city.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral) {
+                "City ${city.id} has no bound ownership"
+            }
+            // Neutral city territory retains the previous road owner.
+            if (roadStatus != RoadStatus.None && roadOwner != "")
+                getRoadOwner()?.neutralRoads?.add(this.position)
+        } else if (city != null) {
             if (roadStatus != RoadStatus.None && roadOwner != "") {
                 // remove previous neutral tile owner
                 getRoadOwner()!!.neutralRoads.remove(this.position)
@@ -116,7 +123,7 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
         } else {
             if (roadStatus != RoadStatus.None && owningCity != null) {
                 // previous tile owner still owns road, add to tracker
-                owningCity!!.civInfo.neutralRoads.add(this.position)
+                owningCity!!.ownerOrNull?.neutralRoads?.add(this.position)
             }
         }
         owningCity = city
@@ -487,7 +494,7 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
 
     fun getOwner(): CivilizationInfo? {
         val containingCity = getCity() ?: return null
-        return containingCity.civInfo
+        return containingCity.ownerOrNull
     }
 
     fun getRoadOwner(): CivilizationInfo? {
@@ -1378,7 +1385,7 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
     }
 
     fun setOwnerTransients() {
-        if (owningCity == null && roadStatus != RoadStatus.None && roadOwner != "")
+        if (getOwner() == null && roadStatus != RoadStatus.None && roadOwner != "")
             getRoadOwner()!!.neutralRoads.add(this.position)
     }
 

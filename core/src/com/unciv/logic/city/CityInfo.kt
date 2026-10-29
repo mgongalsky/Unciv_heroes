@@ -8,6 +8,7 @@ import com.unciv.pure.domain.city.CityPosition
 import com.unciv.pure.domain.city.CityId
 import com.unciv.pure.domain.city.CityState
 import com.unciv.pure.domain.army.deepCopy
+import com.unciv.logic.GameInfo
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.battle.CityCombatant
@@ -90,6 +91,27 @@ enum class CityFocus(val label: String, val tableEnabled: Boolean, val stat: Sta
 open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     @Transient
     private var ownerAdapter: CivilizationInfo? = null
+
+    @Transient
+    private var worldAdapter: GameInfo? = null
+
+    /** The world is independent of whether a player owns this city. */
+    val gameInfo: GameInfo
+        get() = ownerOrNull?.gameInfo ?: checkNotNull(worldAdapter) {
+            "City $id has no bound world"
+        }
+
+    val ownerOrNull: CivilizationInfo?
+        get() = if (state.ownership is CityOwnership.Player) civInfo else null
+
+    /** Bind existing neutral state without founding, transferring or creating a player. */
+    fun bindNeutralWorld(game: GameInfo) {
+        require(state.ownership == CityOwnership.Neutral) { "City $id is not neutral" }
+        check(worldAdapter == null || worldAdapter === game) { "City $id belongs to another world" }
+        worldAdapter = game
+        ownerAdapter = null
+        garrisonAdapter?.setTransients(null, null)
+    }
 
     /** Resolves the core owner through the legacy world; does not register or transfer cities. */
     var civInfo: CivilizationInfo
@@ -197,7 +219,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
                 ?: throw UninitializedPropertyAccessException("lateinit property garrisonInfo has not been initialized")
             val current = garrisonAdapter
             if (current != null && current.army === army) return current
-            return ArmyInfo(current?.civInfo ?: civInfo, army.maxSlots, army).also {
+            return ArmyInfo(ownerOrNull, army.maxSlots, army).also {
                 it.hero = current?.hero
                 garrisonAdapter = it
             }
@@ -345,6 +367,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         val toReturn = CityInfo()
         toReturn.location = location
         toReturn.id = id
+        toReturn.state.ownership = state.ownership
         toReturn.name = name
         toReturn.health = health
         toReturn.garrison = garrison
@@ -409,7 +432,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         .getTilesAtDistance(civInfo.gameInfo.ruleSet.modOptions.constants.minimalCityDistance + 1)
         .count { it.canBeSettled() && (it.getOwner() == null || it.getOwner() == civInfo ) }
 
-    fun getRuleset() = civInfo.gameInfo.ruleSet
+    fun getRuleset() = gameInfo.ruleSet
 
     fun getCityResources(): ResourceSupplyList {
         val cityResources = ResourceSupplyList()
@@ -639,7 +662,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
 
     //region state-changing functions
     fun setTransients() {
-        tileMap = civInfo.gameInfo.tileMap
+        tileMap = gameInfo.tileMap
         centerTileInfo = tileMap[location]
         tilesInRange = getCenterTile().getTilesInDistance(3).toHashSet()
         population.cityInfo = this
