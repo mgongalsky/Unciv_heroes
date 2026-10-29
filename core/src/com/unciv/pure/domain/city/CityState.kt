@@ -29,7 +29,9 @@ data class CityState(
     var garrison: Army? = null,
     /** Null means not yet bound, for example while reading the legacy city container. */
     var ownership: CityOwnership? = null,
-    var position: CityPosition = CityPosition(0f, 0f)
+    var position: CityPosition = CityPosition(0f, 0f),
+    /** Null is a legacy save whose capital status must be inferred once from its buildings. */
+    var isCurrentCapital: Boolean? = null
 ) {
     /** Independent snapshot, including mutable troops and formations. */
     fun deepCopy(): CityState = copy(garrison = garrison?.deepCopy())

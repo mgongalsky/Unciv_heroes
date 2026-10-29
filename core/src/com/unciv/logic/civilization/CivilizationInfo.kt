@@ -1389,11 +1389,13 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     fun moveCapitalTo(city: CityInfo?) {
         if (cities.isNotEmpty() && getCapital() != null) {
             val oldCapital = getCapital()!!
+            oldCapital.state.isCurrentCapital = false
             oldCapital.cityConstructions.removeBuilding(oldCapital.capitalCityIndicator())
         }
 
         if (city == null) return // can't move a non-existent city but we can always remove our old capital
         // move new capital
+        city.state.isCurrentCapital = true
         city.cityConstructions.addBuilding(city.capitalCityIndicator())
         city.isBeingRazed = false // stop razing the new capital if it was being razed
     }

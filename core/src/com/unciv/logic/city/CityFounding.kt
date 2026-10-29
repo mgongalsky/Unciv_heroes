@@ -115,7 +115,10 @@ object CityFounding {
 
     private fun CityInfo.addStartingBuildings(civInfo: CivilizationInfo, startingEra: String) {
         val ruleset = civInfo.gameInfo.ruleSet
-        if (civInfo.cities.size == 1) cityConstructions.addBuilding(capitalCityIndicator())
+        if (civInfo.cities.size == 1) {
+            state.isCurrentCapital = true
+            cityConstructions.addBuilding(capitalCityIndicator())
+        }
 
         // Add buildings and pop we get from starting in this era
         for (buildingName in ruleset.eras[startingEra]!!.settlerBuildings) {

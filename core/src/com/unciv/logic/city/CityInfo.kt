@@ -251,6 +251,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         json.writeValue("previousOwner", previousOwner)
         json.writeValue("turnAcquired", turnAcquired)
         json.writeValue("health", health)
+        json.writeValue("isCurrentCapital", state.isCurrentCapital)
         json.writeValue("location", location, Vector2::class.java)
         if (state.garrison != null) json.writeValue("garrisonInfo", garrisonInfo, ArmyInfo::class.java)
     }
@@ -266,9 +267,10 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         previousOwner = jsonData.getString("previousOwner", previousOwner)
         turnAcquired = jsonData.getInt("turnAcquired", turnAcquired)
         health = jsonData.getInt("health", health)
+        state.isCurrentCapital = jsonData.get("isCurrentCapital")?.takeUnless { it.isNull }?.asBoolean()
         // These properties have no backing fields. Hide them from reflective field reading,
         // then restore the input tree so other consumers can still inspect it.
-        val stateFields = listOf("id", "name", "foundingCiv", "previousOwner", "turnAcquired", "health", "garrisonInfo", "location")
+        val stateFields = listOf("id", "name", "foundingCiv", "previousOwner", "turnAcquired", "health", "garrisonInfo", "location", "isCurrentCapital")
             .mapNotNull { fieldName ->
                 jsonData.remove(fieldName)?.let {
                     // JsonValue.remove unlinks the node but retains its sibling references.
@@ -368,6 +370,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         toReturn.location = location
         toReturn.id = id
         toReturn.state.ownership = state.ownership
+        toReturn.state.isCurrentCapital = state.isCurrentCapital
         toReturn.name = name
         toReturn.health = health
         toReturn.garrison = garrison
@@ -404,7 +407,10 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     fun getWorkableTiles() = tilesInRange.asSequence().filter { it.getOwner() == civInfo }
     fun isWorked(tileInfo: TileInfo) = workedTiles.contains(tileInfo.position)
 
-    fun isCapital(): Boolean = cityConstructions.getBuiltBuildings().any { it.hasUnique(UniqueType.IndicatesCapital) }
+    fun isCapital(): Boolean = state.ownership != CityOwnership.Neutral &&
+        (state.isCurrentCapital ?: cityConstructions.getBuiltBuildings().any {
+            it.hasUnique(UniqueType.IndicatesCapital)
+        })
     fun isCoastal(): Boolean = centerTileInfo.isCoastalTile()
     fun capitalCityIndicator(): String {
         val indicatorBuildings = getRuleset().buildings.values
@@ -670,6 +676,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         expansion.setTransients()
         cityConstructions.cityInfo = this
         cityConstructions.setTransients()
+        if (state.isCurrentCapital == null) state.isCurrentCapital = isCapital()
         religion.setTransients(this)
         espionage.setTransients(this)
     }

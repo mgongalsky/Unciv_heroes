@@ -96,6 +96,7 @@ class WorldCityRegistry(private val game: GameInfo) {
         check(registry.contains(city)) { "City ${city.id} is not registered" }
         require(city.gameInfo === game) { "City belongs to another game" }
         city.state.ownership = CityOwnership.Neutral
+        city.state.isCurrentCapital = false
         city.bindNeutralWorld(game)
     }
     fun transfer(city: CityInfo, newOwner: CivilizationInfo) {
@@ -103,6 +104,7 @@ class WorldCityRegistry(private val game: GameInfo) {
         attach(newOwner)
         check(registry.contains(city)) { "City ${city.id} is not registered" }
         registry.remove(city)
+        city.state.isCurrentCapital = false
         city.civInfo = newOwner
         registry.register(city)
     }
