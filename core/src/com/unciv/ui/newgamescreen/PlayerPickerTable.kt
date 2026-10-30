@@ -52,7 +52,16 @@ class PlayerPickerTable(
     /** No random civilization is available, used during map editing.*/
     var noRandom = false
 
+    private var fillMissingScenarioPlayers = false
+    private val manuallyUnassigned = Collections.newSetFromMap(IdentityHashMap<Player, Boolean>())
     var scenarioSlots: List<com.unciv.pure.domain.city.ScenarioPlayerSlot> = emptyList()
+        set(value) {
+            if (field.map { it.id } != value.map { it.id }) {
+                manuallyUnassigned.clear()
+                fillMissingScenarioPlayers = true
+            }
+            field = value
+        }
     private data class SlotChoice(val id: String, val label: String) {
         override fun toString() = label
     }
@@ -83,6 +92,24 @@ class PlayerPickerTable(
         if (gameParameters.players.size > newRulesetPlayableCivs)
             gameParameters.players = ArrayList(gameParameters.players.subList(0, newRulesetPlayableCivs))
         if (desiredCiv.isNotEmpty()) assignDesiredCiv(desiredCiv)
+        if (!locked && scenarioSlots.isNotEmpty()) {
+            if (fillMissingScenarioPlayers) {
+                val available = previousScreen.ruleset.nations.values.count { it.isMajorCiv() }
+                while (gameParameters.players.count { it.chosenCiv != Constants.spectator } < scenarioSlots.size &&
+                    gameParameters.players.count { it.chosenCiv != Constants.spectator } < available) {
+                    gameParameters.players.add(Player())
+                }
+                fillMissingScenarioPlayers = false
+            }
+            val defaults = com.unciv.pure.domain.city.ScenarioPlayerSlotDefaults.assign(
+                scenarioSlots, gameParameters.players.map {
+                    if (it.chosenCiv == Constants.spectator || it in manuallyUnassigned) null else it.scenarioSlotId
+                }
+            )
+            gameParameters.players.forEachIndexed { index, player ->
+                player.scenarioSlotId = defaults[index].orEmpty()
+            }
+        }
 
         for (player in gameParameters.players) {
             playerListTable.add(getPlayerTable(player)).width(civBlocksWidth).padBottom(20f).row()
@@ -178,7 +205,19 @@ class PlayerPickerTable(
                 selected = choices.firstOrNull { it.id == player.scenarioSlotId } ?: choices.first()
                 isDisabled = locked
             }
-            select.onChange { player.scenarioSlotId = select.selected.id }
+            select.name = "scenario-slot-${gameParameters.players.indexOf(player)}"
+            select.onChange {
+                val previous = player.scenarioSlotId
+                val chosen = select.selected.id
+                if (chosen.isEmpty()) manuallyUnassigned.add(player) else manuallyUnassigned.remove(player)
+                if (chosen.isNotEmpty()) {
+                    gameParameters.players.firstOrNull { it !== player && it.scenarioSlotId == chosen }?.let {
+                        it.scenarioSlotId = previous
+                    }
+                }
+                player.scenarioSlotId = chosen
+                update()
+            }
             playerTable.add(select).colspan(3).growX().pad(5f).row()
         }
         if (gameParameters.isOnlineMultiplayer && player.playerType == PlayerType.Human) {

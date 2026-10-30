@@ -71,6 +71,7 @@ class NewGameScreen(
         )
         newGameOptionsTable = GameOptionsTable(this, isNarrowerThan4to3()) { desiredCiv: String -> playerPickerTable.update(desiredCiv) }
         mapOptionsTable = MapOptionsTable(this)
+        updateTables()
         setDefaultCloseAction()
 
         if (isNarrowerThan4to3()) initPortrait()

@@ -317,8 +317,9 @@ object GameStarter {
 
         for (civ in gameInfo.civilizations.filter { it.cities.isNotEmpty() }) {
             val capital = civ.getCapital() ?: continue
-            if (tileMap.startingLocationsByNation[civ.civName].isNullOrEmpty())
-                tileMap.addStartingLocation(civ.civName, capital.getCenterTile())
+            // Authored cities define the start even when the map has old nation markers elsewhere.
+            tileMap.removeStartingLocations(civ.civName)
+            tileMap.addStartingLocation(civ.civName, capital.getCenterTile())
         }
         val startScores = HashMap<TileInfo, Float>(tileMap.values.size)
         for (tile in tileMap.values) {

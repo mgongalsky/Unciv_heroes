@@ -134,6 +134,10 @@ class ScenarioGameStarterTest {
             assertEquals("home", owner.getCapital()!!.id)
             assertSame(owner, game.cityRegistry.byId(CityId("home"))!!.ownerOrNull)
             assertTrue(owner.getCivUnits().any())
+            val homeArea = owner.getCapital()!!.getCenterTile().getTilesInDistance(2).toSet()
+            assertTrue("Starting units must be near the city, not the old Russia marker",
+                owner.getCivUnits().all { it.currentTile in homeArea })
+            assertFalse(owner.getCivUnits().any { it.isCivilian() && it.hasUnique(UniqueType.FoundCity) })
             assertTrue(game.getCivilization("Sweden").getCivUnits().any())
             assertNull(game.cityRegistry.byId(CityId("neutral"))!!.ownerOrNull)
             assertEquals(2, game.getCities().count())
