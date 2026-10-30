@@ -163,9 +163,7 @@ class NewGameScreen(
                 }
 
                 try {
-                    com.unciv.pure.domain.city.ScenarioCityValidation.validateCapitalsForStartup(
-                        map.scenarioCities, map.scenarioPlayerSlots
-                    )
+
                     com.unciv.pure.domain.city.ScenarioPlayerBindings.resolve(
                         map.scenarioPlayerSlots,
                         gameSetupInfo.gameParameters.players.map { it.scenarioSlotId to it }

@@ -23,7 +23,6 @@ object InstantiateScenarioCitiesUseCase {
     ): List<CityInfo> {
         val map = game.tileMap
         ScenarioMapValidation.validateStructure(map)
-        ScenarioCityValidation.validateCapitalsForStartup(map.scenarioCities, map.scenarioPlayerSlots)
         val errors = ScenarioMapValidation.definitionErrors(map, game.ruleSet)
         require(errors.isEmpty()) { errors.joinToString("\n") }
         val bindings = ScenarioPlayerBindings.resolve(map.scenarioPlayerSlots, participants.toList())
@@ -32,7 +31,7 @@ object InstantiateScenarioCitiesUseCase {
                 !owner.isBarbarian() && !owner.isSpectator()) { "Invalid scenario participant ${owner.civName}" }
         }
         require(bindings.values.distinct().size == bindings.size) { "A participant occupies multiple scenario slots" }
-        val descriptions = map.scenarioCities
+        val descriptions = ScenarioCityCapitals.resolve(map.scenarioCities)
         val resolved = descriptions.map { description ->
             val owner = if (description.owner == ScenarioCityOwner.PlayerSlot)
                 bindings.getValue(description.ownerSlotId) else null

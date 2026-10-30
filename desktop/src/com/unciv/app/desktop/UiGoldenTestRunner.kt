@@ -98,6 +98,7 @@ object UiGoldenTestRunner {
         },
         Scenario("army-troop-info") { com.unciv.ui.playground.openArmyTroopInfoPreview(it) },
         Scenario("city-editor") { com.unciv.ui.playground.openScenarioCityEditorPreview(it) },
+        Scenario("city-editor-tabs") {},
         Scenario("battle-troops") { screen -> openBattleTroopPreview(screen) },
         Scenario("battle-turn-queue") { screen -> openBattleTurnQueuePreview(screen) },
         Scenario("battle-troop-info") { screen -> openBattleTroopInfoPreview(screen) },
@@ -205,6 +206,7 @@ object UiGoldenTestRunner {
             "network-room" -> NetworkBattleGoldenScreens.room()
             "network-battle" -> NetworkBattleGoldenScreens.battle()
             "army-setup-laptop" -> ArmySetupGoldenChecks.screen()
+            "city-editor-tabs" -> com.unciv.ui.playground.createScenarioCityEditorTabsPreview()
             else -> GoldenScenarioScreen(scenario.open)
         }.also { expectedScreen = it }
 

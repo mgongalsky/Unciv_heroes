@@ -3,10 +3,10 @@ package com.unciv.testing
 import com.unciv.app.desktop.UiGoldenTestRunner
 import org.junit.Test
 
-/** Checks form actions and layout in real GL without approving a visual baseline. */
+/** Checks the form and nested editor tools in one GL session without approving a baseline. */
 class ScenarioCityEditorRenderTest {
     @Test
-    fun applyAndRender() {
-        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=city-editor"))
+    fun applyRenderNestedToolsAndRecreation() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=city-editor", "--scenario=city-editor-tabs"))
     }
 }

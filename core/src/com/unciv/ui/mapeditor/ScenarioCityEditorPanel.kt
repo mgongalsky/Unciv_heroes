@@ -82,10 +82,11 @@ class ScenarioCityEditorPanel(
         field("Owner", owner)
         field("Population", population)
         field("Stored food", food)
-        val capital = CheckBox("Current capital".tr(), skin).apply { isChecked = city.isCapital }
-        val originalCapital = CheckBox("Original capital".tr(), skin).apply { isChecked = city.isOriginalCapital }
+        val capital = CheckBox("Capital".tr(), skin).apply {
+            this.name = "scenario-city-capital"
+            isChecked = city.owner == ScenarioCityOwner.PlayerSlot && (city.isCapital || city.isOriginalCapital)
+        }
         form.add(capital).colspan(2).row()
-        form.add(originalCapital).colspan(2).row()
         val fromOwner = CheckBox("Type from starting player".tr(), skin).apply {
             isChecked = city.typeMode == ScenarioCityTypeMode.FromStartingPlayer
         }
@@ -149,8 +150,8 @@ class ScenarioCityEditorPanel(
             food.text.toIntOrNull()?.let { city.foodStored = it }
             city.ownerSlotId = owner.selected.id
             city.owner = if (owner.selected.id.isEmpty()) ScenarioCityOwner.Neutral else ScenarioCityOwner.PlayerSlot
-            city.isCapital = capital.isChecked
-            city.isOriginalCapital = originalCapital.isChecked
+            city.isCapital = city.owner == ScenarioCityOwner.PlayerSlot && capital.isChecked
+            city.isOriginalCapital = city.isCapital
             city.typeMode = if (fromOwner.isChecked) ScenarioCityTypeMode.FromStartingPlayer else ScenarioCityTypeMode.Fixed
             city.fixedType = if (fromOwner.isChecked) "" else fixedType.text.trim()
         }

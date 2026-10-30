@@ -77,6 +77,7 @@ class MapEditorScreen(map: TileMap? = null): BaseScreen(), RecreateOnResize {
     var mapHolder: EditorMapHolder
     val tabs: MapEditorMainTabs
     var tileClickHandler: ((tile: TileInfo)->Unit)? = null
+    var selectedEditSubTab = "Terrain"
     var allowDragPainting = true
     var selectedScenarioCity: com.unciv.pure.domain.city.CityPosition? = null
     private var zoomController: ZoomButtonPair? = null
@@ -254,6 +255,7 @@ class MapEditorScreen(map: TileMap? = null): BaseScreen(), RecreateOnResize {
     override fun recreate(): BaseScreen = MapEditorScreen(tileMap).also {
         it.isDirty = isDirty
         it.selectedScenarioCity = selectedScenarioCity
+        it.selectedEditSubTab = if (tabs.activePage == 2) tabs.edit.currentSubTab() else selectedEditSubTab
         it.tabs.selectPage(tabs.activePage)
     }
 }

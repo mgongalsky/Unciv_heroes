@@ -73,6 +73,7 @@ class MapEditorEditTab(
         Improvements("Improvements", 'i', "OtherIcons/Improvements", { parent, ruleset -> MapEditorEditImprovementsTab(parent, ruleset) }),
         Monsters("Monsters", 'm', "OtherIcons/Shield", { parent, ruleset -> MapEditorEditMonstersTab(parent, ruleset) }),
         Rivers("Rivers", 'v', "OtherIcons/Star", { parent, ruleset -> MapEditorEditRiversTab(parent, ruleset) }),
+        Cities("Cities", 'c', "OtherIcons/City", { parent, _ -> MapEditorCitiesTab(parent.editorScreen, parent) }),
         StartingLocations("Starting locations", 's', "OtherIcons/Nations", { parent, ruleset -> MapEditorEditStartsTab(parent, ruleset) }),
         // Units("Units", 'u', "OtherIcons/Shield", { parent, ruleset -> MapEditorEditUnitsTab(parent, ruleset) }),
     }
@@ -116,14 +117,15 @@ class MapEditorEditTab(
         addSeparator(Color.GRAY)
         add(subTabs).left().fillX().row()
 
+        keyShortcuts.add('c') { subTabs.selectPage("Cities") }
         keyShortcuts.add('t') { selectPage(0) }
         keyShortcuts.add('f') { selectPage(1) }
         keyShortcuts.add('w') { selectPage(2) }
         keyShortcuts.add('r') { selectPage(3) }
         keyShortcuts.add('i') { selectPage(4) }
-        keyShortcuts.add('v') { selectPage(5) }
-        keyShortcuts.add('s') { selectPage(6) }
-        keyShortcuts.add('u') { selectPage(7) }
+        keyShortcuts.add('v') { subTabs.selectPage("Rivers") }
+        keyShortcuts.add('s') { subTabs.selectPage("Starting locations") }
+        keyShortcuts.add('m') { subTabs.selectPage("Monsters") }
         //keyShortcuts.add('1') { brushSize = 1 }
         //keyShortcuts.add('2') { brushSize = 2 }
         //keyShortcuts.add('3') { brushSize = 3 }
@@ -172,6 +174,10 @@ class MapEditorEditTab(
         }
 
     }
+    fun currentSubTab(): String = if (subTabs.activePage >= 0) subTabs.getPageButton(subTabs.activePage).name else editorScreen.selectedEditSubTab
+
+    fun selectPage(caption: String) = subTabs.selectPage(caption)
+
     private fun selectPage(index: Int) = subTabs.selectPage(index)
 
     fun setBrush(name: String, icon: String, isRemove: Boolean = false, applyAction: (TileInfo)->Unit) {
@@ -212,14 +218,32 @@ class MapEditorEditTab(
             editorScreen.editTabsNeedRefresh = false
         }
 
-        editorScreen.tileClickHandler = this::tileClickHandler
+        setCityEditing(false)
         pager.setScrollDisabled(true)
         tileMatchFuzziness = editorScreen.tileMatchFuzziness
+        subTabs.selectPage(editorScreen.selectedEditSubTab)
+        if (subTabs.activePage == subTabs.getPageIndex("Cities")) {
+            citiesTab()?.activated(subTabs.activePage, "Cities", subTabs)
+        }
     }
 
     override fun deactivated(index: Int, caption: String, pager: TabbedPager) {
         pager.setScrollDisabled(true)
+        if (subTabs.activePage >= 0)
+            editorScreen.selectedEditSubTab = subTabs.getPageButton(subTabs.activePage).name
+        subTabs.selectPage(-1)
+        editorScreen.allowDragPainting = true
         editorScreen.tileClickHandler = null
+    }
+
+    private fun citiesTab(): MapEditorCitiesTab? = findActor("scenario-cities-tab")
+
+    internal fun setCityEditing(enabled: Boolean) {
+        editorScreen.allowDragPainting = !enabled
+        brushTable.isVisible = !enabled
+        getCell(brushTable).height(if (enabled) 0f else brushTable.prefHeight)
+        editorScreen.tileClickHandler = if (enabled) null else this::tileClickHandler
+        invalidateHierarchy()
     }
 
     fun tileClickHandler(tile: TileInfo) {

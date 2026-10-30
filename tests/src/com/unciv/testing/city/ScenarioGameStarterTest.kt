@@ -105,7 +105,7 @@ class ScenarioGameStarterTest {
     }
 
     @Test
-    fun missingCurrentCapitalExplainsFailureAndRepairStartsWithNationMarkers() {
+    fun legacyCapitalAndMissingFlagsStartAutomaticallyWithNationMarkers() {
         withMap(true) { file, fixture ->
             val map = fixture.game.tileMap
             map.scenarioPlayerSlots.single().name = "Player 1"
@@ -123,15 +123,11 @@ class ScenarioGameStarterTest {
                 )
             }
             file.writeText(MapSaver.mapToSavedString(map))
-            try {
-                GameStarter.startNewGame(parameters()) { }
-                fail("A missing current capital must be explained")
-            } catch (invalid: IllegalArgumentException) {
-                assertTrue(invalid.message.orEmpty().contains("Player 1"))
-                assertTrue(invalid.message.orEmpty().contains("Dom"))
-                assertTrue(invalid.message.orEmpty().contains("Current capital"))
-            }
-            map.scenarioCities.first().isCapital = true
+            val legacy = GameStarter.startNewGame(parameters()) { }
+            assertEquals("home", legacy.getCivilization("Russia").getCapital()!!.id)
+            assertTrue(legacy.cityRegistry.byId(CityId("home"))!!.isOriginalCapital)
+            assertFalse(MapSaver.loadMap(FileHandle(file)).scenarioCities.first().isCapital)
+            map.scenarioCities.first().isOriginalCapital = false
             file.writeText(MapSaver.mapToSavedString(map))
             val game = GameStarter.startNewGame(parameters()) { }
             val owner = game.getCivilization("Russia")

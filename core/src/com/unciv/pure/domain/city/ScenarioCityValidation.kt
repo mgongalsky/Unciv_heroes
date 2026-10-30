@@ -14,8 +14,6 @@ object ScenarioCityValidation {
         }
         val cityIds = HashSet<String>()
         val claimed = HashMap<CityPosition, String>()
-        val capitals = HashSet<String>()
-        val originalCapitals = HashSet<String>()
         for (city in cities) {
             val label = "Scenario city ${city.id}"
             require(city.id.isNotBlank() && cityIds.add(city.id)) { "$label: empty or duplicate ID" }
@@ -25,13 +23,11 @@ object ScenarioCityValidation {
             when (city.owner) {
                 ScenarioCityOwner.Neutral -> {
                     require(city.ownerSlotId.isEmpty()) { "$label: neutral city refers to a player slot" }
-                    require(!city.isCapital && !city.isOriginalCapital) { "$label: neutral city cannot be a capital" }
                     require(city.typeMode == ScenarioCityTypeMode.Fixed) { "$label: neutral city requires a fixed type" }
                 }
                 ScenarioCityOwner.PlayerSlot -> {
                     require(city.ownerSlotId in slotIds) { "$label: unknown player slot ${city.ownerSlotId}" }
-                    if (city.isCapital) require(capitals.add(city.ownerSlotId)) { "$label: duplicate capital for slot ${city.ownerSlotId}" }
-                    if (city.isOriginalCapital) require(originalCapitals.add(city.ownerSlotId)) { "$label: duplicate original capital for slot ${city.ownerSlotId}" }
+
                 }
             }
             require((city.typeMode == ScenarioCityTypeMode.Fixed && city.fixedType.isNotBlank()) ||
@@ -53,19 +49,4 @@ object ScenarioCityValidation {
             }
         }
     }
-
-fun validateCapitalsForStartup(cities: List<ScenarioCity>, slots: List<ScenarioPlayerSlot>) {
-    for (slot in slots) {
-        val owned =
-                cities.filter { it.owner == ScenarioCityOwner.PlayerSlot && it.ownerSlotId == slot.id }
-        if (owned.isEmpty()) continue
-        val label = slot.name.ifBlank { slot.id }
-        require(owned.count { it.isCapital } == 1) {
-            "Scenario player slot '$label': select exactly one Current capital in the city editor (${owned.joinToString { it.name }})."
-        }
-        require(owned.count { it.isOriginalCapital } == 1) {
-            "Scenario player slot '$label': select exactly one Original capital in the city editor (${owned.joinToString { it.name }})."
-        }
-    }
-}
 }
