@@ -156,7 +156,7 @@ object UnitActions {
             action = {
                 tile.changeImprovement(improvementName)
                 val city = tile.getCity()
-                if (city != null) {
+                if (city?.ownerOrNull != null) {
                     city.cityStats.update()
                     city.civInfo.updateDetailedCivResources()
                 }
@@ -570,7 +570,7 @@ object UnitActions {
             action = {
                 unit.civInfo.victoryManager.currentsSpaceshipParts.add(unit.name, 1)
                 unit.destroy()
-            }.takeIf { tile.isCityCenter() && tile.getCity()!!.isCapital() && tile.getCity()!!.civInfo == unit.civInfo }
+            }.takeIf { tile.isCityCenter() && tile.getCity()!!.ownerOrNull == unit.civInfo && tile.getCity()!!.isCapital() }
         )
     }
 
@@ -603,7 +603,7 @@ object UnitActions {
             }
             UniqueType.CanSpeedupWonderConstruction -> {
                 val canHurryWonder =
-                    if (!tile.isCityCenter()) false
+                    if (!tile.isCityCenter() || tile.getCity()?.ownerOrNull != unit.civInfo) false
                     else tile.getCity()!!.cityConstructions.isBuildingWonder()
                             && tile.getCity()!!.cityConstructions.canBeHurried()
 
@@ -621,7 +621,7 @@ object UnitActions {
             }
 
             UniqueType.CanSpeedupConstruction -> {
-                if (!tile.isCityCenter()) {
+                if (!tile.isCityCenter() || tile.getCity()?.ownerOrNull != unit.civInfo) {
                     actionList += UnitAction(UnitActionType.HurryBuilding, action = null)
                     continue
                 }
@@ -650,8 +650,8 @@ object UnitActions {
                 )
             }
             UniqueType.CanTradeWithCityStateForGoldAndInfluence -> {
-                val canConductTradeMission = tile.owningCity?.civInfo?.isCityState() == true
-                        && tile.owningCity?.civInfo?.isAtWarWith(unit.civInfo) == false
+                val canConductTradeMission = tile.owningCity?.ownerOrNull?.isCityState() == true
+                        && tile.owningCity?.ownerOrNull?.isAtWarWith(unit.civInfo) == false
                 val influenceEarned = unique.params[0].toFloat()
                 actionList += UnitAction(UnitActionType.ConductTradeMission,
                     action = {
@@ -745,7 +745,7 @@ object UnitActions {
 
     private fun addRemoveHeresyActions(unit: MapUnit, actionList: ArrayList<UnitAction>, city: CityInfo) {
         if (!unit.civInfo.gameInfo.isReligionEnabled()) return
-        if (city.civInfo != unit.civInfo) return
+        if (city.ownerOrNull != unit.civInfo) return
         // Only allow the action if the city actually has any foreign religion
         // This will almost be always due to pressure from cities close-by
         if (city.religion.getPressures().none { it.key != unit.religion!! }) return

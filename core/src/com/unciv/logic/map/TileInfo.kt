@@ -1222,7 +1222,7 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
             var cityString = city.name.tr()
             if (isViewableToPlayer) cityString += " (${city.health})"
             lineList += FormattedLine(cityString)
-            if (UncivGame.Current.viewEntireMapForDebug || city.civInfo == viewingCiv)
+            if (city.ownerOrNull != null && (UncivGame.Current.viewEntireMapForDebug || city.ownerOrNull == viewingCiv))
                 lineList += city.cityConstructions.getProductionMarkup(ruleset)
         }
 
