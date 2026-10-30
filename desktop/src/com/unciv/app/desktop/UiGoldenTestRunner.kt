@@ -98,6 +98,7 @@ object UiGoldenTestRunner {
         },
         Scenario("army-troop-info") { com.unciv.ui.playground.openArmyTroopInfoPreview(it) },
         Scenario("city-editor") { com.unciv.ui.playground.openScenarioCityEditorPreview(it) },
+        Scenario("neutral-city-minimap") { com.unciv.ui.playground.openNeutralCityMinimapPreview(it) },
         Scenario("city-editor-tabs") {},
         Scenario("scenario-player-slots") {},
         Scenario("battle-troops") { screen -> openBattleTroopPreview(screen) },

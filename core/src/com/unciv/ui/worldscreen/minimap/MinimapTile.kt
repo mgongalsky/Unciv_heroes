@@ -38,9 +38,12 @@ internal class MinimapTile(val tileInfo: TileInfo, tileSize: Float, val onClick:
     fun updateColor(isTileUnrevealed: Boolean) {
         image.isVisible = UncivGame.Current.viewEntireMapForDebug || !isTileUnrevealed
         if (!image.isVisible) return
+        val nation = tileInfo.getOwner()?.nation
         image.color = when {
-            tileInfo.isCityCenter() && !tileInfo.isWater -> tileInfo.getOwner()!!.nation.getInnerColor()
-            tileInfo.getCity() != null && !tileInfo.isWater -> tileInfo.getOwner()!!.nation.getOuterColor()
+            tileInfo.isCityCenter() && !tileInfo.isWater -> nation?.getInnerColor()
+                ?: Color.LIGHT_GRAY
+
+            tileInfo.getCity() != null && !tileInfo.isWater -> nation?.getOuterColor() ?: Color.GRAY
             else -> tileInfo.getBaseTerrain().getColor().lerp(Color.GRAY, 0.5f)
         }
     }
@@ -95,18 +98,23 @@ internal class MinimapTile(val tileInfo: TileInfo, tileSize: Float, val onClick:
 
     fun updateCityCircle(): ActorChange {
         val prevCircle = cityCircleImage
-
-        val nation = tileInfo.getOwner()!!.nation
-        val nationIconSize = (if (tileInfo.getCity()!!.isCapital() && tileInfo.getOwner()!!.isMajorCiv()) 1.667f else 1.25f) * image.width
-        val cityCircle = ImageGetter.getCircle().apply { color = nation.getInnerColor() }
-            .surroundWithCircle(nationIconSize, color = nation.getOuterColor())
-        val hexCenterXPosition = image.x + image.width / 2
-        cityCircle.x = hexCenterXPosition - nationIconSize / 2
-        val hexCenterYPosition = image.y + image.height / 2
-        cityCircle.y = hexCenterYPosition - nationIconSize / 2
+        val removed = if (prevCircle != null) setOf<Actor>(prevCircle) else emptySet()
+        val city = tileInfo.getCity()
+        if (!tileInfo.isCityCenter() || city == null) {
+            cityCircleImage = null
+            return ActorChange(removed, emptySet())
+        }
+        val owner = tileInfo.getOwner()
+        val nation = owner?.nation
+        val isMajorCapital = owner != null && owner.isMajorCiv() && city.isCapital()
+        val nationIconSize = (if (isMajorCapital) 1.667f else 1.25f) * image.width
+        val cityCircle = ImageGetter.getCircle().apply {
+            color = nation?.getInnerColor() ?: Color.LIGHT_GRAY
+        }.surroundWithCircle(nationIconSize, color = nation?.getOuterColor() ?: Color.GRAY)
+        cityCircle.x = image.x + image.width / 2 - nationIconSize / 2
+        cityCircle.y = image.y + image.height / 2 - nationIconSize / 2
         cityCircle.onClick(onClick)
         cityCircleImage = cityCircle
-
-        return ActorChange(if (prevCircle != null) setOf(prevCircle) else emptySet(), setOf(cityCircle))
+        return ActorChange(removed, setOf(cityCircle))
     }
 }

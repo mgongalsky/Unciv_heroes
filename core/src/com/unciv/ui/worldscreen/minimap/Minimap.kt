@@ -129,23 +129,16 @@ class Minimap(val mapHolder: WorldMapHolder, minimapSize: Int) : Group() {
         for (minimapTile in minimapTiles) {
             val tileInfo = minimapTile.tileInfo
             val ownerChanged = minimapTile.owningCiv != tileInfo.getOwner()
-            if (ownerChanged) {
-                minimapTile.owningCiv = tileInfo.getOwner()
-            }
+            if (ownerChanged) minimapTile.owningCiv = tileInfo.getOwner()
 
             val shouldBeUnrevealed = !viewingCiv.hasExplored(tileInfo) && !viewingCiv.isSpectator()
             val revealStatusChanged = minimapTile.isUnrevealed != shouldBeUnrevealed
-            if (revealStatusChanged || ownerChanged) {
+            if (revealStatusChanged || ownerChanged)
                 minimapTile.updateColor(shouldBeUnrevealed)
-            }
 
-            // If owner didn't change, neither city circle nor borders can have changed
-            if (shouldBeUnrevealed || !ownerChanged) continue
-
-            if (tileInfo.isCityCenter()) {
-                minimapTile.updateCityCircle().updateActorsIn(this)
-            }
-
+            // Neutral cities have no owner change when first discovered.
+            if (shouldBeUnrevealed || !(ownerChanged || revealStatusChanged)) continue
+            minimapTile.updateCityCircle().updateActorsIn(this)
             minimapTile.updateBorders().updateActorsIn(this)
         }
         lastViewingCiv = viewingCiv
