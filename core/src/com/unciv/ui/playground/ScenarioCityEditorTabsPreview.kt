@@ -24,6 +24,25 @@ fun createScenarioCityEditorTabsPreview(): BaseScreen {
     val apply = form.findActor<Actor>("scenario-city-apply")
     apply.listeners.filterIsInstance<OnClickListener>().single().function(null, 0f, 0f)
     check(editor.tileMap.scenarioCities.single().name == "Saved town")
+    fun checkCastle(screen: MapEditorScreen, expected: Boolean) {
+        val center = screen.tileMap[Vector2.Zero]
+        for (group in screen.mapHolder.tileGroups.getValue(center)) {
+            check(group.tileBaseImages.any { it.name?.contains("City center") == true } == expected) {
+                "Editor castle sprite must follow the city description"
+            }
+        }
+        check(center.getCity() == null && center.improvement == null) {
+            "Editor preview must not instantiate a runtime city or modify the terrain"
+        }
+    }
+    checkCastle(editor, true)
+    val savedCity = editor.tileMap.scenarioCities.single()
+    editor.tileMap.scenarioCities.clear()
+    editor.mapHolder.refreshScenarioCityPreviews()
+    checkCastle(editor, false)
+    editor.tileMap.scenarioCities.add(savedCity)
+    editor.mapHolder.refreshScenarioCityPreviews()
+    checkCastle(editor, true)
     editor.tabs.edit.selectPage("Terrain")
     check(editor.allowDragPainting && editor.tileClickHandler != null)
     editor.tabs.edit.selectPage("Cities")
@@ -36,6 +55,7 @@ fun createScenarioCityEditorTabsPreview(): BaseScreen {
     editor.dispose()
     check(recreated.tabs.edit.currentSubTab() == "Cities" && !recreated.allowDragPainting)
     check(recreated.isDirty && recreated.tileMap.scenarioCities.single().name == "Saved town")
+    checkCastle(recreated, true)
     check(recreated.stage.root.findActor<TextField>("scenario-city-name").text == "Saved town")
     return recreated
 }

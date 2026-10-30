@@ -213,6 +213,20 @@ open class TileGroup(
     var showEntireMap = UncivGame.Current.viewEntireMapForDebug
     var forMapEditorIcon = false
 
+    /** Presentation only: a map description is not a live city. */
+    var hasCityPreview = false
+
+    internal fun getShownImprovement(viewingCiv: CivilizationInfo?): String? {
+        val canSeeCurrentTile = viewingCiv == null || showEntireMap || isViewable(viewingCiv)
+        if (hasCityPreview || (canSeeCurrentTile && tileInfo.isCityCenter())) {
+            val cityCenter = if (tileInfo.getOwner()?.isCityState() == true)
+                "Village City center" else "City center"
+            return if (tileInfo.ruleset.tileImprovements.containsKey(cityCenter)) cityCenter
+                else "City center"
+        }
+        return tileInfo.getShownImprovement(viewingCiv)
+    }
+
     init {
         this.setSize(groupSize, groupSize)
         baseLayerGroup.touchable = Touchable.childrenOnly
@@ -276,7 +290,7 @@ open class TileGroup(
             return if (tileSetStrings.tileSetConfig.useSummaryImages) baseHexagon + tileSetStrings.naturalWonder
             else baseHexagon + tileSetStrings.orFallback{ getTile(tileInfo.naturalWonder!!) }
 
-        val shownImprovement = tileInfo.getShownImprovement(viewingCiv)
+        val shownImprovement = getShownImprovement(viewingCiv)
         val shouldShowImprovement = shownImprovement != null && UncivGame.Current.settings.showPixelImprovements && !tileInfo.isItemBeingCollected
 
         val shouldShowResource = UncivGame.Current.settings.showPixelImprovements && tileInfo.resource != null &&
@@ -362,7 +376,7 @@ open class TileGroup(
                 i += 1
             }
             val finalLocation = existingImages.random(Random(tileInfo.position.hashCode() + locationToCheck.hashCode()))
-            val image = ImageGetter.getImage(finalLocation)
+            val image = ImageGetter.getImage(finalLocation).apply { name = finalLocation }
             if(baseLocation == "TileSets/FantasyHex/Hexagon") {
                 image.touchable = Touchable.enabled
                 image.isVisible = false

@@ -134,7 +134,7 @@ class TileGroupIcons(val tileGroup: TileGroup) {
         if (tileInfo.isItemBeingCollected) {
             // Ensure we have an overlay image for the improvement to fade out
             if (improvementFadeActor == null) {
-                val currentImprovement = tileInfo.getShownImprovement(viewingCiv)
+                val currentImprovement = tileGroup.getShownImprovement(viewingCiv)
                 if (currentImprovement != null && showResourcesAndImprovements) {
                     // Get the full-hex improvement texture path and image
                     val improvementPath = tileGroup.tileSetStrings.getTile(currentImprovement)
@@ -182,7 +182,7 @@ class TileGroupIcons(val tileGroup: TileGroup) {
         // Normal (non-animated) update path
         improvementIcon?.remove()
         improvementIcon = null
-        val shownImprovement = tileInfo.getShownImprovement(viewingCiv)
+        val shownImprovement = tileGroup.getShownImprovement(viewingCiv)
         if (shownImprovement == null || !showResourcesAndImprovements) return
 
         val newImprovementImage = ImageGetter.getImprovementIcon(shownImprovement)

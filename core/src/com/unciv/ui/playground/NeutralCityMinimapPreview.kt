@@ -30,6 +30,24 @@ fun openNeutralCityMinimapPreview(screen: BaseScreen) {
     ))
     val city = InstantiateScenarioCitiesUseCase.execute(game, emptyMap()).single()
     check(city.ownerOrNull == null && center.getOwner() == null)
+    val strings = com.unciv.ui.tilegroups.TileSetStrings()
+    val castle = com.unciv.ui.tilegroups.TileGroup(center, strings).apply {
+        showEntireMap = true
+        update()
+    }
+    check(center.improvement == null) { "Rendering must not write a city improvement into the map" }
+    check(castle.tileBaseImages.any { it.name?.contains("City center") == true }) {
+        "A runtime neutral city must render the existing castle sprite without a founding side effect"
+    }
+    val implicitImages = castle.tileBaseImages.map { it.name }
+    center.improvement = "City center"
+    castle.update()
+    check(castle.tileBaseImages.map { it.name } == implicitImages) {
+        "City rendering must agree with the existing founded-city improvement rendering"
+    }
+    center.improvement = null
+    castle.setPosition(screen.stage.width / 2 - 100f, screen.stage.height / 2)
+    screen.stage.addActor(castle)
     val layer = Group()
     val centerTile = MinimapTile(center, 40f) {}
     layer.addActor(centerTile.image)

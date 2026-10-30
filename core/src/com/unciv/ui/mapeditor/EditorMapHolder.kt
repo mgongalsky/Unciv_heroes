@@ -128,7 +128,13 @@ class EditorMapHolder(
             tileGroup.findActor<com.badlogic.gdx.scenes.scene2d.Actor>("scenario-city-preview")?.remove()
             val city = tileMap.scenarioCities.firstOrNull {
                 it.position.x == tileGroup.tileInfo.position.x && it.position.y == tileGroup.tileInfo.position.y
-            } ?: continue
+            }
+            val hasCityPreview = city != null
+            if (tileGroup.hasCityPreview != hasCityPreview) {
+                tileGroup.hasCityPreview = hasCityPreview
+                tileGroup.update()
+            }
+            if (city == null) continue
             val owner = if (city.owner == com.unciv.pure.domain.city.ScenarioCityOwner.Neutral) "Neutral".tr()
                 else tileMap.scenarioPlayerSlots.firstOrNull { it.id == city.ownerSlotId }?.name.orEmpty()
             val label = com.badlogic.gdx.scenes.scene2d.ui.Label(
