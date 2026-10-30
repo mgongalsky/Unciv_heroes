@@ -53,4 +53,19 @@ object ScenarioCityValidation {
             }
         }
     }
+
+fun validateCapitalsForStartup(cities: List<ScenarioCity>, slots: List<ScenarioPlayerSlot>) {
+    for (slot in slots) {
+        val owned =
+                cities.filter { it.owner == ScenarioCityOwner.PlayerSlot && it.ownerSlotId == slot.id }
+        if (owned.isEmpty()) continue
+        val label = slot.name.ifBlank { slot.id }
+        require(owned.count { it.isCapital } == 1) {
+            "Scenario player slot '$label': select exactly one Current capital in the city editor (${owned.joinToString { it.name }})."
+        }
+        require(owned.count { it.isOriginalCapital } == 1) {
+            "Scenario player slot '$label': select exactly one Original capital in the city editor (${owned.joinToString { it.name }})."
+        }
+    }
+}
 }

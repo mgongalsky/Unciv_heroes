@@ -23,6 +23,7 @@ object InstantiateScenarioCitiesUseCase {
     ): List<CityInfo> {
         val map = game.tileMap
         ScenarioMapValidation.validateStructure(map)
+        ScenarioCityValidation.validateCapitalsForStartup(map.scenarioCities, map.scenarioPlayerSlots)
         val errors = ScenarioMapValidation.definitionErrors(map, game.ruleSet)
         require(errors.isEmpty()) { errors.joinToString("\n") }
         val bindings = ScenarioPlayerBindings.resolve(map.scenarioPlayerSlots, participants.toList())

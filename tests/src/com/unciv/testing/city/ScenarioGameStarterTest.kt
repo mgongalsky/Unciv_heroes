@@ -104,6 +104,46 @@ class ScenarioGameStarterTest {
         }
     }
 
+    @Test
+    fun missingCurrentCapitalExplainsFailureAndRepairStartsWithNationMarkers() {
+        withMap(true) { file, fixture ->
+            val map = fixture.game.tileMap
+            map.scenarioPlayerSlots.single().name = "Player 1"
+            map.scenarioCities.first().apply {
+                name = "Dom"
+                isCapital = false
+                isOriginalCapital = true
+            }
+            map.addStartingLocation("Russia", map[com.badlogic.gdx.math.Vector2(5f, 0f)])
+            map.addStartingLocation("Sweden", map[com.badlogic.gdx.math.Vector2(-5f, 0f)])
+            fun parameters() = setup(file, true).apply {
+                gameParameters.players = arrayListOf(
+                    Player("Russia").apply { playerType = PlayerType.Human; scenarioSlotId = "first" },
+                    Player("Sweden").apply { playerType = PlayerType.AI }
+                )
+            }
+            file.writeText(MapSaver.mapToSavedString(map))
+            try {
+                GameStarter.startNewGame(parameters()) { }
+                fail("A missing current capital must be explained")
+            } catch (invalid: IllegalArgumentException) {
+                assertTrue(invalid.message.orEmpty().contains("Player 1"))
+                assertTrue(invalid.message.orEmpty().contains("Dom"))
+                assertTrue(invalid.message.orEmpty().contains("Current capital"))
+            }
+            map.scenarioCities.first().isCapital = true
+            file.writeText(MapSaver.mapToSavedString(map))
+            val game = GameStarter.startNewGame(parameters()) { }
+            val owner = game.getCivilization("Russia")
+            assertEquals("home", owner.getCapital()!!.id)
+            assertSame(owner, game.cityRegistry.byId(CityId("home"))!!.ownerOrNull)
+            assertTrue(owner.getCivUnits().any())
+            assertTrue(game.getCivilization("Sweden").getCivUnits().any())
+            assertNull(game.cityRegistry.byId(CityId("neutral"))!!.ownerOrNull)
+            assertEquals(2, game.getCities().count())
+        }
+    }
+
     private fun setup(file: File, scenario: Boolean) = GameSetupInfo().apply {
         mapParameters.name = "Test map"
         mapFile = FileHandle(file)

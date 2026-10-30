@@ -163,6 +163,9 @@ class NewGameScreen(
                 }
 
                 try {
+                    com.unciv.pure.domain.city.ScenarioCityValidation.validateCapitalsForStartup(
+                        map.scenarioCities, map.scenarioPlayerSlots
+                    )
                     com.unciv.pure.domain.city.ScenarioPlayerBindings.resolve(
                         map.scenarioPlayerSlots,
                         gameSetupInfo.gameParameters.players.map { it.scenarioSlotId to it }
@@ -291,7 +294,7 @@ class NewGameScreen(
                 popup.apply {
                     reuseWith("It looks like we can't make a map with the parameters you requested!")
                     row()
-                    addGoodSizedLabel("Maybe you put too many players into too small a map?").row()
+                    addGoodSizedLabel(exception.message ?: exception.javaClass.simpleName).row()
                     addCloseButton()
                 }
                 Gdx.input.inputProcessor = stage
