@@ -6,5 +6,7 @@ import com.unciv.logic.civilization.PlayerType
 
 class Player(var chosenCiv: String = Constants.random) : IsPartOfGameInfoSerialization {
     var playerType: PlayerType = PlayerType.AI
-    var playerId=""
+    var playerId = ""
+    /** Explicit scenario assignment, independent of nation choice and multiplayer identity. */
+    var scenarioSlotId = ""
 }

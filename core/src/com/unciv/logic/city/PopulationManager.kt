@@ -110,6 +110,14 @@ open class PopulationManager : IsPartOfGameInfoSerialization {
         }
     }
 
+    /** Initial data only: no growth, religious pressure, or territory expansion. */
+    internal fun initializeForScenario(count: Int, food: Int) {
+        require(count > 0 && food >= 0)
+        check(!::cityInfo.isInitialized) { "Scenario population must be initialized before world binding" }
+        population = count
+        foodStored = food
+    }
+
     fun setPopulation(count: Int) {
         addPopulation(-population + count)
     }

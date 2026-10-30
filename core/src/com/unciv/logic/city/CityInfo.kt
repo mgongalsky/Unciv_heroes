@@ -252,6 +252,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         json.writeValue("turnAcquired", turnAcquired)
         json.writeValue("health", health)
         json.writeValue("isCurrentCapital", state.isCurrentCapital)
+        json.writeValue("resolvedCityType", state.resolvedCityType)
         json.writeValue("location", location, Vector2::class.java)
         if (state.garrison != null) json.writeValue("garrisonInfo", garrisonInfo, ArmyInfo::class.java)
     }
@@ -268,9 +269,10 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         turnAcquired = jsonData.getInt("turnAcquired", turnAcquired)
         health = jsonData.getInt("health", health)
         state.isCurrentCapital = jsonData.get("isCurrentCapital")?.takeUnless { it.isNull }?.asBoolean()
+        state.resolvedCityType = jsonData.getString("resolvedCityType", "")
         // These properties have no backing fields. Hide them from reflective field reading,
         // then restore the input tree so other consumers can still inspect it.
-        val stateFields = listOf("id", "name", "foundingCiv", "previousOwner", "turnAcquired", "health", "garrisonInfo", "location", "isCurrentCapital")
+        val stateFields = listOf("id", "name", "foundingCiv", "previousOwner", "turnAcquired", "health", "garrisonInfo", "location", "isCurrentCapital", "resolvedCityType")
             .mapNotNull { fieldName ->
                 jsonData.remove(fieldName)?.let {
                     // JsonValue.remove unlinks the node but retains its sibling references.
@@ -371,6 +373,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         toReturn.id = id
         toReturn.state.ownership = state.ownership
         toReturn.state.isCurrentCapital = state.isCurrentCapital
+        toReturn.state.resolvedCityType = state.resolvedCityType
         toReturn.name = name
         toReturn.health = health
         toReturn.garrison = garrison

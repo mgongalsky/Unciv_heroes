@@ -33,6 +33,7 @@ object MapSaver {
     }
 
     fun mapToSavedString(tileMap: TileMap): String {
+        com.unciv.logic.map.ScenarioMapValidation.validateStructure(tileMap)
         tileMap.assignContinents(TileMap.AssignContinentsMode.Reassign)
         tileMap.mapParameters.mapFormatVersion = MapFormatMigration.currentVersion
         if (tileMap.mapParameters.createdWithVersion.isBlank())
@@ -54,6 +55,11 @@ object MapSaver {
         val migratedJson = MapFormatMigration.migrate(jsonText)
         return json().fromJson(TileMap::class.java, migratedJson).apply {
             mapParameters.mapFormatVersion = MapFormatMigration.currentVersion
+            try {
+                com.unciv.logic.map.ScenarioMapValidation.validateStructure(this)
+            } catch (invalid: IllegalArgumentException) {
+                throw UncivShowableException("Invalid scenario: ${invalid.message}")
+            }
         }
     }
 

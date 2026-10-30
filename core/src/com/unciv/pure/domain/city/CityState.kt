@@ -7,7 +7,7 @@ import com.unciv.pure.domain.army.deepCopy
 data class CityId(val value: String)
 
 /** Immutable map coordinate without a graphics or map dependency. */
-data class CityPosition(val x: Float, val y: Float)
+data class CityPosition(val x: Float = 0f, val y: Float = 0f)
 
 sealed class CityOwnership {
     object Neutral : CityOwnership()
@@ -31,7 +31,9 @@ data class CityState(
     var ownership: CityOwnership? = null,
     var position: CityPosition = CityPosition(0f, 0f),
     /** Null is a legacy save whose capital status must be inferred once from its buildings. */
-    var isCurrentCapital: Boolean? = null
+    var isCurrentCapital: Boolean? = null,
+    /** Resolved once at mission startup; ownership changes do not alter it. */
+    var resolvedCityType: String = ""
 ) {
     /** Independent snapshot, including mutable troops and formations. */
     fun deepCopy(): CityState = copy(garrison = garrison?.deepCopy())

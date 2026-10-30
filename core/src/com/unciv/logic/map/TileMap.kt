@@ -38,6 +38,8 @@ class TileMap : IsPartOfGameInfoSerialization, IBattleField {
     //region Fields, Serialized
 
     var mapParameters = MapParameters()
+    var scenarioCities = arrayListOf<com.unciv.pure.domain.city.ScenarioCity>()
+    var scenarioPlayerSlots = arrayListOf<com.unciv.pure.domain.city.ScenarioPlayerSlot>()
 
     private var tileList = ArrayList<TileInfo>()
 
@@ -152,6 +154,8 @@ class TileMap : IsPartOfGameInfoSerialization, IBattleField {
         val toReturn = TileMap()
         toReturn.tileList.addAll(tileList.map { it.clone() })
         toReturn.mapParameters = mapParameters
+        toReturn.scenarioCities.addAll(scenarioCities.map { it.deepCopy() })
+        toReturn.scenarioPlayerSlots.addAll(scenarioPlayerSlots.map { it.copy() })
         toReturn.ruleset = ruleset
         toReturn.startingLocations.clear()
         toReturn.startingLocations.ensureCapacity(startingLocations.size)
@@ -514,6 +518,12 @@ class TileMap : IsPartOfGameInfoSerialization, IBattleField {
      */
     fun getRulesetIncompatibility(ruleset: Ruleset): HashSet<String> {
         val rulesetIncompatibilities = HashSet<String>()
+        rulesetIncompatibilities.addAll(ScenarioMapValidation.definitionErrors(this, ruleset))
+        try {
+            ScenarioMapValidation.validateStructure(this)
+        } catch (invalid: IllegalArgumentException) {
+            rulesetIncompatibilities.add("Invalid scenario: ${invalid.message}")
+        }
         for (set in values.map { it.getRulesetIncompatibility(ruleset) })
             rulesetIncompatibilities.addAll(set)
 

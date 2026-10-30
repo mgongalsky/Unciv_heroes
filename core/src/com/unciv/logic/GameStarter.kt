@@ -25,13 +25,22 @@ object GameStarter {
     private const val consoleTimings = false
     private lateinit var gameSetupInfo: GameSetupInfo
 
-    fun startNewGame(gameSetupInfo: GameSetupInfo): GameInfo {
+    fun startNewGame(gameSetupInfo: GameSetupInfo): GameInfo = startNewGame(gameSetupInfo) { setup ->
+        UncivGame.Current.settings.apply {
+            lastGameSetup = setup
+            save()
+        }
+    }
+
+    /** Keeps game startup real while allowing callers to isolate the settings write. */
+    fun startNewGame(gameSetupInfo: GameSetupInfo, saveSetup: (GameSetupInfo) -> Unit): GameInfo {
         this.gameSetupInfo = gameSetupInfo
         if (consoleTimings)
             debug("\nGameStarter run with parameters %s, map %s", gameSetupInfo.gameParameters, gameSetupInfo.mapParameters)
 
         val gameInfo = GameInfo()
         lateinit var tileMap: TileMap
+        val scenarioParticipants = linkedMapOf<String, CivilizationInfo>()
 
         // In the case where we used to have an extension mod, and now we don't, we cannot "unselect" it in the UI.
         // We need to remove the dead mods so there aren't problems later.
@@ -74,7 +83,8 @@ object GameStarter {
                 gameSetupInfo.gameParameters,
                 gameInfo,
                 ruleset,
-                existingMap = true
+                existingMap = true,
+                scenarioParticipants = scenarioParticipants
             ) // this is before gameInfo.setTransients, so gameInfo doesn't yet have the gameBasics
         }
 
@@ -95,12 +105,16 @@ object GameStarter {
             }
 
         runAndMeasure("setTransients") {
-            tileMap.setTransients(ruleset) // if we're starting from a map with pre-placed units, they need the civs to exist first
-            tileMap.setStartingLocationsTransients()
-
             gameInfo.difficulty = gameSetupInfo.gameParameters.difficulty
 
-            gameInfo.setTransients() // needs to be before placeBarbarianUnit because it depends on the tilemap having its gameInfo set
+            // GameInfo initializes the tile map and registers pre-placed units with their owners once.
+            gameInfo.setTransients()
+            tileMap.setStartingLocationsTransients()
+        }
+
+        runAndMeasure("scenarioCities") {
+            if (tileMap.scenarioCities.isNotEmpty() || tileMap.scenarioPlayerSlots.isNotEmpty())
+                com.unciv.logic.city.InstantiateScenarioCitiesUseCase.execute(gameInfo, scenarioParticipants)
         }
 
         runAndMeasure("addCivStartingUnits") {
@@ -119,6 +133,15 @@ object GameStarter {
             addCivStats(gameInfo)
         }
 
+        if (tileMap.scenarioCities.isNotEmpty()) {
+            for (civ in gameInfo.civilizations.filter { it.cities.isNotEmpty() }) {
+                civ.initialSetCitiesConnectedToCapitalTransients()
+                civ.updateSightAndResources()
+                for (city in civ.cities) city.population.autoAssignPopulation()
+                civ.updateStatsForNextTurn()
+            }
+        }
+
         // remove starting locations once we're done
         tileMap.clearStartingLocations()
 
@@ -130,10 +153,7 @@ object GameStarter {
         // This triggers the one-time greeting from Nation.startIntroPart1/2
         addPlayerIntros(gameInfo)
 
-        UncivGame.Current.settings.apply {
-            lastGameSetup = gameSetupInfo
-            save()
-        }
+        saveSetup(gameSetupInfo)
         return gameInfo
     }
 
@@ -216,7 +236,16 @@ object GameStarter {
         }
     }
 
-    private fun addCivilizations(newGameParameters: GameParameters, gameInfo: GameInfo, ruleset: Ruleset, existingMap: Boolean) {
+    private fun addCivilizations(
+        newGameParameters: GameParameters, gameInfo: GameInfo, ruleset: Ruleset, existingMap: Boolean,
+        scenarioParticipants: MutableMap<String, CivilizationInfo>? = null
+    ) {
+        if (existingMap && gameInfo.tileMap.scenarioPlayerSlots.isNotEmpty()) {
+            com.unciv.pure.domain.city.ScenarioPlayerBindings.resolve(
+                gameInfo.tileMap.scenarioPlayerSlots,
+                newGameParameters.players.map { it.scenarioSlotId to it }
+            )
+        }
         val availableCivNames = Stack<String>()
         // CityState or Spectator civs are not available for Random pick
         availableCivNames.addAll(ruleset.nations.filter { it.value.isMajorCiv() }.keys.shuffled())
@@ -247,6 +276,8 @@ object GameStarter {
                 playerCiv.tech.techsResearched.add(tech.name) // can't be .addTechnology because the civInfo isn't assigned yet
             playerCiv.playerType = player.playerType
             playerCiv.playerId = player.playerId
+            if (existingMap && player.scenarioSlotId.isNotEmpty())
+                scenarioParticipants?.put(player.scenarioSlotId, playerCiv)
             gameInfo.civilizations.add(playerCiv)
         }
 
@@ -284,6 +315,11 @@ object GameStarter {
         var startingUnits: MutableList<String>
         var eraUnitReplacement: String
 
+        for (civ in gameInfo.civilizations.filter { it.cities.isNotEmpty() }) {
+            val capital = civ.getCapital() ?: continue
+            if (tileMap.startingLocationsByNation[civ.civName].isNullOrEmpty())
+                tileMap.addStartingLocation(civ.civName, capital.getCenterTile())
+        }
         val startScores = HashMap<TileInfo, Float>(tileMap.values.size)
         for (tile in tileMap.values) {
             startScores[tile] = tile.getTileStartScore()
@@ -311,6 +347,7 @@ object GameStarter {
         // no starting units for Barbarians and Spectators
         for (civ in gameInfo.civilizations.filter { !it.isBarbarian() && !it.isSpectator() }) {
             val startingLocation = startingLocations[civ]!!
+            if (civ.cities.isNotEmpty() && civ.getCivUnits().any()) continue
 
             for (tile in startingLocation.getTilesInDistance(3)) {
                 if (tile.improvement != null
@@ -377,7 +414,11 @@ object GameStarter {
 
             for (unit in startingUnits) {
                 val unitToAdd = getEquivalentUnit(civ, unit)
-                if (unitToAdd != null) placeNearStartingPosition(unitToAdd)
+                if (unitToAdd != null) {
+                    val definition = ruleSet.units[unitToAdd]!!
+                    if (civ.cities.isNotEmpty() && definition.isCivilian() && definition.hasUnique(UniqueType.FoundCity)) continue
+                    placeNearStartingPosition(unitToAdd)
+                }
             }
         }
     }
