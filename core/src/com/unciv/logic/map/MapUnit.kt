@@ -710,13 +710,14 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
     }
 
 
-    /** Returns FULL upgrade path, without checking what we can or cannot build currently.
-     * Does not contain current baseunit, so will be empty if no upgrades. */
     fun getUpgradePath(): List<BaseUnit> {
         var currentUnit = baseUnit
         val upgradeList = arrayListOf<BaseUnit>()
+        val visited = hashSetOf(currentUnit.name)
         while (currentUnit.upgradesTo != null) {
             val nextUpgrade = civInfo.getEquivalentUnit(currentUnit.upgradesTo!!)
+            // National replacements can also lead back to an already visited unit.
+            if (!visited.add(nextUpgrade.name)) break
             currentUnit = nextUpgrade
             upgradeList.add(currentUnit)
         }
