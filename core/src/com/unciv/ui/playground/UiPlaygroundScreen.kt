@@ -38,6 +38,9 @@ class UiPlaygroundScreen : BaseScreen() {
     )
 
     private val scenarios = armyPopupScenarios() + listOf(
+        Scenario("Scenario city editor", "City description form without a running game.") {
+            openScenarioCityEditorPreview(it)
+        },
         troopBattleViewScenario(),
         battleResultScenario(
             title = "Battle result — attacker victory",

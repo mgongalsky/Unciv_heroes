@@ -10,7 +10,7 @@ class MapEditorMainTabs(
     minimumHeight = editorScreen.stage.height,
     maximumHeight = editorScreen.stage.height,
     headerFontSize = 24,
-    capacity = 7
+    capacity = 8
 ) {
     val view = MapEditorViewTab(editorScreen)
     val generate = MapEditorGenerateTab(editorScreen)
@@ -19,6 +19,7 @@ class MapEditorMainTabs(
     val save = MapEditorSaveTab(editorScreen, headerHeight)
     val mods = MapEditorModsTab(editorScreen)
     val options = MapEditorOptionsTab(editorScreen)
+    val cities = MapEditorCitiesTab(editorScreen)
 
     init {
         prefWidth = editorScreen.getToolsWidth()
@@ -45,6 +46,9 @@ class MapEditorMainTabs(
         addPage("Options", options,
             ImageGetter.getImage("OtherIcons/Settings"), 25f,
             shortcutKey = KeyCharAndCode.ctrl('o'))
+        addPage("Cities", cities,
+            ImageGetter.getImage("OtherIcons/City"), 25f,
+            shortcutKey = KeyCharAndCode.ctrl('y'))
         selectPage(0)
     }
 }

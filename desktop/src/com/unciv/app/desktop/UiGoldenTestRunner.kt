@@ -39,6 +39,8 @@ object UiGoldenTestRunner {
     @JvmStatic
     fun main(args: Array<String>) {
         val update = args.contains("--update")
+        val captureOnly = args.contains("--capture-only")
+        require(!(update && captureOnly)) { "Capture-only cannot update baselines" }
         val requestedScenarios = args.filter { it.startsWith("--scenario=") }
             .map { it.substringAfter('=') }.toSet()
         val armySetup = requestedScenarios == setOf("army-setup-laptop")
@@ -73,7 +75,7 @@ object UiGoldenTestRunner {
                 disableAudio(true)
             }
             Lwjgl3Application(
-                GoldenApplication(projectRoot, update, selectedScenarios, result),
+                GoldenApplication(projectRoot, update, captureOnly, selectedScenarios, result),
                 config
             )
             check(result.passed) {
@@ -95,6 +97,7 @@ object UiGoldenTestRunner {
             com.unciv.ui.playground.openSplitTroopPreview(it, targetAmount = 12)
         },
         Scenario("army-troop-info") { com.unciv.ui.playground.openArmyTroopInfoPreview(it) },
+        Scenario("city-editor") { com.unciv.ui.playground.openScenarioCityEditorPreview(it) },
         Scenario("battle-troops") { screen -> openBattleTroopPreview(screen) },
         Scenario("battle-turn-queue") { screen -> openBattleTurnQueuePreview(screen) },
         Scenario("battle-troop-info") { screen -> openBattleTroopInfoPreview(screen) },
@@ -127,6 +130,7 @@ object UiGoldenTestRunner {
     private class GoldenApplication(
         private val projectRoot: File,
         private val update: Boolean,
+        private val captureOnly: Boolean,
         private val scenarios: List<Scenario>,
         private val result: GoldenResult
     ) : ApplicationAdapter() {
@@ -172,12 +176,20 @@ object UiGoldenTestRunner {
             )
             val actual = flipVertically(framebuffer)
             framebuffer.dispose()
-            allPassed = compareOrUpdate(
-                scenario = scenarios[scenarioIndex].name,
-                actual = actual,
-                projectRoot = projectRoot,
-                update = update
-            ) && allPassed
+            if (captureOnly) {
+                val platform = System.getProperty("os.name").lowercase()
+                    .replace(Regex("[^a-z0-9]+"), "-").trim('-')
+                val name = scenarios[scenarioIndex].name
+                writePng(File(projectRoot, "tests/golden/results/$platform/$name-actual.png"), actual)
+                println("RENDERED $name: form/layout checks passed; visual comparison not performed")
+            } else {
+                allPassed = compareOrUpdate(
+                    scenario = scenarios[scenarioIndex].name,
+                    actual = actual,
+                    projectRoot = projectRoot,
+                    update = update
+                ) && allPassed
+            }
             actual.dispose()
             scenarioIndex++
             stableFrames = 0

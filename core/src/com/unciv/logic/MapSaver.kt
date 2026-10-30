@@ -63,6 +63,18 @@ object MapSaver {
         }
     }
 
+    private class ScenarioSlotsPreview {
+        val scenarioPlayerSlots = arrayListOf<com.unciv.pure.domain.city.ScenarioPlayerSlot>()
+    }
+
+    /** Reads only participant slots; does not deserialize tiles, units, or runtime cities. */
+    fun loadScenarioPlayerSlots(mapFile: FileHandle): List<com.unciv.pure.domain.city.ScenarioPlayerSlot> {
+        val saved = mapFile.readString()
+        val plain = try { Gzip.unzip(saved.trim()) } catch (_: Exception) { saved }
+        val migrated = MapFormatMigration.migrate(plain)
+        return json().fromJson(ScenarioSlotsPreview::class.java, migrated).scenarioPlayerSlots
+    }
+
     private class TileMapPreview {
         val mapParameters = MapParameters()
     }

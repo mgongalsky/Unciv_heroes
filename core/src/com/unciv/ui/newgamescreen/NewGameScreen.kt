@@ -162,6 +162,23 @@ class NewGameScreen(
                     return@onClick
                 }
 
+                try {
+                    com.unciv.pure.domain.city.ScenarioPlayerBindings.resolve(
+                        map.scenarioPlayerSlots,
+                        gameSetupInfo.gameParameters.players.map { it.scenarioSlotId to it }
+                    )
+                    require(gameSetupInfo.gameParameters.players.none {
+                        it.scenarioSlotId.isNotEmpty() && it.chosenCiv == Constants.spectator
+                    }) { "A spectator cannot occupy a scenario player slot" }
+                } catch (invalid: IllegalArgumentException) {
+                    Popup(this).apply {
+                        addGoodSizedLabel(invalid.message.orEmpty()).row()
+                        addCloseButton()
+                        open()
+                    }
+                    Gdx.input.inputProcessor = stage
+                    return@onClick
+                }
                 val rulesetIncompatibilities = map.getRulesetIncompatibility(ruleset)
                 if (rulesetIncompatibilities.isNotEmpty()) {
                     val incompatibleMap = Popup(this)
@@ -339,6 +356,14 @@ class NewGameScreen(
     }
 
     fun updateTables() {
+        val slots = if (gameSetupInfo.mapParameters.name.isNotEmpty()) {
+            try {
+                gameSetupInfo.mapFile?.let { MapSaver.loadScenarioPlayerSlots(it) } ?: emptyList()
+            } catch (_: Exception) { emptyList() }
+        } else emptyList()
+        playerPickerTable.scenarioSlots = slots
+        for (player in gameSetupInfo.gameParameters.players)
+            if (slots.none { it.id == player.scenarioSlotId }) player.scenarioSlotId = ""
         playerPickerTable.gameParameters = gameSetupInfo.gameParameters
         playerPickerTable.update()
         newGameOptionsTable.gameParameters = gameSetupInfo.gameParameters

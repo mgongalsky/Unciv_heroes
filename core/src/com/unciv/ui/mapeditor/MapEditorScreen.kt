@@ -77,6 +77,8 @@ class MapEditorScreen(map: TileMap? = null): BaseScreen(), RecreateOnResize {
     var mapHolder: EditorMapHolder
     val tabs: MapEditorMainTabs
     var tileClickHandler: ((tile: TileInfo)->Unit)? = null
+    var allowDragPainting = true
+    var selectedScenarioCity: com.unciv.pure.domain.city.CityPosition? = null
     private var zoomController: ZoomButtonPair? = null
 
     private val highlightedTileGroups = mutableListOf<TileGroup>()
@@ -164,6 +166,7 @@ class MapEditorScreen(map: TileMap? = null): BaseScreen(), RecreateOnResize {
     fun loadMap(map: TileMap, newRuleset: Ruleset? = null, selectPage: Int = 0) {
         mapHolder.remove()
         tileMap = map
+        selectedScenarioCity = null
         checkAndFixMapSize()
         ruleset = newRuleset ?: RulesetCache.getComplexRuleset(map.mapParameters)
         mapHolder = newMapHolder()
@@ -248,5 +251,9 @@ class MapEditorScreen(map: TileMap? = null): BaseScreen(), RecreateOnResize {
         params.mapSize = MapSizeNew((maxLongitude - minLongitude + 1), (maxLatitude - minLatitude + 1) / 2)
     }
 
-    override fun recreate(): BaseScreen = MapEditorScreen(tileMap)
+    override fun recreate(): BaseScreen = MapEditorScreen(tileMap).also {
+        it.isDirty = isDirty
+        it.selectedScenarioCity = selectedScenarioCity
+        it.tabs.selectPage(tabs.activePage)
+    }
 }

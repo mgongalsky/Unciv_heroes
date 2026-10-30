@@ -74,4 +74,8 @@ class UiGoldenTest {
     fun armySetupLaptop() {
         UiGoldenTestRunner.main(arrayOf("--scenario=army-setup-laptop"))
     }
+    @Test
+    fun cityEditor() {
+        UiGoldenTestRunner.main(arrayOf("--scenario=city-editor"))
+    }
 }

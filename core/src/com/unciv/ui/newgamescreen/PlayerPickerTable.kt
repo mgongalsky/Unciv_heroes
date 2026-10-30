@@ -52,6 +52,11 @@ class PlayerPickerTable(
     /** No random civilization is available, used during map editing.*/
     var noRandom = false
 
+    var scenarioSlots: List<com.unciv.pure.domain.city.ScenarioPlayerSlot> = emptyList()
+    private data class SlotChoice(val id: String, val label: String) {
+        override fun toString() = label
+    }
+
     private val friendList = FriendList()
 
     init {
@@ -100,9 +105,9 @@ class PlayerPickerTable(
                 }
             playerListTable.add(addPlayerButton).pad(10f)
         }
-        // enable start game when more than 1 active player
-        val moreThanOnePlayer = 1 < gameParameters.players.count { it.chosenCiv != Constants.spectator }
-        (previousScreen as? PickerScreen)?.setRightSideButtonEnabled(moreThanOnePlayer)
+        val activePlayers = gameParameters.players.count { it.chosenCiv != Constants.spectator }
+        val enoughPlayers = activePlayers > 1 || (scenarioSlots.isNotEmpty() && activePlayers == 1)
+        (previousScreen as? PickerScreen)?.setRightSideButtonEnabled(enoughPlayers)
     }
 
     /**
@@ -161,6 +166,20 @@ class PlayerPickerTable(
                         gameParameters.players.remove(player)
                         update()
                     }).pad(5f).right().row()
+        }
+        if (scenarioSlots.isNotEmpty()) {
+            playerTable.row()
+            playerTable.add("Scenario player slot".toLabel()).colspan(3).left().row()
+            val choices = listOf(SlotChoice("", "No slot".tr())) + scenarioSlots.map {
+                SlotChoice(it.id, it.name.ifBlank { it.id })
+            }
+            val select = com.badlogic.gdx.scenes.scene2d.ui.SelectBox<SlotChoice>(BaseScreen.skin).apply {
+                setItems(*choices.toTypedArray())
+                selected = choices.firstOrNull { it.id == player.scenarioSlotId } ?: choices.first()
+                isDisabled = locked
+            }
+            select.onChange { player.scenarioSlotId = select.selected.id }
+            playerTable.add(select).colspan(3).growX().pad(5f).row()
         }
         if (gameParameters.isOnlineMultiplayer && player.playerType == PlayerType.Human) {
 

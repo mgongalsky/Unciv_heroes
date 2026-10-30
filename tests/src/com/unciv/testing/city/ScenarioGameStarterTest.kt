@@ -57,6 +57,53 @@ class ScenarioGameStarterTest {
         }
     }
 
+    @Test
+    fun editedMapSurvivesStartupAcquisitionSaveAndRestart() {
+        withMap(true, emptyNeutral = true) { file, fixture ->
+            val map = fixture.game.tileMap
+            val draft = map.scenarioCities.last().deepCopy().apply {
+                name = "Edited town"
+                population = 2
+                foodStored = 17
+                buildings.add("Granary")
+            }
+            assertTrue(com.unciv.logic.map.ScenarioCityEditorCommands.putCity(map, fixture.ruleset, draft))
+            file.writeText(MapSaver.mapToSavedString(map.clone().apply {
+                setTransients(setUnitCivTransients = false)
+            }))
+            val game = GameStarter.startNewGame(setup(file, true)) { }
+            game.turns = 1
+            val owner = game.civilizations.single()
+            val town = game.cityRegistry.byId(CityId("neutral"))!!
+            assertEquals("Edited town", town.name)
+            game.nextTurn()
+            assertNull(town.ownerOrNull)
+            assertEquals(2, town.population.population)
+            assertEquals(17, town.population.foodStored)
+            assertEquals(setOf("Granary"), town.cityConstructions.builtBuildings)
+            val hero = owner.placeUnitNearTile(com.badlogic.gdx.math.Vector2(3f, 0f), "Warrior")!!
+            assertEquals(com.badlogic.gdx.math.Vector2(3f, 0f), hero.currentTile.position)
+            hero.currentMovement = 2f
+            hero.movement.moveToTile(town.getCenterTile())
+            assertSame(owner, town.ownerOrNull)
+            assertEquals("home", owner.getCapital()!!.id)
+            assertEquals(17, town.population.foodStored)
+            val loaded = com.unciv.logic.UncivFiles.gameInfoFromString(
+                com.unciv.logic.UncivFiles.gameInfoToString(game.clone(), true))
+            val restored = loaded.cityRegistry.byId(CityId("neutral"))!!
+            assertEquals(owner.civName, restored.ownerOrNull!!.civName)
+            assertEquals("neutral-type", restored.state.resolvedCityType)
+            assertSame(restored, restored.getCenterTile().getCity())
+            assertEquals(2, loaded.getCities().count())
+            loaded.nextTurn()
+            assertEquals(2, loaded.getCities().count())
+            val restarted = GameStarter.startNewGame(setup(file, true)) { }
+            assertNull(restarted.cityRegistry.byId(CityId("neutral"))!!.ownerOrNull)
+            assertEquals(2, restarted.getCities().count())
+            assertEquals(draft, MapSaver.loadMap(FileHandle(file)).scenarioCities.last())
+        }
+    }
+
     private fun setup(file: File, scenario: Boolean) = GameSetupInfo().apply {
         mapParameters.name = "Test map"
         mapFile = FileHandle(file)

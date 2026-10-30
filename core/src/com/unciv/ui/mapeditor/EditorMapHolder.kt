@@ -13,6 +13,7 @@ import com.unciv.logic.HexMath
 import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.TileInfo
 import com.unciv.logic.map.TileMap
+import com.unciv.models.translations.tr
 import com.unciv.ui.map.TileGroupMap
 import com.unciv.ui.tilegroups.TileGroup
 import com.unciv.ui.tilegroups.TileSetStrings
@@ -50,6 +51,7 @@ class EditorMapHolder(
         addTiles(parentScreen.stage)
         if (editorScreen != null) addCaptureListener(getDragPaintListener())
         reloadMaxZoom()
+        refreshScenarioCityPreviews()
     }
 
     internal fun reloadMaxZoom() {
@@ -116,6 +118,32 @@ class EditorMapHolder(
     fun updateTileGroups() {
         for (tileGroup in allTileGroups)
             tileGroup.update()
+        refreshScenarioCityPreviews()
+    }
+
+    /** Labels use map descriptions only; the editor has no runtime city world. */
+    fun refreshScenarioCityPreviews() {
+        if (editorScreen == null) return
+        for (tileGroup in allTileGroups) {
+            tileGroup.findActor<com.badlogic.gdx.scenes.scene2d.Actor>("scenario-city-preview")?.remove()
+            val city = tileMap.scenarioCities.firstOrNull {
+                it.position.x == tileGroup.tileInfo.position.x && it.position.y == tileGroup.tileInfo.position.y
+            } ?: continue
+            val owner = if (city.owner == com.unciv.pure.domain.city.ScenarioCityOwner.Neutral) "Neutral".tr()
+                else tileMap.scenarioPlayerSlots.firstOrNull { it.id == city.ownerSlotId }?.name.orEmpty()
+            val label = com.badlogic.gdx.scenes.scene2d.ui.Label(
+                "${city.name}\n$owner", BaseScreen.skin
+            ).apply {
+                name = "scenario-city-preview"
+                touchable = Touchable.disabled
+                color = if (city.owner == com.unciv.pure.domain.city.ScenarioCityOwner.Neutral)
+                    com.badlogic.gdx.graphics.Color.LIGHT_GRAY else com.badlogic.gdx.graphics.Color.GOLD
+                setFontScale(0.7f)
+                pack()
+                setPosition((tileGroup.width - width) / 2f, tileGroup.height * 0.45f)
+            }
+            tileGroup.addActor(label)
+        }
     }
 
     fun setTransients() {
@@ -189,11 +217,13 @@ class EditorMapHolder(
             var touchDownTime = System.currentTimeMillis()
 
             override fun touchDown(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int): Boolean {
+                if (editorScreen?.allowDragPainting == false) return false
                 touchDownTime = System.currentTimeMillis()
                 return true
             }
 
             override fun touchDragged(event: InputEvent?, x: Float, y: Float, pointer: Int) {
+                if (editorScreen?.allowDragPainting == false) return
                 if (!isDragging) {
                     isDragging = true
                     val deltaTime = System.currentTimeMillis() - touchDownTime

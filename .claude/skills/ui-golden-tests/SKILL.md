@@ -103,3 +103,9 @@ scope.
 - [ ] Baselines were updated only for intentional changes.
 - [ ] Every updated scenario was verified immediately afterward.
 - [ ] Approved platform PNGs are committed and generated results are not.
+
+## Scenario city editor
+
+- Verification: `com.unciv.testing.UiGoldenTest#cityEditor` (`city-editor`).
+- Intentional baseline update: `com.unciv.testing.UiGoldenUpdateTest#cityEditor`.
+- Shared Playground factory: `openScenarioCityEditorPreview`; fixed city, slot and garrison, no running game.

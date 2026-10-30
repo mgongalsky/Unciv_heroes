@@ -77,4 +77,8 @@ class UiGoldenUpdateTest {
             )
         )
     }
+    @Test
+    fun cityEditor() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=city-editor"))
+    }
 }
