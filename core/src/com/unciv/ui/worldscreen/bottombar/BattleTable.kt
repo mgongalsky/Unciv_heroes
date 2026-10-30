@@ -191,6 +191,24 @@ class BattleTable(val worldScreen: WorldScreen): Table() {
         clear()
         add(attacker.getName().tr().toLabel())
         add(defender.getName().tr().toLabel()).row()
+        if (com.unciv.logic.city.NeutralCityEntry.decision(defender.city, attacker.unit) ==
+            com.unciv.pure.domain.city.NeutralCityEntryRules.Decision.ACQUIRE
+        ) {
+            val enterButton = "Occupy".toTextButton().apply { name = "neutral-city-occupy" }
+            if (!worldScreen.isPlayersTurn ||
+                !com.unciv.logic.city.NeutralCityEntry.canEnterThisTurn(defender.city, attacker.unit)
+            ) enterButton.disable()
+            else enterButton.onClick(UncivSound.Silent) {
+                if (!worldScreen.canChangeState || !worldScreen.isPlayersTurn) return@onClick
+                com.unciv.logic.city.NeutralCityEntry.enterThisTurn(defender.city, attacker.unit)
+                worldScreen.mapHolder.removeUnitActionOverlay()
+                worldScreen.shouldUpdate = true
+            }
+            add(enterButton).colspan(2).padTop(8f)
+            pack()
+            setPosition(worldScreen.stage.width / 2 - width / 2, 5f)
+            return
+        }
         add(buildBattleThreatPreview(
             BattleThreatArmyPreview(
                 attacker.unit.heroAttackSkill, attacker.unit.heroDefenseSkill,

@@ -16,6 +16,21 @@ object NeutralCityEntry {
         return NeutralCityEntryRules.decide(city.state.ownership, eligible, defenders)
     }
 
+    fun canEnterThisTurn(city: CityInfo, unit: MapUnit): Boolean {
+        if (decision(city, unit) != Decision.ACQUIRE || unit.currentMovement <= 0f) return false
+        val center = city.getCenterTile()
+        return unit.movement.canMoveTo(center) && unit.movement.canReach(center) &&
+            unit.movement.getTileToMoveToThisTurn(center) == center
+    }
+
+    /** Uses normal movement; ownership changes only through the actual entry callback. */
+    fun enterThisTurn(city: CityInfo, unit: MapUnit): Boolean {
+        if (!canEnterThisTurn(city, unit)) return false
+        unit.action = null
+        unit.movement.moveToTile(city.getCenterTile())
+        return unit.currentTile == city.getCenterTile() && city.ownerOrNull === unit.civInfo
+    }
+
     fun tryAcquireOnEntry(unit: MapUnit, tile: TileInfo): Boolean {
         if (!tile.isCityCenter()) return false
         val city = tile.getCity() ?: return false
