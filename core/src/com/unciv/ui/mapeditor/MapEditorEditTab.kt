@@ -117,9 +117,20 @@ class MapEditorEditTab(
             "OtherIcons/Nations",
             { parent, ruleset -> MapEditorEditStartsTab(parent, ruleset) }),
         Victory(
-            "Victory", 'o', "OtherIcons/Star",
-            { parent, _ -> MapEditorVictoryTab(parent.editorScreen, parent) }
-        )
+            "Victory",
+            'o',
+            "OtherIcons/Star",
+            { parent, _ -> MapEditorVictoryTab(parent.editorScreen, parent) }),
+        Heroes(
+            "Heroes",
+            'h',
+            "OtherIcons/Shield",
+            { parent, _ -> MapEditorHeroesTab(parent.editorScreen, parent) }),
+        Story(
+            "Story",
+            'y',
+            "OtherIcons/Star",
+            { parent, _ -> MapEditorStoryTab(parent.editorScreen, parent) })
     }
 
     init {
@@ -279,6 +290,18 @@ class MapEditorEditTab(
             findActor<MapEditorVictoryTab>("scenario-victory-tab")?.activated(
                 subTabs.activePage,
                 "Victory",
+                subTabs
+            )
+        else if (subTabs.activePage == subTabs.getPageIndex("Heroes"))
+            findActor<MapEditorHeroesTab>("scenario-heroes-tab")?.activated(
+                subTabs.activePage,
+                "Heroes",
+                subTabs
+            )
+        else if (subTabs.activePage == subTabs.getPageIndex("Story"))
+            findActor<MapEditorStoryTab>("scenario-story-tab")?.activated(
+                subTabs.activePage,
+                "Story",
                 subTabs
             )
     }

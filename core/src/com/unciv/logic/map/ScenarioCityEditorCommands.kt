@@ -33,11 +33,14 @@ object ScenarioCityEditorCommands {
         return true
     }
 
-    /** Не удаляет город, пока сценарная цель ссылается на его стабильный ID. */
+    /** Не удаляет город, используемый целью победы или сюжетным гарнизоном. */
     fun removeCity(map: TileMap, id: String): Boolean {
         require(map.scenarioVictorySettings?.captureObjectives.orEmpty().none { it.cityId == id }) {
             "This city is still used by a capture objective"
         }
+        require(storyEffects(map).none {
+            it.kind == com.unciv.pure.domain.story.StoryEffectKind.SetGarrison && it.reference == id
+        }) { "This city is still used by a story effect" }
         if (map.scenarioCities.none { it.id == id }) return false
         map.scenarioCities = ArrayList(map.scenarioCities.filterNot { it.id == id })
         return true
@@ -55,7 +58,7 @@ object ScenarioCityEditorCommands {
         return true
     }
 
-    /** Защищает ссылки городов, героев и целей победы до удаления слота участника. */
+    /** Защищает ссылки городов, героев, победы и сюжета до удаления слота участника. */
     fun removeSlot(map: TileMap, id: String): Boolean {
         require(map.scenarioCities.none { it.owner == ScenarioCityOwner.PlayerSlot && it.ownerSlotId == id }) {
             "This player slot is still used by a city"
@@ -68,8 +71,18 @@ object ScenarioCityEditorCommands {
                 .none { id in it.eligibleSlotIds }) {
             "This player slot is still used by a capture objective"
         }
+        require(map.story?.triggers.orEmpty().none { it.ownerSlotId == id } &&
+                storyEffects(map).none { it.recipientSlotId == id }) {
+            "This player slot is still used by the story"
+        }
         if (map.scenarioPlayerSlots.none { it.id == id }) return false
         map.scenarioPlayerSlots = ArrayList(map.scenarioPlayerSlots.filterNot { it.id == id })
         return true
     }
+
+    /** Учитывает последствия как прямых событий, так и всех ветвей разговора. */
+    private fun storyEffects(map: TileMap): List<com.unciv.pure.domain.story.StoryEffect> =
+            map.story?.triggers.orEmpty().flatMap { it.effects } +
+                    map.story?.dialogues.orEmpty().flatMap { it.nodes }.flatMap { it.choices }
+                        .flatMap { it.effects }
 }

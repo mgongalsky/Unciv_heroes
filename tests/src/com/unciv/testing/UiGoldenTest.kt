@@ -151,4 +151,10 @@ class UiGoldenTest {
     fun storyDialogue() {
         UiGoldenTestRunner.main(arrayOf("--scenario=story-dialogue"))
     }
+
+    /** Сравнивает формы героев и сюжета с платформенными эталонами. */
+    @Test
+    fun storyEditors() {
+        UiGoldenTestRunner.main(arrayOf("--scenario=hero-editor", "--scenario=story-editor"))
+    }
 }

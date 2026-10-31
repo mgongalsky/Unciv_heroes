@@ -107,4 +107,16 @@ class UiGoldenUpdateTest {
     fun storyDialogue() {
         UiGoldenTestRunner.main(arrayOf("--update", "--scenario=story-dialogue"))
     }
+
+    /** Утверждает эталоны форм только после просмотра фактических кадров. */
+    @Test
+    fun storyEditors() {
+        UiGoldenTestRunner.main(
+            arrayOf(
+                "--update",
+                "--scenario=hero-editor",
+                "--scenario=story-editor"
+            )
+        )
+    }
 }
