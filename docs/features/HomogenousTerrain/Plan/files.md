@@ -82,6 +82,29 @@ Suite: `tests/src/com/unciv/testing/pure/TerrainGenerationTestSuite.kt`.
 
 ## Документация и исключения
 
-Комплект: Research/RESEARCH.md, CODE_GUIDE.md, Plan/PLAN.md, STEPS.md, files.md и STEP_01…STEP_06 в docs/features/HomogenousTerrain.
+Комплект: Research/RESEARCH.md, CODE_GUIDE.md, Plan/PLAN.md, STEPS.md, files.md и STEP_01…STEP_07 в docs/features/HomogenousTerrain.
 
-Отчёты серии находятся в tests/build/terrain-acceptance и не входят в исходники. Не включать в коммит фичи lasterror.txt, посторонние настройки, ассеты, документацию других тем и существовавшие изменения пользователя. Коммит и публикация не выполнялись.
+Отчёты серии находятся в tests/build/terrain-acceptance и не входят в исходники. Не включать в коммит фичи lasterror.txt, посторонние настройки, ассеты, документацию других тем и существовавшие изменения пользователя. Публикация расширения не входит в текущую задачу.
+
+## Расширение: размеры и широты
+
+Созданы:
+
+- core/src/com/unciv/pure/domain/mapgeneration/LatitudeRange.kt — проверка градусов и проекция по вертикали.
+- tests/src/com/unciv/testing/pure/domain/mapgeneration/LatitudeRangeTest.kt — границы, постоянная широта и одна строка.
+- docs/features/HomogenousTerrain/Plan/STEP_07_LatitudeRange.md — контракт, результаты и ручной сценарий.
+
+Изменены:
+
+- core/src/com/unciv/pure/application/mapgeneration/TerrainGenerationPipeline.kt — необязательный диапазон, версия результата, проекция и валидация.
+- desktop/src/com/unciv/app/desktop/terrain/TerrainExperimentFiles.kt — хранение диапазона и совместимость прежних байтов JSON.
+- tests/src/com/unciv/testing/simulations/terrain/TerrainExperimentCli.kt — парные границы, явный legacy и столбцы CSV.
+- core/src/com/unciv/ui/mapeditor/TerrainPlaygroundScreen.kt — размеры в начале панели, динамические поля формы и широт, публикация новой исходной маски после успешного вычисления.
+- desktop/src/com/unciv/app/desktop/TerrainPlaygroundGoldenChecks.kt — реальные действия с формами, размерами, диапазоном и импортом.
+- tests/src/com/unciv/testing/pure/application/mapgeneration/TerrainGenerationPipelineTest.kt — влияние широт, повторяемость, одна строка и несовместимость Flat Earth.
+- tests/src/com/unciv/testing/pure/TerrainGenerationTestSuite.kt — включение LatitudeRangeTest.
+- tests/src/com/unciv/testing/mapgeneration/TerrainExperimentFilesTest.kt — диапазон, версии и фиксированная legacy JSON-фикстура внутри теста.
+- tests/src/com/unciv/testing/mapgeneration/TerrainExperimentCliTest.kt — диапазон, повтор, ошибки без каталога и новая сетка 7×1.
+- docs/features/HomogenousTerrain/Research/RESEARCH.md, CODE_GUIDE.md, Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Plan/STEP_05_Playground.md, Plan/STEP_06_Acceptance.md — актуальное состояние и ссылки на расширение.
+
+В расширении нет переносов или удалений файлов. Обычная игровая широтная модель не изменена.

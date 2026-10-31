@@ -4,7 +4,7 @@ import com.unciv.pure.domain.mapgeneration.*
 import kotlin.math.abs
 import kotlin.random.Random
 
-/** Геометрия и слои одной клетки экспериментального снимка. Индексы соседей относятся к списку cells. */
+/** Геометрия и слои клетки; индексы соседей относятся к списку cells. */
 data class TerrainSurfaceCell(
     val column: Int, val row: Int,
     val x: Double, val y: Double,
@@ -16,7 +16,7 @@ data class TerrainSurfaceCell(
     val humidity: Double? = null
 )
 
-/** Снимок фактических правил; порядок климатических условий и кандидатов растительности значим. */
+/** Снимок правил; порядок климатических условий и кандидатов растительности значим. */
 data class TerrainRuleSnapshot(
     val terrains: Set<String>,
     val waterTerrains: Set<String>,
@@ -32,10 +32,10 @@ data class TerrainRuleSnapshot(
     val loweringMarker: String = "terrain-lowering"
 )
 
-/** Режим определяет входной RNG-контекст: отдельный этап не имитирует расход предыдущих этапов. */
+/** Отдельный этап не имитирует расход RNG предыдущих этапов. */
 enum class TerrainGenerationMode { ALL, ELEVATION, CLIMATE, VEGETATION }
 
-/** Настройки запуска не читают часы; seed 0 — обычный воспроизводимый seed. */
+/** Явный seed; null диапазона сохраняет историческую климатическую модель. */
 data class TerrainExperimentSettings(
     val seed: Long = 0L,
     val climateScale: Double = 6.0,
@@ -46,10 +46,11 @@ data class TerrainExperimentSettings(
     val temperatureShift: Float = 0f,
     val vegetationRichness: Float = 0.4f,
     val flatEarth: Boolean = false,
-    val mode: TerrainGenerationMode = TerrainGenerationMode.ALL
+    val mode: TerrainGenerationMode = TerrainGenerationMode.ALL,
+    val latitudeRange: LatitudeRange? = null
 )
 
-/** Вход сохраняет всю геометрию и маску воды, а не только название шаблона карты. */
+/** Вход сохраняет всю геометрию и исходную маску воды. */
 data class TerrainExperimentInput(
     val cells: List<TerrainSurfaceCell>,
     val rules: TerrainRuleSnapshot,
@@ -68,16 +69,18 @@ data class TerrainExperimentInput(
     )
 }
 
-/** Результат содержит собственный исходный снимок для точного повторения эксперимента. */
+/** Результат содержит собственный исходный снимок для точного повторения. */
 data class TerrainExperimentResult(
     val input: TerrainExperimentInput,
     val cells: List<TerrainSurfaceCell>,
     val algorithmVersion: String = TerrainGenerationPipeline.ALGORITHM_VERSION
 )
 
-/** Координирует общие доменные генераторы без TileMap, Gdx, файлов или глобального состояния. */
+/** Координирует общие доменные генераторы без движка, файлов и глобального состояния. */
 object TerrainGenerationPipeline {
     const val ALGORITHM_VERSION = "homogenous-terrain-1"
+    /** Новый режим имеет отдельную версию; старые отчёты сохраняют прежнюю. */
+    const val LATITUDE_ALGORITHM_VERSION = "homogenous-terrain-latitude-1"
 
     fun generate(source: TerrainExperimentInput): TerrainExperimentResult {
         val input = source.snapshot()
@@ -99,12 +102,18 @@ object TerrainGenerationPipeline {
         if (settings.mode == TerrainGenerationMode.ALL || settings.mode == TerrainGenerationMode.CLIMATE) {
             val humiditySeed = random.nextInt().toDouble()
             val temperatureSeed = random.nextInt().toDouble()
+            val range = settings.latitudeRange
+            val minY = cells.minOf { it.y }
+            val maxY = cells.maxOf { it.y }
             val climate = ClimateGenerator.generate(cells.map {
-                ClimateCell(it.x, it.y, it.latitude, it.longitude, it.baseTerrain,
+                // Проекция меняет только фон температуры, не геометрию и координаты шума.
+                val latitude = range?.at(it.y, minY, maxY)?.toFloat() ?: it.latitude
+                ClimateCell(it.x, it.y, latitude, it.longitude, it.baseTerrain,
                     it.baseTerrain in rules.waterTerrains || it.baseTerrain in rules.climateExcludedTerrains,
                     it.temperature, it.humidity)
             }, ClimateSettings(settings.climateScale, settings.temperatureExtremeness, settings.temperatureShift,
-                settings.flatEarth, cells.maxOf { abs(it.latitude) }, cells.maxOf { abs(it.longitude) }),
+                settings.flatEarth, if (range == null) cells.maxOf { abs(it.latitude) } else 90f,
+                cells.maxOf { abs(it.longitude) }),
                 rules.climateRanges, rules.terrains, rules.firstLandTerrain, humiditySeed, temperatureSeed)
             cells = cells.mapIndexed { index, cell ->
                 val result = climate[index]
@@ -120,15 +129,20 @@ object TerrainGenerationPipeline {
                 if (addition == null) cell else cell.copy(features = cell.features + addition)
             }
         }
-        return TerrainExperimentResult(input, cells.map { it.copy(features = it.features.toList(), neighbors = it.neighbors.toList()) })
+        return TerrainExperimentResult(input,
+            cells.map { it.copy(features = it.features.toList(), neighbors = it.neighbors.toList()) },
+            if (settings.latitudeRange == null) ALGORITHM_VERSION else LATITUDE_ALGORITHM_VERSION)
     }
 
-    /** Согласованность всего снимка проверяется до первого вычисления и расхода RNG. */
+    /** Проверяет весь снимок до первого вычисления и расхода RNG. */
     fun validate(input: TerrainExperimentInput) {
         val cells = input.cells
         val rules = input.rules
         val settings = input.settings
         require(cells.isNotEmpty()) { "Terrain snapshot must contain cells" }
+        require(!(settings.flatEarth && settings.latitudeRange != null)) {
+            "Latitude range cannot be combined with radial Flat Earth climate"
+        }
         require(listOf(settings.climateScale, settings.vegetationScale, settings.elevationScale)
             .all { it.isFinite() && it > 0.0 }) { "All terrain scales must be positive and finite" }
         require(listOf(settings.elevationExponent, settings.temperatureExtremeness,
@@ -154,8 +168,9 @@ object TerrainGenerationPipeline {
             require(cell.neighbors.all { it in cells.indices }) { "Neighbor outside snapshot" }
             require(cell.neighbors.all { index in cells[it].neighbors }) { "Asymmetric terrain neighborhood" }
         }
-        // В экспериментальном режиме вырожденная геометрия отклоняется явно; игровой legacy-путь не меняется.
-        if (settings.mode == TerrainGenerationMode.ALL || settings.mode == TerrainGenerationMode.CLIMATE) {
+        // Явный диапазон допускает одну строку; legacy сохраняет прежние ограничения.
+        if ((settings.mode == TerrainGenerationMode.ALL || settings.mode == TerrainGenerationMode.CLIMATE)
+            && settings.latitudeRange == null) {
             require(cells.maxOf { abs(it.latitude) } > 0f) { "Climate requires a nonzero latitude extent" }
             if (settings.flatEarth) require(cells.maxOf { abs(it.longitude) } > 0f) { "Flat Earth requires a nonzero longitude extent" }
         }

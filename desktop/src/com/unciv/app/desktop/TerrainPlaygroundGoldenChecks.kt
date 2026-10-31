@@ -60,6 +60,7 @@ object TerrainPlaygroundGoldenChecks {
     }
 
     fun ready(screen: TerrainPlaygroundScreen): Boolean {
+        if (phase >= 9) return readyLatitudeAndSize(screen)
         val status = screen.stage.root.findActor<Label>("terrain-status").text.toString()
         if (phase != 3) check(!status.startsWith("Error:")) { status }
         if (!screen.isResultReady) return false
@@ -67,23 +68,22 @@ object TerrainPlaygroundGoldenChecks {
             0 -> {
                 check(screen.displayedResultSnapshot() == initialResult) { "Worker read mutable form state" }
                 check(screen.snapshotForRun().settings.seed == 42L)
-                val fields = listOf(
+                val baseline = screen.snapshotForRun()
+                for ((index, name) in listOf(
                     "terrain-climate-scale",
                     "terrain-vegetation-scale",
                     "terrain-elevation-scale"
-                )
-                val baseline = screen.snapshotForRun()
-                for ((index, name) in fields.withIndex()) {
-                    val field = field(screen, name)
-                    val original = field.text
-                    field.text = "9.5"
+                ).withIndex()) {
+                    val control = field(screen, name)
+                    val original = control.text
+                    control.text = "9.5"
                     val settings = when (index) {
                         0 -> baseline.settings.copy(climateScale = 9.5)
                         1 -> baseline.settings.copy(vegetationScale = 9.5)
                         else -> baseline.settings.copy(elevationScale = 9.5)
                     }
                     check(screen.snapshotForRun() == baseline.copy(settings = settings)) { "Scale controls are coupled" }
-                    field.text = original
+                    control.text = original
                 }
                 field(screen, "terrain-seed").text = "0"
                 check(screen.snapshotForRun() == initialResult.input)
@@ -100,7 +100,7 @@ object TerrainPlaygroundGoldenChecks {
             }
 
             2 -> {
-                check(screen.displayedResultSnapshot() == expected) { "Scale change did not use the shared pipeline" }
+                check(screen.displayedResultSnapshot() == expected)
                 pathField(screen).text = "invalid"
                 phase = 3
                 click(screen, "Open snapshot / report")
@@ -115,14 +115,14 @@ object TerrainPlaygroundGoldenChecks {
             }
 
             4 -> {
-                check(screen.displayedResultSnapshot() == imported) { "Opened report differs from the CLI result" }
-                check(screen.snapshotForRun() == imported.input) { "Opened report did not restore source and settings" }
+                check(screen.displayedResultSnapshot() == imported)
+                check(screen.snapshotForRun() == imported.input)
                 phase = 5
                 click(screen, "Generate / repeat")
             }
 
             5 -> {
-                check(screen.displayedResultSnapshot() == imported) { "Imported source accumulated generated layers" }
+                check(screen.displayedResultSnapshot() == imported) { "Imported source accumulated layers" }
                 pathField(screen).text = ""
                 phase = 6
                 click(screen, "Show game terrain")
@@ -135,8 +135,8 @@ object TerrainPlaygroundGoldenChecks {
             }
 
             7 -> {
-                check(screen.displayedResultSnapshot() == imported) { "PNG view changed the result" }
-                check(screen.stage.root.findActor<Actor>("terrain-game-preview") == null) { "PNG view did not replace game view" }
+                check(screen.displayedResultSnapshot() == imported)
+                check(screen.stage.root.findActor<Actor>("terrain-game-preview") == null)
                 check(status.startsWith("Displayed: BASE")) { status }
                 phase = 8
                 click(screen, "Show game terrain")
@@ -144,15 +144,8 @@ object TerrainPlaygroundGoldenChecks {
 
             8 -> {
                 verifyGamePreview(screen)
-                check(screen.game.settings.lastGameSetup === originalSetup) { "Playground replaced game setup" }
-                check(screen.game.settings.lastGameSetup?.mapParameters?.toString() == originalParameters) { "Playground changed game parameters" }
-                check(screen.stage.root.findActor<Label>("terrain-metrics").text.isNotEmpty())
-                check(screen.stage.width > 370f && screen.stage.height > 0f)
                 phase = 9
-                return true
             }
-
-            else -> return true
         }
         return false
     }
@@ -195,5 +188,110 @@ object TerrainPlaygroundGoldenChecks {
                 holder.tileGroups.getValue(tile)
                     .all { it.showEntireMap && it.tileBaseImages.isNotEmpty() })
         }
+    }
+
+    /** Проверяет смену геометрии, снимок широт, отказ без мутации и открытие нового формата. */
+    private fun readyLatitudeAndSize(screen: TerrainPlaygroundScreen): Boolean {
+        if (!screen.isResultReady) return false
+        val status = screen.stage.root.findActor<Label>("terrain-status").text.toString()
+        if (phase != 12) check(!status.startsWith("Error:")) { status }
+        fun select(name: String, value: String) {
+            screen.stage.root.findActor<com.badlogic.gdx.scenes.scene2d.ui.SelectBox<String>>(name).selected =
+                    value
+        }
+        when (phase) {
+            9 -> {
+                select("terrain-shape", "rectangular")
+                field(screen, "terrain-width").text = "7"
+                field(screen, "terrain-height").text = "5"
+                check(screen.stage.root.findActor<Actor>("terrain-radius") == null)
+                select("terrain-latitude-mode", "Latitude range")
+                field(screen, "terrain-top-latitude").text = "60"
+                field(screen, "terrain-bottom-latitude").text = "20"
+                val draft = screen.snapshotForRun()
+                expected = TerrainGenerationPipeline.generate(
+                    draft.copy(
+                        cells = TerrainGridFactory.rectangular(
+                            7,
+                            5,
+                            "Grassland"
+                        )
+                    )
+                )
+                phase = 10
+                click(screen, "Create new land mask")
+                // После запуска меняется только черновик; расчёт использует захваченный диапазон.
+                field(screen, "terrain-top-latitude").text = "80"
+            }
+
+            10 -> {
+                check(screen.displayedResultSnapshot() == expected) { "Grid worker read mutable latitude fields" }
+                check(screen.snapshotForRun() == expected.input) { "New grid did not become the source" }
+                check(expected.cells.size == 35)
+                phase = 11
+                click(screen, "Generate / repeat")
+            }
+
+            11 -> {
+                check(screen.displayedResultSnapshot() == expected)
+                field(screen, "terrain-top-latitude").text = "100"
+                phase = 12
+                click(screen, "Create new land mask")
+            }
+
+            12 -> {
+                check(status.startsWith("Error:")) { "Invalid latitude was accepted" }
+                check(screen.displayedResultSnapshot() == expected) { "Invalid grid replaced the result" }
+                field(screen, "terrain-top-latitude").text = "60"
+                check(screen.snapshotForRun() == expected.input) { "Invalid grid changed the source" }
+                select("terrain-shape", "hexagonal")
+                field(screen, "terrain-radius").text = "3"
+                check(screen.stage.root.findActor<Actor>("terrain-width") == null)
+                expected = TerrainGenerationPipeline.generate(
+                    screen.snapshotForRun()
+                        .copy(cells = TerrainGridFactory.hexagonal(3, "Grassland"))
+                )
+                phase = 13
+                click(screen, "Create new land mask")
+            }
+
+            13 -> {
+                check(screen.displayedResultSnapshot() == expected)
+                check(expected.cells.size == 37)
+                imported = expected
+                TerrainExperimentFiles.writeResult(report, imported)
+                select("terrain-latitude-mode", "Legacy")
+                phase = 14
+                click(screen, "Generate / repeat")
+            }
+
+            14 -> {
+                check(screen.displayedResultSnapshot()!!.input.settings.latitudeRange == null)
+                pathField(screen).text = report.absolutePath
+                phase = 15
+                click(screen, "Open snapshot / report")
+            }
+
+            15 -> {
+                check(screen.displayedResultSnapshot() == imported)
+                check(screen.snapshotForRun() == imported.input) { "Report did not restore latitude controls" }
+                pathField(screen).text = ""
+                phase = 16
+                click(screen, "Show game terrain")
+            }
+
+            16 -> {
+                verifyGamePreview(screen)
+                check(screen.game.settings.lastGameSetup === originalSetup)
+                check(screen.game.settings.lastGameSetup?.mapParameters?.toString() == originalParameters)
+                check(screen.stage.root.findActor<Label>("terrain-metrics").text.isNotEmpty())
+                check(screen.stage.width > 370f && screen.stage.height > 0f)
+                phase = 17
+                return true
+            }
+
+            else -> return true
+        }
+        return false
     }
 }

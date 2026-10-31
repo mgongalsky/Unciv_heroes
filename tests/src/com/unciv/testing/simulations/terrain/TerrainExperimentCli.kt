@@ -4,23 +4,22 @@ import com.unciv.app.desktop.terrain.TerrainExperimentExport
 import com.unciv.app.desktop.terrain.TerrainExperimentFiles
 import com.unciv.app.desktop.terrain.TerrainExperimentSource
 import com.unciv.pure.application.mapgeneration.*
+import com.unciv.pure.domain.mapgeneration.LatitudeRange
 import java.io.File
 
 /** Пакетный запуск общего координатора без игрового приложения, окна и JUnit. */
 object TerrainExperimentCli {
     private val options = setOf("input", "terrains", "shape", "radius", "width", "height", "output", "seeds",
-        "climate-scales", "vegetation-scales", "elevation-scales", "mode")
+        "climate-scales", "vegetation-scales", "elevation-scales", "mode", "latitude-mode", "top-latitude", "bottom-latitude")
     private const val USAGE = "TerrainExperimentCli (--input=<snapshot-or-report.json> | --terrains=<Terrains.json> " +
         "[--shape=hexagonal --radius=12 | --shape=rectangular --width=30 --height=20]) --output=<new-directory> " +
         "[--seeds=0,42,-17] [--climate-scales=6,12] [--vegetation-scales=3,6] " +
-        "[--elevation-scales=2,4] [--mode=ALL|ELEVATION|CLIMATE|VEGETATION]"
+        "[--elevation-scales=2,4] [--mode=ALL|ELEVATION|CLIMATE|VEGETATION] " +
+        "[--top-latitude=60 --bottom-latitude=20 | --latitude-mode=legacy]"
 
     @JvmStatic
     fun main(args: Array<String>) {
-        if (args.contentEquals(arrayOf("--help"))) {
-            println(USAGE)
-            return
-        }
+        if (args.contentEquals(arrayOf("--help"))) { println(USAGE); return }
         val parsed = linkedMapOf<String, String>()
         for (argument in args) {
             require(argument.startsWith("--") && '=' in argument) { "Expected --name=value. $USAGE" }
@@ -36,10 +35,20 @@ object TerrainExperimentCli {
         val output = File(requireNotNull(parsed["output"]) { "Missing --output. $USAGE" })
         require(!output.exists()) { "Output directory already exists: $output" }
         val requestedMode = parsed["mode"]?.let { TerrainGenerationMode.valueOf(it) }
+        val latitudeMode = parsed["latitude-mode"]
+        require(latitudeMode == null || latitudeMode in setOf("legacy", "range")) { "Unknown latitude mode" }
+        val hasTop = "top-latitude" in parsed
+        val hasBottom = "bottom-latitude" in parsed
+        require(hasTop == hasBottom) { "Specify both --top-latitude and --bottom-latitude" }
+        require(latitudeMode != "legacy" || !hasTop) { "Legacy latitude mode cannot have a range" }
+        require(latitudeMode != "range" || hasTop) { "Range mode requires both latitude bounds" }
+        val requestedRange = if (hasTop) LatitudeRange(
+            requireNotNull(parsed.getValue("top-latitude").toDoubleOrNull()) { "Invalid top latitude" },
+            requireNotNull(parsed.getValue("bottom-latitude").toDoubleOrNull()) { "Invalid bottom latitude" }) else null
         fun integer(name: String, default: Int) = parsed[name]?.let {
             requireNotNull(it.toIntOrNull()) { "Invalid integer in --$name: $it" }
         } ?: default
-        val source = if (parsed.containsKey("input")) {
+        val loaded = if (parsed.containsKey("input")) {
             require(setOf("shape", "radius", "width", "height").none { it in parsed }) {
                 "Snapshot geometry cannot be overridden; use --terrains for a new grid"
             }
@@ -53,8 +62,14 @@ object TerrainExperimentCli {
             TerrainExperimentSource.create(
                 TerrainExperimentSource.loadRules(File(parsed.getValue("terrains"))), shape,
                 radius = integer("radius", 12), width = integer("width", 30), height = integer("height", 20),
-                settings = TerrainExperimentSettings(mode = requestedMode ?: TerrainGenerationMode.ALL))
+                settings = TerrainExperimentSettings(mode = requestedMode ?: TerrainGenerationMode.ALL,
+                    latitudeRange = requestedRange))
         }
+        val source = loaded.copy(settings = loaded.settings.copy(latitudeRange = when {
+            latitudeMode == "legacy" -> null
+            hasTop -> requestedRange
+            else -> loaded.settings.latitudeRange
+        }))
         val original = source.settings
         fun doubles(name: String, default: Double): List<Double> = parsed[name]?.split(',')?.map {
             requireNotNull(it.trim().toDoubleOrNull()) { "Invalid number in --$name: $it" }
@@ -76,16 +91,17 @@ object TerrainExperimentCli {
             configurations.add(settings)
         }
         check(output.mkdirs()) { "Cannot create output directory: $output" }
-        // Результаты не становятся входами следующих запусков.
         TerrainExperimentFiles.writeInput(File(output, "input.json"), source)
         val index = File(output, "index.csv")
-        index.writeText("run,seed,climateScale,vegetationScale,elevationScale,mode,report\n", Charsets.UTF_8)
+        index.writeText("run,seed,climateScale,vegetationScale,elevationScale,mode,latitudeMode,topLatitude,bottomLatitude,report\n", Charsets.UTF_8)
         for ((number, settings) in configurations.withIndex()) {
             val name = "run-${number.toString().padStart(4, '0')}"
             val result = TerrainGenerationPipeline.generate(source.copy(settings = settings))
             TerrainExperimentExport.write(File(output, name), result)
+            val range = settings.latitudeRange
             index.appendText("$name,${settings.seed},${settings.climateScale},${settings.vegetationScale}," +
-                "${settings.elevationScale},${settings.mode},$name/result.json\n", Charsets.UTF_8)
+                "${settings.elevationScale},${settings.mode},${if (range == null) "legacy" else "range"}," +
+                "${range?.top ?: ""},${range?.bottom ?: ""},$name/result.json\n", Charsets.UTF_8)
             println("EXPORTED $name seed=${settings.seed} mode=${settings.mode}")
         }
         println("Completed ${configurations.size} terrain experiments: ${output.absolutePath}")

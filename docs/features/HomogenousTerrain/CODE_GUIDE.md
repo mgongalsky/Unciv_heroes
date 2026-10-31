@@ -1,74 +1,77 @@
 # HomogenousTerrain: код и запуск
 
-Реализация и автоматические проверки завершены. Визуальные baseline и ручная приёмка не выполнены; исторические эталоны охватывают три выделенных слоя, а не весь generateMap.
+Реализация и автоматические проверки завершены. Пользователь подтвердил первоначальный просмотр игровых текстур. Новые настройки размеров и широт ещё требуют ручного просмотра; визуальные baseline не утверждены.
 
-[Исследование](Research/RESEARCH.md) · [План](Plan/PLAN.md) · [Этапы](Plan/STEPS.md) · [Файлы](Plan/files.md) · [Приёмка](Plan/STEP_06_Acceptance.md)
+[Исследование](Research/RESEARCH.md) · [План](Plan/PLAN.md) · [Этапы](Plan/STEPS.md) · [Файлы](Plan/files.md) · [Размеры и широты](Plan/STEP_07_LatitudeRange.md)
 
 ## Путь вычислений
 
 Игра и редактор → MapGenerator → TerrainGenerationAdapter → общие доменные генераторы → TileMap.
 
-CLI и песочница → TerrainGenerationPipeline → те же генераторы → TerrainExperimentResult. ALL означает рельеф → климат → растительность. Берега, лёд, реки, ресурсы и остальные игровые этапы в экспериментальный ALL не входят.
+CLI и песочница → TerrainGenerationPipeline → те же генераторы → TerrainExperimentResult. ALL означает рельеф → климат → растительность. Берега, лёд, реки и игровые объекты в него не входят.
 
-Domain находится в `core/src/com/unciv/pure/domain/mapgeneration/`: PerlinNoise, ClimateGenerator, ElevationGenerator, VegetationGenerator. Application в соседнем `pure/application/mapgeneration/`: контракты и координатор TerrainGenerationPipeline, геометрия TerrainGridFactory, метрики TerrainMetrics. Здесь нет Gdx, файлов и игровых объектов.
+В `core/src/com/unciv/pure/domain/mapgeneration/` находятся PerlinNoise, ClimateGenerator, ElevationGenerator, VegetationGenerator и LatitudeRange. Последний проверяет границы широт и интерполирует их по вертикальной координате. В `pure/application/mapgeneration/` находятся снимки, координатор, TerrainGridFactory и TerrainMetrics. Чистый код не зависит от движка и файлов.
 
-Игровые адаптеры находятся в `core/src/com/unciv/logic/map/mapgenerator/`: TerrainGenerationAdapter применяет этапы, TerrainRuleSnapshotAdapter снимает правила, TerrainPreviewMapAdapter создаёт отдельную карту для игровых спрайтов. `logic/map/Perlin.kt` сохраняет прежний API делегированием.
+В `core/src/com/unciv/logic/map/mapgenerator/` TerrainGenerationAdapter применяет этапы, TerrainRuleSnapshotAdapter снимает правила, TerrainPreviewMapAdapter создаёт отдельную карту для игровых спрайтов. `logic/map/Perlin.kt` сохраняет прежний API. Диапазон широт пока используется только экспериментами; обычная игра сохраняет прежний климат.
 
-## Снимки и файлы
+## Снимки и совместимость
 
-JVM-адаптеры находятся в `desktop/src/com/unciv/app/desktop/terrain/`:
+В `desktop/src/com/unciv/app/desktop/terrain/`:
 
-- TerrainExperimentSource загружает Terrains.json в локальные правила без RulesetCache. Дубликаты имён отклоняются; моды не объединяются неявно.
-- TerrainExperimentFiles сохраняет входы и результаты с версией и SHA-256. Чтение результата проверяет повторное вычисление.
-- TerrainExperimentExport создаёт result.json, metrics.csv, legend.csv и пять PNG без OpenGL. Существующий каталог не перезаписывается.
+- TerrainExperimentSource загружает Terrains.json без RulesetCache; дубликаты отклоняются, моды не объединяются неявно.
+- TerrainExperimentFiles сохраняет входы и отчёты с SHA-256 и проверяет повторное вычисление.
+- TerrainExperimentExport создаёт result.json, metrics.csv, legend.csv и пять PNG без OpenGL. Каталог должен быть новым.
 
-Снимок хранит геометрию, исходную маску, фактический порядок правил и настройки. Повторное чтение одного снимка устраняет неопределённость legacy HashSet между процессами. Отдельный этап сравним с игровым только при одинаковых исходных клетках и RNG-контексте.
+Снимок содержит геометрию, маску, порядок правил и настройки. Legacy использует `homogenous-terrain-1`; диапазон — `homogenous-terrain-latitude-1`. У legacy отсутствует поле latitudeRange, поэтому канонические байты и checksum сохраняются. Несогласованные версии отклоняются.
 
-## Запуск
+Отдельный этап сравним с игровым только при одинаковом входе и RNG-контексте. Сохранённый порядок правил устраняет неопределённость legacy HashSet между процессами.
 
-Из корня проекта получить справку CLI:
+## Запуск песочницы
 
-```text
-./gradlew tests:runTerrainExperimentCli --args="--help"
-```
+В IDE открыть Run → Edit Configurations, выбрать существующую Gradle-конфигурацию Terrain либо создать Gradle-конфигурацию. Gradle project — корень проекта, задача — `desktop:runTerrain`. Запустить конфигурацию. Launcher работает из android/assets; для открытия отчётов удобнее абсолютный путь.
 
-В PowerShell для готового снимка без пробелов в пути:
+Размеры находятся в начале левой панели. New grid shape выбирает hexagonal с радиусом или rectangular с шириной и высотой. Равные ширина и высота задают квадратный контур, клетки остаются гексами. Create new land mask применяет размеры; Generate / repeat сохраняет текущую сетку.
+
+Для участка северного полушария выбрать Latitude model = Latitude range и задать верхнюю 60, нижнюю 20. Для экватора — 20 и −20. Допустимы −90…+90, верхняя не меньше нижней. Одна строка использует середину диапазона, одинаковые границы — постоянную широту. Flat Earth с диапазоном несовместим.
+
+Seed фиксирует случайность. Повтор с тем же полным входом воспроизводится; изменение размера не обязано сохранять рисунок общих клеток. New seed меняет его явно. Параметры фиксируются до рабочего потока, результат публикуется на GL-потоке. Ошибка оставляет прежний результат.
+
+Show game terrain показывает игровые текстуры с навигацией без обработчиков редактора. Show selected layer возвращает PNG. После генерации можно снова нажать Show game terrain. Open snapshot / report проверяет и восстанавливает вход, Export displayed result сохраняет показанный результат независимо от черновика формы.
+
+Игровой вид требует стандартного незамкнутого соседства гексов, координат −500…500 и совместимого графического ruleset. Произвольные графы доступны через PNG и метрики. Общие игровые настройки lastGameSetup не меняются.
+
+Подробный [ручной сценарий](Plan/STEP_07_LatitudeRange.md) использует seed 42, прямоугольник 40×30 и диапазоны 60°…20° и 20°…−20°.
+
+## CLI
+
+Из корня проекта в PowerShell:
 
 ```powershell
-.\gradlew.bat tests:runTerrainExperimentCli --args='--input=experiment.json --output=terrain-series --seeds=0,42 --climate-scales=6,12'
+.\gradlew.bat tests:runTerrainExperimentCli --args='--help'
 ```
 
-Новый эксперимент из базовых правил с внутренними кавычками вокруг пути:
+Новый прямоугольный эксперимент:
 
 ```powershell
-.\gradlew.bat tests:runTerrainExperimentCli --args='--terrains="android/assets/jsons/Civ V - Gods & Kings/Terrains.json" --shape=hexagonal --radius=8 --output=terrain-series --seeds=0,42'
+.\gradlew.bat tests:runTerrainExperimentCli --args='--terrains="android/assets/jsons/Civ V - Gods & Kings/Terrains.json" --shape=rectangular --width=40 --height=30 --top-latitude=60 --bottom-latitude=20 --seeds=42 --output=terrain-north-42'
 ```
 
-Графический launcher:
+Повтор отчёта сохраняет его диапазон:
 
-```text
-./gradlew desktop:runTerrain
+```powershell
+.\gradlew.bat tests:runTerrainExperimentCli --args='--input=terrain-north-42/run-0000/result.json --output=terrain-north-repeat'
 ```
 
-Он работает из android/assets; относительные пути --input и --terrains считаются оттуда. Для отчётов серии удобнее абсолютный путь в поле экрана. Задачи можно запускать из Gradle-конфигураций IDE. В MaxVibes сборка и тесты выполняются через BUILD/TESTS.
-
-## Настройки и UI
-
-Defaults: tilesPerBiomeArea = 6, vegetationScale = 3.0, elevationScale = 2.0. Старые JSON получают исторические значения. Общая форма предлагает новые масштабы 0.5–30 с шагом 0.5; её Reset сохраняет исторический reseed. Partial фиксирует настройки выбранного этапа до фонового запуска.
-
-TerrainPlaygroundScreen принимает файловые callbacks от DesktopLauncherTerrain. Параметры и исходная маска фиксируются до рабочего потока, текстура публикуется на GL-потоке. Generate / repeat не накапливает слои; New seed меняет seed явно. Open snapshot / report проверяет отчёт. Export displayed result сохраняет показанный результат, независимо от черновика формы.
-
-Show game terrain использует EditorMapHolder без партии и обработчиков редактирования. Требуются стандартные незамкнутые гексагональные координаты в пределах −500…500 и совместимые определения террейнов загруженного графического ruleset. Show selected layer возвращает PNG. Пользовательские графы и другие правила можно исследовать через числовые слои и экспорт.
+Обе границы задаются вместе. `--latitude-mode=range` требует границ; `--latitude-mode=legacy` отключает диапазон и не допускает границы. Геометрия импортированного снимка не переопределяется: для новой сетки нужен `--terrains`. Неверные параметры отклоняются до создания каталога. CSV-индекс содержит режим и границы широт.
 
 ## Проверки
 
-Native TESTS:
+В MaxVibes сборка и тесты запускаются native BUILD/TESTS. После расширения прошли:
 
-- `com.unciv.testing.pure.TerrainGenerationTestSuite`: 33 чистых теста.
-- `com.unciv.testing.mapgeneration.TerrainGenerationCharacterizationTest`: 8 тестов и 36 исторических отпечатков слоёв/RNG.
-- `com.unciv.testing.mapgeneration.TerrainParametersCompatibilityTest`: 5 тестов.
-- В том же пакете TerrainExperimentFilesTest (4), TerrainExperimentExportTest (2), TerrainExperimentSourceTest (3), TerrainExperimentCliTest (4), TerrainFullGenerationTest (2).
-- `com.unciv.testing.mapgeneration.TerrainAcceptanceSeriesTest`: 1 тест, сохраняющий восемь проверенных экспериментов в tests/build/terrain-acceptance; latest.txt указывает каталог.
-- `com.unciv.testing.UiGoldenTest#terrainPlaygroundRender` и `#terrainParametersRender`: прошедшие capture-проверки. Методы без суффикса Render сравнивают с baseline; UiGoldenUpdateTest обновляет их только намеренно после просмотра.
+- `com.unciv.testing.pure.TerrainGenerationTestSuite`: 39 тестов.
+- `com.unciv.testing.mapgeneration.TerrainGenerationCharacterizationTest`: 8 тестов, 36 исторических отпечатков и RNG.
+- `com.unciv.testing.mapgeneration.TerrainExperimentFilesTest`: 7 тестов, включая фиксированную legacy JSON-фикстуру.
+- `com.unciv.testing.mapgeneration.TerrainExperimentCliTest`: 7 тестов, включая однострочный прямоугольник.
+- `com.unciv.testing.UiGoldenTest#terrainPlaygroundRender`: обработчики размеров, широт, повтора, ошибок, импорта и игровых текстур.
 
-Полный генератор проверен на повторяемость и старые параметры, включая Flat Earth и wrap. Исторический эталон всего конвейера не получен; руины и размещение стартовых регионов не покрыты этим интеграционным тестом. Точные данные серии и оставшиеся действия автора приведены в документе приёмки.
+Первоначальный этап также проверил параметры, источник правил, экспорт, полный генератор, общую форму и серию из восьми экспериментов; детали в [приёмке](Plan/STEP_06_Acceptance.md). Исторического эталона всего generateMap нет. UI Render — capture, а не сравнение с baseline; эталоны намеренно не обновлялись.

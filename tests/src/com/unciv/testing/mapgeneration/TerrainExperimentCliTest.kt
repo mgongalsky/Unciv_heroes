@@ -87,4 +87,89 @@ class TerrainExperimentCliTest {
         assertEquals(4.0, result.input.settings.elevationScale, 0.0)
         assertTrue(result.input.cells.all { it.baseTerrain == "Grassland" })
     }
+
+    /** Диапазон сохраняется в отчёте, повторяется и явно отключается без изменения исходного файла. */
+    @Test
+    fun latitudeRangeCanBeReplayedAndDisabled() {
+        val input = inputFile()
+        val original = input.readBytes()
+        val output = File(temporary.root, "latitude")
+        TerrainExperimentCli.main(
+            arrayOf(
+                "--input=$input",
+                "--output=$output",
+                "--top-latitude=60",
+                "--bottom-latitude=20"
+            )
+        )
+        val report = File(output, "run-0000/result.json")
+        val result = TerrainExperimentFiles.readResult(report)
+        assertEquals(
+            com.unciv.pure.domain.mapgeneration.LatitudeRange(60.0, 20.0),
+            result.input.settings.latitudeRange
+        )
+        val replay = File(temporary.root, "latitude-repeat")
+        TerrainExperimentCli.main(arrayOf("--input=$report", "--output=$replay"))
+        assertEquals(
+            result,
+            TerrainExperimentFiles.readResult(File(replay, "run-0000/result.json"))
+        )
+        val legacy = File(temporary.root, "legacy-repeat")
+        TerrainExperimentCli.main(
+            arrayOf(
+                "--input=$report",
+                "--output=$legacy",
+                "--latitude-mode=legacy"
+            )
+        )
+        assertEquals(
+            TerrainGenerationPipeline.generate(TerrainExperimentFiles.readInput(input)),
+            TerrainExperimentFiles.readResult(File(legacy, "run-0000/result.json"))
+        )
+        assertArrayEquals(original, input.readBytes())
+    }
+
+    /** Неполные, перевёрнутые и конфликтующие широты отклоняются до записи. */
+    @Test
+    fun invalidLatitudeOptionsCreateNoOutput() {
+        val input = inputFile()
+        val variants = listOf(
+            arrayOf("--top-latitude=60"),
+            arrayOf("--top-latitude=20", "--bottom-latitude=60"),
+            arrayOf("--top-latitude=NaN", "--bottom-latitude=20"),
+            arrayOf("--latitude-mode=legacy", "--top-latitude=60", "--bottom-latitude=20"),
+            arrayOf("--latitude-mode=range")
+        )
+        for ((index, options) in variants.withIndex()) {
+            val output = File(temporary.root, "bad-latitude-$index")
+            try {
+                TerrainExperimentCli.main(arrayOf("--input=$input", "--output=$output") + options)
+                fail("Invalid latitude options accepted")
+            } catch (_: IllegalArgumentException) {
+                assertFalse(output.exists())
+            }
+        }
+    }
+
+    /** Диапазон передаётся до валидации новой сетки, поэтому одна строка допустима. */
+    @Test
+    fun latitudeRangeAllowsNewSingleRowGrid() {
+        val terrains = temporary.newFile("single-row-terrains.json")
+        terrains.writeText("""[{"name":"Grassland","type":"Land"}]""")
+        val output = File(temporary.root, "single-row")
+        TerrainExperimentCli.main(
+            arrayOf(
+                "--terrains=$terrains", "--output=$output",
+                "--shape=rectangular", "--width=7", "--height=1",
+                "--top-latitude=60", "--bottom-latitude=20"
+            )
+        )
+        val result = TerrainExperimentFiles.readResult(File(output, "run-0000/result.json"))
+        assertEquals(7, result.cells.size)
+        assertEquals(
+            com.unciv.pure.domain.mapgeneration.LatitudeRange(60.0, 20.0),
+            result.input.settings.latitudeRange
+        )
+        assertEquals(TerrainGenerationPipeline.LATITUDE_ALGORITHM_VERSION, result.algorithmVersion)
+    }
 }

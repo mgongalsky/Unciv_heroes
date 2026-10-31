@@ -24,7 +24,7 @@ object TerrainExperimentFiles {
     }
 
     fun writeResult(file: File, result: TerrainExperimentResult) {
-        require(result.algorithmVersion == TerrainGenerationPipeline.ALGORITHM_VERSION) { "Unsupported terrain algorithm" }
+        require(result.algorithmVersion == algorithmVersion(result.input)) { "Unsupported terrain algorithm" }
         val snapshot = result.input.snapshot()
         TerrainGenerationPipeline.validate(snapshot)
         val input = inputJson(snapshot)
@@ -37,12 +37,12 @@ object TerrainExperimentFiles {
         write(file, root)
     }
 
-    /** Несовпадение версии, контрольной суммы или результата не маскируется новым успешным запуском. */
+    /** Проверяет согласованность версии, checksum и повторного вычисления для обеих моделей климата. */
     fun readResult(file: File): TerrainExperimentResult {
         val root = JsonReader().parse(file.readText(Charsets.UTF_8))
         require(root.getInt("formatVersion") == 1) { "Unsupported terrain report format" }
-        require(root.getString("algorithmVersion") == TerrainGenerationPipeline.ALGORITHM_VERSION) { "Unsupported terrain algorithm" }
         val input = decodeInput(root.get("input"))
+        require(root.getString("algorithmVersion") == algorithmVersion(input)) { "Unsupported terrain algorithm" }
         require(root.getString("inputSha256") == sha256(text(inputJson(input)))) { "Terrain input checksum mismatch" }
         val output = decodeCells(root.get("output"))
         val regenerated = TerrainGenerationPipeline.generate(input)
@@ -53,7 +53,7 @@ object TerrainExperimentFiles {
     private fun inputJson(input: TerrainExperimentInput): JsonValue {
         val root = obj()
         root.addChild("formatVersion", number(1))
-        root.addChild("algorithmVersion", string(TerrainGenerationPipeline.ALGORITHM_VERSION))
+        root.addChild("algorithmVersion", string(algorithmVersion(input)))
         val settings = input.settings
         val config = obj()
         config.addChild("seed", JsonValue(settings.seed))
@@ -61,18 +61,31 @@ object TerrainExperimentFiles {
         config.addChild("vegetationScale", JsonValue(settings.vegetationScale))
         config.addChild("elevationScale", JsonValue(settings.elevationScale))
         config.addChild("elevationExponent", JsonValue(settings.elevationExponent.toDouble()))
-        config.addChild("temperatureExtremeness", JsonValue(settings.temperatureExtremeness.toDouble()))
+        config.addChild(
+            "temperatureExtremeness",
+            JsonValue(settings.temperatureExtremeness.toDouble())
+        )
         config.addChild("temperatureShift", JsonValue(settings.temperatureShift.toDouble()))
         config.addChild("vegetationRichness", JsonValue(settings.vegetationRichness.toDouble()))
         config.addChild("flatEarth", JsonValue(settings.flatEarth))
         config.addChild("mode", string(settings.mode.name))
+        // Отсутствие поля принципиально: null также изменил бы checksum старого отчёта.
+        settings.latitudeRange?.let { range ->
+            config.addChild("latitudeRange", obj().apply {
+                addChild("top", JsonValue(range.top))
+                addChild("bottom", JsonValue(range.bottom))
+            })
+        }
         root.addChild("settings", config)
         val rules = input.rules
         val ruleJson = obj()
         ruleJson.addChild("terrains", strings(rules.terrains.sorted()))
         ruleJson.addChild("waterTerrains", strings(rules.waterTerrains.sorted()))
         ruleJson.addChild("impassableTerrains", strings(rules.impassableTerrains.sorted()))
-        ruleJson.addChild("climateExcludedTerrains", strings(rules.climateExcludedTerrains.sorted()))
+        ruleJson.addChild(
+            "climateExcludedTerrains",
+            strings(rules.climateExcludedTerrains.sorted())
+        )
         ruleJson.addChild("firstLandTerrain", string(rules.firstLandTerrain))
         ruleJson.addChild("flatTerrain", string(rules.flatTerrain))
         ruleJson.addChild("mountainTerrain", string(rules.mountainTerrain))
@@ -89,7 +102,12 @@ object TerrainExperimentFiles {
             }
         }))
         ruleJson.addChild("vegetation", array(rules.vegetation.map {
-            obj().apply { addChild("terrain", string(it.terrain)); addChild("occursOn", strings(it.occursOn)) }
+            obj().apply {
+                addChild("terrain", string(it.terrain)); addChild(
+                "occursOn",
+                strings(it.occursOn)
+            )
+            }
         }))
         root.addChild("rules", ruleJson)
         root.addChild("cells", cellsJson(input.cells))
@@ -118,24 +136,68 @@ object TerrainExperimentFiles {
 
     private fun decodeInput(root: JsonValue): TerrainExperimentInput {
         require(root.getInt("formatVersion") == 1) { "Unsupported terrain input format" }
-        require(root.getString("algorithmVersion") == TerrainGenerationPipeline.ALGORITHM_VERSION) { "Unsupported terrain algorithm" }
+        val version = root.getString("algorithmVersion")
+        require(
+            version == TerrainGenerationPipeline.ALGORITHM_VERSION ||
+                    version == TerrainGenerationPipeline.LATITUDE_ALGORITHM_VERSION
+        ) { "Unsupported terrain algorithm" }
         val s = root.get("settings")
-        val settings = TerrainExperimentSettings(s.getLong("seed"), s.getDouble("climateScale"),
-            s.getDouble("vegetationScale"), s.getDouble("elevationScale"), s.getFloat("elevationExponent"),
-            s.getFloat("temperatureExtremeness"), s.getFloat("temperatureShift"), s.getFloat("vegetationRichness"),
-            s.getBoolean("flatEarth"), TerrainGenerationMode.valueOf(s.getString("mode")))
+        val range = if (version == TerrainGenerationPipeline.LATITUDE_ALGORITHM_VERSION) {
+            val value =
+                    requireNotNull(s.get("latitudeRange")) { "Latitude range is required for this algorithm" }
+            com.unciv.pure.domain.mapgeneration.LatitudeRange(
+                value.getDouble("top"),
+                value.getDouble("bottom")
+            )
+        } else {
+            require(!s.has("latitudeRange")) { "Legacy algorithm cannot contain a latitude range" }
+            null
+        }
+        val settings = TerrainExperimentSettings(
+            s.getLong("seed"),
+            s.getDouble("climateScale"),
+            s.getDouble("vegetationScale"),
+            s.getDouble("elevationScale"),
+            s.getFloat("elevationExponent"),
+            s.getFloat("temperatureExtremeness"),
+            s.getFloat("temperatureShift"),
+            s.getFloat("vegetationRichness"),
+            s.getBoolean("flatEarth"),
+            TerrainGenerationMode.valueOf(s.getString("mode")),
+            range
+        )
         val r = root.get("rules")
         fun set(name: String) = r.get(name).map { it.asString() }.toSet()
-        fun optional(name: String): String? = r.get(name).let { if (it.isNull) null else it.asString() }
-        val rules = TerrainRuleSnapshot(set("terrains"), set("waterTerrains"), set("impassableTerrains"),
-            r.getString("firstLandTerrain"), optional("flatTerrain"), optional("mountainTerrain"), optional("hillTerrain"),
-            set("climateExcludedTerrains"), r.get("climateRanges").map {
-                // Нижние границы уже включают исторический ulp; повторный сдвиг запрещён.
-                ClimateTerrainRange(it.getString("terrain"), it.getFloat("temperatureFrom"), it.getFloat("temperatureTo"),
-                    it.getFloat("humidityFrom"), it.getFloat("humidityTo"))
-            }, r.get("vegetation").map {
-                VegetationRule(it.getString("terrain"), it.get("occursOn").map { base -> base.asString() })
-            }, r.getString("risingMarker"), r.getString("loweringMarker"))
+        fun optional(name: String): String? =
+                r.get(name).let { if (it.isNull) null else it.asString() }
+
+        val rules = TerrainRuleSnapshot(
+            set("terrains"),
+            set("waterTerrains"),
+            set("impassableTerrains"),
+            r.getString("firstLandTerrain"),
+            optional("flatTerrain"),
+            optional("mountainTerrain"),
+            optional("hillTerrain"),
+            set("climateExcludedTerrains"),
+            r.get("climateRanges").map {
+                // Границы уже включают исторический ulp; повторный сдвиг запрещён.
+                ClimateTerrainRange(
+                    it.getString("terrain"),
+                    it.getFloat("temperatureFrom"),
+                    it.getFloat("temperatureTo"),
+                    it.getFloat("humidityFrom"),
+                    it.getFloat("humidityTo")
+                )
+            },
+            r.get("vegetation").map {
+                VegetationRule(
+                    it.getString("terrain"),
+                    it.get("occursOn").map { base -> base.asString() })
+            },
+            r.getString("risingMarker"),
+            r.getString("loweringMarker")
+        )
         return TerrainExperimentInput(decodeCells(root.get("cells")), rules, settings)
     }
 
@@ -174,4 +236,9 @@ object TerrainExperimentFiles {
         file.absoluteFile.parentFile.mkdirs()
         file.writeText(text(value), Charsets.UTF_8)
     }
+
+    /** Версия зависит от явно выбранной модели; legacy-снимок сохраняет прежние байты. */
+    private fun algorithmVersion(input: TerrainExperimentInput): String =
+            if (input.settings.latitudeRange == null) TerrainGenerationPipeline.ALGORITHM_VERSION
+            else TerrainGenerationPipeline.LATITUDE_ALGORITHM_VERSION
 }
