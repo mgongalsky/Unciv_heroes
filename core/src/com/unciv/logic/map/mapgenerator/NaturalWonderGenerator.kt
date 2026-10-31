@@ -28,6 +28,7 @@ class NaturalWonderGenerator(val ruleset: Ruleset, val randomness: MapGeneration
     to the map height / 5.
     */
     fun spawnNaturalWonders(tileMap: TileMap) {
+        tileMap.mapParameters.validatedLatitudeRange()
         if (tileMap.mapParameters.noNaturalWonders)
             return
         val mapRadius = tileMap.mapParameters.mapSize.radius
@@ -88,6 +89,7 @@ class NaturalWonderGenerator(val ruleset: Ruleset, val randomness: MapGeneration
     private fun Unique.getIntParam(index: Int) = params[index].toInt()
 
     private fun getCandidateTilesForWonder(tileMap: TileMap, naturalWonder: Terrain): Collection<TileInfo> {
+        val latitudes = MapLatitudeAdapter(tileMap)
         val continentsRelevant = naturalWonder.hasUnique(UniqueType.NaturalWonderLargerLandmass) ||
                 naturalWonder.hasUnique(UniqueType.NaturalWonderSmallerLandmass)
         val sortedContinents = if (continentsRelevant)
@@ -121,9 +123,7 @@ class NaturalWonderGenerator(val ruleset: Ruleset, val randomness: MapGeneration
                         tile.getContinent() in sortedContinents.take(unique.getIntParam(0))
                     }
                     UniqueType.NaturalWonderLatitude -> {
-                        val lower = tileMap.maxLatitude * unique.getIntParam(0) * 0.01f
-                        val upper = tileMap.maxLatitude * unique.getIntParam(1) * 0.01f
-                        abs(tile.latitude) in lower..upper
+                        latitudes.matchesPercentRange(tile, unique.getIntParam(0), unique.getIntParam(1))
                     }
                     else -> true
                 }

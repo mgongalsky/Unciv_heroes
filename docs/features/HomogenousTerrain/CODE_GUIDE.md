@@ -12,7 +12,7 @@ CLI и песочница → TerrainGenerationPipeline → те же генер
 
 В `core/src/com/unciv/pure/domain/mapgeneration/` находятся PerlinNoise, ClimateGenerator, ElevationGenerator, VegetationGenerator и LatitudeRange. Последний проверяет границы широт и интерполирует их по вертикальной координате. В `pure/application/mapgeneration/` находятся снимки, координатор, TerrainGridFactory и TerrainMetrics. Чистый код не зависит от движка и файлов.
 
-В `core/src/com/unciv/logic/map/mapgenerator/` TerrainGenerationAdapter применяет этапы, TerrainRuleSnapshotAdapter снимает правила, TerrainPreviewMapAdapter создаёт отдельную карту для игровых спрайтов. `logic/map/Perlin.kt` сохраняет прежний API. Диапазон широт пока используется только экспериментами; обычная игра сохраняет прежний климат.
+В `core/src/com/unciv/logic/map/mapgenerator/` TerrainGenerationAdapter применяет этапы, TerrainRuleSnapshotAdapter снимает правила, TerrainPreviewMapAdapter создаёт отдельную карту для игровых спрайтов. `logic/map/Perlin.kt` сохраняет прежний API. Диапазон широт также используется генерацией редактора; выключенный диапазон сохраняет прежний климат.
 
 ## Снимки и совместимость
 
@@ -75,3 +75,51 @@ Show game terrain показывает игровые текстуры с нав
 - `com.unciv.testing.UiGoldenTest#terrainPlaygroundRender`: обработчики размеров, широт, повтора, ошибок, импорта и игровых текстур.
 
 Первоначальный этап также проверил параметры, источник правил, экспорт, полный генератор, общую форму и серию из восьми экспериментов; детали в [приёмке](Plan/STEP_06_Acceptance.md). Исторического эталона всего generateMap нет. UI Render — capture, а не сравнение с baseline; эталоны намеренно не обновлялись.
+
+## Редактор уровней
+
+Открыть обычный редактор → Generate → New map. Размеры задаются существующими Map Shape и World Size → Custom. Блок Use latitude range находится рядом с размерами. Пример: Rectangular 40×30, Top latitude 60, Bottom latitude 20, затем Create. Диапазон 20…−20 охватывает экватор. Flat Earth требует выключенного диапазона.
+
+Настройки сохраняются с картой и восстанавливаются при открытии. Форма редактирует отдельный черновик. Для текущей карты изменить границы в New map, затем выбрать Partial → Humidity and temperature → Generate. Размеры текущей карты не меняются. Лёд и растительность запускаются отдельными шагами; прежние особенности не очищаются автоматически. Редактор сохраняет историческое автоматическое изменение seed при повторении действий, в отличие от песочницы.
+
+MapParameters хранит useLatitudeRange/topLatitude/bottomLatitude и проверяет их через LatitudeRange. MapLatitudeAdapter преобразует Y для климата, льда и процентных ограничений чудес. Геометрические широты TileInfo не меняются. MapLatitudeControls обслуживает форму; MapEditorGenerateTab проверяет итоговые параметры до запуска потока и передаёт их нужным шагам. MapEditorScreen восстанавливает черновик при открытии карты.
+
+Сохранение использует прежний формат 3 с необязательными полями настроек. TileInfo.setTerrainFeatures копирует вход в ArrayList для корректного JSON round-trip; температура и влажность остаются transient. Старые карты не перегенерируются при чтении.
+
+Проверены MapLatitudeParametersTest (5), TerrainFullGenerationTest (7), TerrainGenerationCharacterizationTest (8), TerrainParametersCompatibilityTest (5), чистая TerrainGenerationTestSuite (39) и расширенный UiGoldenTest#terrainParametersRender. UI-сценарий включает настоящий редактор, загрузку другой карты и отказ неверного Partial. Это capture с проверками поведения, а не сравнение с baseline.
+
+Подробный [ручной сценарий редактора](Plan/STEP_08_EditorIntegration.md) ещё предстоит выполнить пользователю.
+## Основные масштабы и просмотр слоёв редактора
+
+В Generate → New map масштабы Climate scale, Vegetation scale и Elevation scale находятся в основном блоке рядом с размерами. Значения постоянно видны; Advanced больше не содержит их дубликатов. Общий Reset возвращает 6/3/2. Климатический ползунок редактора допускает целые 1–30, остальные — 0.5–30 с шагом 0.5. Обычная форма новой игры сохраняет прежние настройки.
+
+View layer внутри Generate переключает Game terrain, Base terrain, Temperature, Humidity, Elevation и Vegetation. Он доступен только в Generate, включая New map и Partial. Выход в View/Edit возвращает игровой вид; возврат в Generate восстанавливает выбранный слой. Выбор не запускает генерацию и не меняет карту, isDirty, seed или положение камеры. Рисование остаётся доступным. Рельеф показывает категории, растительность — текущие особенности. Климатические слои показывают последние вычисленные значения; после загрузки отсутствующие transient-поля серые. Цвета и их смысл указаны в легенде.
+
+MapEditorTerrainLayer содержит UI-палитру; MapEditorLayerOverlay читает текущую клетку при рисовании. EditorMapHolder добавляет заливку под выделение оригинальных и зеркальных гексов. MapEditorLayerControls предоставляется GenerationPage как fixed content страницы Generate; выбранный режим хранится в MapEditorScreen и восстанавливается при загрузке/recreate, но не сохраняется в карте. SolidHexagonDrawable используется также прежней боевой обёрткой BattleSupportFillDrawable.
+
+Проверки: UiGoldenTest#terrainParametersRender (масштабы и Reset), #terrainEditorLayersRender (слои, кисть, ввод, layout, wrap и загрузка), #terrainPlaygroundRender (песочница), #battleHexFillRender (отрисовка общих боевых заливок), TerrainParametersCompatibilityTest (5 тестов). BUILD прошёл. Capture не является сравнением с baseline; новый интерфейс ещё требует ручного просмотра. Подробный сценарий: [этап 09](Plan/STEP_09_EditorLayers.md).
+## Исправление отображения слоёв
+
+Панель больше не глобальная: открыть Generate и выбрать View layer под заголовком этого раздела. Она общая для New map и Partial. При выходе из Generate диагностическая заливка скрывается; выбранный режим сохраняется для возвращения. Легенда переносится с естественной высотой текста.
+
+MapEditorLayerOverlay создаётся через Image(drawable), задающий исходные размеры до sizeAndPlaceOverHex. Прежний пустой Image мог приводить к NaN в расчёте высоты. Конечные положительные размеры теперь проверяются явно. MapEditorScreen.terrainLayersVisible управляется активацией GenerationPage, а EditorMapHolder учитывает его при отображении.
+
+terrainEditorLayersRender сравнивает реальные пиксели только области карты между игровым и диагностическими режимами и проверяет обратимость Game terrain. Это устраняет ложный успех прежней проверки только currentColor. BUILD и UI-сценарии слоёв, параметров и песочницы прошли. Визуальный baseline не утверждался. [Этап 10](Plan/STEP_10_GenerateLayerFix.md) содержит детали и ручной сценарий.
+## Закреплённая генерация и прокрутка Generate
+
+Под View layer находится одна кнопка Generate, общая для New map и Partial. Она полностью создаёт карту с текущими настройками и новым положительным случайным seed, отличным от предыдущего. Нижний дубль полной генерации удалён; отдельное применение выбранного шага Partial сохранено. Во время работы кнопка заблокирована, повторный запуск дополнительно отклоняет обработчик. После завершения редактор остаётся в Generate.
+
+GenerationPage локально отключает внешнюю прокрутку страницы и восстанавливает её при выходе. Container с нулевым минимальным размером передаёт вложенному MapEditorGenerateTab оставшуюся высоту; внутренний pager прокручивает форму до последнего элемента. Общий TabbedPager не изменялся.
+
+MapParametersTable.reseed принимает необязательный явный seed и синхронизирует поле. MapEditorScreen.rememberGenerationParameters делегирует сохранение переданному адаптеру persistGenerationDefaults: по умолчанию прежнее сохранение настроек, в UI-сценарии пустой обработчик без записи пользовательских предпочтений. При recreate адаптер сохраняется.
+
+TerrainEditorGenerationGoldenChecks включён в UiGoldenTest.terrainEditorLayersRender. Проверяются полностью видимый Reset, цель клика, неподвижность кнопки, два асинхронных запуска через Stage с разными seed, сохранение настроек, блокировка повторного ввода и раздел Generate после загрузки результата. Координаты ScrollPane читаются после draw; кнопки проверяются через принятый Unciv isEnabled. BUILD и три UI-сценария прошли; baseline не обновлялся. [Этап 11](Plan/STEP_11_PinnedGeneration.md) содержит результаты и короткую ручную приёмку.
+## Вода и полный сброс настроек
+
+В игровом редакторе вода создаётся MapLandmassGenerator до климата и рельефа. Тип карты управляет геометрией суши; Water level в Advanced задаёт порог: выше значение — больше воды при одинаковом seed для шумовых типов. Archipelago и Inner Sea предназначены для других водных конфигураций, чем Pangaea. Климатический, растительный и рельефный масштабы не являются настройкой доли воды. Правила без водных террейнов намеренно работают в land-only режиме. Полный MapGenerator также обрабатывает озёра, берега и реки.
+
+В закреплённой панели под Generate есть полный Reset to defaults с подтверждением. ConfirmPopup Cancel сохраняет значения; подтверждение восстанавливает стандартные параметры формы (Pangaea, Hexagonal, Medium, обычные ресурсы/флаги/масштабы/климат/уровень воды, выключенный диапазон широт), сохраняет текущие mods и baseRuleset и записывает настройки через rememberGenerationParameters. Открытая карта и dirty-флаг не меняются; Generate запускается отдельно. Кнопка отключена во время генерации. Нижний Advanced Reset по-прежнему сбрасывает только расширенные параметры.
+
+MapEditorGenerateTab.restoreGenerationParameters принимает источник MapParameters, по умолчанию параметры открытой карты; полный сброс передаёт новый MapParameters. Перестраивается форма при сохранении объекта черновика. MapEditorToolsDrawer не перехватывает события из Popup, даже если кнопка диалога находится на X ручки.
+
+Проверки: TerrainFullGenerationTest (8 тестов, вода нескольких типов и влияние Water level), UiGoldenTest.terrainEditorLayersRender (диалог, отмена/подтверждение, in-memory запись, неизменная карта, блокировка кнопки и геометрия) и UiGoldenTest.terrainParametersRender. BUILD и все указанные проверки прошли. Новых чистых правил нет; baseline не обновлялся. [Этап 12](Plan/STEP_12_WaterAndDefaults.md) содержит ручной сценарий; его пользовательский просмотр ещё не подтверждён.

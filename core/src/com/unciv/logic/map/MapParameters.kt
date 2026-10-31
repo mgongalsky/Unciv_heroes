@@ -174,6 +174,9 @@ class MapParameters : IsPartOfGameInfoSerialization {
         it.resourceRichness = resourceRichness
         it.waterThreshold = waterThreshold
         it.createdWithVersion = createdWithVersion
+        it.useLatitudeRange = useLatitudeRange
+        it.topLatitude = topLatitude
+        it.bottomLatitude = bottomLatitude
     }
 
     fun reseed() {
@@ -193,6 +196,9 @@ class MapParameters : IsPartOfGameInfoSerialization {
         rareFeaturesRichness = 0.05f
         resourceRichness = 0.1f
         waterThreshold = if (type == MapType.smoothedRandom) -0.05f else 0f
+        useLatitudeRange = false
+        topLatitude = 60.0
+        bottomLatitude = 20.0
     }
 
     fun getArea() = when {
@@ -245,4 +251,20 @@ class MapParameters : IsPartOfGameInfoSerialization {
 
     /** Пространственный масштаб шума рельефа, независимый от показателя преобразования высоты. */
     var elevationScale = 2.0
+
+    /** Старые карты без этого поля сохраняют историческую широтную модель. */
+    var useLatitudeRange = false
+
+    /** Мировая широта верхнего края карты в градусах; применяется при включённом диапазоне. */
+    var topLatitude = 60.0
+
+    /** Мировая широта нижнего края карты в градусах. */
+    var bottomLatitude = 20.0
+
+    /** Проверяет включённый диапазон до генерации; неактивные значения не влияют на Legacy. */
+    fun validatedLatitudeRange(): com.unciv.pure.domain.mapgeneration.LatitudeRange? {
+        if (!useLatitudeRange) return null
+        require(shape != MapShape.flatEarth) { "Latitude range is not supported for Flat Earth" }
+        return com.unciv.pure.domain.mapgeneration.LatitudeRange(topLatitude, bottomLatitude)
+    }
 }

@@ -70,7 +70,7 @@ These shapes are used all over Unciv and can be replaced to make a lot of UI ele
 | LoadGameScreen/ | TopTable | null | |
 | MainMenuScreen/ | Background | null | |
 | MainMenuScreen/ | MenuButton | roundedEdgeRectangle | |
-| MapEditor/MapEditorToolsDrawer/ | Handle | null | |
+| MapEditor/MapEditorToolsDrawer/ | Handle", tintColor = BaseScreen.skin.get("color | null | |
 | ModManagementOptions/ | ExpanderTab | null | |
 | ModManagementScreen/ | BottomTable | null | |
 | ModManagementScreen/ | TopTable | null | |

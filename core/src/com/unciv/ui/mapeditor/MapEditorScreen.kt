@@ -48,14 +48,25 @@ import com.unciv.ui.worldscreen.ZoomButtonPair
 //todo See #6694 - allow adding tiles to a map (1 cell all around on hex? world-wrapped hex?? all around on rectangular? top bottom only on world-wrapped??)
 //todo move map copy&paste to save/load??
 
-class MapEditorScreen(map: TileMap? = null): BaseScreen(), RecreateOnResize {
+class MapEditorScreen(
+    map: TileMap? = null,
+    private val persistGenerationDefaults: (MapParameters) -> Unit = { saveDefaultParameters(it) }
+): BaseScreen(), RecreateOnResize {
+    /** Сохранение настроек отделено от генерации; адаптер по умолчанию сохраняет прежнее поведение. */
+    fun rememberGenerationParameters(parameters: MapParameters) = persistGenerationDefaults(parameters)
+    /** Диагностическая заливка активна только во время работы в Generate. */
+    var terrainLayersVisible = false
+
+    /** Только состояние просмотра; не входит в сохранение карты и не устанавливает isDirty. */
+    var terrainLayer = MapEditorTerrainLayer.GAME
+
     /** The map being edited, with mod list for that map */
     var tileMap: TileMap
     /** Flag indicating the map should be saved */
     var isDirty = false
 
-    /** The parameters to use for new maps, and the UI-shown mod list (which can be applied to the active map) */
-    val newMapParameters = getDefaultParameters()
+    /** Отдельный черновик генерации: открытая карта задаёт исходные настройки, но не разделяет их с формой. */
+    val newMapParameters = map?.mapParameters?.clone() ?: getDefaultParameters()
 
     /** RuleSet corresponding to [tileMap]'s mod list */
     var ruleset: Ruleset
@@ -177,9 +188,11 @@ class MapEditorScreen(map: TileMap? = null): BaseScreen(), RecreateOnResize {
         checkAndFixMapSize()
         ruleset = newRuleset ?: RulesetCache.getComplexRuleset(map.mapParameters)
         mapHolder = newMapHolder()
+        // Размеры и широты формы должны соответствовать открытой карте, а не прошлому черновику.
+        tabs.generate.restoreGenerationParameters()
         isDirty = false
         Gdx.input.inputProcessor = stage
-        tabs.selectPage(selectPage)  // must be done _after_ resetting inputProcessor!
+        tabs.selectPage(selectPage)
     }
 
     fun getMapCloneForSave() =
@@ -258,9 +271,10 @@ class MapEditorScreen(map: TileMap? = null): BaseScreen(), RecreateOnResize {
         params.mapSize = MapSizeNew((maxLongitude - minLongitude + 1), (maxLatitude - minLatitude + 1) / 2)
     }
 
-    /** Пересоздаёт UI вокруг той же карты, сохраняя признак изменений, позицию города и выбранный инструмент. */
-    override fun recreate(): BaseScreen = MapEditorScreen(tileMap).also {
+    /** Восстанавливает редактируемую карту, инструмент и выбранный диагностический слой. */
+    override fun recreate(): BaseScreen = MapEditorScreen(tileMap, persistGenerationDefaults).also {
         it.isDirty = isDirty
+        it.terrainLayer = terrainLayer
         it.selectedScenarioCity = selectedScenarioCity
         it.selectedEditSubTab =
                 if (tabs.activePage == 2) tabs.edit.currentSubTab() else selectedEditSubTab

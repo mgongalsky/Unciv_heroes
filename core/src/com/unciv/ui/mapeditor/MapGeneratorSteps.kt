@@ -12,12 +12,18 @@ private object MapGeneratorStepsHelpers {
         actualParameters.elevationExponent = newParameters.elevationExponent
         actualParameters.elevationScale = newParameters.elevationScale
     }
-    val applyHumidityAndTemperature =
-            fun(newParameters: MapParameters, actualParameters: MapParameters) {
-                actualParameters.temperatureExtremeness = newParameters.temperatureExtremeness
-                actualParameters.temperatureShift = newParameters.temperatureShift
-                actualParameters.tilesPerBiomeArea = newParameters.tilesPerBiomeArea
-            }
+    /** Мировой диапазон переносится без формы и размеров текущей карты. */
+    val applyLatitude = fun(newParameters: MapParameters, actualParameters: MapParameters) {
+        actualParameters.useLatitudeRange = newParameters.useLatitudeRange
+        actualParameters.topLatitude = newParameters.topLatitude
+        actualParameters.bottomLatitude = newParameters.bottomLatitude
+    }
+    val applyHumidityAndTemperature = fun(newParameters: MapParameters, actualParameters: MapParameters) {
+        actualParameters.temperatureExtremeness = newParameters.temperatureExtremeness
+        actualParameters.temperatureShift = newParameters.temperatureShift
+        actualParameters.tilesPerBiomeArea = newParameters.tilesPerBiomeArea
+        applyLatitude(newParameters, actualParameters)
+    }
     val applyLakesAndCoast = fun(newParameters: MapParameters, actualParameters: MapParameters) {
         actualParameters.maxCoastExtension = newParameters.maxCoastExtension
     }
@@ -35,19 +41,20 @@ private object MapGeneratorStepsHelpers {
 
 enum class MapGeneratorSteps(
     val label: String,
-    val copyParameters: ((MapParameters, MapParameters)->Unit)? = null
+    val copyParameters: ((MapParameters, MapParameters) -> Unit)? = null
 ) {
     None(""),
-    All("All"), // Special case - applying params done elsewhere
+    All("All"),
     Landmass("Generate landmass", MapGeneratorStepsHelpers.applyLandmass),
     Elevation("Raise mountains and hills", MapGeneratorStepsHelpers.applyElevation),
     HumidityAndTemperature("Humidity and temperature", MapGeneratorStepsHelpers.applyHumidityAndTemperature),
     LakesAndCoast("Lakes and coastline", MapGeneratorStepsHelpers.applyLakesAndCoast),
     Vegetation("Sprout vegetation", MapGeneratorStepsHelpers.applyVegetation),
     RareFeatures("Spawn rare features", MapGeneratorStepsHelpers.applyRareFeatures),
-    Ice("Distribute ice"),
+    // Лёд читает те же настройки температуры, но сохраняет собственную формулу смешивания шума.
+    Ice("Distribute ice", MapGeneratorStepsHelpers.applyHumidityAndTemperature),
     Continents("Assign continent IDs"),
-    NaturalWonders("Place Natural Wonders"),
+    NaturalWonders("Place Natural Wonders", MapGeneratorStepsHelpers.applyLatitude),
     Rivers("Let the rivers flow"),
     Resources("Spread Resources", MapGeneratorStepsHelpers.applyResources),
     AncientRuins("Create ancient ruins"),

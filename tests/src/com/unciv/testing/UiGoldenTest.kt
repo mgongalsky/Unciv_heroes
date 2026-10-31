@@ -127,4 +127,22 @@ class UiGoldenTest {
     fun terrainParameters() {
         UiGoldenTestRunner.main(arrayOf("--scenario=terrain-parameters"))
     }
+
+    /** Проверяет слои, кисть, wrap и загрузку настоящего редактора; capture не утверждает baseline. */
+    @Test
+    fun terrainEditorLayersRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=terrain-editor-layers"))
+    }
+
+    /** Проверяет отрисовку боевых заливок после выделения общего Drawable; baseline не обновляется. */
+    @Test
+    fun battleHexFillRender() {
+        UiGoldenTestRunner.main(
+            arrayOf(
+                "--capture-only",
+                "--scenario=battle-flanking",
+                "--scenario=battle-tile-highlights"
+            )
+        )
+    }
 }

@@ -82,6 +82,8 @@ class MapGenerator(val ruleset: Ruleset) {
             .map { unique -> TerrainOccursRange(this, unique) }
 
     fun generateMap(mapParameters: MapParameters, gameParameters: GameParameters = GameParameters(), civilizations: List<CivilizationInfo> = emptyList()): TileMap {
+        // Ошибочный диапазон отклоняется до изменения seed и создания карты.
+        mapParameters.validatedLatitudeRange()
         val mapSize = mapParameters.mapSize
         val mapType = mapParameters.type
 
@@ -222,6 +224,8 @@ class MapGenerator(val ruleset: Ruleset) {
         return battlefield
     }
     fun generateSingleStep(map: TileMap, step: MapGeneratorSteps) {
+        // Проверка предшествует RNG и мутации существующей карты.
+        map.mapParameters.validatedLatitudeRange()
         if (map.mapParameters.seed == 0L)
             map.mapParameters.seed = System.currentTimeMillis()
 
@@ -434,6 +438,7 @@ class MapGenerator(val ruleset: Ruleset) {
      * [MapParameters.temperatureExtremeness] as in [applyHumidityAndTemperature]
      */
     private fun spawnIce(tileMap: TileMap) {
+        val latitudes = MapLatitudeAdapter(tileMap)
         val waterTerrain: Set<String> =
             ruleset.terrains.values.asSequence()
             .filter { it.type == TerrainType.Water }
@@ -465,7 +470,7 @@ class MapGenerator(val ruleset: Ruleset) {
                 continue
 
             val randomTemperature = randomness.getPerlinNoise(tile, temperatureSeed, scale = tileMap.mapParameters.tilesPerBiomeArea.toDouble(), nOctaves = 1)
-            val latitudeTemperature = 1.0 - 2.0 * abs(tile.latitude) / tileMap.maxLatitude
+            val latitudeTemperature = latitudes.temperatureBackground(tile)
             var temperature = ((latitudeTemperature + randomTemperature) / 2.0)
             temperature = abs(temperature).pow(1.0 - tileMap.mapParameters.temperatureExtremeness) * temperature.sign
             temperature = (temperature + tileMap.mapParameters.temperatureShift).coerceIn(-1.0..1.0)

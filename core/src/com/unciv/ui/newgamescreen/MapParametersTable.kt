@@ -34,6 +34,9 @@ class MapParametersTable(
     private val forMapEditor: Boolean = false,
     private val sizeChangedCallback: (()->Unit)? = null
 ) : Table() {
+    /** Блок редактора синхронизируется при сбросе и смене формы. */
+    private lateinit var latitudeControls: MapLatitudeControls
+
     // These are accessed fom outside the class to read _and_ write values,
     // namely from MapOptionsTable, NewMapScreen and NewGameScreen
     lateinit var mapTypeSelectBox: TranslatedSelectBox
@@ -63,13 +66,18 @@ class MapParametersTable(
         addMapShapeSelectBox()
         addMapTypeSelectBox()
         addWorldSizeTable()
+        if (forMapEditor) {
+            latitudeControls = MapLatitudeControls(mapParameters)
+            add(latitudeControls).colspan(2).growX().row()
+        }
         addResourceSelectBox()
         addWrappedCheckBoxes()
         addAdvancedSettings()
     }
 
-    fun reseed() {
-        mapParameters.reseed()
+    /** Обновляет модель и поле seed; явное значение используется закреплённой генерацией. */
+    fun reseed(seed: Long? = null) {
+        if (seed == null) mapParameters.reseed() else mapParameters.seed = seed
         seedTextField.text = mapParameters.seed.toString()
     }
 
@@ -83,6 +91,7 @@ class MapParametersTable(
             TranslatedSelectBox(mapShapes, mapParameters.shape, skin)
         mapShapeSelectBox.onChange {
             mapParameters.shape = mapShapeSelectBox.selected.value
+            if (::latitudeControls.isInitialized) latitudeControls.updateState()
             updateWorldSizeTable()
         }
 
@@ -123,15 +132,13 @@ class MapParametersTable(
         val mapSizes = MapSize.values().map { it.name } + listOf(MapSize.custom)
         worldSizeSelectBox = TranslatedSelectBox(mapSizes, mapParameters.mapSize.name, skin)
         worldSizeSelectBox.onChange { updateWorldSizeTable() }
-
         addHexagonalSizeTable()
         addRectangularSizeTable()
-
         add("{World Size}:".toLabel()).left()
         add(worldSizeSelectBox).fillX().row()
         add(customWorldSizeTable).colspan(2).grow().row()
-
         updateWorldSizeTable()
+        if (forMapEditor) addEditorScales()
     }
 
     private fun addHexagonalSizeTable() {
@@ -250,6 +257,7 @@ class MapParametersTable(
         val expander = ExpanderTab("Advanced Settings", startsOutOpened = false) {
             addAdvancedControls(it)
         }
+        expander.name = "map-advanced-settings"
         add(expander).pad(0f).padTop(10f).colspan(2).growX().row()
     }
 
@@ -257,12 +265,9 @@ class MapParametersTable(
         table.defaults().pad(5f)
         seedTextField = UncivTextField.create("RNG Seed", mapParameters.seed.toString())
         seedTextField.textFieldFilter = DigitsOnlyFilter()
-        seedTextField.onChange {
-            mapParameters.seed = seedTextField.text.toLongOrNull() ?: 0L
-        }
+        seedTextField.onChange { mapParameters.seed = seedTextField.text.toLongOrNull() ?: 0L }
         table.add("RNG Seed".toLabel()).left()
         table.add(seedTextField).fillX().padBottom(10f).row()
-
         fun addSlider(
             text: String, getValue: () -> Float, min: Float, max: Float,
             step: Float = (max - min) / 20, onChange: (Float) -> Unit
@@ -276,9 +281,17 @@ class MapParametersTable(
         addSlider("Map Elevation", { mapParameters.elevationExponent }, 0.6f, 0.8f) {
             mapParameters.elevationExponent = it
         }
-        // Диапазоны предназначены для исследования масштаба, а не задают новый баланс по умолчанию.
-        addSlider("Elevation scale", { mapParameters.elevationScale.toFloat() }, 0.5f, 30f, 0.5f) {
-            mapParameters.elevationScale = it.toDouble()
+        // В редакторе эти масштабы уже находятся в основном блоке; вторых источников ввода нет.
+        if (!forMapEditor) {
+            addSlider(
+                "Elevation scale",
+                { mapParameters.elevationScale.toFloat() },
+                0.5f,
+                30f,
+                0.5f
+            ) {
+                mapParameters.elevationScale = it.toDouble()
+            }
         }
         addSlider("Temperature extremeness", { mapParameters.temperatureExtremeness }, 0.4f, 0.8f) {
             mapParameters.temperatureExtremeness = it
@@ -292,14 +305,16 @@ class MapParametersTable(
         addSlider("Vegetation richness", { mapParameters.vegetationRichness }, 0f, 1f) {
             mapParameters.vegetationRichness = it
         }
-        addSlider(
-            "Vegetation scale",
-            { mapParameters.vegetationScale.toFloat() },
-            0.5f,
-            30f,
-            0.5f
-        ) {
-            mapParameters.vegetationScale = it.toDouble()
+        if (!forMapEditor) {
+            addSlider(
+                "Vegetation scale",
+                { mapParameters.vegetationScale.toFloat() },
+                0.5f,
+                30f,
+                0.5f
+            ) {
+                mapParameters.vegetationScale = it.toDouble()
+            }
         }
         addSlider("Rare features richness", { mapParameters.rareFeaturesRichness }, 0f, 0.5f) {
             mapParameters.rareFeaturesRichness = it
@@ -307,18 +322,79 @@ class MapParametersTable(
         addSlider("Max Coast extension", { mapParameters.maxCoastExtension.toFloat() }, 0f, 5f) {
             mapParameters.maxCoastExtension = it.toInt()
         }.apply { stepSize = 1f }
-        addSlider("Biome areas extension", { mapParameters.tilesPerBiomeArea.toFloat() }, 1f, 15f) {
-            mapParameters.tilesPerBiomeArea = it.toInt()
-        }.apply { stepSize = 1f }
+        if (!forMapEditor) {
+            addSlider(
+                "Biome areas extension",
+                { mapParameters.tilesPerBiomeArea.toFloat() },
+                1f,
+                15f
+            ) {
+                mapParameters.tilesPerBiomeArea = it.toInt()
+            }.apply { stepSize = 1f }
+        }
         addSlider("Water level", { mapParameters.waterThreshold }, -0.1f, 0.1f) {
             mapParameters.waterThreshold = it
         }
-        val resetToDefaultButton = "Reset to defaults".toTextButton()
+        val resetToDefaultButton = "Reset to defaults".toTextButton().apply { name = "map-reset-advanced" }
         resetToDefaultButton.onClick {
             mapParameters.resetAdvancedSettings()
+            if (::latitudeControls.isInitialized) latitudeControls.refresh()
             seedTextField.text = mapParameters.seed.toString()
             for (entry in advancedSliders) entry.key.value = entry.value()
         }
         table.add(resetToDefaultButton).colspan(2).padTop(10f).row()
+    }
+
+    /** Основные масштабы редактора доступны без раскрытия Advanced; значения постоянно видны рядом с ползунками. */
+    private fun addEditorScales() {
+        val controls = Table(skin).apply {
+            name = "map-editor-scales"
+            defaults().pad(5f)
+        }
+
+        fun scale(
+            label: String, actorName: String, getValue: () -> Float,
+            minimum: Float, step: Float, changed: (Float) -> Unit
+        ) {
+            val valueLabel = getValue().toString().toLabel().apply { name = "$actorName-value" }
+            val slider = UncivSlider(minimum, 30f, step, initial = getValue(), onChange = {
+                changed(it)
+                valueLabel.setText(if (step == 1f) it.toInt().toString() else it.toString())
+            }).apply { name = actorName }
+            advancedSliders[slider] = getValue
+            controls.add(label.toLabel()).left()
+            val row = Table(skin)
+            row.add(slider).minWidth(180f).growX()
+            row.add(valueLabel).width(50f).right()
+            controls.add(row).growX().row()
+        }
+        scale(
+            "Climate scale",
+            "map-climate-scale",
+            { mapParameters.tilesPerBiomeArea.toFloat() },
+            1f,
+            1f
+        ) {
+            mapParameters.tilesPerBiomeArea = it.toInt()
+        }
+        scale(
+            "Vegetation scale",
+            "map-vegetation-scale",
+            { mapParameters.vegetationScale.toFloat() },
+            0.5f,
+            0.5f
+        ) {
+            mapParameters.vegetationScale = it.toDouble()
+        }
+        scale(
+            "Elevation scale",
+            "map-elevation-scale",
+            { mapParameters.elevationScale.toFloat() },
+            0.5f,
+            0.5f
+        ) {
+            mapParameters.elevationScale = it.toDouble()
+        }
+        add(controls).colspan(2).growX().row()
     }
 }

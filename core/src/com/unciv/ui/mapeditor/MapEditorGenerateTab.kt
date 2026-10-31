@@ -32,7 +32,23 @@ import kotlin.concurrent.thread
 class MapEditorGenerateTab(
     private val editorScreen: MapEditorScreen
 ): TabbedPager(capacity = 2) {
-    private val newTab = MapEditorNewMapTab(this)
+    /** Полный сброс формы доступен только после явного подтверждения. */
+    val resetDefaultsButton = "Reset to defaults".toTextButton().apply {
+        name = "map-generation-reset-defaults"
+        onClick { requestDefaultParameters() }
+    }
+
+    /** Повторный запуск запрещён до публикации результата на UI-потоке. */
+    var isGenerating = false
+        private set
+
+    /** Общая кнопка полной генерации располагается в закреплённой панели. */
+    val regenerateButton = "Generate".toTextButton().apply {
+        name = "map-generate-new-seed"
+        onClick { generate(MapGeneratorSteps.All, randomizeSeed = true) }
+    }
+
+    private var newTab = MapEditorNewMapTab(this)
     private val partialTab = MapEditorGenerateStepsTab(this)
 
     // Since we allow generation components to be run repeatedly, it might surprise the user that
@@ -55,29 +71,43 @@ class MapEditorGenerateTab(
     }
 
     private fun setButtonsEnabled(enable: Boolean) {
-        newTab.generateButton.isEnabled = enable
-        newTab.generateButton.setText( (if(enable) "Create" else "Working...").tr())
+        isGenerating = !enable
+        regenerateButton.isEnabled = enable
+        resetDefaultsButton.isEnabled = enable
+        regenerateButton.setText((if (enable) "Generate" else "Working...").tr())
         partialTab.generateButton.isEnabled = enable
-        partialTab.generateButton.setText( (if(enable) "Generate" else "Working...").tr())
+        partialTab.generateButton.setText((if (enable) "Generate" else "Working...").tr())
     }
 
-    /** Снимает настройки на UI-потоке: рабочий поток не читает изменяемые параметры формы. */
-    private fun generate(step: MapGeneratorSteps) {
-        if (step <= MapGeneratorSteps.Landmass && step in seedUsedForStep) {
+    /** Проверяет итоговые параметры и снимает вход на UI-потоке до запуска генерации. */
+    private fun generate(step: MapGeneratorSteps, randomizeSeed: Boolean = false) {
+        if (isGenerating) return
+        val validationParameters = if (step <= MapGeneratorSteps.Landmass)
+            editorScreen.newMapParameters.clone()
+        else editorScreen.tileMap.mapParameters.clone().also {
+            step.copyParameters?.invoke(editorScreen.newMapParameters, it)
+        }
+        try {
+            validationParameters.validatedLatitudeRange()
+        } catch (invalid: IllegalArgumentException) {
+            ToastPopup(invalid.message ?: "Invalid latitude range", editorScreen, 4000)
+            return
+        }
+        if (!randomizeSeed && step <= MapGeneratorSteps.Landmass && step in seedUsedForStep) {
             newTab.mapParametersTable.reseed()
             seedUsedForStep -= step
         }
         val mapParameters = editorScreen.newMapParameters.clone()
-        val message = mapParameters.mapSize.fixUndesiredSizes(mapParameters.worldWrap)
+        // Partial сохраняет геометрию карты и не зависит от неприменённого размера новой карты.
+        val message = if (step <= MapGeneratorSteps.Landmass)
+            mapParameters.mapSize.fixUndesiredSizes(mapParameters.worldWrap) else null
         if (message != null) {
             Gdx.app.postRunnable {
                 ToastPopup(message, editorScreen, 4000)
                 newTab.mapParametersTable.run {
-                    mapParameters.mapSize.also {
-                        customMapSizeRadius.text = it.radius.toString()
-                        customMapWidth.text = it.width.toString()
-                        customMapHeight.text = it.height.toString()
-                    }
+                    customMapSizeRadius.text = mapParameters.mapSize.radius.toString()
+                    customMapWidth.text = mapParameters.mapSize.width.toString()
+                    customMapHeight.text = mapParameters.mapSize.height.toString()
                 }
             }
             return
@@ -89,14 +119,21 @@ class MapEditorGenerateTab(
             )
             return
         }
+        if (randomizeSeed) {
+            // Новый ненулевой seed выбирается после успешной проверки параметров.
+            val previous = editorScreen.newMapParameters.seed
+            var next = kotlin.random.Random.nextLong(1L, Long.MAX_VALUE)
+            while (next == previous) next = kotlin.random.Random.nextLong(1L, Long.MAX_VALUE)
+            newTab.mapParametersTable.reseed(next)
+            mapParameters.seed = next
+            seedUsedForStep -= step
+        }
         if (step in seedUsedForStep) mapParameters.reseed()
         else seedUsedForStep += step
-
         val targetMap = editorScreen.tileMap
         val targetRuleset = editorScreen.ruleset
         val savedScale = editorScreen.mapHolder.scaleX
         val requestedType = mapParameters.type
-        // Сохраняем настройки остальных этапов текущей карты и копируем только выбранный этап.
         val partialParameters = targetMap.mapParameters.clone().also {
             step.copyParameters?.invoke(mapParameters, it)
             it.seed = mapParameters.seed
@@ -110,7 +147,7 @@ class MapEditorGenerateTab(
             newRuleset: Ruleset,
             selectPage: Int
         ) {
-            MapEditorScreen.saveDefaultParameters(parameters)
+            editorScreen.rememberGenerationParameters(parameters)
             editorScreen.loadMap(generatedMap, newRuleset, selectPage)
             editorScreen.isDirty = true
             setButtonsEnabled(true)
@@ -119,7 +156,7 @@ class MapEditorGenerateTab(
 
         fun stepCompleted() {
             if (step == MapGeneratorSteps.NaturalWonders) editorScreen.naturalWondersNeedRefresh =
-                true
+                    true
             editorScreen.mapHolder.updateTileGroups()
             editorScreen.isDirty = true
             setButtonsEnabled(true)
@@ -129,8 +166,8 @@ class MapEditorGenerateTab(
             try {
                 val (newRuleset, generator) = if (step > MapGeneratorSteps.Landmass) null to null
                 else {
-                    val newRuleset = RulesetCache.getComplexRuleset(mapParameters)
-                    newRuleset to MapGenerator(newRuleset)
+                    val loadedRuleset = RulesetCache.getComplexRuleset(mapParameters)
+                    loadedRuleset to MapGenerator(loadedRuleset)
                 }
                 when (step) {
                     MapGeneratorSteps.All -> {
@@ -140,7 +177,7 @@ class MapEditorGenerateTab(
                                 generatedMap,
                                 mapParameters,
                                 newRuleset!!,
-                                selectPage = 0
+                                1
                             )
                         }
                     }
@@ -155,7 +192,7 @@ class MapEditorGenerateTab(
                                 generatedMap,
                                 mapParameters,
                                 newRuleset!!,
-                                selectPage = 1
+                                1
                             )
                         }
                     }
@@ -184,7 +221,6 @@ class MapEditorGenerateTab(
     class MapEditorNewMapTab(
         private val parent: MapEditorGenerateTab
     ): Table(BaseScreen.skin) {
-        val generateButton = "".toTextButton()
         val mapParametersTable = MapParametersTable(parent.editorScreen.newMapParameters, forMapEditor = true) {
             parent.replacePage(0, this)  // A kludge to get the ScrollPanes to recognize changes in vertical layout??
         }
@@ -194,8 +230,7 @@ class MapEditorGenerateTab(
             pad(10f)
             add("Map Options".toLabel(fontSize = 24)).row()
             add(mapParametersTable).row()
-            add(generateButton).padTop(15f).row()
-            generateButton.onClick { parent.generate(MapGeneratorSteps.All) }
+
             mapParametersTable.resourceSelectBox.onChange {
                 parent.editorScreen.run {
                     // normally the 'new map' parameters are independent, this needs to be an exception so strategic resource painting will use it
@@ -234,5 +269,50 @@ class MapEditorGenerateTab(
             // generate сам снимает параметры до запуска потока; позднее копирование создавало гонку.
             generateButton.onClick { parent.generate(choice) }
         }
+    }
+
+    /** Обновляет тот же черновик и форму, сохраняя набор правил, моды и метаданные карты. */
+    fun restoreGenerationParameters(source: MapParameters = editorScreen.tileMap.mapParameters) {
+        val target = editorScreen.newMapParameters
+        target.type = source.type
+        target.shape = source.shape
+        target.mapSize = source.mapSize.clone()
+        target.mapResources = source.mapResources
+        target.noRuins = source.noRuins
+        target.noNaturalWonders = source.noNaturalWonders
+        target.worldWrap = source.worldWrap
+        target.seed = source.seed
+        target.tilesPerBiomeArea = source.tilesPerBiomeArea
+        target.vegetationScale = source.vegetationScale
+        target.elevationScale = source.elevationScale
+        target.maxCoastExtension = source.maxCoastExtension
+        target.elevationExponent = source.elevationExponent
+        target.temperatureExtremeness = source.temperatureExtremeness
+        target.temperatureShift = source.temperatureShift
+        target.vegetationRichness = source.vegetationRichness
+        target.rareFeaturesRichness = source.rareFeaturesRichness
+        target.resourceRichness = source.resourceRichness
+        target.waterThreshold = source.waterThreshold
+        target.useLatitudeRange = source.useLatitudeRange
+        target.topLatitude = source.topLatitude
+        target.bottomLatitude = source.bottomLatitude
+        newTab = MapEditorNewMapTab(this)
+        replacePage(0, newTab)
+    }
+
+    /** Отмена не меняет черновик; подтверждение сохраняет настройки без генерации или мутации карты. */
+    private fun requestDefaultParameters() {
+        if (isGenerating) return
+        com.unciv.ui.popup.ConfirmPopup(
+            screen = editorScreen,
+            question = "Reset all map generation settings to defaults?",
+            confirmText = "Reset to defaults"
+        ) {
+            if (!isGenerating) {
+                restoreGenerationParameters(MapParameters())
+                seedUsedForStep.clear()
+                editorScreen.rememberGenerationParameters(editorScreen.newMapParameters)
+            }
+        }.apply { name = "map-generation-reset-confirmation" }.open()
     }
 }

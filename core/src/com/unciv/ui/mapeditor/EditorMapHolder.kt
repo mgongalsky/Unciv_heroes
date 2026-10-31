@@ -61,55 +61,35 @@ class EditorMapHolder(
     }
 
     internal fun addTiles(stage: Stage) {
-
         val tileSetStrings = TileSetStrings()
         val daTileGroups = tileMap.values.map { TileGroup(it, tileSetStrings) }
-
-        tileGroupMap = TileGroupMap(
-            daTileGroups,
-            continuousScrollingX)
+        tileGroupMap = TileGroupMap(daTileGroups, continuousScrollingX)
         actor = tileGroupMap
-        val mirrorTileGroups = tileGroupMap.getMirrorTiles()
-
+        val mirrors = tileGroupMap.getMirrorTiles()
         for (tileGroup in daTileGroups) {
-            if (continuousScrollingX){
-                val mirrorTileGroupLeft = mirrorTileGroups[tileGroup.tileInfo]!!.first
-                val mirrorTileGroupRight = mirrorTileGroups[tileGroup.tileInfo]!!.second
-
-                allTileGroups.add(tileGroup)
-                allTileGroups.add(mirrorTileGroupLeft)
-                allTileGroups.add(mirrorTileGroupRight)
-
-                tileGroups[tileGroup.tileInfo] = listOf(tileGroup, mirrorTileGroupLeft, mirrorTileGroupRight)
-            } else {
-                tileGroups[tileGroup.tileInfo] = listOf(tileGroup)
-                allTileGroups.add(tileGroup)
-            }
+            val groups = if (continuousScrollingX) {
+                val pair = mirrors.getValue(tileGroup.tileInfo)
+                listOf(tileGroup, pair.first, pair.second)
+            } else listOf(tileGroup)
+            tileGroups[tileGroup.tileInfo] = groups
+            allTileGroups.addAll(groups)
         }
-
         for (tileGroup in allTileGroups) {
-
-/* revisit when Unit editing is re-implemented
-            // This is a hack to make the unit icons render correctly on the game, even though the map isn't part of a game
-            // and the units aren't assigned to any "real" CivInfo
-            //to do make safe the !!
-            //to do worse - don't create a whole Civ instance per unit
-            tileGroup.tileInfo.getUnits().forEach {
-                it.civInfo = CivilizationInfo().apply {
-                    nation = ruleset.nations[it.owner]!!
-                }
-            }
-*/
             tileGroup.showEntireMap = true
             tileGroup.update()
             if (touchable != Touchable.disabled)
                 tileGroup.onClick { onTileClick(tileGroup.tileInfo) }
+            val editor = editorScreen
+            if (editor != null) {
+                tileGroup.highlightFogCrosshairLayerGroup.addActorAt(
+                    0,
+                    MapEditorLayerOverlay(tileGroup) {
+                        if (editor.terrainLayersVisible) editor.terrainLayer else MapEditorTerrainLayer.GAME
+                    })
+            }
         }
-
         setSize(stage.width, stage.height)
-
         layout()
-
         scrollPercentX = .5f
         scrollPercentY = .5f
         updateVisualScroll()

@@ -89,6 +89,7 @@ object UiGoldenTestRunner {
     private fun scenarios() = listOf(
         Scenario("terrain-playground") {},
         Scenario("terrain-parameters") { TerrainParametersGoldenChecks.open(it) },
+        Scenario("terrain-editor-layers") {},
         Scenario("network-room") {},
         Scenario("network-battle") {},
         arenaScenario("arena-start", 0),
@@ -166,7 +167,7 @@ object UiGoldenTestRunner {
             game.create()
         }
 
-        /** Ждёт готовности экрана и фонового результата перед захватом стабильного кадра. */
+        /** Ждёт экрана и проверок поведения, затем захватывает стабильный кадр. */
         override fun render() {
             Gdx.graphics.isContinuousRendering = true
             if (System.currentTimeMillis() - startedAt > 30_000L) {
@@ -185,13 +186,18 @@ object UiGoldenTestRunner {
                 stableFrames = 0
                 return
             }
+            val editorScreen = expectedScreen as? com.unciv.ui.mapeditor.MapEditorScreen
+            if (scenarios[scenarioIndex].name == "terrain-editor-layers" && editorScreen != null &&
+                    !TerrainEditorLayersGoldenChecks.ready(editorScreen)
+            ) {
+                stableFrames = 0
+                return
+            }
             stableFrames++
             if (stableFrames < STABLE_FRAMES_BEFORE_CAPTURE) return
             val framebuffer = ScreenUtils.getFrameBufferPixmap(
-                0,
-                0,
-                Gdx.graphics.backBufferWidth,
-                Gdx.graphics.backBufferHeight
+                0, 0,
+                Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight
             )
             val actual = flipVertically(framebuffer)
             framebuffer.dispose()
@@ -216,20 +222,20 @@ object UiGoldenTestRunner {
             actual.dispose()
             scenarioIndex++
             stableFrames = 0
-            if (scenarioIndex < scenarios.size) {
-                game.replaceCurrentScreen(scenarioScreen(scenarios[scenarioIndex]))
-            } else {
+            if (scenarioIndex < scenarios.size) game.replaceCurrentScreen(scenarioScreen(scenarios[scenarioIndex]))
+            else {
                 result.passed = allPassed
                 Gdx.app.exit()
             }
         }
 
-        /** Навигационные сценарии используют настоящие экраны; формы — общий контейнер предпросмотра. */
+        /** Навигационные сценарии создают настоящие экраны, остальные используют контейнер предпросмотра. */
         private fun scenarioScreen(scenario: Scenario): BaseScreen = when (scenario.name) {
             "network-room" -> NetworkBattleGoldenScreens.room()
             "network-battle" -> NetworkBattleGoldenScreens.battle()
             "army-setup-laptop" -> ArmySetupGoldenChecks.screen()
             "terrain-playground" -> TerrainPlaygroundGoldenChecks.screen()
+            "terrain-editor-layers" -> TerrainEditorLayersGoldenChecks.screen()
             "city-editor-tabs" -> com.unciv.ui.playground.createScenarioCityEditorTabsPreview()
             "scenario-player-slots" -> com.unciv.ui.playground.createScenarioPlayerPickerPreview()
             "victory-selection" -> com.unciv.ui.playground.createScenarioVictorySelectionPreview()

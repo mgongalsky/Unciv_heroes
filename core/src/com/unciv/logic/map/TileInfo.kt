@@ -1440,14 +1440,16 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
             else probability
     }
 
-    fun setTerrainFeatures(terrainFeatureList:List<String>) {
-        terrainFeatures = terrainFeatureList
-        terrainFeatureObjects = terrainFeatureList.mapNotNull { ruleset.terrains[it] }
+    /** Копирует список в сериализуемую коллекцию; изменения входного списка не меняют клетку. */
+    fun setTerrainFeatures(terrainFeatureList: List<String>) {
+        // listOf одного элемента создаёт SingletonList без конструктора для JSON-загрузчика.
+        terrainFeatures = ArrayList(terrainFeatureList)
+        terrainFeatureObjects = terrainFeatures.mapNotNull { ruleset.terrains[it] }
         allTerrains = sequence {
-            yield(baseTerrainObject) // There is an assumption here that base terrains do not change
+            yield(baseTerrainObject)
             if (naturalWonder != null) yield(getNaturalWonder())
             yieldAll(terrainFeatureObjects)
-        }.toList().asSequence() //Save in memory, and return as sequence
+        }.toList().asSequence()
 
         val newUniqueMap = UniqueMap()
         for (terrain in allTerrains)

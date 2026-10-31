@@ -17,37 +17,56 @@ import kotlin.random.Random
 internal object TerrainGenerationAdapter {
     fun applyClimate(map: TileMap, ruleset: Ruleset, random: Random) {
         val parameters = map.mapParameters
-        // Проверяем масштаб до RNG и любых изменений карты.
+        // Проверяем настройки до RNG и любых изменений карты.
         require(parameters.tilesPerBiomeArea > 0) { "Climate scale must be positive" }
         require(parameters.temperatureExtremeness.isFinite() && parameters.temperatureShift.isFinite()) {
             "Climate parameters must be finite"
         }
+        val latitudes = MapLatitudeAdapter(map)
         val humiditySeed = random.nextInt().toDouble()
         val temperatureSeed = random.nextInt().toDouble()
         map.setTransients(ruleset)
         val settings = ClimateSettings(
             parameters.tilesPerBiomeArea.toDouble(), parameters.temperatureExtremeness,
             parameters.temperatureShift, parameters.shape === MapShape.flatEarth,
-            map.maxLatitude, map.maxLongitude
+            latitudes.maximum, map.maxLongitude
         )
-        val ranges = ruleset.terrains.values.filter { it.type == TerrainType.Land }.flatMap { terrain ->
-            terrain.getMatchingUniques(UniqueType.TileGenerationConditions).map { unique ->
-                ClimateTerrainRange.inclusiveMinimums(terrain.name,
-                    unique.params[0].toFloat(), unique.params[1].toFloat(),
-                    unique.params[2].toFloat(), unique.params[3].toFloat())
-            }.toList()
-        }
+        val ranges =
+                ruleset.terrains.values.filter { it.type == TerrainType.Land }.flatMap { terrain ->
+                    terrain.getMatchingUniques(UniqueType.TileGenerationConditions).map { unique ->
+                        ClimateTerrainRange.inclusiveMinimums(
+                            terrain.name,
+                            unique.params[0].toFloat(), unique.params[1].toFloat(),
+                            unique.params[2].toFloat(), unique.params[3].toFloat()
+                        )
+                    }.toList()
+                }
         val elevations = ruleset.terrains.values.filter { it.hasUnique(UniqueType.OccursInChains) }
             .mapTo(mutableSetOf()) { it.name }
         if (elevations.isEmpty()) elevations.add(Constants.mountain)
         val tiles = map.values.toList()
         val cells = tiles.map { tile ->
             val world = HexMath.hex2WorldCoords(tile.position)
-            ClimateCell(world.x.toDouble(), world.y.toDouble(), tile.latitude, tile.longitude,
-                tile.baseTerrain, tile.isWater || tile.baseTerrain in elevations, tile.temperature, tile.humidity)
+            ClimateCell(
+                world.x.toDouble(),
+                world.y.toDouble(),
+                latitudes.latitude(tile),
+                tile.longitude,
+                tile.baseTerrain,
+                tile.isWater || tile.baseTerrain in elevations,
+                tile.temperature,
+                tile.humidity
+            )
         }
-        val results = ClimateGenerator.generate(cells, settings, ranges, ruleset.terrains.keys.toSet(),
-            ruleset.terrains.values.first { it.type == TerrainType.Land }.name, humiditySeed, temperatureSeed)
+        val results = ClimateGenerator.generate(
+            cells,
+            settings,
+            ranges,
+            ruleset.terrains.keys.toSet(),
+            ruleset.terrains.values.first { it.type == TerrainType.Land }.name,
+            humiditySeed,
+            temperatureSeed
+        )
         // Проверка всего результата предшествует публикации базовых террейнов.
         require(results.size == tiles.size && results.all { it.baseTerrain in ruleset.terrains })
         for ((index, result) in results.withIndex()) {
