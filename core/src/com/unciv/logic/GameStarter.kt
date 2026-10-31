@@ -226,11 +226,19 @@ object GameStarter {
         }
     }
 
-    /** Готовые столицы задают стартовые позиции; уже размещённые войска не дублируются. */
+    /** Сценарные герои создаются до обычных войск; их владельцы не получают дополнительный стартовый отряд. */
     private fun addCivStartingUnits(gameInfo: GameInfo) {
         val ruleSet = gameInfo.ruleSet
         val tileMap = gameInfo.tileMap
         val startingEra = gameInfo.gameParameters.startingEra
+        val scenarioHeroes =
+                com.unciv.logic.scenario.InstantiateScenarioHeroesUseCase.execute(gameInfo)
+        val heroOwners = scenarioHeroes.mapTo(HashSet()) { it.owner }
+        // В миссии без города авторская позиция героя заменяет случайный стартовый ориентир.
+        for (hero in scenarioHeroes.distinctBy { it.owner }) {
+            tileMap.removeStartingLocations(hero.owner)
+            tileMap.addStartingLocation(hero.owner, hero.currentTile)
+        }
         for (civ in gameInfo.civilizations.filter { it.cities.isNotEmpty() }) {
             val capital = civ.getCapital() ?: continue
             tileMap.removeStartingLocations(civ.civName)
@@ -241,28 +249,37 @@ object GameStarter {
         val allCivs = gameInfo.civilizations.filter { !it.isBarbarian() }
         val landTilesInBigEnoughGroup = getCandidateLand(allCivs.size, tileMap, startScores)
         val civNamesWithStartingLocations = tileMap.startingLocationsByNation.keys
-        val bestCivs = allCivs.filter { !it.isCityState() || it.civName in civNamesWithStartingLocations }
-        val bestLocations = getStartingLocations(bestCivs, tileMap, landTilesInBigEnoughGroup, startScores)
+        val bestCivs =
+                allCivs.filter { !it.isCityState() || it.civName in civNamesWithStartingLocations }
+        val bestLocations =
+                getStartingLocations(bestCivs, tileMap, landTilesInBigEnoughGroup, startScores)
         for ((civ, tile) in bestLocations) {
             tileMap.removeStartingLocations(civ.civName)
             tileMap.addStartingLocation(civ.civName, tile)
         }
-        val startingLocations = getStartingLocations(allCivs, tileMap, landTilesInBigEnoughGroup, startScores)
+        val startingLocations =
+                getStartingLocations(allCivs, tileMap, landTilesInBigEnoughGroup, startScores)
         val settlerLikeUnits = ruleSet.units.filter { it.value.hasUnique(UniqueType.FoundCity) }
         for (civ in gameInfo.civilizations.filter { !it.isBarbarian() && !it.isSpectator() }) {
             val startingLocation = startingLocations[civ]!!
-            if (civ.cities.isNotEmpty() && civ.getCivUnits().any()) continue
+            if (civ.civName in heroOwners || (civ.cities.isNotEmpty() && civ.getCivUnits()
+                        .any())
+            ) continue
             for (tile in startingLocation.getTilesInDistance(3)) {
-                if (tile.improvement != null && tile.getTileImprovement()!!.isAncientRuinsEquivalent())
+                if (tile.improvement != null && tile.getTileImprovement()!!
+                            .isAncientRuinsEquivalent()
+                )
                     tile.changeImprovement(null)
             }
             val startingUnits = ruleSet.eras[startingEra]!!.getStartingUnits().toMutableList()
             val eraUnitReplacement = ruleSet.eras[startingEra]!!.startingMilitaryUnit
-            startingUnits.addAll(when {
-                civ.isPlayerCivilization() -> gameInfo.getDifficulty().playerBonusStartingUnits
-                civ.isMajorCiv() -> gameInfo.getDifficulty().aiMajorCivBonusStartingUnits
-                else -> gameInfo.getDifficulty().aiCityStateBonusStartingUnits
-            })
+            startingUnits.addAll(
+                when {
+                    civ.isPlayerCivilization() -> gameInfo.getDifficulty().playerBonusStartingUnits
+                    civ.isMajorCiv() -> gameInfo.getDifficulty().aiMajorCivBonusStartingUnits
+                    else -> gameInfo.getDifficulty().aiCityStateBonusStartingUnits
+                }
+            )
             fun getEquivalentUnit(civ: CivilizationInfo, unitParam: String): String? {
                 var unit = unitParam
                 if (unit == Constants.eraSpecificUnit) unit = eraUnitReplacement
@@ -295,7 +312,10 @@ object GameStarter {
             for (unit in startingUnits) {
                 val unitToAdd = getEquivalentUnit(civ, unit) ?: continue
                 val definition = ruleSet.units[unitToAdd]!!
-                if (civ.cities.isNotEmpty() && definition.isCivilian() && definition.hasUnique(UniqueType.FoundCity)) continue
+                if (civ.cities.isNotEmpty() && definition.isCivilian() && definition.hasUnique(
+                            UniqueType.FoundCity
+                        )
+                ) continue
                 civ.placeUnitNearTile(startingLocation.position, unitToAdd)
             }
         }

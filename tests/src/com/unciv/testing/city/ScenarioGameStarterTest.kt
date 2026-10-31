@@ -219,4 +219,42 @@ class ScenarioGameStarterTest {
             assertEquals(1, game.civilizations.single().cities.size)
         }
     }
+
+    /** Миссия без города создаёт ровно одного сценарного героя; загрузка сохраняет личность, повторный старт берёт исходное описание. */
+    @Test
+    fun scenarioHeroWithoutCitySurvivesSaveAndIndependentRestart() {
+        withMap(false) { file, fixture ->
+            val map = fixture.game.tileMap
+            map.scenarioPlayerSlots.add(ScenarioPlayerSlot("first"))
+            val description = com.unciv.pure.domain.hero.ScenarioHero(
+                "guide", "Проводник", "Warrior", "first", CityPosition(1f, 0f)
+            )
+            map.scenarioHeroes.add(description)
+            file.writeText(MapSaver.mapToSavedString(map))
+            val game = GameStarter.startNewGame(setup(file, true)) { }
+            val owner = game.civilizations.single()
+            val hero = owner.getCivUnits().single()
+            assertTrue(owner.cities.isEmpty())
+            assertFalse(owner.isDefeated())
+            assertEquals("guide", hero.scenarioHeroId)
+            assertEquals("Проводник", hero.instanceName)
+            assertEquals(com.badlogic.gdx.math.Vector2(1f, 0f), hero.currentTile.position)
+            hero.instanceName = "Новое имя"
+            val loaded = com.unciv.logic.UncivFiles.gameInfoFromString(
+                com.unciv.logic.UncivFiles.gameInfoToString(game.clone(), true)
+            )
+            val restored = loaded.civilizations.single().getCivUnits().single()
+            assertEquals("guide", restored.scenarioHeroId)
+            assertEquals("Новое имя", restored.instanceName)
+            assertSame(restored, restored.currentTile.militaryUnit)
+            assertEquals(hero.currentTile.position, restored.currentTile.position)
+            assertEquals("Проводник", loaded.tileMap.scenarioHeroes.single().name)
+            val restarted = GameStarter.startNewGame(setup(file, true)) { }
+            val fresh = restarted.civilizations.single().getCivUnits().single()
+            assertEquals("guide", fresh.scenarioHeroId)
+            assertEquals("Проводник", fresh.instanceName)
+            assertNotSame(hero, fresh)
+            assertEquals(description, MapSaver.loadMap(FileHandle(file)).scenarioHeroes.single())
+        }
+    }
 }

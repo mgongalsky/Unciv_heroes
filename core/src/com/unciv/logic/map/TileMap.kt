@@ -153,13 +153,14 @@ class TileMap : IsPartOfGameInfoSerialization, IBattleField {
     //endregion
     //region Operators and Standards
 
-    /** Копирует сохраняемые данные; изменяемые настройки сценария принадлежат только копии. */
+    /** Копирует сохраняемые данные; изменяемые описания сценария принадлежат только копии. */
     fun clone(): TileMap {
         val toReturn = TileMap()
         toReturn.tileList.addAll(tileList.map { it.clone() })
         toReturn.mapParameters = mapParameters
         toReturn.scenarioCities.addAll(scenarioCities.map { it.deepCopy() })
         toReturn.scenarioPlayerSlots.addAll(scenarioPlayerSlots.map { it.copy() })
+        toReturn.scenarioHeroes.addAll(scenarioHeroes.map { it.copy() })
         toReturn.scenarioVictorySettings = scenarioVictorySettings?.deepCopy()
         toReturn.ruleset = ruleset
         toReturn.startingLocations.clear()
@@ -856,4 +857,7 @@ class TileMap : IsPartOfGameInfoSerialization, IBattleField {
     //endregion
     /** Авторские условия победы; null сохраняет поведение карт без сценарных ограничений. */
     var scenarioVictorySettings: com.unciv.pure.domain.scenario.ScenarioVictorySettings? = null
+
+    /** Исходные размещения героев; запуск создаёт отдельные юниты, не изменяя описания карты. */
+    var scenarioHeroes = arrayListOf<com.unciv.pure.domain.hero.ScenarioHero>()
 }

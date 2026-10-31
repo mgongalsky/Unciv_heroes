@@ -75,8 +75,8 @@ data class CompatibilityVersion(
 
 class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion, Json.Serializable {
     companion object {
-        /** Формат 6 добавляет сценарные условия и сохраняемый результат победы, неизвестные старым версиям. */
-        const val CURRENT_COMPATIBILITY_NUMBER = 6
+        /** Формат 7 сохраняет сценарные описания героев и их стабильные ID в игровых юнитах. */
+        const val CURRENT_COMPATIBILITY_NUMBER = 7
 
         val CURRENT_COMPATIBILITY_VERSION = CompatibilityVersion(CURRENT_COMPATIBILITY_NUMBER, UncivGame.VERSION)
 

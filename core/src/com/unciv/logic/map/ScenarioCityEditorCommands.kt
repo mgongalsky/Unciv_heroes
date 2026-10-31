@@ -55,10 +55,13 @@ object ScenarioCityEditorCommands {
         return true
     }
 
-    /** Защищает ссылки владельцев и целей победы до удаления слота участника. */
+    /** Защищает ссылки городов, героев и целей победы до удаления слота участника. */
     fun removeSlot(map: TileMap, id: String): Boolean {
         require(map.scenarioCities.none { it.owner == ScenarioCityOwner.PlayerSlot && it.ownerSlotId == id }) {
             "This player slot is still used by a city"
+        }
+        require(map.scenarioHeroes.none { it.ownerSlotId == id }) {
+            "This player slot is still used by a hero"
         }
         require(
             map.scenarioVictorySettings?.captureObjectives.orEmpty()

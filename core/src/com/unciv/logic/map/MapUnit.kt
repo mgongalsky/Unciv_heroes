@@ -418,9 +418,9 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
     /** Array list of all the tiles that this unit has attacked since the start of its most recent turn. Used in movement arrow overlay. */
     var attacksSinceTurnStart = ArrayList<Vector2>()
 
-    //region pure functions
+    /** Копирует личность и характеристики; прежний контракт общей ссылки на армию сохраняется. */
     fun clone(): MapUnit {
-        // That is not good, but the only hardcoding way I found
+        // Сохраняем существующее определение типа копии по владельцу.
         val toReturn = MapUnit(civInfo.civName == "Barbarians")
         toReturn.baseUnit = baseUnit
         toReturn.name = name
@@ -428,6 +428,7 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
         toReturn.owner = owner
         toReturn.originalOwner = originalOwner
         toReturn.instanceName = instanceName
+        toReturn.scenarioHeroId = scenarioHeroId
         toReturn.currentMovement = currentMovement
         toReturn.hero = Hero(
             hero.baseAttackSkill, hero.baseDefenseSkill, hero.baseFoodCapacity,
@@ -548,18 +549,18 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
             .any { it.hasUnique(UniqueType.TakeOverTilesAroundWhenBuilt) }
     }
 
+    /** Переносит свойства при замене юнита, сохраняя имя и стабильную сюжетную идентичность. */
     fun copyStatisticsTo(newUnit: MapUnit) {
         newUnit.health = health
         newUnit.instanceName = instanceName
+        newUnit.scenarioHeroId = scenarioHeroId
         newUnit.currentMovement = currentMovement
         newUnit.attacksThisTurn = attacksThisTurn
         newUnit.isTransported = isTransported
         for (promotion in newUnit.promotions.promotions)
             if (promotion !in promotions.promotions)
                 promotions.addPromotion(promotion, isFree = true)
-
         newUnit.promotions = promotions.clone()
-
         newUnit.updateUniques(ruleset)
         newUnit.updateVisibleTiles()
     }
@@ -1546,4 +1547,6 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
     }
 
     //endregion
+    /** Стабильная ссылка сценария, независимая от имени, владельца и числового ID юнита; пусто у обычных юнитов. */
+    var scenarioHeroId: String = ""
 }
