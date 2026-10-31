@@ -603,6 +603,8 @@ class WorldScreen(
     }
 
     fun nextTurn() {
+        // Не запускаем клонирование и передачу хода, пока игрок отвечает на сюжетную сцену.
+        if (com.unciv.logic.story.StoryRuntime.isBlocked(gameInfo)) return
         isPlayersTurn = false
         shouldUpdate = true
 
@@ -624,23 +626,21 @@ class WorldScreen(
                         is FileStorageRateLimitReached -> "Server limit reached! Please wait for [${ex.limitRemainingSeconds}] seconds"
                         else -> "Could not upload game!"
                     }
-                    launchOnGLThread { // Since we're changing the UI, that should be done on the main thread
+                    launchOnGLThread {
                         val cantUploadNewGamePopup = Popup(this@WorldScreen)
                         cantUploadNewGamePopup.addGoodSizedLabel(message).row()
                         cantUploadNewGamePopup.addCloseButton()
                         cantUploadNewGamePopup.open()
                     }
-                    this@WorldScreen.isPlayersTurn = true // Since we couldn't push the new game clone, then it's like we never clicked the "next turn" button
+                    this@WorldScreen.isPlayersTurn = true
                     this@WorldScreen.shouldUpdate = true
                     return@runOnNonDaemonThreadPool
                 }
             }
 
-            if (game.gameInfo != originalGameInfo) // while this was turning we loaded another game
-                return@runOnNonDaemonThreadPool
+            if (game.gameInfo != originalGameInfo) return@runOnNonDaemonThreadPool
 
             debug("Next turn took %sms", System.currentTimeMillis() - startTime)
-
             startNewScreenJob(gameInfoClone)
         }
     }

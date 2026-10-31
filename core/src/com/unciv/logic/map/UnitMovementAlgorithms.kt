@@ -443,152 +443,158 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         else if (unit is MapUnit) unit.destroy()
     }
 
+    /** Выполняет движение; сюжетные последствия применяются только после завершения размещения героя. */
     fun moveToTile(destination: TileInfo, considerZoneOfControl: Boolean = true) {
-        if (destination == unit.getTile() || (unit is MapUnit && unit.isDestroyed)) return // already here (or dead)!
-
-
-        if (unit is MapUnit && unit.baseUnit.movesLikeAirUnits()) { // air units move differently from all other units
+        if (destination == unit.getTile() || (unit is MapUnit && unit.isDestroyed)) return
+        val storyUnit = (unit as? MapUnit)?.takeIf {
+            it.civInfo.gameInfo.tileMap.story != null && com.unciv.logic.story.StoryMapEvents.isEligible(
+                it
+            )
+        }
+        if (unit is MapUnit && com.unciv.logic.story.StoryRuntime.isBlocked(unit.civInfo.gameInfo)) return
+        if (unit is MapUnit && unit.baseUnit.movesLikeAirUnits()) {
             unit.action = null
             unit.removeFromTile()
-            unit.isTransported = false // it has left the carrier by own means
+            unit.isTransported = false
             unit.putInTile(destination)
             unit.currentMovement = 0f
             unit.mostRecentMoveType = UnitMovementMemoryType.UnitTeleported
             return
-        } else if (unit is MapUnit && unit.isPreparingParadrop()) { // paradropping units move differently
+        } else if (unit is MapUnit && unit.isPreparingParadrop()) {
+            val from = unit.getTile()
+            val visible = storyUnit?.viewableTiles?.toSet().orEmpty()
             unit.action = null
             unit.removeFromTile()
             unit.putInTile(destination)
             unit.mostRecentMoveType = UnitMovementMemoryType.UnitTeleported
             unit.useMovementPoints(1f)
             unit.attacksThisTurn += 1
-            // Check if unit maintenance changed
-            // Is also done for other units, but because we skip everything else, we have to manually check it
-            // The reason we skip everything, is that otherwise `getPathToTile()` throws an exception
-            // As we can not reach our destination in a single turn
             if (unit.canGarrison()
                 && (unit.getTile().isCityCenter() || destination.isCityCenter())
                 && unit.civInfo.hasUnique(UniqueType.UnitsInCitiesNoMaintenance)
             ) unit.civInfo.updateStatsForNextTurn()
+            if (storyUnit != null) {
+                com.unciv.logic.story.StoryMapEvents.queueStep(storyUnit, from, visible)
+                com.unciv.logic.story.StoryRuntime.drain(storyUnit.civInfo.gameInfo)
+            }
             return
         }
-
         val distanceToTiles = getDistanceToTiles(considerZoneOfControl)
         val pathToDestination = distanceToTiles.getPathToTile(destination)
         val movableTiles = pathToDestination.takeWhile { canPassThrough(it) }
-        val lastReachableTile = movableTiles.lastOrNull { canMoveTo(it) }
-            ?: return  // no tiles can pass though/can move to
-        if (unit is MapUnit)
-            unit.mostRecentMoveType = UnitMovementMemoryType.UnitMoved
+        val lastReachableTile = movableTiles.lastOrNull { canMoveTo(it) } ?: return
+        if (unit is MapUnit) unit.mostRecentMoveType = UnitMovementMemoryType.UnitMoved
         val pathToLastReachableTile = distanceToTiles.getPathToTile(lastReachableTile)
 
-        // If we are about to step onto a takeable improvement tile this turn, defer movement until after fade animation
-        if (unit is MapUnit && lastReachableTile == destination) {
+        // На сюжетной карте нельзя собирать дальнюю цель до прохождения промежуточных событий.
+        if (storyUnit == null && unit is MapUnit && lastReachableTile == destination) {
             val visitable = destination.visitable
             if (destination.improvement != null && visitable?.visitability == Visitability.takeable) {
                 Log.debug("Deferring movement to %s for loot fade animation", destination.position)
-                // Trigger animation setup (flags + callback)
                 val started = visitable.visit(unit)
                 if (started) {
                     val prevCallback = destination.collectionCallback
                     destination.collectionCallback = {
                         prevCallback?.invoke()
-                        Log.debug("Loot fade completed, proceeding to move unit to %s", destination.position)
-                        // Now perform the actual move (improvement is gone, so no defer loop)
+                        Log.debug(
+                            "Loot fade completed, proceeding to move unit to %s",
+                            destination.position
+                        )
                         unit.movement.moveToTile(destination, considerZoneOfControl)
                     }
-                    // Request UI update if not already
                     UncivGame.Current.worldScreen?.shouldUpdate = true
                     return
                 }
             }
         }
-
-        if (unit is MapUnit && (unit.isFortified() || unit.isSetUpForSiege() || unit.isSleeping()))
-            unit.action = null // un-fortify/un-setup/un-sleep after moving
-
-        // If this unit is a carrier, keep record of its air payload whereabouts.
+        if (unit is MapUnit && (unit.isFortified() || unit.isSetUpForSiege() || unit.isSleeping())) unit.action =
+            null
         val origin = unit.getTile()
         var needToFindNewRoute = false
-        // Cache this in case something goes wrong
-
         var lastReachedEnterableTile = unit.getTile()
         var previousTile = unit.getTile()
-        var passingMovementSpent = 0f // Movement points spent since last tile we could end our turn on
-
+        var passingMovementSpent = 0f
+        var storyInterrupted = false
         unit.removeFromTile()
-
         for (tile in pathToLastReachableTile) {
             if (!unit.movement.canPassThrough(tile)) {
-                // AAAH something happened making our previous path invalid
-                // Maybe we spawned a unit using ancient ruins, or our old route went through
-                // fog of war, and we found an obstacle halfway?
-                // Anyway: PANIC!! We stop this route, and after leaving the game in a valid state,
-                // we try again.
                 needToFindNewRoute = true
-                break // If you ever remove this break, remove the `assumeCanPassThrough` param below
+                break
             }
+            val previousVisible = storyUnit?.viewableTiles?.toSet().orEmpty()
             unit.moveThroughTile(tile)
-
-            // This fixes a bug where tiles in the fog of war would always only cost 1 mp
             if (!unit.civInfo.gameInfo.gameParameters.godMode)
-                passingMovementSpent += getMovementCostBetweenAdjacentTiles(previousTile, tile, unit.civInfo)
-
-            // In case something goes wrong, cache the last tile we were able to end on
-            // We can assume we can pass through this tile, as we would have broken earlier
-            if (unit.movement.canMoveTo(tile, assumeCanPassThrough = true)) {
+                passingMovementSpent += getMovementCostBetweenAdjacentTiles(
+                    previousTile,
+                    tile,
+                    unit.civInfo
+                )
+            val canStop = unit.movement.canMoveTo(tile, assumeCanPassThrough = true)
+            if (canStop) {
                 lastReachedEnterableTile = tile
                 unit.useMovementPoints(passingMovementSpent)
                 passingMovementSpent = 0f
             }
-
+            if (storyUnit != null && !storyUnit.isDestroyed)
+                com.unciv.logic.story.StoryMapEvents.queueStep(
+                    storyUnit,
+                    previousTile,
+                    previousVisible
+                )
             previousTile = tile
-
-            // We can't continue, stop here.
-            if ((unit is MapUnit && unit.isDestroyed) || unit.currentMovement - passingMovementSpent < Constants.minimumMovementEpsilon) {
+            // На проходной занятой клетке останавливаться нельзя; завершаем размещение на следующей доступной.
+            if (storyUnit != null && canStop && com.unciv.logic.story.StoryRuntime.isBlocked(
+                    storyUnit.civInfo.gameInfo
+                )
+            ) {
+                storyInterrupted = true
+                storyUnit.action = null
                 break
             }
+            if ((unit is MapUnit && unit.isDestroyed) || unit.currentMovement - passingMovementSpent < Constants.minimumMovementEpsilon) break
         }
-
         val finalTileReached = lastReachedEnterableTile
-
-        // Silly floats which are almost zero
-        if (unit.currentMovement < Constants.minimumMovementEpsilon)
-            unit.currentMovement = 0f
-
-
-        if (unit is MapUnit && !unit.isDestroyed)
-            unit.putInTile(finalTileReached)
-
-        // The .toList() here is because we have a sequence that's running on the units in the tile,
-        // then if we move one of the units we'll get a ConcurrentModificationException, se we save them all to a list
-        val payloadUnits = origin.getUnits().filter { it.isTransported && unit is MapUnit && unit.canTransport(it) }.toList()
-        // bring along the payloads
+        if (unit.currentMovement < Constants.minimumMovementEpsilon) unit.currentMovement = 0f
+        if (unit is MapUnit && !unit.isDestroyed) unit.putInTile(finalTileReached)
+        val payloadUnits = origin.getUnits()
+            .filter { it.isTransported && unit is MapUnit && unit.canTransport(it) }.toList()
         for (payload in payloadUnits) {
             payload.removeFromTile()
-            for (tile in pathToLastReachableTile){
+            for (tile in pathToLastReachableTile) {
                 payload.moveThroughTile(tile)
-                if (tile == finalTileReached) break // this is the final tile the transport reached
+                if (tile == finalTileReached) break
             }
             payload.putInTile(finalTileReached)
-            payload.isTransported = true // restore the flag to not leave the payload in the city
+            payload.isTransported = true
             payload.mostRecentMoveType = UnitMovementMemoryType.UnitMoved
         }
-
-        // Unit maintenance changed
         if (unit is MapUnit && unit.canGarrison()
             && (origin.isCityCenter() || finalTileReached.isCityCenter())
             && unit.civInfo.hasUnique(UniqueType.UnitsInCitiesNoMaintenance)
         ) unit.civInfo.updateStatsForNextTurn()
-
-        // Under rare cases (see #8044), we can be headed to a tile and *the entire path* is blocked by other units, so we can't "enter" that tile.
-        // If, in such conditions, the *destination tile* is unenterable, needToFindNewRoute will trigger, so we need to catch this situation to avoid infinite loop
-        if (needToFindNewRoute && unit.currentTile != origin) {
+        if (!storyInterrupted && needToFindNewRoute && unit.currentTile != origin)
             moveToTile(destination, considerZoneOfControl)
-        }
 
-        (unit as? MapUnit)?.visitPlace(destination)
-
+        if (storyUnit != null) {
+            // В мире снова есть размещённый герой. Сначала сохраняем факт посещения, затем исполняем очередь.
+            if (!storyUnit.isDestroyed) {
+                val reached = storyUnit.currentTile
+                if (reached.improvement != null || reached.isCityCenter()) {
+                    val scenario = storyUnit.civInfo.gameInfo.tileMap.story!!
+                    storyUnit.civInfo.gameInfo.storyProgress =
+                        com.unciv.pure.application.story.ProcessStoryEvent.execute(
+                            scenario, storyUnit.civInfo.gameInfo.storyProgress,
+                            com.unciv.logic.story.StoryMapEvents.event(
+                                storyUnit,
+                                com.unciv.pure.domain.story.StoryEventKind.ObjectVisited,
+                                reached
+                            )
+                        )
+                }
+                storyUnit.visitPlace(reached)
+            }
+            com.unciv.logic.story.StoryRuntime.drain(storyUnit.civInfo.gameInfo)
+        } else (unit as? MapUnit)?.visitPlace(destination)
         (unit as? MapUnit)?.updateUniques(unit.currentTile.ruleset)
     }
 

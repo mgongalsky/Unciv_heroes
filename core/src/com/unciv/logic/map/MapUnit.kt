@@ -907,37 +907,31 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
         return currentTile.tileMap[destinationVector]
     }
 
+    /** Продолжает назначенное действие только вне ожидающего сюжетного взаимодействия. */
     fun doAction() {
+        if (com.unciv.logic.story.StoryRuntime.isBlocked(civInfo.gameInfo)) return
         if (action == null) return
-        if (currentMovement == 0f) return  // We've already done stuff this turn, and can't do any more stuff
-
+        if (currentMovement == 0f) return
         val enemyUnitsInWalkingDistance = movement.getDistanceToTiles().keys
             .filter { it.militaryUnit != null && civInfo.isAtWarWith(it.militaryUnit!!.civInfo) }
         if (enemyUnitsInWalkingDistance.isNotEmpty()) {
-            if (isMoving()) // stop on enemy in sight
-                action = null
-            if (!(isExploring() || isAutomated()))  // have fleeing code
-                return  // Don't you dare move.
+            if (isMoving()) action = null
+            if (!(isExploring() || isAutomated())) return
         }
-
         val currentTile = getTile()
         if (isMoving()) {
             val destinationTile = getMovementDestination()
-            if (!movement.canReach(destinationTile)) { // That tile that we were moving towards is now unreachable -
-                // for instance we headed towards an unknown tile and it's apparently unreachable
+            if (!movement.canReach(destinationTile)) {
                 action = null
                 return
             }
             val gotTo = movement.headTowards(destinationTile)
-            if (gotTo == currentTile) // We didn't move at all
-                return
+            if (gotTo == currentTile) return
             if (gotTo.position == destinationTile.position) action = null
             if (currentMovement > 0) doAction()
             return
         }
-
         if (isAutomated()) WorkerAutomation.automateWorkerAction(this)
-
         if (isExploring()) UnitAutomation.automatedExplore(this)
     }
 

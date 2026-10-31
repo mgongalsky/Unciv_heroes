@@ -2,24 +2,32 @@
 
 ## Сценарные герои
 
-`core/src/com/unciv/pure/domain/hero/ScenarioHero.kt` — исходное описание и локальные инварианты. `core/src/com/unciv/pure/application/scenario/PrepareScenarioHeroesUseCase.kt` проверяет связи и готовит независимые описания с разрешёнными владельцами.
+`pure/domain/hero/ScenarioHero.kt` описывает исходную личность. `pure/application/scenario/PrepareScenarioHeroesUseCase.kt` проверяет расстановку и разрешает владельцев. Пути кода в этом документе относительны `core/src/com/unciv/`.
 
-`core/src/com/unciv/logic/scenario/InstantiateScenarioHeroesUseCase.kt` создаёт реальные юниты. Производственный вызов находится в GameStarter.addCivStartingUnits, после сценарных городов и до стандартных войск. Весь набор проверяется до размещения; прямое размещение исключает эффекты посещения на старте. Участники со сценарными героями не получают дополнительные стартовые отряды.
+`logic/scenario/InstantiateScenarioHeroesUseCase.kt` вызывается из GameStarter.addCivStartingUnits после сценарных городов и до стандартных войск. Набор проверяется до размещения; прямое размещение исключает посещения на старте. Участники со сценарными героями не получают дополнительные стартовые отряды.
 
-TileMap.scenarioHeroes хранит исходные описания. MapUnit.scenarioHeroId — стабильный ID, instanceName — отображаемое имя. Clone и перенос характеристик сохраняют личность. Карта копирует описания независимо. Владельцы разрешаются через существующий GameInfo.scenarioVictoryParticipants.
+TileMap.scenarioHeroes хранит описания, MapUnit.scenarioHeroId — стабильный ID, instanceName — имя. Clone и перенос характеристик сохраняют личность. Владельцы разрешаются через GameInfo.scenarioVictoryParticipants.
 
-Формат карты 4 мигрирует старые карты с пустыми описаниями героев. Формат игры 7 сохраняет новые поля. Восстановление партии читает юнитов, не повторяя запуск сценария. ScenarioMapValidation проверяет структуру и типы; ScenarioCityEditorCommands защищает используемые слоты от удаления.
+## Сюжетное ядро и адаптеры
 
-## Проверки через IDE
+`pure/domain/story/StoryScenario.kt` содержит зоны, триггеры, условия, последствия, разговоры и описания роликов. `StoryProgress.kt` хранит факты событий, очередь и прогресс. Описания и прогресс копируются независимо.
 
-- `com.unciv.testing.pure.application.scenario.PrepareScenarioHeroesUseCaseTest` — чистая подготовка, 6 тестов, PASSED.
-- `com.unciv.testing.story.ScenarioHeroInstantiationTest` — адаптер, формат карты, копирование, перенос ID и отказ размещения в нейтральном городе, PASSED. В файле 6 методов, счётчик IDE при полном запуске сообщил 7.
-- `com.unciv.testing.city.ScenarioGameStarterTest#scenarioHeroWithoutCitySurvivesSaveAndIndependentRestart` — полный запуск без города, сохранение и повторный старт, PASSED.
-- Адресная регрессия ScenarioGameStarterTest и ScenarioCityMapFormatTest — PASSED.
-- BUILD после производственных изменений — PASSED.
+`pure/application/story/ValidateStoryScenario.kt` проверяет связи и авторский маршрут AI. `ProcessStoryEvent.kt` выбирает триггеры и ставит последствия в очередь. `AdvanceStory.kt` проверяет номер последствия и ревизию, переводит реплики и применяет флаги без объектов игры.
 
-## Ещё не реализовано
+`logic/story/StoryRuntime.kt` исполняет очередь до сцены человека, обрабатывает авторские ответы AI. `StoryWorldEffects.kt` подготавливает награды, появление армии и гарнизон до изменения мира. GameStarter публикует вступление только при новой игре.
 
-Сюжетные события, диалоги, последствия, видео, формы героев/зон/событий и демонстрационный сценарий остаются следующими этапами. Ручная визуальная приёмка не выполнялась. Начальные армии героев используют существующие defaults.
+`StoryMapEvents.kt` собирает факты движения и новой видимости. UnitMovementAlgorithms исполняет очередь после размещения героя. GameInfo.nextTurn и WorldScreen.nextTurn удерживают ход при ожидающей очереди.
+
+`StoryBattleEvents.kt` подключён к Battle.attack: сохраняет конкретную ожидающую атаку, проверяет её перед продолжением и однократно расходует решение. Вызов resume из UI ещё предстоит подключить.
+
+## Сохранения
+
+Текущий формат карты — 5, совместимость игры — 8. Формат карты 4 добавил героев, 5 — сюжет. Старые карты получают пустые описания героев и отсутствие сюжета. TileMap.story содержит авторские данные; GameInfo.storyProgress и storyPendingAttack — прогресс партии. Чтение и клонирование не запускают последствия.
+
+## Проверки и ограничения
+
+Чистые тесты описаний, валидации, обработки событий и переходов прошли. Проверены JSON, копирование, игровые последствия и вступление через GameStarter. StoryMovementTest: 5 PASSED. StoryBattleEventsTest: 5 PASSED. NeutralCityBattleLaunchTest: 2 PASSED. Последняя сборка PASSED. Подробности и оставшиеся проверки — в документах этапов.
+
+UI диалогов и видео, формы редактора и демонстрационный сценарий ещё не реализованы. Текущая очередь блокирует все сцены. Общего отката исключений применения последствий нет. Ручная визуальная приёмка не выполнялась. Начальные армии героев используют существующие defaults.
 
 [План](Plan/PLAN.md) · [Исследование](Research/RESEARCH.md) · [Этапы](Plan/STEPS.md) · [Файлы](Plan/files.md)

@@ -92,8 +92,9 @@ object Battle {
             attack(attacker, getMapCombatantOfTile(attackableTile.tileToAttack)!!)
     }
 
-    /** Запускает подходящий бой: нейтральный гарнизон использует общую тактическую сессию без цивилизации защитника. */
+    /** Запускает подходящий бой после разрешения сюжетного предбоевого события. */
     fun attack(attacker: ICombatant, defender: ICombatant) {
+        if (!com.unciv.logic.story.StoryBattleEvents.beforeAttack(attacker, defender)) return
         if (defender is CityCombatant &&
             defender.city.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
         ) {
@@ -111,7 +112,6 @@ object Battle {
                     result.termination == com.unciv.pure.application.battle.BattleTermination.MUTUAL_DEFEAT
                 ) BattleWorldOutcomeHandler(attacker, defender).apply(result.winnerIsAttacker)
             }
-            // Обычный путь ниже требует владельца защитника и не должен выполняться для нейтрального города.
             return
         }
         debug(
@@ -125,16 +125,12 @@ object Battle {
         if (attacker is MapUnitCombatant && (defender is MapUnitCombatant || defender is CityCombatant) && attacker.getCivInfo()
                 .isPlayerCivilization()
         ) {
-            //attacker.unit.runBattle()
             if (!attacker.isDefeated() && !defender.isDefeated()) {
-                //attacker.unit.civInfo.battle.startBattle(attacker.unit, defender.unit)
                 val screen = BattleScreen.fromCombatants(attacker, defender)
                 UncivGame.Current.pushScreen(screen)
-
                 return
             }
         }
-
         if (attacker is MapUnitCombatant) {
             attacker.unit.attacksSinceTurnStart.add(Vector2(attackedTile.position))
         } else {
@@ -146,19 +142,16 @@ object Battle {
                 )
             )
         }
-
         if (attacker is MapUnitCombatant && attacker.unit.baseUnit.isAirUnit()) {
             tryInterceptAirAttack(attacker, attackedTile, defender.getCivInfo(), defender)
             if (attacker.isDefeated()) return
         }
-
         // Withdraw from melee ability
         if (attacker is MapUnitCombatant && attacker.isMelee() && defender is MapUnitCombatant) {
             val withdrawUniques = defender.unit.getMatchingUniques(UniqueType.MayWithdraw)
             val combinedProbabilityToStayPut =
                 withdrawUniques.fold(100) { probabilityToStayPut, unique -> probabilityToStayPut * (100 - unique.params[0].toInt()) / 100 }
             val baseWithdrawChance = 100 - combinedProbabilityToStayPut
-            // If a mod allows multiple withdraw properties, they stack multiplicatively
             if (baseWithdrawChance != 0 && doWithdrawFromMeleeAbility(
                     attacker,
                     defender,
@@ -166,16 +159,10 @@ object Battle {
                 )
             ) return
         }
-
         val isAlreadyDefeatedCity = defender is CityCombatant && defender.isDefeated()
-
         val damageDealt = takeDamage(attacker, defender)
-
-        // check if unit is captured by the attacker (prize ships unique)
-        // As ravignir clarified in issue #4374, this only works for aggressor
         val captureMilitaryUnitSuccess = tryCaptureUnit(attacker, defender, attackedTile)
-
-        if (!captureMilitaryUnitSuccess) // capture creates a new unit, but `defender` still is the original, so this function would still show a kill message
+        if (!captureMilitaryUnitSuccess)
             postBattleNotifications(
                 attacker,
                 defender,
@@ -183,19 +170,16 @@ object Battle {
                 attacker.getTile(),
                 damageDealt
             )
-
         if (defender.getCivInfo()
                 .isBarbarian() && attackedTile.improvement == Constants.barbarianEncampment
         )
             defender.getCivInfo().gameInfo.barbarians.campAttacked(attackedTile.position)
-
-        // This needs to come BEFORE the move-to-tile, because if we haven't conquered it we can't move there =)
+        // Capture must precede movement into the attacked city.
         if (defender.isDefeated() && defender is CityCombatant && attacker is MapUnitCombatant
             && attacker.isMelee() && !attacker.unit.hasUnique(UniqueType.CannotCaptureCities)
         ) {
-            // Barbarians can't capture cities
             if (attacker.unit.civInfo.isBarbarian()) {
-                defender.takeDamage(-1) // Back to 2 HP
+                defender.takeDamage(-1)
                 val ransom = min(200, defender.city.civInfo.gold)
                 defender.city.civInfo.addGold(-ransom)
                 defender.city.civInfo.addNotification(
@@ -203,17 +187,11 @@ object Battle {
                     defender.city.location,
                     NotificationIcon.War
                 )
-                attacker.unit.destroy() // Remove the barbarian
-            } else
-                conquerCity(defender.city, attacker)
+                attacker.unit.destroy()
+            } else conquerCity(defender.city, attacker)
         }
-
-        // Exploring units surviving an attack should "wake up"
         if (!defender.isDefeated() && defender is MapUnitCombatant && defender.unit.isExploring())
             defender.unit.action = null
-
-        // Add culture when defeating a barbarian when Honor policy is adopted, gold from enemy killed when honor is complete
-        // or any enemy military unit with Sacrificial captives unique (can be either attacker or defender!)
         if (defender.isDefeated() && defender is MapUnitCombatant && !defender.unit.isCivilian()) {
             tryEarnFromKilling(attacker, defender)
             tryHealAfterKilling(attacker)
@@ -221,21 +199,14 @@ object Battle {
             tryEarnFromKilling(defender, attacker)
             tryHealAfterKilling(defender)
         }
-
         if (attacker is MapUnitCombatant) {
-            if (attacker.unit.hasUnique(UniqueType.SelfDestructs))
-                attacker.unit.destroy()
-            else if (attacker.unit.isMoving())
-                attacker.unit.action = null
+            if (attacker.unit.hasUnique(UniqueType.SelfDestructs)) attacker.unit.destroy()
+            else if (attacker.unit.isMoving()) attacker.unit.action = null
             doDestroyImprovementsAbility(attacker, attackedTile, defender)
         }
-
-        // Should be called after tryCaptureUnit(), as that might spawn a unit on the tile we go to
         if (!captureMilitaryUnitSuccess)
             postBattleMoveToAttackedTile(attacker, defender, attackedTile)
-
         reduceAttackerMovementPointsAndAttacks(attacker, defender)
-
         if (!isAlreadyDefeatedCity) postBattleAddXp(attacker, defender)
     }
 

@@ -363,8 +363,9 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
     //endregion
     //region State changing functions
 
-    /** Выполняет цепочку ходов до человека либо сохраняемого результата победы. */
+    /** Выполняет цепочку ходов до человека либо сохраняемого результата победы; сюжетная очередь удерживает текущий ход. */
     fun nextTurn() {
+        if (com.unciv.logic.story.StoryRuntime.isBlocked(this)) return
         if (shouldStopForVictory) {
             simulateUntilWin = false
             return
