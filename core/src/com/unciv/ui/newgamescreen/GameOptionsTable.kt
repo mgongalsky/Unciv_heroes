@@ -245,37 +245,51 @@ class GameOptionsTable(
         { gameParameters.startingEra = it; null }
     }
 
-    /** Отображает авторские ограничения; пользователь изменяет только Optional. */
+    /** Отображает ограничения; красная точка обозначает Required, пользователь изменяет только Optional. */
     private fun addVictoryTypeCheckboxes() {
         add("{Victory Conditions}:".toLabel()).colspan(2).row()
         val table = Table().apply { defaults().pad(5f) }
         val policy = scenarioVictorySettings?.rules.orEmpty().associateBy { it.victoryType }
+        var hasRequired = false
         for ((i, victory) in ruleset.victories.values.withIndex()) {
             val mode = policy[victory.name]?.mode
+            val required = mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Required
             val captureUnavailable =
                     victory.name == com.unciv.pure.domain.victory.CaptureCityObjective.VICTORY_TYPE &&
                             scenarioVictorySettings?.captureObjectives.isNullOrEmpty()
-            val label =
-                    if (mode == null || mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Optional)
-                        victory.name.tr() else "${victory.name.tr()} (${mode.name.tr()})"
+            val label = if (mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Forbidden)
+                "${victory.name.tr()} (${mode.name.tr()})" else victory.name.tr()
             val checkbox =
                     label.toCheckBox(gameParameters.victoryTypes.contains(victory.name)) { checked ->
                         gameParameters.victorySelectionInitialized = true
                         if (checked) {
-                            if (victory.name !in gameParameters.victoryTypes) gameParameters.victoryTypes.add(
-                                victory.name
-                            )
+                            if (victory.name !in gameParameters.victoryTypes)
+                                gameParameters.victoryTypes.add(victory.name)
                         } else gameParameters.victoryTypes.remove(victory.name)
                         if (victory.enablesMaxTurns()) update()
                     }
             checkbox.name = victory.name
-            checkbox.isDisabled = locked || captureUnavailable ||
-                    mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Required ||
+            checkbox.isDisabled = locked || captureUnavailable || required ||
                     mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Forbidden
-            table.add(checkbox).left()
+            val entry = Table()
+            entry.add(checkbox).left()
+            if (required) {
+                hasRequired = true
+                entry.add("●".toLabel(com.badlogic.gdx.graphics.Color.RED)).padLeft(6f)
+            }
+            table.add(entry).left()
             if ((i + 1) % 2 == 0) table.row()
         }
         add(table).colspan(2).row()
+        // Общая легенда заменяет повторяющуюся подпись у каждого обязательного условия.
+        if (hasRequired) {
+            val legend = Table().apply {
+                name = "victory-required-legend"
+                add("●".toLabel(com.badlogic.gdx.graphics.Color.RED)).padRight(6f)
+                add("Required".toLabel())
+            }
+            add(legend).colspan(2).padTop(0f).row()
+        }
         // При первом вызове из init поздние поля класса ещё имеют JVM-значения по умолчанию.
         val errorMessage: String? = scenarioVictoryError
         if (!errorMessage.isNullOrEmpty()) {

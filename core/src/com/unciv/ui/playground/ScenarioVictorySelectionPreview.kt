@@ -14,12 +14,19 @@ import com.unciv.ui.newgamescreen.NewGameScreen
 import com.unciv.ui.utils.BaseScreen
 import java.io.File
 
-/** Проверяет реальные галочки меню и пересоздание экрана без запуска игры и записи пользовательских настроек. */
+/** Проверяет ограничения меню, общую легенду Required и сохранение выбора при пересоздании. */
 fun createScenarioVictorySelectionPreview(): BaseScreen {
     val ruleset = RulesetCache.getComplexRuleset(GameParameters())
     val map = TileMap(3, ruleset)
     map.scenarioPlayerSlots.add(ScenarioPlayerSlot("one", "First player"))
-    map.scenarioCities.add(ScenarioCity(id = "fort", name = "Fort", typeMode = ScenarioCityTypeMode.Fixed, fixedType = "Castle"))
+    map.scenarioCities.add(
+        ScenarioCity(
+            id = "fort",
+            name = "Fort",
+            typeMode = ScenarioCityTypeMode.Fixed,
+            fixedType = "Castle"
+        )
+    )
     map.scenarioVictorySettings = ScenarioVictorySettings(
         rules = arrayListOf(
             ScenarioVictoryRule("CaptureCity", ScenarioVictoryMode.Required),
@@ -30,6 +37,8 @@ fun createScenarioVictorySelectionPreview(): BaseScreen {
     )
     val file = File.createTempFile("unciv-victory-menu-", ".json")
     val screen = NewGameScreen(GameSetupInfo())
+    var screenDisposed = false
+    var recreated: NewGameScreen? = null
     try {
         file.writeText(MapSaver.mapToSavedString(map))
         screen.gameSetupInfo.mapFile = FileHandle(file)
@@ -43,6 +52,12 @@ fun createScenarioVictorySelectionPreview(): BaseScreen {
         val domination = screen.stage.root.findActor<CheckBox>("Domination")
         val science = screen.stage.root.findActor<CheckBox>("Scientific")
         check(capture.isChecked && capture.isDisabled)
+        check(
+            !capture.text.toString().contains("Required")
+        ) { "Required повторяется в подписи условия" }
+        check(screen.stage.root.findActor<com.badlogic.gdx.scenes.scene2d.ui.Table>("victory-required-legend") != null) {
+            "Отсутствует общая легенда обязательных условий"
+        }
         check(!domination.isChecked && domination.isDisabled)
         check(!science.isChecked && !science.isDisabled) { "Optional default was ignored" }
         science.isChecked = true
@@ -54,12 +69,23 @@ fun createScenarioVictorySelectionPreview(): BaseScreen {
         screen.gameSetupInfo.gameParameters.victorySelectionInitialized = true
         screen.updateTables()
         check(screen.gameSetupInfo.gameParameters.victoryTypes.isEmpty()) { "Empty choice was replaced by defaults" }
-        val recreated = screen.recreate() as NewGameScreen
+        val result = screen.recreate() as NewGameScreen
+        recreated = result
+        // Освобождаем старый экран ровно один раз, даже если очистка выбросит исключение.
+        screenDisposed = true
         screen.dispose()
-        check(recreated.gameSetupInfo.gameParameters.victoryTypes.isEmpty()) { "Recreation enabled all victories" }
-        return recreated
+        check(result.gameSetupInfo.gameParameters.victoryTypes.isEmpty()) { "Recreation enabled all victories" }
+        return result
     } catch (failure: Throwable) {
-        screen.dispose()
+        // Ошибка очистки не должна скрывать исходную причину падения сценария.
+        if (!screenDisposed) runCatching { screen.dispose() }.onFailure { failure.addSuppressed(it) }
+        recreated?.let {
+            runCatching { it.dispose() }.onFailure { cleanup ->
+                failure.addSuppressed(
+                    cleanup
+                )
+            }
+        }
         throw failure
     } finally {
         file.delete()
