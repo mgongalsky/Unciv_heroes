@@ -30,11 +30,12 @@ object TerrainEditorGenerationGoldenChecks {
         phase = 0
         completed = 0
         previousMap = null
+        TerrainMountainZonesGoldenChecks.reset()
     }
 
-    /** Проверяет подтверждение сброса, затем ожидает два настоящих запуска между кадрами. */
+    /** Проверяет прежнюю генерацию, затем передаёт управление сценарию новых горных шаблонов. */
     fun ready(editor: MapEditorScreen): Boolean {
-        if (phase == 2) return true
+        if (phase == 2) return TerrainMountainZonesGoldenChecks.ready(editor)
         if (phase == 0) {
             TerrainEditorDefaultsGoldenChecks.verify(editor)
             verifyScroll(editor)
@@ -69,14 +70,13 @@ object TerrainEditorGenerationGoldenChecks {
         verifyButton(editor)
         completed++
         if (completed == 1) {
-            // Закреплённая кнопка выполняет полную генерацию также из Partial.
             editor.tabs.generate.selectPage(1)
             start(editor)
             return false
         }
         editor.tabs.generate.selectPage(0)
         phase = 2
-        return true
+        return TerrainMountainZonesGoldenChecks.ready(editor)
     }
 
     /** Во время генерации повторный ввод и полный сброс настроек заблокированы. */

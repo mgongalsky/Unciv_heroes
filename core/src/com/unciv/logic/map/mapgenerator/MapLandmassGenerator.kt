@@ -29,15 +29,19 @@ class MapLandmassGenerator(val ruleset: Ruleset, val randomness: MapGenerationRa
     }
 
     fun generateLand(tileMap: TileMap) {
-        // This is to accommodate land-only mods
-        if (landOnlyMod) {
-            for (tile in tileMap.values)
-                tile.baseTerrain = landTerrainName
+        if (tileMap.mapParameters.isMountainZoneType()) {
+            // Новый путь не расходует исторический RNG остальных шаблонов.
+            MountainZoneGenerationAdapter.apply(
+                tileMap,
+                MountainZoneGenerationAdapter.prepare(tileMap)
+            )
             return
         }
-
+        if (landOnlyMod) {
+            for (tile in tileMap.values) tile.baseTerrain = landTerrainName
+            return
+        }
         waterThreshold = tileMap.mapParameters.waterThreshold.toDouble()
-
         when (tileMap.mapParameters.type) {
             MapType.pangaea -> createPangaea(tileMap)
             MapType.innerSea -> createInnerSea(tileMap)
@@ -49,10 +53,7 @@ class MapLandmassGenerator(val ruleset: Ruleset, val randomness: MapGenerationRa
             MapType.archipelago -> createArchipelago(tileMap)
             MapType.default -> createPerlin(tileMap)
         }
-
-        if (tileMap.mapParameters.shape === MapShape.flatEarth) {
-            generateFlatEarthExtraWater(tileMap)
-        }
+        if (tileMap.mapParameters.shape === MapShape.flatEarth) generateFlatEarthExtraWater(tileMap)
     }
 
     private fun generateFlatEarthExtraWater(tileMap: TileMap) {

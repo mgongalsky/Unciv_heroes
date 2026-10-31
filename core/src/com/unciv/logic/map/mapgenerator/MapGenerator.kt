@@ -81,92 +81,86 @@ class MapGenerator(val ruleset: Ruleset) {
         getMatchingUniques(UniqueType.TileGenerationConditions)
             .map { unique -> TerrainOccursRange(this, unique) }
 
-    fun generateMap(mapParameters: MapParameters, gameParameters: GameParameters = GameParameters(), civilizations: List<CivilizationInfo> = emptyList()): TileMap {
-        // Ошибочный диапазон отклоняется до изменения seed и создания карты.
+    fun generateMap(
+        mapParameters: MapParameters,
+        gameParameters: GameParameters = GameParameters(),
+        civilizations: List<CivilizationInfo> = emptyList()
+    ): TileMap {
+        // Проверки предшествуют seed, метаданным и публикации изменяемой карты.
         mapParameters.validatedLatitudeRange()
+        MountainZoneGenerationAdapter.validate(mapParameters, ruleset)
         val mapSize = mapParameters.mapSize
         val mapType = mapParameters.type
-
-        if (mapParameters.seed == 0L)
-            mapParameters.seed = System.currentTimeMillis()
-
+        if (mapParameters.seed == 0L) mapParameters.seed = System.currentTimeMillis()
         randomness.seedRNG(mapParameters.seed)
-
-        val map: TileMap = if (mapParameters.shape == MapShape.rectangular)
+        val map = if (mapParameters.shape == MapShape.rectangular)
             TileMap(mapSize.width, mapSize.height, ruleset, mapParameters.worldWrap)
-        else
-            TileMap(mapSize.radius, ruleset, mapParameters.worldWrap)
-
-        mapParameters.createdWithVersion = UncivGame.VERSION.toNiceString()
+        else TileMap(mapSize.radius, ruleset, mapParameters.worldWrap)
         map.mapParameters = mapParameters
-
+        val mountainZones = MountainZoneGenerationAdapter.prepare(map)
+        mapParameters.createdWithVersion = UncivGame.VERSION.toNiceString()
         if (mapType == MapType.empty) {
             for (tile in map.values) {
                 tile.baseTerrain = Constants.ocean
                 tile.setTerrainTransients()
             }
-
             return map
         }
-
         if (consoleTimings) debug("\nMapGenerator run with parameters %s", mapParameters)
         runAndMeasure("MapLandmassGenerator") {
-            MapLandmassGenerator(ruleset, randomness).generateLand(map)
+            MapLandmassGenerator(
+                ruleset,
+                randomness
+            ).generateLand(map)
         }
-        runAndMeasure("raiseMountainsAndHills") {
-            raiseMountainsAndHills(map)
-        }
-        runAndMeasure("applyHumidityAndTemperature") {
-            applyHumidityAndTemperature(map)
-        }
-        runAndMeasure("spawnLakesAndCoasts") {
-            spawnLakesAndCoasts(map)
-        }
-        runAndMeasure("spawnVegetation") {
-            spawnVegetation(map)
-        }
-        runAndMeasure("spawnRareFeatures") {
-            spawnRareFeatures(map)
-        }
-        runAndMeasure("spawnIce") {
-            spawnIce(map)
-        }
-        runAndMeasure("assignContinents") {
-            map.assignContinents(TileMap.AssignContinentsMode.Assign)
-        }
-        runAndMeasure("RiverGenerator") {
-            RiverGenerator(map, randomness, ruleset).spawnRivers()
-        }
+        runAndMeasure("raiseMountainsAndHills") { raiseMountainsAndHills(map) }
+        runAndMeasure("applyHumidityAndTemperature") { applyHumidityAndTemperature(map) }
+        runAndMeasure("spawnLakesAndCoasts") { spawnLakesAndCoasts(map) }
+        runAndMeasure("spawnVegetation") { spawnVegetation(map) }
+        runAndMeasure("spawnRareFeatures") { spawnRareFeatures(map) }
+        runAndMeasure("spawnIce") { spawnIce(map) }
+        // Размещение цивилизаций и содержимого уже видит непроходимые стены и открытые проходы.
+        MountainZoneGenerationAdapter.apply(map, mountainZones)
+        runAndMeasure("assignContinents") { map.assignContinents(TileMap.AssignContinentsMode.Assign) }
+        runAndMeasure("RiverGenerator") { RiverGenerator(map, randomness, ruleset).spawnRivers() }
         convertTerrains(map, ruleset)
-
-        // Region based map generation - not used when generating maps in map editor
         if (civilizations.isNotEmpty()) {
             val regions = MapRegions(ruleset)
             runAndMeasure("generateRegions") {
-                regions.generateRegions(map, civilizations.count { ruleset.nations[it.civName]!!.isMajorCiv() })
+                regions.generateRegions(
+                    map,
+                    civilizations.count { ruleset.nations[it.civName]!!.isMajorCiv() })
             }
             runAndMeasure("assignRegions") {
-                regions.assignRegions(map, civilizations.filter { ruleset.nations[it.civName]!!.isMajorCiv() }, gameParameters)
+                regions.assignRegions(
+                    map,
+                    civilizations.filter { ruleset.nations[it.civName]!!.isMajorCiv() },
+                    gameParameters
+                )
             }
-            // Natural wonders need to go before most resources since there is a minimum distance
             runAndMeasure("NaturalWonderGenerator") {
-                NaturalWonderGenerator(ruleset, randomness).spawnNaturalWonders(map)
+                NaturalWonderGenerator(
+                    ruleset,
+                    randomness
+                ).spawnNaturalWonders(map)
             }
             runAndMeasure("placeResourcesAndMinorCivs") {
-                regions.placeResourcesAndMinorCivs(map, civilizations.filter { ruleset.nations[it.civName]!!.isCityState() })
+                regions.placeResourcesAndMinorCivs(
+                    map,
+                    civilizations.filter { ruleset.nations[it.civName]!!.isCityState() })
             }
         } else {
             runAndMeasure("NaturalWonderGenerator") {
-                NaturalWonderGenerator(ruleset, randomness).spawnNaturalWonders(map)
+                NaturalWonderGenerator(
+                    ruleset,
+                    randomness
+                ).spawnNaturalWonders(map)
             }
-            // Fallback spread resources function - used when generating maps in map editor
-            runAndMeasure("spreadResources") {
-                spreadResources(map)
-            }
+            runAndMeasure("spreadResources") { spreadResources(map) }
         }
-        runAndMeasure("spreadAncientRuins") {
-            spreadAncientRuins(map)
-        }
+        runAndMeasure("spreadAncientRuins") { spreadAncientRuins(map) }
+        // Преобразования и чудеса не должны прорезать стену или перекрыть охраняемый проход.
+        MountainZoneGenerationAdapter.apply(map, mountainZones)
         return map
     }
 
@@ -223,18 +217,21 @@ class MapGenerator(val ruleset: Ruleset) {
         }
         return battlefield
     }
+
     fun generateSingleStep(map: TileMap, step: MapGeneratorSteps) {
-        // Проверка предшествует RNG и мутации существующей карты.
         map.mapParameters.validatedLatitudeRange()
-        if (map.mapParameters.seed == 0L)
-            map.mapParameters.seed = System.currentTimeMillis()
-
+        MountainZoneGenerationAdapter.validate(map.mapParameters, ruleset)
+        if (map.mapParameters.seed == 0L) map.mapParameters.seed = System.currentTimeMillis()
+        val mountainZones = MountainZoneGenerationAdapter.prepare(map)
         randomness.seedRNG(map.mapParameters.seed)
-
-        when(step) {
+        when (step) {
             MapGeneratorSteps.None -> return
             MapGeneratorSteps.All -> throw IllegalArgumentException("MapGeneratorSteps.All cannot be used in generateSingleStep")
-            MapGeneratorSteps.Landmass -> MapLandmassGenerator(ruleset, randomness).generateLand(map)
+            MapGeneratorSteps.Landmass -> MapLandmassGenerator(
+                ruleset,
+                randomness
+            ).generateLand(map)
+
             MapGeneratorSteps.Elevation -> raiseMountainsAndHills(map)
             MapGeneratorSteps.HumidityAndTemperature -> applyHumidityAndTemperature(map)
             MapGeneratorSteps.LakesAndCoast -> spawnLakesAndCoasts(map)
@@ -242,14 +239,21 @@ class MapGenerator(val ruleset: Ruleset) {
             MapGeneratorSteps.RareFeatures -> spawnRareFeatures(map)
             MapGeneratorSteps.Ice -> spawnIce(map)
             MapGeneratorSteps.Continents -> map.assignContinents(TileMap.AssignContinentsMode.Reassign)
-            MapGeneratorSteps.NaturalWonders -> NaturalWonderGenerator(ruleset, randomness).spawnNaturalWonders(map)
+            MapGeneratorSteps.NaturalWonders -> NaturalWonderGenerator(
+                ruleset,
+                randomness
+            ).spawnNaturalWonders(map)
+
             MapGeneratorSteps.Rivers -> {
                 RiverGenerator(map, randomness, ruleset).spawnRivers()
                 convertTerrains(map, ruleset)
             }
+
             MapGeneratorSteps.Resources -> spreadResources(map)
             MapGeneratorSteps.AncientRuins -> spreadAncientRuins(map)
         }
+        // Partial пользуется тем же контрактом стен и проходов, что и полная генерация.
+        MountainZoneGenerationAdapter.apply(map, mountainZones)
     }
 
     private fun runAndMeasure(text: String, action: ()->Unit) {

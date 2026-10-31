@@ -30,3 +30,6 @@ DONE означает завершение реализации и предус�
 
 
 12 — [Вода и полный сброс](STEP_12_WaterAndDefaults.md): DONE. Вода и Water level проверены, полный сброс требует подтверждения; BUILD и автоматические проверки прошли.
+
+
+13 — [Mountain Cross и Mountain Zones](STEP_13_MountainZones.md): DONE. Зоны, горные стены, узкие проходы, число зон, сохранения и стабильный Partial проверены; игровой World Wrap и Flat Earth явно не поддержаны.

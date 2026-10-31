@@ -5,6 +5,7 @@ import com.unciv.logic.map.MapParameters
 private object MapGeneratorStepsHelpers {
     val applyLandmass = fun(newParameters: MapParameters, actualParameters: MapParameters) {
         actualParameters.type = newParameters.type
+        actualParameters.mountainZoneCount = newParameters.mountainZoneCount
         actualParameters.waterThreshold = newParameters.waterThreshold
         actualParameters.seed = newParameters.seed
     }

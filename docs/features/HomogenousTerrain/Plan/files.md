@@ -216,3 +216,29 @@ MapEditorGenerateTab.kt менять не потребовалось: панел
 - docs/features/HomogenousTerrain/Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Research/RESEARCH.md, CODE_GUIDE.md — итоговые контракты и проверки.
 
 Переносов и удалений нет. Чистое ядро, MapParameters, формулы генерации воды и формат карт не менялись.
+
+## Этап 13 — фактический перечень
+
+Созданы:
+
+- core/src/com/unciv/pure/domain/mapgeneration/MountainZoneGenerator.kt — числовая геометрия, Cross/Network, горные стены, проверенные узкие проходы и инварианты графа.
+- core/src/com/unciv/logic/map/mapgenerator/MountainZoneGenerationAdapter.kt — снимок геометрии TileMap, проверка террейнов Ruleset и применение структуры.
+- tests/src/com/unciv/testing/pure/domain/mapgeneration/MountainZoneGeneratorTest.kt — 6 независимых тестов чистого ядра.
+- tests/src/com/unciv/testing/mapgeneration/MountainZoneGenerationTest.kt — 4 интеграционные проверки полного пути, Partial, сериализации и ранних отказов.
+- desktop/src/com/unciv/app/desktop/TerrainMountainZonesGoldenChecks.kt — реальные селекторы, число зон, генерация обоих типов и пиксели карты.
+- desktop/src/com/unciv/app/desktop/TerrainMountainPartialGoldenChecks.kt — два реальных Partial с неизменными seed структуры и координатами стен.
+- docs/features/HomogenousTerrain/Plan/STEP_13_MountainZones.md — контракт, ограничения и результаты.
+
+Изменены:
+
+- core/src/com/unciv/logic/map/MapParameters.kt — два типа, mountainZoneCount, clone и ранняя проверка запроса.
+- core/src/com/unciv/logic/map/mapgenerator/MapLandmassGenerator.kt — новый структурный путь без изменения старого RNG.
+- core/src/com/unciv/logic/map/mapgenerator/MapGenerator.kt — применение структуры до размещения содержимого и после полного/частичного запуска.
+- core/src/com/unciv/ui/newgamescreen/MapParametersTable.kt — два шаблона и контекстный селектор числа зон.
+- core/src/com/unciv/ui/mapeditor/MapEditorGenerateTab.kt — валидация, сообщения ошибок, восстановление числа зон и сохранение seed структуры в Partial.
+- core/src/com/unciv/ui/mapeditor/MapGeneratorSteps.kt — копирование числа зон для Landmass.
+- desktop/src/com/unciv/app/desktop/TerrainEditorGenerationGoldenChecks.kt — подключение UI-сценариев шаблонов и Partial.
+- desktop/src/com/unciv/app/desktop/TerrainEditorDefaultsGoldenChecks.kt — новое поле в проверке полного Reset.
+- docs/features/HomogenousTerrain/Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Research/RESEARCH.md, CODE_GUIDE.md — итоговые контракты и проверки.
+
+Переносов и удалений нет. TileMap, старые шаблоны и их world wrap не менялись. Новое необязательное поле параметров не требует миграции старых карт.

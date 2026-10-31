@@ -34,6 +34,9 @@ class MapParametersTable(
     private val forMapEditor: Boolean = false,
     private val sizeChangedCallback: (()->Unit)? = null
 ) : Table() {
+    /** Пустой блок не занимает высоту у исторических шаблонов. */
+    private val mountainZoneControls = Table()
+
     /** Блок редактора синхронизируется при сбросе и смене формы. */
     private lateinit var latitudeControls: MapLatitudeControls
 
@@ -100,32 +103,25 @@ class MapParametersTable(
     }
 
     private fun addMapTypeSelectBox() {
-        // MapType is not an enum so we can't simply enumerate. //todo: make it so!
         val mapTypes = listOfNotNull(
-            MapType.default,
-            MapType.pangaea,
-            MapType.continentAndIslands,
-            MapType.twoContinents,
-            MapType.threeContinents,
-            MapType.fourCorners,
-            MapType.smoothedRandom,
-            MapType.archipelago,
-            MapType.innerSea,
+            MapType.default, MapType.pangaea, MapType.continentAndIslands,
+            MapType.twoContinents, MapType.threeContinents, MapType.fourCorners,
+            MapType.smoothedRandom, MapType.archipelago, MapType.innerSea,
+            MapType.mountainCross, MapType.mountainZones,
             if (forMapEditor) MapType.empty else null
         )
-
         mapTypeSelectBox = TranslatedSelectBox(mapTypes, mapParameters.type, skin)
-
         mapTypeSelectBox.onChange {
             mapParameters.type = mapTypeSelectBox.selected.value
-
-            // If the map won't be generated, these options are irrelevant and are hidden
             noRuinsCheckbox.isVisible = mapParameters.type != MapType.empty
             noNaturalWondersCheckbox.isVisible = mapParameters.type != MapType.empty
+            refreshMountainZoneControls()
+            sizeChangedCallback?.invoke()
         }
-
         add("{Map Generation Type}:".toLabel()).left()
         add(mapTypeSelectBox).fillX().row()
+        add(mountainZoneControls).colspan(2).growX().pad(0f).row()
+        refreshMountainZoneControls()
     }
 
     private fun addWorldSizeTable() {
@@ -396,5 +392,28 @@ class MapParametersTable(
             mapParameters.elevationScale = it.toDouble()
         }
         add(controls).colspan(2).growX().row()
+    }
+
+    /** Число зон доступно только структурным шаблонам; в Cross центр входит в общее число. */
+    private fun refreshMountainZoneControls() {
+        mountainZoneControls.clear()
+        mountainZoneControls.name = "map-mountain-zone-controls"
+        if (mapParameters.isMountainZoneType()) {
+            val count = com.badlogic.gdx.scenes.scene2d.ui.SelectBox<Int>(skin).apply {
+                name = "map-mountain-zone-count"
+                setItems(*(3..12).toList().toTypedArray())
+                selected = mapParameters.mountainZoneCount
+            }
+            count.onChange { mapParameters.mountainZoneCount = count.selected }
+            mountainZoneControls.defaults().pad(5f)
+            mountainZoneControls.add("Zones".toLabel()).left()
+            mountainZoneControls.add(count).growX().row()
+            val description = if (mapParameters.type == MapType.mountainCross)
+                "Includes the central zone; passages lead through the centre"
+            else "Mountain walls with one narrow passage per connection"
+            mountainZoneControls.add(description.toLabel(fontSize = 14).apply { wrap = true })
+                .colspan(2).width(280f).growX().row()
+        }
+        invalidateHierarchy()
     }
 }

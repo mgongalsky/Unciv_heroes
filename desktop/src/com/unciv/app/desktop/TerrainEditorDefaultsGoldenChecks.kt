@@ -83,14 +83,33 @@ object TerrainEditorDefaultsGoldenChecks {
         draft.mods = originalMods
     }
 
-    /** Seed намеренно меняется; контекст ruleset/mods проверяется отдельно от сбрасываемых настроек. */
+    /** Seed меняется отдельно; контекст ruleset/mods не относится к сбрасываемым параметрам. */
     private fun settings(p: MapParameters): List<Any> = listOf(
-        p.type, p.shape, p.mapSize.name, p.mapSize.radius, p.mapSize.width, p.mapSize.height,
-        p.mapResources, p.noRuins, p.noNaturalWonders, p.worldWrap,
-        p.tilesPerBiomeArea, p.vegetationScale, p.elevationScale, p.maxCoastExtension,
-        p.elevationExponent, p.temperatureExtremeness, p.temperatureShift, p.vegetationRichness,
-        p.rareFeaturesRichness, p.resourceRichness, p.waterThreshold,
-        p.useLatitudeRange, p.topLatitude, p.bottomLatitude
+        p.type,
+        p.mountainZoneCount,
+        p.shape,
+        p.mapSize.name,
+        p.mapSize.radius,
+        p.mapSize.width,
+        p.mapSize.height,
+        p.mapResources,
+        p.noRuins,
+        p.noNaturalWonders,
+        p.worldWrap,
+        p.tilesPerBiomeArea,
+        p.vegetationScale,
+        p.elevationScale,
+        p.maxCoastExtension,
+        p.elevationExponent,
+        p.temperatureExtremeness,
+        p.temperatureShift,
+        p.vegetationRichness,
+        p.rareFeaturesRichness,
+        p.resourceRichness,
+        p.waterThreshold,
+        p.useLatitudeRange,
+        p.topLatitude,
+        p.bottomLatitude
     )
 
     private fun buttons(actor: Actor): List<TextButton> =

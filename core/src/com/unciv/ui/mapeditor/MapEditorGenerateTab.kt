@@ -79,7 +79,7 @@ class MapEditorGenerateTab(
         partialTab.generateButton.setText((if (enable) "Generate" else "Working...").tr())
     }
 
-    /** Проверяет итоговые параметры и снимает вход на UI-потоке до запуска генерации. */
+    /** Проверяет запрос и снимает независимый снимок параметров до запуска фонового генератора. */
     private fun generate(step: MapGeneratorSteps, randomizeSeed: Boolean = false) {
         if (isGenerating) return
         val validationParameters = if (step <= MapGeneratorSteps.Landmass)
@@ -89,8 +89,9 @@ class MapEditorGenerateTab(
         }
         try {
             validationParameters.validatedLatitudeRange()
+            validationParameters.validateMountainZones()
         } catch (invalid: IllegalArgumentException) {
-            ToastPopup(invalid.message ?: "Invalid latitude range", editorScreen, 4000)
+            ToastPopup(invalid.message ?: "Invalid generation settings", editorScreen, 4000)
             return
         }
         if (!randomizeSeed && step <= MapGeneratorSteps.Landmass && step in seedUsedForStep) {
@@ -98,7 +99,6 @@ class MapEditorGenerateTab(
             seedUsedForStep -= step
         }
         val mapParameters = editorScreen.newMapParameters.clone()
-        // Partial сохраняет геометрию карты и не зависит от неприменённого размера новой карты.
         val message = if (step <= MapGeneratorSteps.Landmass)
             mapParameters.mapSize.fixUndesiredSizes(mapParameters.worldWrap) else null
         if (message != null) {
@@ -120,7 +120,6 @@ class MapEditorGenerateTab(
             return
         }
         if (randomizeSeed) {
-            // Новый ненулевой seed выбирается после успешной проверки параметров.
             val previous = editorScreen.newMapParameters.seed
             var next = kotlin.random.Random.nextLong(1L, Long.MAX_VALUE)
             while (next == previous) next = kotlin.random.Random.nextLong(1L, Long.MAX_VALUE)
@@ -128,19 +127,19 @@ class MapEditorGenerateTab(
             mapParameters.seed = next
             seedUsedForStep -= step
         }
-        if (step in seedUsedForStep) mapParameters.reseed()
-        else seedUsedForStep += step
+        if (step in seedUsedForStep) mapParameters.reseed() else seedUsedForStep += step
         val targetMap = editorScreen.tileMap
         val targetRuleset = editorScreen.ruleset
         val savedScale = editorScreen.mapHolder.scaleX
         val requestedType = mapParameters.type
         val partialParameters = targetMap.mapParameters.clone().also {
             step.copyParameters?.invoke(mapParameters, it)
-            it.seed = mapParameters.seed
+            // Partial меняет наполнение зон, но не seed их структурных стен и проходов.
+        it.seed = if (step > MapGeneratorSteps.Landmass && targetMap.mapParameters.isMountainZoneType())
+            targetMap.mapParameters.seed else mapParameters.seed
         }
         Gdx.input.inputProcessor = null
         setButtonsEnabled(false)
-
         fun freshMapCompleted(
             generatedMap: TileMap,
             parameters: MapParameters,
@@ -208,8 +207,13 @@ class MapEditorGenerateTab(
                 Gdx.app.postRunnable {
                     setButtonsEnabled(true)
                     Gdx.input.inputProcessor = editorScreen.stage
+                    val explanation =
+                            if (validationParameters.isMountainZoneType()) exception.message else null
                     Popup(editorScreen).apply {
-                        addGoodSizedLabel("It looks like we can't make a map with the parameters you requested!".tr())
+                        addGoodSizedLabel(
+                            (explanation
+                                ?: "It looks like we can't make a map with the parameters you requested!").tr()
+                        )
                         row()
                         addCloseButton()
                     }.open()
@@ -275,6 +279,7 @@ class MapEditorGenerateTab(
     fun restoreGenerationParameters(source: MapParameters = editorScreen.tileMap.mapParameters) {
         val target = editorScreen.newMapParameters
         target.type = source.type
+        target.mountainZoneCount = source.mountainZoneCount
         target.shape = source.shape
         target.mapSize = source.mapSize.clone()
         target.mapResources = source.mapResources

@@ -114,6 +114,8 @@ object MapType : IsPartOfGameInfoSerialization {
     const val smoothedRandom = "Smoothed Random"
     const val custom = "Custom"
     const val empty = "Empty"
+    const val mountainCross = "Mountain Cross"
+    const val mountainZones = "Mountain Zones"
 }
 
 object MapResources {
@@ -177,6 +179,7 @@ class MapParameters : IsPartOfGameInfoSerialization {
         it.useLatitudeRange = useLatitudeRange
         it.topLatitude = topLatitude
         it.bottomLatitude = bottomLatitude
+        it.mountainZoneCount = mountainZoneCount
     }
 
     fun reseed() {
@@ -266,5 +269,22 @@ class MapParameters : IsPartOfGameInfoSerialization {
         if (!useLatitudeRange) return null
         require(shape != MapShape.flatEarth) { "Latitude range is not supported for Flat Earth" }
         return com.unciv.pure.domain.mapgeneration.LatitudeRange(topLatitude, bottomLatitude)
+    }
+
+    /** Число горных зон; в Mountain Cross центральная входит в это количество. */
+    var mountainZoneCount = 5
+
+    /** Старые шаблоны не используют настройку зон и сохраняют прежнюю генерацию. */
+    fun isMountainZoneType() = type == MapType.mountainCross || type == MapType.mountainZones
+
+    /** Неподдержанные геометрии отклоняются до изменения карты и seed. */
+    fun validateMountainZones() {
+        if (!isMountainZoneType()) return
+        require(mountainZoneCount in 3..12) { "Mountain zone count must be between 3 and 12" }
+        require(shape != MapShape.flatEarth) { "Mountain zones do not support Flat Earth; choose Hexagonal or Rectangular" }
+        require(!worldWrap) { "Mountain zones do not support World Wrap; turn World Wrap off" }
+        require(getArea() >= mountainZoneCount * 30) {
+            "Map is too small for $mountainZoneCount mountain zones; increase map size or reduce zone count"
+        }
     }
 }
