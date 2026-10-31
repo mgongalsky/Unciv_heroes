@@ -246,7 +246,7 @@ object GameStarter {
     ) {
         // Ошибки назначения слотов выявляем до создания участников, а не при частичном создании городов.
         if (existingMap && gameInfo.tileMap.scenarioPlayerSlots.isNotEmpty()) {
-            com.unciv.pure.domain.city.ScenarioPlayerBindings.resolve(
+            com.unciv.pure.application.scenario.ScenarioPlayerBindings.resolve(
                 gameInfo.tileMap.scenarioPlayerSlots,
                 newGameParameters.players.map { it.scenarioSlotId to it }
             )

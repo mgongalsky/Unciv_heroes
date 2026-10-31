@@ -1,10 +1,12 @@
-package com.unciv.testing.city
+package com.unciv.testing.pure.domain.city
 
 import com.unciv.pure.domain.city.*
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет чистый реестр без мира: уникальность, канонические объекты и безопасную замену состава. */
 class CityRegistryTest {
+    /** Минимальная оболочка доказывает, что реестру не нужен игровой CityInfo. */
     private class City(val state: CityState)
 
     private fun city(id: String, x: Float, owner: String = "Rome") = City(
@@ -13,6 +15,7 @@ class CityRegistryTest {
 
     private fun registry() = CityRegistry<City> { it.state }
 
+    /** Ожидаемый отказ должен быть именно ошибкой входных данных, а не произвольным исключением. */
     private fun rejects(action: () -> Unit) {
         try {
             action()
@@ -21,6 +24,7 @@ class CityRegistryTest {
         }
     }
 
+    /** Поиск возвращает исходные экземпляры; выборка владельца следует текущему состоянию города. */
     @Test
     fun lookupsReturnOriginalObjectsAndOwnershipFollowsState() {
         val registry = registry()
@@ -37,6 +41,7 @@ class CityRegistryTest {
         assertSame(first, registry.byId(CityId("first")))
     }
 
+    /** Повторный объект, ID, центр и отсутствующая привязка отклоняются без потери прежнего состава. */
     @Test
     fun duplicateIdentityPositionAndUnboundOwnerLeaveRegistryUnchanged() {
         val registry = registry()
@@ -49,6 +54,7 @@ class CityRegistryTest {
         assertEquals(listOf(original), registry.all())
     }
 
+    /** Невалидная замена не публикует часть нового набора; валидная полностью заменяет старый. */
     @Test
     fun replacementIsValidatedBeforeChangingMembership() {
         val registry = registry()
@@ -62,6 +68,7 @@ class CityRegistryTest {
         assertSame(replacement, registry.at(replacement.state.position))
     }
 
+    /** Удаление различает экземпляры с одинаковыми данными; ранее выданный снимок списка не меняется. */
     @Test
     fun removalUsesObjectIdentityAndPreviousSnapshotsRemainStable() {
         val registry = registry()

@@ -1,7 +1,7 @@
-package com.unciv.testing.city
+package com.unciv.testing.pure.application.scenario
 
 import com.unciv.pure.domain.city.ScenarioPlayerSlot
-import com.unciv.pure.domain.city.ScenarioPlayerSlotDefaults
+import com.unciv.pure.application.scenario.ScenarioPlayerSlotDefaults
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

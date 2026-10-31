@@ -81,13 +81,19 @@ class ArcherAttackTest {
     }
 
     @Test
-    fun `canShoot returns true for archer`() {
+    fun `canShoot returns true for placed archer without adjacent enemies`() {
         val attackerArmy = ArmyInfo(FakeCivilizationInfo(), 7).apply { addUnits("Archer", 10) }
         val defenderArmy = ArmyInfo(FakeCivilizationInfo(), 7).apply { addUnits("Spearman", 10) }
         val manager = makeManager(attackerArmy, defenderArmy)
-        manager.initializeTurnQueue()
-
         val archer = attackerArmy.getAllTroops().filterNotNull().first()
+        // Наличие дальнего оружия не разрешает стрелять до размещения на поле.
+        org.junit.Assert.assertFalse(manager.canShoot(archer))
+        manager.placeTroop(archer, FakeBattleTile(Vector2(0f, 0f)))
+        manager.placeTroop(
+            defenderArmy.getAllTroops().filterNotNull().first(),
+            FakeBattleTile(Vector2(5f, 0f))
+        )
+        manager.initializeTurnQueue()
         assertTrue(manager.canShoot(archer))
     }
 

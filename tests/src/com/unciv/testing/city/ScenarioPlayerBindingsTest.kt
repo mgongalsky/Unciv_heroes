@@ -4,7 +4,7 @@ import com.unciv.Constants
 import com.unciv.json.json
 import com.unciv.models.metadata.GameParameters
 import com.unciv.models.metadata.Player
-import com.unciv.pure.domain.city.ScenarioPlayerBindings
+import com.unciv.pure.application.scenario.ScenarioPlayerBindings
 import com.unciv.pure.domain.city.ScenarioPlayerSlot
 import org.junit.Assert.*
 import org.junit.Test

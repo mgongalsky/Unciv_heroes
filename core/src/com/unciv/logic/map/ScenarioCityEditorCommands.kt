@@ -1,5 +1,7 @@
 package com.unciv.logic.map
 
+import com.unciv.pure.application.scenario.ValidateScenarioUseCase
+
 import com.badlogic.gdx.math.Vector2
 import com.unciv.models.GameConstants
 import com.unciv.models.ruleset.Ruleset
@@ -14,7 +16,7 @@ object ScenarioCityEditorCommands {
         val cities = ArrayList(map.scenarioCities)
         if (index < 0) cities.add(copy) else cities[index] = copy
         // Ссылки на слоты и пересечения территории проверяются для всего предполагаемого результата.
-        ScenarioCityValidation.validate(cities, map.scenarioPlayerSlots,
+        ValidateScenarioUseCase.execute(cities, map.scenarioPlayerSlots,
             map.values.mapTo(HashSet()) { CityPosition(it.position.x, it.position.y) })
         // После смены правил или рельефа другие города могут требовать исправления.
         // Их данные сохраняем, а определения и пригодность центра проверяем только у применяемого города.

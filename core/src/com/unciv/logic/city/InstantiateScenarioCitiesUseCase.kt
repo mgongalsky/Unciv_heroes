@@ -1,21 +1,20 @@
 package com.unciv.logic.city
 
+import com.unciv.pure.application.scenario.ScenarioPlayerBindings
+
 import com.badlogic.gdx.math.Vector2
 import com.unciv.logic.GameInfo
 import com.unciv.logic.army.ArmyInfo
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.logic.map.ScenarioMapValidation
+import com.unciv.pure.application.city.PrepareScenarioCitiesUseCase
 import com.unciv.pure.domain.city.*
 import com.unciv.pure.domain.troop.RulesetTroopDefinitionSource
 import com.unciv.pure.domain.troop.TroopFactory
 
-/**
- * Создаёт обычные игровые CityInfo из исходных описаний карты только при запуске миссии.
- * Загрузка партии восстанавливает текущие города из сохранения и эту операцию не вызывает.
- * Основание и завоевание не выполняются: начальные данные берутся из описания без наград и потерь.
- */
+/** Игровой адаптер: создаёт CityInfo из чистого плана только при запуске миссии. */
 object InstantiateScenarioCitiesUseCase {
-    /** participants связывает стабильные ID слотов карты с уже созданными цивилизациями запуска. */
+    /** participants связывает стабильные ID слотов карты с цивилизациями запуска. */
     fun execute(
         game: GameInfo,
         participants: Map<String, CivilizationInfo>,
@@ -36,12 +35,20 @@ object InstantiateScenarioCitiesUseCase {
                 !owner.isBarbarian() && !owner.isSpectator()) { "Invalid scenario participant ${owner.civName}" }
         }
         require(bindings.values.distinct().size == bindings.size) { "A participant occupies multiple scenario slots" }
-        // Столичные предпочтения разрешаются на копиях: исходная миссия должна оставаться неизменной.
-        val descriptions = ScenarioCityCapitals.resolve(map.scenarioCities)
-        val resolved = descriptions.map { description ->
+        val prepared = PrepareScenarioCitiesUseCase.execute(
+            PrepareScenarioCitiesUseCase.Input(
+                map.scenarioCities, map.scenarioPlayerSlots,
+                map.values.map { CityPosition(it.position.x, it.position.y) }.toSet(),
+                participants.map { (slot, owner) -> slot to owner.civName }
+            )
+        )
+        val descriptions = prepared.map { it.description }
+        val resolved = prepared.map { plan ->
+            val description = plan.description
             val owner = if (description.owner == ScenarioCityOwner.PlayerSlot)
                 bindings.getValue(description.ownerSlotId) else null
-            val type = resolveType(description.deepCopy(), owner)
+            // Сохраняем точку расширения адаптера для специализированных сценариев.
+            val type = resolveType(description.deepCopy().apply { fixedType = description.fixedType }, owner)
             require(type.isNotBlank()) { "Scenario city ${description.id}: unresolved type" }
             require(game.cityRegistry.byId(CityId(description.id)) == null) {
                 "Scenario city ${description.id} already exists"
@@ -64,7 +71,6 @@ object InstantiateScenarioCitiesUseCase {
             }
             Triple(owner, type, army)
         }
-        // Это внутренний инвариант результата resolve, а не требование двух галочек от автора карты.
         for ((slotId, owner) in bindings) {
             val owned = descriptions.filter { it.owner == ScenarioCityOwner.PlayerSlot && it.ownerSlotId == slotId }
             if (owned.isEmpty()) continue
@@ -76,7 +82,7 @@ object InstantiateScenarioCitiesUseCase {
             }
         }
         val source = RulesetTroopDefinitionSource(game.ruleSet)
-        // Сначала строим все объекты вне реестра: ошибка подготовки не должна опубликовать часть городов.
+        // Готовим все объекты до публикации, чтобы ошибка не оставила часть городов в реестре.
         val cities = descriptions.mapIndexed { index, description ->
             val (owner, type, army) = resolved[index]
             description.garrison.forEachIndexed { slot, troop ->
@@ -94,7 +100,6 @@ object InstantiateScenarioCitiesUseCase {
                 state.ownership = CityOwnership.Neutral
                 if (owner == null) bindNeutralWorld(game) else civInfo = owner
                 garrisonInfo = army
-                // Инициализация без роста, голодания и побочных эффектов обычного изменения населения.
                 population.initializeForScenario(description.population, description.foodStored)
                 cityConstructions.builtBuildings.addAll(description.buildings)
                 tiles = description.territory.ifEmpty { listOf(description.position) }
@@ -103,7 +108,6 @@ object InstantiateScenarioCitiesUseCase {
         }
         for (city in cities) game.cityRegistry.register(city)
         for (city in cities) city.setTransients()
-        // После публикации городов согласуем производные данные владельцев и первоначальные назначения.
         for ((_, owner) in bindings) {
             val owned = cities.filter { it.ownerOrNull === owner }
             if (owned.isEmpty()) continue

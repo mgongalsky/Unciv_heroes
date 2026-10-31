@@ -1,4 +1,6 @@
-package com.unciv.pure.domain.city
+package com.unciv.pure.application.scenario
+
+import com.unciv.pure.domain.city.ScenarioPlayerSlot
 
 /**
  * Проверяет явное сопоставление слотов карты участникам запуска.

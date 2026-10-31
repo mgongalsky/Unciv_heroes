@@ -1,4 +1,6 @@
-package com.unciv.pure.domain.city
+package com.unciv.pure.application.scenario
+
+import com.unciv.pure.domain.city.ScenarioPlayerSlot
 
 /**
  * Автоназначение слотов в меню: пустая строка разрешает подбор, null запрещает его

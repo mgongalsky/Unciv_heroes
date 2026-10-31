@@ -1,4 +1,4 @@
-package com.unciv.testing.city
+package com.unciv.testing.pure.domain.army
 
 import com.unciv.pure.domain.army.Army
 import com.unciv.pure.domain.army.deepCopy

@@ -1,14 +1,14 @@
 package com.unciv.logic.map
 
 import com.unciv.pure.domain.city.CityPosition
-import com.unciv.pure.domain.city.ScenarioCityValidation
+import com.unciv.pure.application.scenario.ValidateScenarioUseCase
 import com.unciv.models.ruleset.Ruleset
 
 /** Проверки на границе карты: не создают игровые города и не запускают основание или GameInfo. */
 object ScenarioMapValidation {
     /** Передаёт чистым правилам реальные координаты карты для проверки ссылок и территорий. */
     fun validateStructure(map: TileMap) {
-        ScenarioCityValidation.validate(map.scenarioCities, map.scenarioPlayerSlots,
+        ValidateScenarioUseCase.execute(map.scenarioCities, map.scenarioPlayerSlots,
             map.values.mapTo(HashSet()) { CityPosition(it.position.x, it.position.y) })
     }
 

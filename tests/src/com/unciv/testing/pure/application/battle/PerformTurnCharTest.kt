@@ -150,25 +150,32 @@ class PerformTurnCharTest {
     }
 
     @Test
-    fun `SHOOT on enemy returns success`() {
+    fun `SHOOT with adjacent enemy returns rejection without damage`() {
         val archerArmy = ArmyInfo(civInfo, maxSlots = 5).apply { addUnits("Archer", 10) }
         val shooterManager = TestableBattleManager(
             archerArmy, defenderArmy,
-            FakeBattleField(),
+            FakeBattleField(listOf(attackerTile, defenderTile)),
             FakeBattleRandom(List(100) { 0.0 })
         )
-        shooterManager.initializeTurnQueue()
-        val archer = archerArmy.getAllTroops().first { it != null }!!
-        val defender = defenderArmy.getAllTroops().first { it != null }!!
+        val archer = archerArmy.getAllTroops().filterNotNull().first()
+        val defender = defenderArmy.getAllTroops().filterNotNull().first()
         shooterManager.placeTroop(archer, attackerTile)
         shooterManager.placeTroop(defender, defenderTile)
-
+        shooterManager.initializeTurnQueue()
+        val healthBefore = defender.currentHealth
+        val amountBefore = defender.currentAmount
         val result = shooterManager.performTurn(
-            BattleActionRequest(actionType = ActionType.SHOOT, troop = archer, targetPosition = defenderTile)
+            BattleActionRequest(
+                actionType = ActionType.SHOOT,
+                troop = archer,
+                targetPosition = defenderTile
+            )
         )
-        assertTrue(result.success)
+        assertFalse(result.success)
+        assertEquals(ErrorId.SHOOTING_BLOCKED_BY_ENEMY, result.errorId)
+        assertEquals(healthBefore, defender.currentHealth)
+        assertEquals(amountBefore, defender.currentAmount)
         assertFalse(result.battleEnded)
-        assertFalse(result.isLuck)
     }
 
     @Test

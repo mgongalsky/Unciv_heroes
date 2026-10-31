@@ -1,4 +1,4 @@
-package com.unciv.testing.city
+package com.unciv.testing.pure.domain.city
 
 import com.unciv.pure.domain.army.Army
 import com.unciv.pure.domain.city.CityHistory
@@ -11,7 +11,9 @@ import com.unciv.pure.domain.troop.Troop
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет независимое ядро города без игры, графики, DI и генерации ID. */
 class CityStateTest {
+    /** Идентификатор приходит снаружи; локальные значения и снимок доступны без игрового окружения. */
     @Test
     fun stateCanBeCreatedWithoutGameOrGeneratedIdentity() {
         val state = CityState(CityId("scenario-city-1"))
@@ -23,6 +25,7 @@ class CityStateTest {
         assertEquals(state, state.deepCopy())
     }
 
+    /** Снимок сохраняет идентичность и историю, но его переименование и повреждения не меняют оригинал. */
     @Test
     fun copyKeepsHistoryAndAllowsIndependentLocalChanges() {
         val original = CityState(CityId("rome"), "Rome", CityHistory("Rome", "Greece", 7), 120)
@@ -38,6 +41,7 @@ class CityStateTest {
         assertEquals(original.id, copy.id)
     }
 
+    /** Координаты и владение сравниваются по значениям без объектов CivilizationInfo. */
     @Test
     fun positionAndOwnershipAreValuesIndependentOfCivilizations() {
         assertEquals(CityPosition(2f, -1f), CityPosition(2f, -1f))
@@ -45,6 +49,7 @@ class CityStateTest {
         assertNotEquals(CityOwnership.Neutral, CityOwnership.Player("slot-1"))
     }
 
+    /** deepCopy отделяет слоты, войска и строй; проверка меняет копию и наблюдает неизменный оригинал. */
     @Test
     fun snapshotOwnsIndependentGarrisonAndPreservesHistory() {
         val army = Army(3)

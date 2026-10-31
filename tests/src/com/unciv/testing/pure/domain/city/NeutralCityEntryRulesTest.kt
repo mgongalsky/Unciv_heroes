@@ -1,4 +1,4 @@
-package com.unciv.testing.city
+package com.unciv.testing.pure.domain.city
 
 import com.unciv.pure.domain.city.CityOwnership
 import com.unciv.pure.domain.city.NeutralCityEntryRules

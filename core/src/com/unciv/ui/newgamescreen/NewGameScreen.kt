@@ -165,7 +165,7 @@ class NewGameScreen(
 
                 try {
 
-                    com.unciv.pure.domain.city.ScenarioPlayerBindings.resolve(
+                    com.unciv.pure.application.scenario.ScenarioPlayerBindings.resolve(
                         map.scenarioPlayerSlots,
                         gameSetupInfo.gameParameters.players.map { it.scenarioSlotId to it }
                     )

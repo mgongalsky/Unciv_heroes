@@ -1,5 +1,7 @@
 package com.unciv.testing.city
 
+import com.unciv.pure.application.scenario.ValidateScenarioUseCase
+
 import com.badlogic.gdx.math.Vector2
 import com.unciv.logic.MapFormatMigration
 import com.unciv.logic.MapSaver
@@ -37,7 +39,7 @@ class ScenarioCityMapFormatTest {
                     assertEquals(map.scenarioPlayerSlots, loaded.scenarioPlayerSlots)
                     assertEquals(MapFormatMigration.currentVersion,
                         MapSaver.mapParametersFromSavedString(saved).mapFormatVersion)
-                    ScenarioCityValidation.validate(loaded.scenarioCities, loaded.scenarioPlayerSlots,
+                    ValidateScenarioUseCase.execute(loaded.scenarioCities, loaded.scenarioPlayerSlots,
                         loaded.values.map { CityPosition(it.position.x, it.position.y) }.toSet())
                     assertFalse(loaded.values.any { it.isCityCenter() })
                     assertEquals(0, fixture.game.getCities().count())
@@ -90,7 +92,7 @@ class ScenarioCityMapFormatTest {
         val positions = setOf(CityPosition(2f, 0f), CityPosition(3f, 0f))
         fun reject(cities: List<ScenarioCity>, slots: List<ScenarioPlayerSlot>, text: String) {
             try {
-                ScenarioCityValidation.validate(cities, slots, positions)
+                ValidateScenarioUseCase.execute(cities, slots, positions)
                 fail("Invalid scenario must be rejected")
             } catch (expected: IllegalArgumentException) {
                 assertTrue(expected.message.orEmpty(), expected.message.orEmpty().contains(text))

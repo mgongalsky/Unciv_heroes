@@ -106,7 +106,7 @@ class PlayerPickerTable(
                 }
                 fillMissingScenarioPlayers = false
             }
-            val defaults = com.unciv.pure.domain.city.ScenarioPlayerSlotDefaults.assign(
+            val defaults = com.unciv.pure.application.scenario.ScenarioPlayerSlotDefaults.assign(
                 scenarioSlots, gameParameters.players.map {
                     if (it.chosenCiv == Constants.spectator || it in manuallyUnassigned) null else it.scenarioSlotId
                 }
