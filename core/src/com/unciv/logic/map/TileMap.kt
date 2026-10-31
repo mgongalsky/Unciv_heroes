@@ -162,6 +162,7 @@ class TileMap : IsPartOfGameInfoSerialization, IBattleField {
         toReturn.scenarioPlayerSlots.addAll(scenarioPlayerSlots.map { it.copy() })
         toReturn.scenarioHeroes.addAll(scenarioHeroes.map { it.copy() })
         toReturn.scenarioVictorySettings = scenarioVictorySettings?.deepCopy()
+        toReturn.story = story?.deepCopy()
         toReturn.ruleset = ruleset
         toReturn.startingLocations.clear()
         toReturn.startingLocations.ensureCapacity(startingLocations.size)
@@ -860,4 +861,7 @@ class TileMap : IsPartOfGameInfoSerialization, IBattleField {
 
     /** Исходные размещения героев; запуск создаёт отдельные юниты, не изменяя описания карты. */
     var scenarioHeroes = arrayListOf<com.unciv.pure.domain.hero.ScenarioHero>()
+
+    /** Авторский сюжет карты; null сохраняет обычное поведение карт без сценария. */
+    var story: com.unciv.pure.domain.story.StoryScenario? = null
 }

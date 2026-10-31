@@ -75,8 +75,8 @@ data class CompatibilityVersion(
 
 class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion, Json.Serializable {
     companion object {
-        /** Формат 7 сохраняет сценарные описания героев и их стабильные ID в игровых юнитах. */
-        const val CURRENT_COMPATIBILITY_NUMBER = 7
+        /** Формат 8 добавляет авторский сюжет и прогресс партии с очередью незавершённых последствий. */
+        const val CURRENT_COMPATIBILITY_NUMBER = 8
 
         val CURRENT_COMPATIBILITY_VERSION = CompatibilityVersion(CURRENT_COMPATIBILITY_NUMBER, UncivGame.VERSION)
 
@@ -235,7 +235,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         }
     }
 
-    /** Копирует мир и результат партии; gameParameters сохраняет прежний контракт общей ссылки. */
+    /** Копирует мир, результат партии и сюжетный прогресс; gameParameters сохраняет прежний контракт общей ссылки. */
     fun clone(): GameInfo {
         val toReturn = GameInfo()
         toReturn.tileMap = tileMap.clone()
@@ -260,6 +260,9 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         toReturn.victoryWinner = victoryWinner
         toReturn.victoryType = victoryType
         toReturn.scenarioVictoryParticipants.putAll(scenarioVictoryParticipants)
+        toReturn.storyProgress = storyProgress.deepCopy()
+        toReturn.storyPendingAttack = storyPendingAttack?.copy()
+        toReturn.storyAttackCancelled = storyAttackCancelled
         return toReturn
     }
 
@@ -733,6 +736,15 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
     /** Автоматизация останавливается на результате; явное продолжение разрешает её вне симуляции до победы. */
     val shouldStopForVictory: Boolean
         get() = victoryWinner.isNotEmpty() && (!oneMoreTurnMode || simulateUntilWin)
+
+    /** Прогресс сюжета принадлежит партии: флаги, выполненные триггеры и незавершённая очередь сохраняются вместе с миром. */
+    var storyProgress = com.unciv.pure.domain.story.StoryProgress()
+
+    /** Контекст атаки, ожидающей сюжетного решения; хранит значения вместо callback или боевых объектов. */
+    var storyPendingAttack: com.unciv.pure.domain.story.StoryEvent? = null
+
+    /** Решение отменить текущую отложенную атаку сохраняется до обработки её продолжения. */
+    var storyAttackCancelled = false
 }
 
 /**

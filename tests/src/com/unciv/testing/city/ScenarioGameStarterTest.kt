@@ -257,4 +257,37 @@ class ScenarioGameStarterTest {
             assertEquals(description, MapSaver.loadMap(FileHandle(file)).scenarioHeroes.single())
         }
     }
+
+    /** Настоящий запуск публикует вступление после стартовых ресурсов; загрузка не повторяет награду. */
+    @Test
+    fun missionOpeningRunsOnStartupButNotOnLoad() {
+        withMap(false) { file, fixture ->
+            val story = com.unciv.pure.domain.story.StoryScenario(
+                triggers = arrayListOf(
+                    com.unciv.pure.domain.story.StoryTrigger(
+                        id = "opening",
+                        event = com.unciv.pure.domain.story.StoryEventKind.MissionStarted,
+                        effects = arrayListOf(
+                            com.unciv.pure.domain.story.StoryEffect(
+                                com.unciv.pure.domain.story.StoryEffectKind.GrantGold, amount = 17
+                            )
+                        )
+                    )
+                )
+            )
+            val ordinary = GameStarter.startNewGame(setup(file, false)) { }
+            val startingGold = ordinary.civilizations.single().gold
+            fixture.game.tileMap.story = story
+            file.writeText(MapSaver.mapToSavedString(fixture.game.tileMap))
+            val game = GameStarter.startNewGame(setup(file, false)) { }
+            assertEquals(startingGold + 17, game.civilizations.single().gold)
+            assertTrue("opening" in game.storyProgress.firedTriggers)
+            assertTrue(game.storyProgress.pending.isEmpty())
+            val loaded = com.unciv.logic.UncivFiles.gameInfoFromString(
+                com.unciv.logic.UncivFiles.gameInfoToString(game.clone(), true)
+            )
+            assertEquals(startingGold + 17, loaded.civilizations.single().gold)
+            assertEquals(game.storyProgress, loaded.storyProgress)
+        }
+    }
 }

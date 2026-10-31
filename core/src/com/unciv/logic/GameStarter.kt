@@ -130,7 +130,9 @@ object GameStarter {
         debug("GameStarter.%s took %s.%sms", text, delta / 1000000L, (delta / 10000L).rem(100))
     }
 
+    /** После подготовки мира ставит сюжетное вступление и сохраняет прежние вступления наций. */
     private fun addPlayerIntros(gameInfo: GameInfo) {
+        com.unciv.logic.story.StoryRuntime.startMission(gameInfo)
         gameInfo.civilizations.filter {
             it.playerType == PlayerType.Human && it.nation.startIntroPart1.isNotEmpty()
         }.forEach { it.popupAlerts.add(PopupAlert(AlertType.StartIntro, "")) }

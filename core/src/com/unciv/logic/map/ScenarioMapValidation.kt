@@ -6,7 +6,7 @@ import com.unciv.models.ruleset.Ruleset
 
 /** Проверки на границе карты: не создают игровые города и не запускают основание или GameInfo. */
 object ScenarioMapValidation {
-    /** Проверяет координаты и ссылки описаний до публикации или записи карты. */
+    /** Проверяет координаты и ссылки всех описаний до публикации или записи карты. */
     fun validateStructure(map: TileMap) {
         val positions = map.values.mapTo(HashSet()) { CityPosition(it.position.x, it.position.y) }
         ValidateScenarioUseCase.execute(
@@ -15,6 +15,13 @@ object ScenarioMapValidation {
         com.unciv.pure.application.scenario.PrepareScenarioHeroesUseCase.validateDescriptions(
             map.scenarioHeroes, map.scenarioPlayerSlots, positions
         )
+        map.story?.let {
+            com.unciv.pure.application.story.ValidateStoryScenario.execute(
+                it, map.scenarioHeroes.mapTo(HashSet()) { hero -> hero.id },
+                map.scenarioPlayerSlots.mapTo(HashSet()) { slot -> slot.id },
+                map.scenarioCities.mapTo(HashSet()) { city -> city.id }, positions
+            )
+        }
     }
 
     /** Собирает отсутствующие определения, сохраняя данные сценария для исправления автором. */

@@ -6,8 +6,8 @@ import com.badlogic.gdx.utils.JsonWriter
 
 /** Последовательно обновляет JSON карты без создания игровых объектов или событий захвата. */
 object MapFormatMigration {
-    /** Версия 4 добавляет исходные размещения сценарных героев. */
-    const val currentVersion = 4
+    /** Версия 5 добавляет авторский сюжет; версия 4 ввела сценарных героев. */
+    const val currentVersion = 5
     private const val legacyVersion = 0
 
     /** Будущий неизвестный формат отклоняется до чтения карты и её превью. */
@@ -27,6 +27,7 @@ object MapFormatMigration {
                 1 -> migrateVersion1ToVersion2(root, parameters)
                 2 -> migrateVersion2ToVersion3(root, parameters)
                 3 -> migrateVersion3ToVersion4(root, parameters)
+                4 -> migrateVersion4ToVersion5(root, parameters)
                 else -> throw UncivShowableException("No map migration exists from format version [$version].")
             }
             version++
@@ -64,5 +65,13 @@ object MapFormatMigration {
             root.addChild("scenarioHeroes", JsonValue(JsonValue.ValueType.array))
         parameters.remove("mapFormatVersion")
         parameters.addChild("mapFormatVersion", JsonValue(4L))
+    }
+
+    /** Отсутствие сюжета сохраняет прежнее поведение существующих карт. */
+    private fun migrateVersion4ToVersion5(root: JsonValue, parameters: JsonValue) {
+        if (root.get("story") == null)
+            root.addChild("story", JsonValue(JsonValue.ValueType.nullValue))
+        parameters.remove("mapFormatVersion")
+        parameters.addChild("mapFormatVersion", JsonValue(5L))
     }
 }
