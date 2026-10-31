@@ -9,7 +9,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет игровые последствия получения нейтрального города без живого гарнизона. */
 class NeutralCityAcquisitionTest {
+    /** Готовит зарегистрированный нейтральный город с пустой армией и сохранённым строительным прогрессом. */
     private fun neutralCity(fixture: CityTestFixture) = CityInfo().apply {
         state.ownership = CityOwnership.Neutral
         location = Vector2(4f, 0f)
@@ -26,6 +28,7 @@ class NeutralCityAcquisitionTest {
         setTransients()
     }
 
+    /** Получение сохраняет население и прогресс, не приносит добычи и не заменяет существующую столицу. */
     @Test
     fun acquisitionPreservesLocalStateWithoutConquestRewardsOrLosses() {
         CityTestFixture().use { fixture ->
@@ -58,12 +61,14 @@ class NeutralCityAcquisitionTest {
             assertFalse(city.hasFlag(CityFlags.Resistance))
             assertEquals(7, city.turnAcquired)
             assertEquals("", city.previousOwner)
+            // Получение существующего города не считается основанием и не применяет награды завоевания.
             assertEquals(gold, owner.gold)
             assertEquals(created, owner.citiesCreated)
             assertEquals(diplomacy, owner.diplomacy)
         }
     }
 
+    /** Даже один живой защитник требует боя; отказ не меняет владельца, историю или гарнизон. */
     @Test
     fun livingGarrisonRejectsAcquisitionWithoutChangingWorld() {
         CityTestFixture().use { fixture ->

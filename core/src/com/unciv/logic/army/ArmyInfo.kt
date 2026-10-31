@@ -27,14 +27,17 @@ open class ArmyInfo(
     @Transient
     private var ownerAdapter: CivilizationInfo? = civInfo
 
-    /** Null is an explicitly ownerless adapter, not a substitute civilization. */
+    /** null означает армию без владельца, например нейтральный гарнизон; скрытая цивилизация не создаётся. */
     val ownerOrNull: CivilizationInfo?
         get() = ownerAdapter
 
+    /** Обязательный доступ для старых сервисов игрока; для нейтральной армии нужно использовать ownerOrNull. */
     var civInfo: CivilizationInfo
         get() = ownerAdapter
             ?: throw UninitializedPropertyAccessException("Army has no bound civilization owner")
-        set(value) { ownerAdapter = value }
+        set(value) {
+            ownerAdapter = value
+        }
     companion object {
         private var _defaultMaxSlots: Int? = null
         fun setTestingMaxSlots(slots: Int) {
@@ -71,6 +74,7 @@ open class ArmyInfo(
         fillArmy(unitName, totalCount)
     }
 
+    /** Назначает или очищает внешние связи владельца и героя, сохраняя существующую армию и её войска. */
     fun setTransients(civInfo0: CivilizationInfo?, hero0: MapUnit?) {
         ownerAdapter = civInfo0
         hero = hero0
@@ -178,6 +182,7 @@ open class ArmyInfo(
     override fun finishBattle() = super<IArmy>.finishBattle()
     fun copySlots(): Array<Troop?> = troops
 
+    /** Копирует контейнер слотов с прежними ссылками на войска; для независимого снимка города используется Army.deepCopy. */
     fun clone(): ArmyInfo {
         val copy = ArmyInfo(ownerOrNull, maxSlots)
         for (index in troops.indices) copy.setTroopAt(index, troops[index])

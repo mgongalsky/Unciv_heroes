@@ -7,11 +7,16 @@ import com.unciv.pure.domain.city.CityOwnership
 import com.unciv.pure.domain.city.CityPosition
 import com.unciv.pure.domain.city.CityRegistry
 
-/** Runtime membership with legacy containers used only until their civilization is attached. */
+/**
+ * Канонический учёт игровых городов одного GameInfo, включая нейтральные.
+ * До привязки принимает старые списки CivilizationInfo; после неё списки владельцев — выборки реестра.
+ * Меняет принадлежность, но не выполняет основание, завоевание и остальные последствия для мира.
+ */
 class WorldCityRegistry(private val game: GameInfo) {
     private val registry = CityRegistry<CityInfo> { it.state }
     private val attached = ArrayList<CivilizationInfo>()
 
+    /** Импортирует входные списки цивилизаций один раз; повторный вызов не дублирует города. */
     fun attachCivilizations() {
         for (civ in game.civilizations) attach(civ)
     }
@@ -24,6 +29,7 @@ class WorldCityRegistry(private val game: GameInfo) {
             for (city in incoming) city.state.ownership = CityOwnership.Player(civ.civName)
             registry.replaceAll(registry.all() + incoming)
         } catch (failure: Exception) {
+            // Не оставляем входные объекты с изменённым владельцем, если проверка набора не прошла.
             incoming.forEachIndexed { index, city -> city.state.ownership = previousOwners[index] }
             throw failure
         }
@@ -32,7 +38,7 @@ class WorldCityRegistry(private val game: GameInfo) {
         civ.attachCityRegistry(this)
     }
 
-    /** Validate the complete save before publishing membership or binding any city. */
+    /** Проверяет владельцев и весь состав сохранения до публикации членства и привязки городов. */
     internal fun restore(cities: List<CityInfo>) {
         check(attached.isEmpty() && registry.all().isEmpty()) { "City registry is already attached" }
         require(game.civilizations.map { it.civName }.distinct().size == game.civilizations.size) {
@@ -60,10 +66,12 @@ class WorldCityRegistry(private val game: GameInfo) {
             attached.add(civ)
         }
     }
+
+    /** Города цивилизации вычисляются по текущему владению, а не хранятся параллельным списком. */
     fun ownedBy(civ: CivilizationInfo): List<CityInfo> =
         registry.ownedBy(CityOwnership.Player(civ.civName))
 
-    /** Keep the legacy civilization grouping and per-owner order for existing consumers. */
+    /** Сохраняет привычную группировку по цивилизациям; нейтральные города перечисляются после них. */
     fun all(): List<CityInfo> {
         val order = game.civilizations.map { CityOwnership.Player(it.civName) }
         return registry.all().sortedBy { city ->
@@ -75,6 +83,7 @@ class WorldCityRegistry(private val game: GameInfo) {
     fun byId(id: CityId): CityInfo? = registry.byId(id)
     fun at(position: CityPosition): CityInfo? = registry.at(position)
 
+    /** Принимает существующий объект только из своего мира; нейтральному не требуется цивилизация. */
     fun register(city: CityInfo) {
         if (city.state.ownership == CityOwnership.Neutral) {
             require(city.gameInfo === game) { "City belongs to another game" }
@@ -87,11 +96,12 @@ class WorldCityRegistry(private val game: GameInfo) {
         registry.register(city)
     }
 
+    /** Удаляет из учёта; освобождение клеток выполняется в операции уничтожения города. */
     fun remove(city: CityInfo) {
         check(registry.remove(city)) { "City ${city.id} is not registered" }
     }
 
-    /** Membership only, like transfer; world effects belong to the ownership operation. */
+    /** Только снимает принадлежность; пересчёты прежнего владельца делает NeutralCityOwnership. */
     fun neutralize(city: CityInfo) {
         check(registry.contains(city)) { "City ${city.id} is not registered" }
         require(city.gameInfo === game) { "City belongs to another game" }
@@ -99,6 +109,8 @@ class WorldCityRegistry(private val game: GameInfo) {
         city.state.isCurrentCapital = false
         city.bindNeutralWorld(game)
     }
+
+    /** Передаёт тот же объект и ID, сбрасывая статус текущей столицы прежнего владельца. */
     fun transfer(city: CityInfo, newOwner: CivilizationInfo) {
         require(newOwner.gameInfo === game) { "New owner belongs to another game" }
         attach(newOwner)
@@ -109,7 +121,7 @@ class WorldCityRegistry(private val game: GameInfo) {
         registry.register(city)
     }
 
-    /** Compatibility setter for callers replacing a civilization's whole list. */
+    /** Совместимый setter старого API cities: заменяет состав без игровых эффектов передачи. */
     fun replaceOwned(civ: CivilizationInfo, replacement: List<CityInfo>) {
         val owner = CityOwnership.Player(civ.civName)
         val remaining = registry.all().filter { it.state.ownership != owner }

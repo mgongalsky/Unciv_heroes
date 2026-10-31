@@ -159,6 +159,7 @@ object UiGoldenTestRunner {
             game.create()
         }
 
+        /** Ждёт готовности нужного экрана, снимает кадр и выполняет выбранный режим: захват, сравнение или обновление. */
         override fun render() {
             Gdx.graphics.isContinuousRendering = true
             if (System.currentTimeMillis() - startedAt > 30_000L) {
@@ -180,10 +181,15 @@ object UiGoldenTestRunner {
             val actual = flipVertically(framebuffer)
             framebuffer.dispose()
             if (captureOnly) {
+                // Сценарий уже выполнил встроенные проверки, но этот режим не сравнивает и не утверждает изображение.
+                // Пишется только actual в results; эталоны baseline остаются прежними.
                 val platform = System.getProperty("os.name").lowercase()
                     .replace(Regex("[^a-z0-9]+"), "-").trim('-')
                 val name = scenarios[scenarioIndex].name
-                writePng(File(projectRoot, "tests/golden/results/$platform/$name-actual.png"), actual)
+                writePng(
+                    File(projectRoot, "tests/golden/results/$platform/$name-actual.png"),
+                    actual
+                )
                 println("RENDERED $name: form/layout checks passed; visual comparison not performed")
             } else {
                 allPassed = compareOrUpdate(
@@ -204,6 +210,7 @@ object UiGoldenTestRunner {
             }
         }
 
+        /** Сценарии навигации получают настоящий экран; отдельные формы открываются в общем контейнере предпросмотра. */
         private fun scenarioScreen(scenario: Scenario): BaseScreen = when (scenario.name) {
             "network-room" -> NetworkBattleGoldenScreens.room()
             "network-battle" -> NetworkBattleGoldenScreens.battle()

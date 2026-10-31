@@ -14,7 +14,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExternalResource
 
+/** Проверяет, когда действие основания скрыто, отключено или доступно для выполнения. */
 class CityFoundingAvailabilityTest {
+    /** Создание действия обращается к Gdx.input; прежний ввод восстанавливается и при падении теста. */
     @get:Rule
     val inputEnvironment = object : ExternalResource() {
         private var previous: Input? = null
@@ -27,6 +29,7 @@ class CityFoundingAvailabilityTest {
         }
     }
 
+    /** Готовит основателя из реальных правил с запасом движения на указанной клетке. */
     private fun founder(fixture: CityTestFixture, position: Vector2 = Vector2(0f, 0f)): MapUnit {
         val definition = fixture.ruleset.units.values.first { it.hasUnique(UniqueType.FoundCity) }
         return MapUnit().apply {
@@ -39,6 +42,7 @@ class CityFoundingAvailabilityTest {
         }
     }
 
+    /** Человеку нужна Small village; для AI сохраняется основание без этого улучшения. */
     @Test
     fun humanRequiresSmallVillageButAiDoesNot() {
         CityTestFixture().use { fixture ->
@@ -56,6 +60,7 @@ class CityFoundingAvailabilityTest {
         }
     }
 
+    /** Без движения и рядом с городом кнопка остаётся видимой, но обработчик отсутствует. */
     @Test
     fun noMovementOrNearbyCityLeavesADisabledAction() {
         CityTestFixture().use { fixture ->
@@ -75,6 +80,7 @@ class CityFoundingAvailabilityTest {
         }
     }
 
+    /** В режиме одного города история владения исходной столицей запрещает новое основание. */
     @Test
     fun oneCityChallengeHidesFoundingAfterOriginalCapitalWasOwned() {
         CityTestFixture().use { fixture ->

@@ -9,7 +9,9 @@ import com.unciv.pure.domain.troop.Troop
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Защищает глубокое копирование активной армии города: боевые значения сохраняются, изменения отделены. */
 class CityArmyCopyTest {
+    /** Копия сохраняет пустые слоты, потери, строй и способности; её изменение не затрагивает оригинал. */
     @Test
     fun copyPreservesSlotsCombatStateAndCapabilities() {
         val troop = Troop("Guard", 20, 5, 12, 100, 7, true, 16, 42, 19,
@@ -54,6 +56,7 @@ class CityArmyCopyTest {
         assertEquals(30, troop.formation.current)
     }
 
+    /** Пустая армия остаётся пустой, а сломанный строй не восстанавливается конструктором копии. */
     @Test
     fun emptyAndBrokenFormationSurviveCopy() {
         assertTrue(Army(0).deepCopy().getAllTroops().isEmpty())

@@ -20,6 +20,7 @@ class WorldTileGroup(internal val worldScreen: WorldScreen, tileInfo: TileInfo, 
         unitImage?.selectUnit()
     }
 
+    /** Обновляет клетку и подпись города по видимости; значок работающего населения доступен только владельцу. */
     fun update(viewingCiv: CivilizationInfo) {
         val city = tileInfo.getCity()
 
@@ -27,21 +28,27 @@ class WorldTileGroup(internal val worldScreen: WorldScreen, tileInfo: TileInfo, 
         val tileIsViewable = isViewable(viewingCiv)
         val showEntireMap = UncivGame.Current.viewEntireMapForDebug
 
+        // Наличие города на клетке не гарантирует наличие цивилизации: у нейтрального владельца нет.
         if (tileIsViewable && tileInfo.isWorked() && UncivGame.Current.settings.showWorkedTiles
-                && city?.ownerOrNull == viewingCiv)
+            && city?.ownerOrNull == viewingCiv
+        )
             icons.addPopulationIcon()
-        // update city buttons in explored tiles or entire map
         if (showEntireMap
-                || viewingCiv.hasExplored(tileInfo)
-                || viewingCiv.isSpectator()
-                || (worldScreen.viewingCiv.isSpectator() && !worldScreen.fogOfWar)) {
-            updateCityButton(city, tileIsViewable || showEntireMap) // needs to be before the update so the units will be above the city button
+            || viewingCiv.hasExplored(tileInfo)
+            || viewingCiv.isSpectator()
+            || (worldScreen.viewingCiv.isSpectator() && !worldScreen.fogOfWar)
+        ) {
+            // Подпись добавляется до остальных слоёв, чтобы юниты оставались над ней.
+            updateCityButton(city, tileIsViewable || showEntireMap)
         } else if (worldScreen.viewingCiv.isSpectator() && worldScreen.fogOfWar) {
-            // remove city buttons in unexplored tiles during spectating and fog of war enabled
             updateCityButton(null, showEntireMap)
         }
 
-        super.update(viewingCiv, UncivGame.Current.settings.showResourcesAndImprovements, UncivGame.Current.settings.showTileYields)
+        super.update(
+            viewingCiv,
+            UncivGame.Current.settings.showResourcesAndImprovements,
+            UncivGame.Current.settings.showTileYields
+        )
     }
 
 

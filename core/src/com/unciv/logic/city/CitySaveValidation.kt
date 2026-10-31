@@ -3,10 +3,11 @@ package com.unciv.logic.city
 import com.unciv.logic.map.TileMap
 import com.unciv.pure.domain.city.CityPosition
 
-/** Checks serialized territory without requiring initialized tile or city adapters. */
+/** Проверки сохранённых городов до восстановления ссылок клеток и игровых менеджеров. */
 object CitySaveValidation {
-    /** Reject unresolved construction references without deleting saved progress. */
+    /** Неизвестные определения отклоняются с диагностикой; сохранённый прогресс не удаляется молча. */
     fun validateDefinitions(cities: List<CityInfo>, ruleset: com.unciv.models.ruleset.Ruleset) {
+        // Пустая очередь допустима; постоянные проекты не являются обычными зданиями или юнитами.
         fun knownConstruction(name: String) = name.isEmpty() || name in ruleset.buildings ||
             name in ruleset.units || name in ruleset.cityEvents ||
             name in PerpetualConstruction.perpetualConstructionsMap
@@ -26,6 +27,8 @@ object CitySaveValidation {
             }
         }
     }
+
+    /** Центр и назначенные клетки должны существовать; территории разных городов не пересекаются. */
     fun validateTerritory(cities: List<CityInfo>, tileMap: TileMap) {
         val positions = tileMap.values.mapTo(HashSet()) { CityPosition(it.position.x, it.position.y) }
         val claimed = HashMap<CityPosition, String>()
@@ -38,6 +41,7 @@ object CitySaveValidation {
                 val previous = claimed.put(position, city.id)
                 require(previous == null) { "City ${city.id}: territory tile $position is also claimed by city $previous" }
             }
+            // Назначения проверяются отдельно от владения: здесь контролируются границы карты.
             for (tile in city.workedTiles + city.lockedTiles) {
                 val position = CityPosition(tile.x, tile.y)
                 require(position in positions) { "City ${city.id}: assigned tile $position is outside the map" }

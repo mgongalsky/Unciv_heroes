@@ -10,7 +10,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет расписание нейтральной фазы при последовательных ходах двух людей. */
 class NeutralCityRoundScheduleTest {
+    /** Счётчик отличает вызов нейтральной фазы от простого увеличения номера игрового хода. */
     private class CountingCity : CityInfo() {
         var rounds = 0
         override fun completeNeutralRound() {
@@ -19,6 +21,7 @@ class NeutralCityRoundScheduleTest {
         }
     }
 
+    /** Переход Rome → Greece не завершает раунд; нейтральная фаза выполняется при возврате к Rome. */
     @Test
     fun playerSwitchDoesNotRunNeutralPhaseUntilRoundWraps() {
         CityTestFixture().use { fixture ->

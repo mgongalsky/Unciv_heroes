@@ -7,7 +7,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет привязку нейтрального города к миру без создания цивилизации для его обслуживания. */
 class NeutralCityBindingTest {
+    /** Нейтральному городу доступны мир и правила; его копия сохраняет нейтральность и независимую армию. */
     @Test
     fun neutralCityBindsToWorldAndCopiesWithoutCivilization() {
         val game = GameInfo()
@@ -31,6 +33,7 @@ class NeutralCityBindingTest {
         assertTrue(game.civilizations.isEmpty())
     }
 
+    /** Привязка нейтрального мира не должна неявно отнимать город игрока. */
     @Test
     fun neutralBindingRejectsPlayerCityWithoutChangingOwner() {
         CityTestFixture().use { fixture ->

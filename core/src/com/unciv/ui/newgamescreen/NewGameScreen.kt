@@ -357,13 +357,18 @@ class NewGameScreen(
         newGameOptionsTable.locked = false
     }
 
+    /** Обновляет параметры и назначения участников при выборе карты или изменении настроек запуска. */
     fun updateTables() {
+        // Для формы нужны только слоты: полная загрузка и обязательная проверка карты выполняются при старте.
         val slots = if (gameSetupInfo.mapParameters.name.isNotEmpty()) {
             try {
                 gameSetupInfo.mapFile?.let { MapSaver.loadScenarioPlayerSlots(it) } ?: emptyList()
-            } catch (_: Exception) { emptyList() }
+            } catch (_: Exception) {
+                emptyList()
+            }
         } else emptyList()
         playerPickerTable.scenarioSlots = slots
+        // Ссылки на слоты прежней карты сбрасываются до автоподбора в таблице игроков.
         for (player in gameSetupInfo.gameParameters.players)
             if (slots.none { it.id == player.scenarioSlotId }) player.scenarioSlotId = ""
         playerPickerTable.gameParameters = gameSetupInfo.gameParameters

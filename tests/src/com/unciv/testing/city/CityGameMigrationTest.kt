@@ -10,10 +10,14 @@ import com.unciv.logic.civilization.CivilizationInfo
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет переход от городов внутри цивилизаций к единой коллекции городов в сохранении игры. */
 class CityGameMigrationTest {
+    /** Возвращает обычный JSON для передачи в настоящий загрузчик. */
     private fun text(tree: JsonValue) = tree.toJson(JsonWriter.OutputType.json)
+    /** Копирует дерево, чтобы повреждение одного сценария не влияло на остальные. */
     private fun duplicate(tree: JsonValue) = JsonReader().parse(text(tree))
 
+    /** Готовит сохранение с заметными значениями истории и запасов, восстанавливая глобальное окружение. */
     private fun withSave(action: (CityTestFixture, JsonValue) -> Unit) {
         CityTestFixture().use { fixture ->
             val previous = CivilizationInfo.monsterGameInfo
@@ -30,6 +34,7 @@ class CityGameMigrationTest {
         }
     }
 
+    /** Формат 5 пишет город один раз с явным владельцем и выдерживает копирование с повторной загрузкой. */
     @Test
     fun canonicalSaveWritesCitiesOnceAndCloneRoundTrips() = withSave { fixture, tree ->
         assertEquals(5, tree.get("version").getInt("number"))
@@ -47,8 +52,10 @@ class CityGameMigrationTest {
         assertSame(restored.getCities().single(), restored.civilizations.single().cities.single())
     }
 
+    /** Старый контейнер версии 4 мигрирует без потери данных; новая запись и следующий ход работают. */
     @Test
     fun legacyCivilizationContainerMigratesAndSurvivesAnotherSaveAndTurn() = withSave { fixture, tree ->
+        // Воспроизводим прежнее размещение города внутри цивилизации и убираем новую корневую коллекцию.
         val oldCities = JsonValue(JsonValue.ValueType.array)
         oldCities.addChild(duplicate(tree.get("cities").get(0).get("city")))
         tree.remove("cities")
@@ -72,6 +79,7 @@ class CityGameMigrationTest {
         assertEquals(city.id, reloaded.getCities().single().id)
     }
 
+    /** Дубликаты, неизвестный владелец, смешанные форматы и будущая версия отклоняются с конкретной причиной. */
     @Test
     fun corruptCanonicalSavesAreRejectedWithSpecificDiagnostics() = withSave { _, source ->
         val cases = listOf<Pair<String, (JsonValue) -> Unit>>(
@@ -105,6 +113,7 @@ class CityGameMigrationTest {
                 error
             }
             assertNotNull("Must reject: $diagnostic", failure)
+            // Сериализатор может обернуть исходную ошибку: ищем причину во всей цепочке исключений.
             val messages = generateSequence(failure as Throwable?) { it.cause }
                 .joinToString("\n") { it.message.orEmpty() }
             assertTrue("Expected $diagnostic, got $messages", messages.contains(diagnostic))

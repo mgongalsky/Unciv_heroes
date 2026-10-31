@@ -200,10 +200,14 @@ class BattleScreen private constructor(
     //)
     // Предположим, что BFwidth, BFheight, attackerTile и defenderTile уже определены
     val mapGenerator = MapGenerator(ruleset)
+
+    /** Общая с AI сессия нейтрального боя: единые армии, поле и однократный расход мировой атаки. */
     private val neutralSession = if (attacker is MapUnitCombatant && defender is CityCombatant &&
-        defender.city.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
+            defender.city.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
     ) com.unciv.logic.battle.NeutralCityBattleSession.create(attacker.unit, defender.city)
     else null
+
+    /** Нейтральный бой использует поле своей сессии; остальные бои сохраняют прежний путь генерации. */
     val battleField: TileMap = neutralSession?.battleField
         ?: mapGenerator.generateBattlefield(BFwidth, BFheight, attackerClimate, defenderClimate)
 

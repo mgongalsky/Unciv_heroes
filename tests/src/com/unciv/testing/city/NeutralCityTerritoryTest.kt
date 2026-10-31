@@ -8,7 +8,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет восстановление территории и менеджеров нейтрального города без цивилизации-владельца. */
 class NeutralCityTerritoryTest {
+    /** Повторное восстановление связывает клетки и менеджеры, сохраняя прогресс и отдельного владельца дороги. */
     @Test
     fun repeatedRestorationBindsTerritoryWithoutPlayerOrFoundingEffects() {
         CityTestFixture().use { fixture ->
@@ -22,6 +24,7 @@ class NeutralCityTerritoryTest {
                 health = 91
                 cityConstructions.constructionQueue.add("Scout")
             }
+            // Дорога может принадлежать игроку даже на территории города без владельца.
             val road = fixture.game.tileMap[city.tiles.first { it != city.location }]
             road.roadStatus = RoadStatus.Road
             road.roadOwner = fixture.civilization.civName

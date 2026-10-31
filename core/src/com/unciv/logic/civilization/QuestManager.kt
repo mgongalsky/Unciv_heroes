@@ -402,16 +402,27 @@ class QuestManager : IsPartOfGameInfoSerialization {
         }
     }
 
-    /** Returns true if the [assignedQuest] request cannot be fulfilled anymore */
+    /** Проверяет, можно ли ещё выполнить задание; построенное вне городов исполнителя чудо делает его недостижимым. */
     private fun isObsolete(assignedQuest: AssignedQuest): Boolean {
         val assignee = civInfo.gameInfo.getCivilization(assignedQuest.assignee)
         return when (assignedQuest.questName) {
             QuestName.ClearBarbarianCamp.value -> civInfo.gameInfo.tileMap[assignedQuest.data1.toInt(), assignedQuest.data2.toInt()].improvement != Constants.barbarianEncampment
-            QuestName.ConstructWonder.value -> civInfo.gameInfo.getCities().any { it.ownerOrNull != assignee && it.cityConstructions.isBuilt(assignedQuest.data1) }
-            QuestName.FindPlayer.value -> civInfo.gameInfo.getCivilization(assignedQuest.data1).isDefeated()
-            QuestName.ConquerCityState.value ->  civInfo.gameInfo.getCivilization(assignedQuest.data1).isDefeated()
-            QuestName.BullyCityState.value ->  civInfo.gameInfo.getCivilization(assignedQuest.data1).isDefeated()
-            QuestName.DenounceCiv.value ->  civInfo.gameInfo.getCivilization(assignedQuest.data1).isDefeated()
+            // Чудо может сохраниться в нейтральном городе: для проверки здания цивилизация не требуется.
+            QuestName.ConstructWonder.value -> civInfo.gameInfo.getCities()
+                .any { it.ownerOrNull != assignee && it.cityConstructions.isBuilt(assignedQuest.data1) }
+
+            QuestName.FindPlayer.value -> civInfo.gameInfo.getCivilization(assignedQuest.data1)
+                .isDefeated()
+
+            QuestName.ConquerCityState.value -> civInfo.gameInfo.getCivilization(assignedQuest.data1)
+                .isDefeated()
+
+            QuestName.BullyCityState.value -> civInfo.gameInfo.getCivilization(assignedQuest.data1)
+                .isDefeated()
+
+            QuestName.DenounceCiv.value -> civInfo.gameInfo.getCivilization(assignedQuest.data1)
+                .isDefeated()
+
             else -> false
         }
     }
@@ -692,23 +703,26 @@ class QuestManager : IsPartOfGameInfoSerialization {
         return null
     }
 
+    /** Выбирает доступное исполнителю ещё не построенное чудо, за которое другие игроки не успели существенно продвинуться. */
     private fun getWonderToBuildForQuest(challenger: CivilizationInfo): Building? {
-        val startingEra = civInfo.gameInfo.ruleSet.eras[civInfo.gameInfo.gameParameters.startingEra]!!
+        val startingEra =
+                civInfo.gameInfo.ruleSet.eras[civInfo.gameInfo.gameParameters.startingEra]!!
         val wonders = civInfo.gameInfo.ruleSet.buildings.values
-                .filter { building ->
-                            // Buildable wonder
-                            building.isWonder
-                            && (building.requiredTech == null || challenger.tech.isResearched(building.requiredTech!!))
-                            && civInfo.gameInfo.getCities().none { it.cityConstructions.isBuilt(building.name) }
-                            // Can't be disabled
-                            && building.name !in startingEra.startingObsoleteWonders
-                            && (civInfo.gameInfo.isReligionEnabled() || !building.hasUnique(UniqueType.HiddenWithoutReligion))
-                            // Can't be more than 25% built anywhere
-                            && civInfo.gameInfo.getCities().filter { it.ownerOrNull != null }.none {
-                        it.cityConstructions.getWorkDone(building.name) * 3 > it.cityConstructions.getRemainingWork(building.name) }
-                            // Can't be a unique wonder
-                            && building.uniqueTo == null
+            .filter { building ->
+                building.isWonder
+                        && (building.requiredTech == null || challenger.tech.isResearched(building.requiredTech!!))
+                        && civInfo.gameInfo.getCities()
+                    .none { it.cityConstructions.isBuilt(building.name) }
+                        && building.name !in startingEra.startingObsoleteWonders
+                        && (civInfo.gameInfo.isReligionEnabled() || !building.hasUnique(UniqueType.HiddenWithoutReligion))
+                        // Стоимость и оставшуюся работу считаем только для городов игроков; нейтральное производство статично.
+                        && civInfo.gameInfo.getCities().filter { it.ownerOrNull != null }.none {
+                    it.cityConstructions.getWorkDone(building.name) * 3 > it.cityConstructions.getRemainingWork(
+                        building.name
+                    )
                 }
+                        && building.uniqueTo == null
+            }
 
         if (wonders.isNotEmpty())
             return wonders.random()

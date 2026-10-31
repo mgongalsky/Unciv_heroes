@@ -7,7 +7,9 @@ import com.unciv.logic.civilization.PlayerType
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет город через публичные операции чтения и записи обычного и сжатого сохранения. */
 class CitySaveFormatTest {
+    /** Оба формата восстанавливают город, который затем можно передать без потери армии и территории. */
     @Test
     fun plainAndCompressedSavesRestoreCitiesAndPermitOwnershipTransfer() {
         CityTestFixture().use { fixture ->
@@ -42,6 +44,7 @@ class CitySaveFormatTest {
 
                     city.moveToCiv(greece)
 
+                    // Реестр, списки владельцев и клетки должны указывать на тот же экземпляр города.
                     assertSame(greece, city.civInfo)
                     assertTrue(rome.cities.isEmpty())
                     assertSame(city, greece.cities.single())

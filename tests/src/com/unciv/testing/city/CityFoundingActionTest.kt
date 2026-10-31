@@ -20,7 +20,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExternalResource
 
+/** Проверяет полное действие основания через UnitActions, включая удаление основателя. */
 class CityFoundingActionTest {
+    /** Подменяет только ввод LibGDX и возвращает прежнее значение после каждого теста. */
     @get:Rule
     val inputEnvironment = object : ExternalResource() {
         private var previous: Input? = null
@@ -31,12 +33,13 @@ class CityFoundingActionTest {
         override fun after() { Gdx.input = previous }
     }
 
+    /** Для человека и AI обучение предшествует основанию, а обновление UI видит готовый мир. */
     @Test
     fun humanAndAiFoundingApplyWorldEffectsBeforeUpdatingUi() {
         for (playerType in listOf(PlayerType.Human, PlayerType.AI)) {
             CityTestFixture().use { fixture ->
                 fixture.civilization.playerType = playerType
-                // Explicitly exercise the ruleset-dependent city-center branch.
+                // Явно включаем ветвь улучшения центра, зависящую от состава правил.
                 fixture.ruleset.tileImprovements.putIfAbsent("City center", TileImprovement().apply {
                     name = "City center"
                 })
@@ -57,6 +60,7 @@ class CityFoundingActionTest {
                 val events = mutableListOf<String>()
                 val action = UnitActions.getFoundCityAction(
                     unit, tile,
+                    // Обработчики проверяют порядок без записи настроек и создания WorldScreen.
                     onFoundingTutorial = {
                         assertTrue(fixture.civilization.cities.isEmpty())
                         assertFalse(unit.isDestroyed)

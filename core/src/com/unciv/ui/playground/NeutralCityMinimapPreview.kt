@@ -13,7 +13,7 @@ import com.unciv.pure.domain.city.ScenarioCityTypeMode
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.worldscreen.minimap.MinimapTile
 
-/** Exercises the real minimap actors for an ownerless city in a GL session. */
+/** Проверяет настоящие GL-акторы нейтрального города: спрайт замка, цвета миникарты и отсутствие национальных границ. */
 fun openNeutralCityMinimapPreview(screen: BaseScreen) {
     val ruleset = RulesetCache.getVanillaRuleset()
     val game = GameInfo().apply {
@@ -35,6 +35,7 @@ fun openNeutralCityMinimapPreview(screen: BaseScreen) {
         showEntireMap = true
         update()
     }
+    // Отрисовка выбирает спрайт центра, не записывая улучшение в данные карты.
     check(center.improvement == null) { "Rendering must not write a city improvement into the map" }
     check(castle.tileBaseImages.any { it.name?.contains("City center") == true }) {
         "A runtime neutral city must render the existing castle sprite without a founding side effect"
@@ -51,6 +52,7 @@ fun openNeutralCityMinimapPreview(screen: BaseScreen) {
     val layer = Group()
     val centerTile = MinimapTile(center, 40f) {}
     layer.addActor(centerTile.image)
+    // Переход от скрытой клетки к открытой должен работать и без изменения владельца (null → null).
     centerTile.updateColor(true)
     centerTile.updateColor(false)
     check(centerTile.image.isVisible && centerTile.image.color == Color.LIGHT_GRAY)
@@ -60,6 +62,7 @@ fun openNeutralCityMinimapPreview(screen: BaseScreen) {
     check(layer.children.size == 2) { "Refreshing a city circle must replace the previous actor" }
     centerTile.updateBorders().updateActorsIn(layer)
     check(layer.children.size == 2) { "Neutral territory must not acquire national borders" }
+    // Обычная клетка территории имеет серый цвет, но не получает круг центра города.
     val territoryTile = MinimapTile(territory, 40f) {}
     layer.addActor(territoryTile.image)
     territoryTile.updateColor(false)

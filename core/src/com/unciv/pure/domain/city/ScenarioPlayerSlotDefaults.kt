@@ -1,10 +1,14 @@
 package com.unciv.pure.domain.city
 
-/** Empty means automatic; null means explicitly unassigned or ineligible (for example a spectator). */
+/**
+ * Автоназначение слотов в меню: пустая строка разрешает подбор, null запрещает его
+ * для ручного «Без слота» или наблюдателя. Возвращаемый список соответствует порядку участников.
+ */
 object ScenarioPlayerSlotDefaults {
     fun assign(slots: List<ScenarioPlayerSlot>, assignments: List<String?>): List<String?> {
         val ids = slots.map { it.id }.toSet()
         val reserved = HashSet<String>()
+        // Сначала сохраняем все действующие назначения, чтобы ранняя пустая строка не заняла чужой слот.
         val result = assignments.map { id ->
             when {
                 id == null -> null
@@ -13,6 +17,7 @@ object ScenarioPlayerSlotDefaults {
             }
         }.toMutableList()
         val free = slots.map { it.id }.filter { it !in reserved }.iterator()
+        // Неизвестные и повторные назначения также попадают в подбор свободных слотов.
         for (index in result.indices) {
             if (result[index] == "" && free.hasNext()) result[index] = free.next()
         }

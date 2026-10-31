@@ -20,7 +20,9 @@ import com.unciv.testing.pure.fakes.FakeBattleTile
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Связывает настоящую боевую симуляцию с очисткой гарнизона и применением результата к городу. */
 class NeutralCityBattleSimulationTest {
+    /** Город передаётся только после событий победы и удаления погибших защитников из армии. */
     @Test
     fun seededBattleDefeatsOwnerlessGarrisonBeforeAcquiringCity() {
         CityTestFixture().use { fixture ->
@@ -38,6 +40,7 @@ class NeutralCityBattleSimulationTest {
                 fixture.game.cityRegistry.register(this)
                 setTransients()
             }
+            // Минимальное поле из двух соседних клеток исключает влияние генерации рельефа и поиска пути.
             val attackerTile = FakeBattleTile(Vector2(0f, 0f))
             val defenderTile = FakeBattleTile(Vector2(1f, 0f))
             attackerTile.addNeighbor(defenderTile)
@@ -53,6 +56,7 @@ class NeutralCityBattleSimulationTest {
             manager.setTroopPosition(attacker, attackerTile)
             manager.setTroopPosition(defender, defenderTile)
             manager.initializeTurnQueue()
+            // Нападающий атакует, защитник пропускает ход: проверяется боевой механизм, а не выбор тактики AI.
             val result = BattleSimulationRunner(
                 manager,
                 BattlePolicy { BattleCommand.Attack(it, Point(1, 0), Point(0, 0)) },
@@ -66,6 +70,7 @@ class NeutralCityBattleSimulationTest {
             assertTrue(result.events.dropLast(1).any { it is BattleEvent.TroopAttacked && it.defenderDied })
             assertNull(city.ownerOrNull)
             assertNull(city.garrisonInfo.ownerOrNull)
+            // Завершение боя очищает слоты; только после этого обработчик мировой карты получает город.
             manager.finishBattle()
             assertTrue(city.garrisonInfo.getAllTroops().all { it == null })
             val gold = fixture.civilization.gold

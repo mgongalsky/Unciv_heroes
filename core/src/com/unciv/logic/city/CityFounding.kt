@@ -13,16 +13,16 @@ import com.unciv.logic.map.MapUnit
 import com.unciv.logic.map.RoadStatus
 import com.unciv.logic.map.TileInfo
 
-/** Game effects of founding, after availability and diplomatic confirmation have been handled. */
+/** Игровые эффекты основания. Доступность действия и дипломатическое подтверждение проверяет вызывающая сторона. */
 object CityFounding {
-    /** Creates and registers a city, without choosing production or consuming its founder. */
+    /** Создаёт и регистрирует город; выбор производства и уничтожение основателя выполняются отдельно. */
     fun create(civInfo: CivilizationInfo, cityLocation: Vector2, foundingUnit: MapUnit): CityInfo {
         val city = CityInfo()
         initialize(city, civInfo, cityLocation, foundingUnit)
         return city
     }
 
-    /** Shared with the legacy founding constructor; called exactly once for a new city. */
+    /** Общий путь с совместимым конструктором CityInfo; вызывается однократно для нового города. */
     internal fun initialize(city: CityInfo, civInfo: CivilizationInfo, cityLocation: Vector2, foundingUnit: MapUnit) {
         with(city) {
             this.civInfo = civInfo
@@ -30,15 +30,16 @@ object CityFounding {
             turnAcquired = civInfo.gameInfo.turns
             location = cityLocation
 
-            // Initialize the garrisonInfo with predefined troops
+            // Активная армия получает прежний стартовый состав; рефакторинг не меняет баланс основания.
             garrisonInfo = ArmyInfo(
                 civInfo,
                 "Archer" to 35,
-                 "Peasant" to 20 // Uncomment if needed
+                 "Peasant" to 20
                 //"Horseman" to 8,
                 //"Swordsman" to 20
             )
 
+            // Старое представление гарнизона пока сохраняется отдельно и имеет свой исторический состав.
             garrison.add(TroopInfo(30, "Archer"))
             garrison.add(TroopInfo(20, "Spearman"))
             garrison.add(TroopInfo(10, "Horseman"))
@@ -55,17 +56,19 @@ object CityFounding {
             isOriginalCapital = civInfo.citiesCreated == 0
             if (isOriginalCapital) {
                 civInfo.hasEverOwnedOriginalCapital = true
-                // if you have some culture before the 1st city is found, you may want to adopt the 1st policy
+                // Культура могла накопиться до первого города; теперь выбор первой политики становится возможен.
                 civInfo.policies.shouldOpenPolicyPicker = true
             }
             civInfo.citiesCreated++
 
+            // Регистрация предшествует стартовым зданиям: первый город определяется через список владельца.
             civInfo.gameInfo.cityRegistry.register(city)
 
             val startingEra = civInfo.gameInfo.gameParameters.startingEra
 
             addStartingBuildings(civInfo, startingEra)
 
+            // Порядок расширения и установки населения сохранён: оба этапа могут влиять на итоговую территорию.
             expansion.reset()
 
             tryUpdateRoadStatus()
@@ -82,10 +85,9 @@ object CityFounding {
             tile.improvementInProgress = null
 
             val ruleset = civInfo.gameInfo.ruleSet
-            workedTiles = hashSetOf() //reassign 1st working tile
+            workedTiles = hashSetOf() // Рабочие клетки будут назначены заново после изменения населения.
 
-            // TODO: Change there for new settling mechanics
-            //calculateArmyPopulation()
+            // Начальное население складывается из значения эпохи и вклада армии основателя.
             population.setPopulation(ruleset.eras[startingEra]!!.settlerPopulation + foundingUnit.calculateArmyPopulation())
 
             if (civInfo.religionManager.religionState == ReligionState.Pantheon) {
@@ -97,14 +99,14 @@ object CityFounding {
 
             population.autoAssignPopulation()
 
-            // Update proximity rankings for all civs
+            // Новый город меняет близость цивилизаций; уже достигнутое соседство пересчитывать не требуется.
             for (otherCiv in civInfo.gameInfo.getAliveMajorCivs()) {
-                if (civInfo.getProximity(otherCiv) != Proximity.Neighbors) // unless already neighbors
+                if (civInfo.getProximity(otherCiv) != Proximity.Neighbors)
                     civInfo.updateProximity(otherCiv,
                     otherCiv.updateProximity(civInfo))
             }
             for (otherCiv in civInfo.gameInfo.getAliveCityStates()) {
-                if (civInfo.getProximity(otherCiv) != Proximity.Neighbors) // unless already neighbors
+                if (civInfo.getProximity(otherCiv) != Proximity.Neighbors)
                     civInfo.updateProximity(otherCiv,
                         otherCiv.updateProximity(civInfo))
             }
@@ -113,6 +115,7 @@ object CityFounding {
         }
     }
 
+    /** Назначает первую столицу и выдаёт здания эпохи с учётом национальных замен и бесплатных построек. */
     private fun CityInfo.addStartingBuildings(civInfo: CivilizationInfo, startingEra: String) {
         val ruleset = civInfo.gameInfo.ruleSet
         if (civInfo.cities.size == 1) {
@@ -120,7 +123,6 @@ object CityFounding {
             cityConstructions.addBuilding(capitalCityIndicator())
         }
 
-        // Add buildings and pop we get from starting in this era
         for (buildingName in ruleset.eras[startingEra]!!.settlerBuildings) {
             val building = ruleset.buildings[buildingName] ?: continue
             val uniqueBuilding = civInfo.getEquivalentBuilding(building)
@@ -133,18 +135,12 @@ object CityFounding {
     }
 
     /**
-     * Generates and returns a new city name for the [foundingCiv].
-     *
-     * This method attempts to return the first unused city name of the [foundingCiv], taking used
-     * city names into consideration (including foreign cities). If that fails, it then checks
-     * whether the civilization has [UniqueType.BorrowsCityNames] and, if true, returns a borrowed
-     * name. Else, it repeatedly attaches one of the given [prefixes] to the list of names up to ten
-     * times until an unused name is successfully generated. If all else fails, null is returned.
-     *
-     * @param foundingCiv The civilization that founded this city.
-     * @param aliveCivs Every civilization currently alive.
-     * @param prefixes Prefixes to add when every base name is taken, ordered.
-     * @return A new city name in [String]. Null if failed to generate a name.
+     * Выбирает свободное имя с учётом городов всех живых цивилизаций.
+     * Сначала использует список основателя, затем заимствование при соответствующем свойстве,
+     * иначе перебирает префиксы с повторением до десяти раз. null означает, что имя не найдено.
+     * @param foundingCiv Цивилизация, основывающая город.
+     * @param aliveCivs Живые цивилизации для проверки занятых имён и заимствования.
+     * @param prefixes Префиксы в порядке предпочтения после исчерпания обычных имён.
      */
     private fun CityInfo.generateNewCityName(
         foundingCiv: CivilizationInfo,
@@ -156,20 +152,15 @@ object CityFounding {
                 civilization.cities.asSequence().map { city -> city.name }
             }.toSet()
 
-        // Attempt to return the first missing name from the list of city names
         for (cityName in foundingCiv.nation.cities) {
             if (cityName !in usedCityNames) return cityName
         }
 
-        // If all names are taken and this nation borrows city names,
-        // return a random borrowed city name
         if (foundingCiv.hasUnique(UniqueType.BorrowsCityNames)) {
             return borrowCityName(foundingCiv, aliveCivs, usedCityNames)
         }
 
-        // If the nation doesn't have the unique above,
-        // return the first missing name with an increasing number of prefixes attached
-        // TODO: Make prefixes moddable per nation? Support suffixes?
+        // TODO: Вынести префиксы в настройки наций и рассмотреть поддержку суффиксов.
         var candidate: String?
         for (number in (1..10)) {
             for (prefix in prefixes) {
@@ -181,18 +172,11 @@ object CityFounding {
             }
         }
 
-        // If all else fails (by using some sort of rule set mod without city names),
+        // Например, мод может вообще не задавать имена городов.
         return null
     }
 
-    /**
-     * Borrows a city name from another major civilization.
-     *
-     * @param foundingCiv The civilization that founded this city.
-     * @param aliveCivs Every civilization currently alive.
-     * @param usedCityNames Every city name that have already been taken.
-     * @return A new city named in [String]. Null if failed to generate a name.
-     */
+    /** Заимствует свободное имя у другой крупной нации; при отсутствии кандидатов возвращает null. */
     private fun CityInfo.borrowCityName(
         foundingCiv: CivilizationInfo,
         aliveCivs: Set<CivilizationInfo>,
@@ -201,11 +185,7 @@ object CityFounding {
         val aliveMajorNations: Sequence<Nation> =
             aliveCivs.asSequence().filter { civ -> civ.isMajorCiv() }.map { civ -> civ.nation }
 
-        /*
-        We take the last unused city name for each other major nation in this game,
-        skipping nations whose names are exhausted,
-        and choose a random one from that pool if it's not empty.
-        */
+        // От каждой другой живой нации берём последнее свободное имя и случайно выбираем одно из них.
         val otherMajorNations: Sequence<Nation> =
             aliveMajorNations.filter { nation -> nation != foundingCiv.nation }
         var newCityNames: Set<String> =
@@ -214,8 +194,7 @@ object CityFounding {
             }.toSet()
         if (newCityNames.isNotEmpty()) return newCityNames.random()
 
-        // As per fandom wiki, once the names from the other nations in the game are exhausted,
-        // names are taken from the rest of the major nations in the rule set
+        // Если имена участников исчерпаны, используем свободные имена крупных наций, отсутствующих в партии.
         val absentMajorNations: Sequence<Nation> =
             getRuleset().nations.values.asSequence().filter { nation ->
                 nation.isMajorCiv() && nation !in aliveMajorNations
@@ -226,19 +205,12 @@ object CityFounding {
             }.toSet()
         if (newCityNames.isNotEmpty()) return newCityNames.random()
 
-        // If for some reason we have used every single city name in the game,
-        // (are we using some sort of rule set mod without city names?)
         return null
     }
 
-    /*
-     When someone settles a city within 6 tiles of another civ, this makes the AI unhappy and it starts a rolling event.
-     The SettledCitiesNearUs flag gets added to the AI so it knows this happened,
-        and on its turn it asks the player to stop (with a DemandToStopSettlingCitiesNear alert type)
-     If the player says "whatever, I'm not promising to stop", they get a -10 modifier which gradually disappears in 40 turns
-     If they DO agree, then if they keep their promise for ~100 turns they get a +10 modifier for keeping the promise,
-     But if they don't keep their promise they get a -20 that will only fully disappear in 160 turns.
-     There's a lot of triggering going on here.
+    /**
+     * Уведомляет знакомых крупных соседей об основании в пределах шести клеток от их городов.
+     * Флаг запускает последующую дипломатическую реакцию AI; просьбы и последствия обещаний обрабатываются отдельно.
      */
     private fun CityInfo.triggerCitiesSettledNearOtherCiv() {
         val citiesWithin6Tiles =
@@ -255,7 +227,7 @@ object CityFounding {
             otherCiv.getDiplomacyManager(civInfo).setFlag(DiplomacyFlags.SettledCitiesNearUs, 30)
     }
 
-    /** Tutorial bookkeeping precedes this operation; presentation updates follow it. */
+    /** Полное игровое действие: создаёт город, оформляет центр и уничтожает основателя. Обучение вызывается до, UI — после. */
     fun complete(unit: MapUnit, tile: TileInfo) {
         unit.civInfo.addCity(tile.position, unit)
         if (tile.ruleset.tileImprovements.containsKey("City center")) {

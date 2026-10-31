@@ -7,7 +7,9 @@ import com.unciv.pure.domain.city.CityPosition
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет защиту координат города от изменения внешнего Vector2 и совместимость старого JSON. */
 class CityPositionStateTest {
+    /** Ни входной, ни возвращённый вектор не является изменяемой ссылкой на координаты ядра. */
     @Test
     fun boundaryVectorsCannotMutateCoreCoordinates() {
         val city = CityInfo()
@@ -25,6 +27,7 @@ class CityPositionStateTest {
         assertEquals(CityPosition(-3f, 1f), city.state.position)
     }
 
+    /** Копия сохраняет позицию, но перемещается только через setter, независимо от исходного города. */
     @Test
     fun clonedCityKeepsCoordinatesWithoutSharingMutableVectors() {
         CityTestFixture().use { fixture ->
@@ -40,6 +43,7 @@ class CityPositionStateTest {
         }
     }
 
+    /** На диске остаётся поле location; внутренние state/position не должны дублировать его. */
     @Test
     fun legacyLocationJsonRestoresCoreCoordinates() {
         val codec = json()

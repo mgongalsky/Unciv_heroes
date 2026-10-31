@@ -7,10 +7,13 @@ import com.unciv.logic.civilization.CivilizationInfo
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет сохранение города внутри полной игры, включая восстановление связей и следующий ход. */
 class CityGamePersistenceTest {
+    /** Копирование и JSON сохраняют состояние, после загрузки работают расширение территории и ход игры. */
     @Test
     fun gameCopyAndRealJsonRestoreCityAndAllowAnotherTurn() {
         CityTestFixture().use { fixture ->
+            // Изолируем ещё одну глобальную ссылку, которую использует обычный CivilizationInfo.
             val previousMonsterGame = CivilizationInfo.monsterGameInfo
             CivilizationInfo.monsterGameInfo = GameInfo()
             try {
@@ -25,6 +28,7 @@ class CityGamePersistenceTest {
 
                 val copy = fixture.game.clone()
                 val copiedCity = copy.getCities().single()
+                // Копия содержит обычную цивилизацию, поэтому последующая загрузка проверяет реальный путь.
                 assertEquals(CivilizationInfo::class.java, copy.civilizations.single().javaClass)
                 assertNotSame(fixture.game.tileMap, copy.tileMap)
                 assertNotSame(original, copiedCity)
@@ -58,10 +62,11 @@ class CityGamePersistenceTest {
                     city.garrison.map { it.unitName to it.amount })
                 assertEquals(original.garrisonInfo.getAllTroops().map { it?.let { it.unitName to it.amount } },
                     city.garrisonInfo.getAllTroops().map { it?.let { it.unitName to it.amount } })
-                // Full restoration binds the army to the same owner as the city.
+                // Полное восстановление привязывает армию к тому же владельцу, что и город.
                 assertSame(owner, city.garrisonInfo.civInfo)
                 assertSame(city.state.garrison, city.garrisonInfo.army)
 
+                // Проверяем работоспособность восстановленных связей, а не только равенство полей JSON.
                 val territoryBefore = city.tiles.size
                 assertNotNull(city.expansion.addNewTileForFree())
                 assertEquals(territoryBefore + 1, city.tiles.size)

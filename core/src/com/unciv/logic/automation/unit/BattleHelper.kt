@@ -12,19 +12,27 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.pure.domain.pathfinding.PathsToTilesWithinTurn
 
 object BattleHelper {
+    /**
+     * Оценивает силы тактических армий для нейтральной цели; null оставляет обычной цели прежнюю оценку боя.
+     * Решение не запускает симуляцию и не меняет войска: используются только снимки живых стеков.
+     */
     private fun shouldAttackNeutralGarrison(unit: MapUnit, tile: TileInfo): Boolean? {
         val city = tile.getCity()?.takeIf {
             tile.isCityCenter() && it.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
         } ?: return null
+
         fun snapshots(troops: List<com.unciv.pure.domain.troop.Troop?>) =
-            troops.filterNotNull().filter { it.currentAmount > 0 }.map {
-                com.unciv.pure.application.battle.AssessBattleThreatUseCase.TroopSnapshot(
-                    it.currentAmount, it.damage, it.maxHealth, it.speed,
-                    if (it.rangedStrength > 0) city.getRuleset().units[it.unitName]?.range ?: 2 else 0
-                )
-            }
+                troops.filterNotNull().filter { it.currentAmount > 0 }.map {
+                    com.unciv.pure.application.battle.AssessBattleThreatUseCase.TroopSnapshot(
+                        it.currentAmount, it.damage, it.maxHealth, it.speed,
+                        if (it.rangedStrength > 0) city.getRuleset().units[it.unitName]?.range
+                            ?: 2 else 0
+                    )
+                }
+
         val threat = com.unciv.pure.application.battle.AssessBattleThreatUseCase.execute(
-            snapshots(unit.army.getAllTroops().toList()), snapshots(city.garrisonInfo.getAllTroops().toList()),
+            snapshots(unit.army.getAllTroops().toList()),
+            snapshots(city.garrisonInfo.getAllTroops().toList()),
             attackerAttackSkill = unit.heroAttackSkill,
             attackerDefenseSkill = unit.heroDefenseSkill
         )

@@ -11,7 +11,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет запуск нейтрального тактического боя через общий игровой метод Battle.attack. */
 class NeutralCityBattleLaunchTest {
+    /** Создаёт защищённую цель с заметными запасами, чтобы обнаружить лишние эффекты завоевания. */
     private fun city(fixture: CityTestFixture) = CityInfo().apply {
         state.ownership = CityOwnership.Neutral
         location = Vector2(4f, 0f)
@@ -24,6 +26,7 @@ class NeutralCityBattleLaunchTest {
         setTransients()
     }
 
+    /** Атака AI проходит тактический бой, очищает гарнизон и вводит победившего героя в полученный город. */
     @Test
     fun aiAttackRunsTacticalBattleAndAcquiresCity() {
         CityTestFixture().use { fixture ->
@@ -50,6 +53,7 @@ class NeutralCityBattleLaunchTest {
         }
     }
 
+    /** Запуск без движения отклоняется без расхода атаки, повреждения гарнизона и смены владельца. */
     @Test
     fun rejectedAttackLeavesWorldAndGarrisonUnchanged() {
         CityTestFixture().use { fixture ->

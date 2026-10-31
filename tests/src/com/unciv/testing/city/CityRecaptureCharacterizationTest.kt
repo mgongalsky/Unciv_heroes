@@ -9,7 +9,9 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Фиксирует повторный захват, аннексию и освобождение города после первоначального завоевания. */
 class CityRecaptureCharacterizationTest {
+    /** Создаёт участника с теми же начальными технологиями и восстанавливает его игровые связи. */
     private fun addCivilization(fixture: CityTestFixture, name: String): FakeCivilizationInfo {
         val civ = FakeCivilizationInfo().apply {
             civName = name
@@ -22,6 +24,7 @@ class CityRecaptureCharacterizationTest {
         return civ
     }
 
+    /** Готовит римский город, уже захваченный Грецией: пять жителей, сопротивление и марионеточный статус. */
     private fun withCapturedCity(block: (CityTestFixture, CityInfo, FakeCivilizationInfo, FakeCivilizationInfo) -> Unit) {
         CityTestFixture().use { fixture ->
             fixture.civilization.isCurrentPlayerOverride = false
@@ -43,6 +46,7 @@ class CityRecaptureCharacterizationTest {
         }
     }
 
+    /** Возврат прежнему владельцу снимает сопротивление, но сохраняет потери жителей от захвата. */
     @Test
     fun recaptureDuringResistanceRemovesResistanceButStillLosesPopulation() {
         withCapturedCity { _, city, greece, egypt ->
@@ -66,6 +70,7 @@ class CityRecaptureCharacterizationTest {
             assertEquals(listOf(city), greece.cities)
             assertTrue(egypt.cities.isEmpty())
 
+            // Аннексия убирает марионеточный статус и накопленное производство, не меняя население.
             city.cityConstructions.inProgressConstructions["Warrior"] = 17
             city.annexCity()
 
@@ -76,6 +81,7 @@ class CityRecaptureCharacterizationTest {
         }
     }
 
+    /** Освободитель возвращает город основателю; сам он владельцем не становится. */
     @Test
     fun liberationReturnsCityToFounderWithoutResistanceOrPuppetStatus() {
         withCapturedCity { fixture, city, greece, egypt ->

@@ -7,7 +7,9 @@ import com.unciv.logic.civilization.SpyAction
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет прекращение шпионажа и запрет новых назначений в нейтральный город. */
 class NeutralCityEspionageTest {
+    /** Шпион покидает ставший нейтральным город при обработке хода и сбрасывает задание с таймером. */
     @Test
     fun spyReturnsToHideoutWhenItsCityBecomesNeutral() {
         CityTestFixture().use { fixture ->
@@ -27,6 +29,7 @@ class NeutralCityEspionageTest {
         }
     }
 
+    /** Отказ назначить шпиона в нейтральный город сохраняет его прежнее место, действие и оставшееся время. */
     @Test
     fun rejectedNeutralAssignmentPreservesPreviousSpyState() {
         CityTestFixture().use { fixture ->

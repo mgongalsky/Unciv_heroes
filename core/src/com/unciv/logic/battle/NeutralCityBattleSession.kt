@@ -12,7 +12,11 @@ import com.unciv.logic.map.mapgenerator.MapGenerator
 import com.unciv.pure.application.battle.BattleSimulationResult
 import com.unciv.pure.domain.city.NeutralCityEntryRules.Decision
 
-/** Shared tactical setup; neither side requires a substitute civilization. */
+/**
+ * Общая тактическая сессия боя героя с нейтральным гарнизоном для игрока и AI.
+ * Работает с настоящими армиями сторон; фиктивная цивилизация защитника не создаётся.
+ * Применение исхода к мировой карте выполняет BattleWorldOutcomeHandler, а не эта сессия.
+ */
 class NeutralCityBattleSession private constructor(
     val battleField: TileMap,
     val manager: BattleManager,
@@ -22,6 +26,7 @@ class NeutralCityBattleSession private constructor(
 ) {
     private var attackConsumed = false
 
+    /** Однократно расходует мировую атаку и движение, даже если UI повторно вызовет обработчик. */
     fun consumeWorldAttack() {
         if (attackConsumed) return
         attackConsumed = true
@@ -31,6 +36,7 @@ class NeutralCityBattleSession private constructor(
         hero.attacksSinceTurnStart.add(com.badlogic.gdx.math.Vector2(city.getCenterTile().position))
     }
 
+    /** AI исполняет те же боевые команды; ограничения останавливают затянувшийся бой без прогресса. */
     fun runAutomated(maxTurns: Int = 1_000): BattleSimulationResult {
         require(maxTurns > 0) { "maxTurns must be positive" }
         manager.initializeBattle()
@@ -42,6 +48,7 @@ class NeutralCityBattleSession private constructor(
     }
 
     companion object {
+        /** Проверяет запуск уже с соседней клетки; подход к ней выполняется до создания сессии. */
         fun canStart(hero: MapUnit, city: CityInfo): Boolean =
             NeutralCityEntry.decision(city, hero) == Decision.FIGHT_GARRISON &&
                 hero.currentMovement > Constants.minimumMovementEpsilon && hero.canAttack() &&
@@ -49,6 +56,7 @@ class NeutralCityBattleSession private constructor(
                 city.getCenterTile().militaryUnit == null &&
                 hero.army.getAllTroops().any { it != null && it.currentAmount > 0 }
 
+        /** Создаёт поле и менеджер, но ещё не расходует мировую атаку и не назначает победителя. */
         fun create(hero: MapUnit, city: CityInfo, seed: Long = 42L): NeutralCityBattleSession {
             require(canStart(hero, city)) { "Hero cannot attack this neutral garrison" }
             val field = MapGenerator(city.getRuleset()).generateBattlefield(

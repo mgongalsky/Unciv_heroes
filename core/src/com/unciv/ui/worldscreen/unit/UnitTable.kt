@@ -266,7 +266,8 @@ class UnitTable(val worldScreen: WorldScreen) : Table() {
         return nameLabelText
     }
 
-    fun citySelected(cityInfo: CityInfo) : Boolean {
+    /** Выбирает город игрока для панели управления; нейтральный город не имеет доступных здесь действий владельца. */
+    fun citySelected(cityInfo: CityInfo): Boolean {
         if (cityInfo.ownerOrNull == null) return false
         selectUnit()
         if (cityInfo == selectedCity) return false

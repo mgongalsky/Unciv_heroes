@@ -5,15 +5,15 @@ import com.badlogic.gdx.utils.JsonValue
 import com.badlogic.gdx.utils.JsonWriter
 
 /**
- * Upgrades serialized maps before they are read into the current domain model.
- *
- * Maps without a version predate explicit format versioning and are treated as version 0.
- * Add future migrations as one-step transformations and increment [currentVersion].
+ * Последовательно обновляет JSON карты до чтения в текущую модель.
+ * Отсутствующая версия означает старый формат 0. Каждый переход меняет только один номер версии;
+ * новые переходы добавляются сюда вместе с увеличением currentVersion, без запуска игровой логики.
  */
 object MapFormatMigration {
     const val currentVersion = 2
     private const val legacyVersion = 0
 
+    /** Возвращает обновлённый JSON; будущий неизвестный формат отклоняется, а не читается наугад. */
     fun migrate(mapJson: String): String {
         val root = JsonReader().parse(mapJson)
         val parameters = root.get("mapParameters")
@@ -38,6 +38,7 @@ object MapFormatMigration {
         return root.toJson(JsonWriter.OutputType.json)
     }
 
+    /** Старые карты не имели описаний городов и слотов: добавляем пустые коллекции, не игровые объекты. */
     private fun migrateVersion1ToVersion2(root: JsonValue, parameters: JsonValue) {
         if (root.get("scenarioCities") == null)
             root.addChild("scenarioCities", JsonValue(JsonValue.ValueType.array))
@@ -47,6 +48,7 @@ object MapFormatMigration {
         parameters.addChild("mapFormatVersion", JsonValue(2L))
     }
 
+    /** Первый переход только вводит явный номер формата. */
     private fun migrateLegacyToVersion1(parameters: JsonValue) {
         parameters.remove("mapFormatVersion")
         parameters.addChild("mapFormatVersion", JsonValue(1L))

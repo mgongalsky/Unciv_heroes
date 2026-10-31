@@ -10,7 +10,7 @@ import com.unciv.ui.utils.AutoScrollPane
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.OnClickListener
 
-/** Shared deterministic editor form, without a game world or runtime city objects. */
+/** Создаёт воспроизводимую форму города без игрового мира и проверяет её настоящий обработчик Apply перед снимком. */
 fun openScenarioCityEditorPreview(screen: BaseScreen) {
     val ruleset = RulesetCache.getVanillaRuleset()
     val map = TileMap(3, ruleset)
@@ -24,7 +24,7 @@ fun openScenarioCityEditorPreview(screen: BaseScreen) {
     val panel = ScenarioCityEditorPanel(map, ruleset, 500f) { changes++ }
     panel.select(CityPosition())
 
-    // Exercise the actual form handler before restoring the deterministic preview.
+    /** Меняет виджет и вызывает зарегистрированный обработчик кнопки, а не команду карты напрямую. */
     fun applyName(value: String) {
         panel.findActor<TextField>("scenario-city-name").text = value
         val button = panel.findActor<com.badlogic.gdx.scenes.scene2d.Actor>("scenario-city-apply")
@@ -36,6 +36,7 @@ fun openScenarioCityEditorPreview(screen: BaseScreen) {
     check(original.name == "Riverford") { "Editing mutated the previous description" }
     applyName("Updated Riverford")
     check(map.scenarioCities.size == 1 && changes == 1) { "Repeated Apply duplicated a city or change" }
+    // Возвращаем исходное имя для воспроизводимого снимка и проверяем сохранность остальных полей.
     applyName("Riverford")
     check(map.scenarioCities.single() == original) { "Editing lost city properties" }
 

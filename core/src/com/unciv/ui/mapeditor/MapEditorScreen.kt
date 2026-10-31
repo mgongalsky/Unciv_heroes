@@ -77,8 +77,14 @@ class MapEditorScreen(map: TileMap? = null): BaseScreen(), RecreateOnResize {
     var mapHolder: EditorMapHolder
     val tabs: MapEditorMainTabs
     var tileClickHandler: ((tile: TileInfo)->Unit)? = null
+
+    /** Имя последнего инструмента Edit для возврата на вкладку и восстановления экрана. */
     var selectedEditSubTab = "Terrain"
+
+    /** Города и слоты редактируются одиночными командами; их инструменты отключают рисование перетаскиванием. */
     var allowDragPainting = true
+
+    /** Выбранная позиция восстанавливает форму применённого описания, но не хранит неприменённый черновик. */
     var selectedScenarioCity: com.unciv.pure.domain.city.CityPosition? = null
     private var zoomController: ZoomButtonPair? = null
 
@@ -252,10 +258,12 @@ class MapEditorScreen(map: TileMap? = null): BaseScreen(), RecreateOnResize {
         params.mapSize = MapSizeNew((maxLongitude - minLongitude + 1), (maxLatitude - minLatitude + 1) / 2)
     }
 
+    /** Пересоздаёт UI вокруг той же карты, сохраняя признак изменений, позицию города и выбранный инструмент. */
     override fun recreate(): BaseScreen = MapEditorScreen(tileMap).also {
         it.isDirty = isDirty
         it.selectedScenarioCity = selectedScenarioCity
-        it.selectedEditSubTab = if (tabs.activePage == 2) tabs.edit.currentSubTab() else selectedEditSubTab
+        it.selectedEditSubTab =
+                if (tabs.activePage == 2) tabs.edit.currentSubTab() else selectedEditSubTab
         it.tabs.selectPage(tabs.activePage)
     }
 }

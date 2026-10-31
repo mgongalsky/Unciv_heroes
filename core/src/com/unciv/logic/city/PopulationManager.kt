@@ -43,6 +43,7 @@ open class PopulationManager : IsPartOfGameInfoSerialization {
         return population - workingPopulation - getNumberOfSpecialists()
     }
 
+    /** Собирает игровые модификаторы владельца; сам порог роста вычисляется чистыми правилами CityPopulationRules. */
     fun getFoodToNextPopulation(): Int = CityPopulationRules.foodToNextPopulation(
         population,
         cityInfo.civInfo.isCityState(),
@@ -110,7 +111,7 @@ open class PopulationManager : IsPartOfGameInfoSerialization {
         }
     }
 
-    /** Initial data only: no growth, religious pressure, or territory expansion. */
+    /** Задаёт исходные значения до привязки к миру, без роста, религиозного давления и расширения территории. */
     internal fun initializeForScenario(count: Int, food: Int) {
         require(count > 0 && food >= 0)
         check(!::cityInfo.isInitialized) { "Scenario population must be initialized before world binding" }

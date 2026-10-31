@@ -7,7 +7,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Фиксирует снабжение посетившего город героя и исторически сложившиеся условия поражения владельца. */
 class CitySupplyAndDefeatTest {
+    /** Еда передаётся герою только при autoFeedHero и списывается из городского запаса. */
     @Test
     fun startTurnSuppliesVisitingHeroFromStoredFoodWhenEnabled() {
         CityTestFixture().use { fixture ->
@@ -36,6 +38,7 @@ class CitySupplyAndDefeatTest {
         }
     }
 
+    /** При истории исходной столицы выживание определяется городами, в остальных ветвях — юнитами. */
     @Test
     fun defeatUsesUnitsUntilOriginalCapitalHistoryExistsThenUsesCities() {
         CityTestFixture().use { fixture ->
@@ -57,6 +60,7 @@ class CitySupplyAndDefeatTest {
             civ.removeUnit(unit)
             assertFalse(civ.isDefeated())
 
+            // Наличие города не меняет прежнюю ветвь для false и для неизвестной истории из старого сохранения.
             civ.hasEverOwnedOriginalCapital = false
             assertTrue(civ.isDefeated())
             civ.hasEverOwnedOriginalCapital = null

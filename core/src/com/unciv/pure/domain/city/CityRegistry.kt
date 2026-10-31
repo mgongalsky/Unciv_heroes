@@ -1,20 +1,29 @@
 package com.unciv.pure.domain.city
 
-/** Owns city membership; state remains on the registered objects, without parallel copies. */
+/**
+ * Учёт существования городов без зависимости от GameInfo и CivilizationInfo.
+ * Хранит сами объекты; ID, позицию и владельца читает из их текущего CityState.
+ * Поиск линейный: отдельных индексов, которые могли бы разойтись с состоянием города, нет.
+ */
 class CityRegistry<T : Any>(private val stateOf: (T) -> CityState) {
     private val cities = ArrayList<T>()
 
-    /** Snapshot membership allows registration and removal during a caller's traversal. */
+    /** Снимок состава: вызывающий код может регистрировать и удалять города во время своего обхода. */
     fun all(): List<T> = cities.toList()
 
+    /** Находит канонический объект по постоянному ID. */
     fun byId(id: CityId): T? = cities.firstOrNull { stateOf(it).id == id }
 
+    /** Ищет город по центру, а не по любой клетке его территории. */
     fun at(position: CityPosition): T? = cities.firstOrNull { stateOf(it).position == position }
 
+    /** Производная выборка владельца; не создаёт второй список-источник истины. */
     fun ownedBy(owner: CityOwnership): List<T> = cities.filter { stateOf(it).ownership == owner }
 
+    /** Проверяет присутствие именно этого экземпляра, а не равного ему объекта. */
     fun contains(city: T): Boolean = cities.any { it === city }
 
+    /** Добавляет уже привязанный город, запрещая повторные ID и центры. Основание не выполняет. */
     fun register(city: T) {
         val state = stateOf(city)
         require(state.ownership != null) { "City ${state.id.value} has no bound owner" }
@@ -23,7 +32,7 @@ class CityRegistry<T : Any>(private val stateOf: (T) -> CityState) {
         cities.add(city)
     }
 
-    /** Replaces membership only after the entire incoming collection has been validated. */
+    /** Сначала проверяет весь новый состав; при ошибке прежний реестр остаётся нетронутым. */
     fun replaceAll(replacement: Collection<T>) {
         val validated = CityRegistry(stateOf)
         for (city in replacement) validated.register(city)
@@ -31,6 +40,7 @@ class CityRegistry<T : Any>(private val stateOf: (T) -> CityState) {
         cities.addAll(validated.cities)
     }
 
+    /** Убирает конкретный экземпляр из учёта; освобождение территории выполняет игровой адаптер. */
     fun remove(city: T): Boolean {
         val index = cities.indexOfFirst { it === city }
         if (index < 0) return false

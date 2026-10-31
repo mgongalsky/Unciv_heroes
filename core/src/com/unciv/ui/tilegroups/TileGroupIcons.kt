@@ -127,13 +127,18 @@ class TileGroupIcons(val tileGroup: TileGroup) {
     }
 
 
-    private fun updateImprovementIcon(showResourcesAndImprovements: Boolean, viewingCiv: CivilizationInfo?) {
+    /** Обновляет значок или анимацию улучшения, используя тот же выбор изображения города, что и основной слой клетки. */
+    private fun updateImprovementIcon(
+        showResourcesAndImprovements: Boolean,
+        viewingCiv: CivilizationInfo?
+    ) {
         val tileInfo = tileGroup.tileInfo
 
         // If loot collection is in progress, animate the full-tile improvement overlay (not the small icon)
         if (tileInfo.isItemBeingCollected) {
             // Ensure we have an overlay image for the improvement to fade out
             if (improvementFadeActor == null) {
+                // Общая функция учитывает превью редактора и игровой центр даже без записанного улучшения.
                 val currentImprovement = tileGroup.getShownImprovement(viewingCiv)
                 if (currentImprovement != null && showResourcesAndImprovements) {
                     // Get the full-hex improvement texture path and image
@@ -145,7 +150,11 @@ class TileGroupIcons(val tileGroup: TileGroup) {
                     // Add above the base layer to ensure visibility but below UI icons
                     tileGroup.baseLayerGroup.addActor(fadeImg)
                     improvementFadeActor = fadeImg
-                    Log.debug("Improvement fade overlay created for %s (%s)", tileInfo.position, currentImprovement)
+                    Log.debug(
+                        "Improvement fade overlay created for %s (%s)",
+                        tileInfo.position,
+                        currentImprovement
+                    )
                 }
             }
 

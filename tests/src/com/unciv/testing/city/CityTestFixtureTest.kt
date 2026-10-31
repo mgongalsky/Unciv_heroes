@@ -8,7 +8,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.koin.core.context.GlobalContext
 
+/** Проверяет саму фикстуру: она создаёт настоящий город и не оставляет глобальные зависимости теста. */
 class CityTestFixtureTest {
+    /** Основание связывает владельца и центр, а закрытие возвращает Current, кеш правил и DI. */
     @Test
     fun fixtureFoundsARealCityAndRestoresGlobals() {
         val currentField = UncivGame::class.java.getDeclaredField("Current").apply { isAccessible = true }
@@ -31,6 +33,7 @@ class CityTestFixtureTest {
         assertTrue(GlobalContext.getOrNull() == null)
     }
 
+    /** Исключение внутри use не отменяет очистку и возвращается вызывающему коду без подмены. */
     @Test
     fun fixtureRestoresGlobalsWhenTestBodyThrows() {
         val currentField = UncivGame::class.java.getDeclaredField("Current").apply { isAccessible = true }

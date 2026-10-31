@@ -1,4 +1,4 @@
-package com.unciv.logic.automation.unit
+﻿package com.unciv.logic.automation.unit
 
 import com.unciv.Constants
 import com.unciv.logic.automation.Automation
@@ -302,6 +302,7 @@ object SpecificUnitAutomation {
         }
     }
 
+    /** Выбирает город для миссионера; нейтральная религия статична, поэтому такие города исключены из внешних целей. */
     fun automateMissionary(unit: MapUnit) {
         if (unit.religion != unit.civInfo.religionManager.religion?.name || unit.religion == null)
             return unit.disband()
@@ -312,7 +313,9 @@ object SpecificUnitAutomation {
 
         val city =
             if (ourCitiesWithoutReligion.any())
-                ourCitiesWithoutReligion.minByOrNull { it.getCenterTile().aerialDistanceTo(unit.getTile()) }
+                ourCitiesWithoutReligion.minByOrNull {
+                    it.getCenterTile().aerialDistanceTo(unit.getTile())
+                }
             else unit.civInfo.gameInfo.getCities().asSequence()
                 .filter { it.ownerOrNull != null }
                 .filter { it.religion.getMajorityReligion() != unit.civInfo.religionManager.religion }
@@ -328,7 +331,10 @@ object SpecificUnitAutomation {
 
         unit.movement.headTowards(destination)
 
-        if (unit.getTile() in city.getTiles() && unit.civInfo.religionManager.maySpreadReligionNow(unit)) {
+        if (unit.getTile() in city.getTiles() && unit.civInfo.religionManager.maySpreadReligionNow(
+                unit
+            )
+        ) {
             doReligiousAction(unit, unit.getTile())
         }
     }

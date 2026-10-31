@@ -267,47 +267,47 @@ class CityInfoConquestFunctions(val city: CityInfo){
     }
 
 
+    /**
+     * Передаёт город между цивилизациями и обновляет здания, дороги и статистику.
+     * Общий путь для торговли и завоевания; потери жителей, добычу и сопротивление добавляет conquerCity.
+     * Для получения нейтрального города используется отдельная операция NeutralCityOwnership.
+     */
     fun moveToCiv(newCivInfo: CivilizationInfo) {
         city.apply {
             val oldCiv = civInfo
 
 
-            // Remove/relocate palace for old Civ - need to do this BEFORE we move the cities between
-            //  civs so the capitalCityIndicator recognizes the unique buildings of the conquered civ
-            if (oldCiv.getCapital() == this)  oldCiv.moveCapitalToNextLargest()
+            // Старую столицу переносим до смены владельца, пока национальный индикатор дворца ещё определяется верно.
+            if (oldCiv.getCapital() == this) oldCiv.moveCapitalToNextLargest()
 
             oldCiv.gameInfo.cityRegistry.transfer(city, newCivInfo)
-            // Keep road ownership consistent with the city's new owner before updating stats.
+            // Перепривязка клеток согласует владельца дорог с новым владельцем города до расчёта статистики.
             for (tile in getTiles()) tile.setOwningCity(city)
             hasJustBeenConquered = false
             turnAcquired = civInfo.gameInfo.turns
             previousOwner = oldCiv.civName
 
-            // now that the tiles have changed, we need to reassign population
+            // Рабочие клетки, вышедшие из территории, требуют повторного назначения населения.
             for (it in workedTiles.filterNot { tiles.contains(it) }) {
                 workedTiles = workedTiles.withoutItem(it)
                 population.autoAssignPopulation()
             }
 
-            // Stop WLTKD if it's still going
             resetWLTKD()
 
-            // Remove their free buildings from this city and remove free buildings provided by the city from their cities
+            // Удаляем бесплатные здания прежнего владельца и выдаваемые этим городом здания в его других городах.
             removeBuildingsOnMoveToCiv(oldCiv)
 
-            // Place palace for newCiv if this is the only city they have
-            // This needs to happen _before_ free buildings are added, as somtimes these should
-            // only be placed in the capital, and then there needs to be a capital.
+            // Первому городу получателя нужна столица до выдачи бесплатных зданий с условием «в столице».
             if (newCivInfo.cities.size == 1) {
                 newCivInfo.moveCapitalTo(this)
             }
 
-            // Add our free buildings to this city and add free buildings provided by the city to other cities
             civInfo.civConstructions.tryAddFreeBuildings()
 
             isBeingRazed = false
 
-            // Transfer unique buildings
+            // Существующие здания заменяются национальными эквивалентами нового владельца.
             for (building in cityConstructions.getBuiltBuildings()) {
                 val civEquivalentBuilding = newCivInfo.getEquivalentBuilding(building.name)
                 if (building != civEquivalentBuilding) {
@@ -321,9 +321,10 @@ class CityInfoConquestFunctions(val city: CityInfo){
             tryUpdateRoadStatus()
             cityStats.update()
 
-            // Update proximity rankings
-            civInfo.updateProximity(oldCiv,
-                oldCiv.updateProximity(civInfo))
+            civInfo.updateProximity(
+                oldCiv,
+                oldCiv.updateProximity(civInfo)
+            )
         }
     }
 

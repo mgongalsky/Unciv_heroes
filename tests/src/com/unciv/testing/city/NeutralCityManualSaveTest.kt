@@ -18,8 +18,9 @@ import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 
-/** Builds the user-requested manual smoke-test save and validates it before publishing. */
+/** Генерирует запрошенное сохранение для ручной проверки и проверяет его загрузку перед записью. */
 class NeutralCityManualSaveTest {
+    /** Создаёт домашний, пустой нейтральный и защищённый нейтральный города с готовыми к проверке героями. */
     @Test
     fun prepareLoadableSaveWithEmptyAndDefendedNeutralCities() {
         val previousInput = Gdx.input
@@ -35,6 +36,7 @@ class NeutralCityManualSaveTest {
                     game.gameParameters.victoryTypes.clear()
                     game.gameParameters.noBarbarians = true
                     game.gameParameters.nuclearWeaponsEnabled = false
+                    // Для ручного боя нужны настоящие характеристики войск из правил, а не упрощённый источник заготовки.
                     val source = RulesetTroopDefinitionSource(fixture.ruleset)
 
                     fun army(amount: Int, neutral: Boolean) = ArmyInfo(
@@ -60,6 +62,7 @@ class NeutralCityManualSaveTest {
                     }
                     val empty = neutralCity("Emptyford", Vector2(4f, 0f), 0)
                     val defended = neutralCity("Guardford", Vector2(-4f, 0f), 5)
+                    // Каждый герой стоит рядом со своей целью; еды, движения и войск достаточно для ручной проверки.
                     for (position in listOf(Vector2(3f, 0f), Vector2(-3f, 0f))) {
                         val hero = fixture.civilization.placeUnitNearTile(position, "Warrior")!!
                         assertEquals(position, hero.currentTile.position)
@@ -108,6 +111,7 @@ class NeutralCityManualSaveTest {
                         assertEquals(23, city.cityConstructions.inProgressConstructions["Scout"])
                     }
 
+                    // Этот тест намеренно записывает ресурс для ручной приёмки; его запуск обновляет файл в репозитории.
                     var root = File(".").canonicalFile
                     while (!File(root, "core/src/com/unciv").isDirectory) {
                         root = root.parentFile ?: error("Cannot locate project root")

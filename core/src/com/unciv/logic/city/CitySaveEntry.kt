@@ -5,7 +5,10 @@ import com.badlogic.gdx.utils.JsonValue
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.pure.domain.city.CityOwnership
 
-/** Explicit ownership envelope for the canonical game city collection. */
+/**
+ * Запись единого массива cities в сохранении игры: явное владение плюс обычные данные CityInfo.
+ * Владелец не выводится из расположения города внутри списка цивилизации, как в старом формате.
+ */
 class CitySaveEntry() : IsPartOfGameInfoSerialization, Json.Serializable {
     lateinit var city: CityInfo
         private set
@@ -14,6 +17,7 @@ class CitySaveEntry() : IsPartOfGameInfoSerialization, Json.Serializable {
         this.city = city
     }
 
+    /** Не записывает transient-ссылки; Player обозначается civName, Neutral — отдельным типом. */
     override fun write(json: Json) {
         val owner = requireNotNull(city.state.ownership) { "City ${city.id} has no saved owner" }
         json.writeObjectStart("ownership")
@@ -29,6 +33,7 @@ class CitySaveEntry() : IsPartOfGameInfoSerialization, Json.Serializable {
         json.writeValue("city", city, CityInfo::class.java)
     }
 
+    /** Проверяет оболочку до чтения города; ссылки на мир и реального владельца восстанавливаются позже. */
     override fun read(json: Json, jsonData: JsonValue) {
         val payload = requireNotNull(jsonData.get("city")) { "Missing city payload" }
         require(payload.isObject) { "City payload must be an object" }
@@ -44,6 +49,7 @@ class CitySaveEntry() : IsPartOfGameInfoSerialization, Json.Serializable {
                 CityOwnership.Player(civName)
             }
             "Neutral" -> {
+                // Запрещаем противоречивую запись: нейтральный город не имеет цивилизации-владельца.
                 require(!ownership.has("civName")) { "Neutral city $id cannot name a civilization" }
                 CityOwnership.Neutral
             }

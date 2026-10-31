@@ -5,7 +5,9 @@ import com.unciv.pure.domain.army.Army
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет адаптер ArmyInfo для нейтрального гарнизона, у которого нет цивилизации и героя. */
 class OwnerlessArmyAdapterTest {
+    /** Армия без владельца работает с базовыми боевыми значениями и не создаёт скрытую цивилизацию. */
     @Test
     fun explicitOwnerlessArmyNeedsNeitherCivilizationNorGame() {
         val state = Army(2)
@@ -19,6 +21,7 @@ class OwnerlessArmyAdapterTest {
         assertNull(copy.ownerOrNull)
         assertNotSame(state, copy.army)
         try {
+            // Старый обязательный getter явно отказывает: отсутствие владельца нельзя маскировать заглушкой.
             adapter.civInfo
             fail("An ownerless army must not manufacture a civilization")
         } catch (expected: UninitializedPropertyAccessException) {
@@ -26,6 +29,7 @@ class OwnerlessArmyAdapterTest {
         }
     }
 
+    /** Назначение и снятие внешних связей не заменяют объект армии и очищают ссылку на героя. */
     @Test
     fun bindingAndClearingOwnerPreservesArmy() {
         CityTestFixture().use { fixture ->

@@ -710,13 +710,14 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
     }
 
 
+    /** Возвращает полный путь улучшений без проверки доступности; исходный и повторно встреченные типы исключаются. */
     fun getUpgradePath(): List<BaseUnit> {
         var currentUnit = baseUnit
         val upgradeList = arrayListOf<BaseUnit>()
         val visited = hashSetOf(currentUnit.name)
         while (currentUnit.upgradesTo != null) {
             val nextUpgrade = civInfo.getEquivalentUnit(currentUnit.upgradesTo!!)
-            // National replacements can also lead back to an already visited unit.
+            // Проверяем уже разрешённую национальную замену: она тоже может замкнуть цикл правил.
             if (!visited.add(nextUpgrade.name)) break
             currentUnit = nextUpgrade
             upgradeList.add(currentUnit)

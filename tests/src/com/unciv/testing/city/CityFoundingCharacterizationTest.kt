@@ -13,10 +13,13 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Фиксирует наблюдаемое поведение основания, которое должен сохранять рефакторинг. */
 class CityFoundingCharacterizationTest {
+    /** Проверяет первый и следующий город: население, столицу, территорию, гарнизон и регистрацию. */
     @Test
     fun firstAndSecondFoundingPreserveObservedStateAndEntryPointEffects() {
         CityTestFixture().use { fixture ->
+            // Состав армии задаётся явно: от него зависит начальное население города.
             fun founder(vararg troops: Pair<String, Int>) = MapUnit().apply {
                 civInfo = fixture.civilization
                 owner = civInfo.civName
@@ -26,6 +29,7 @@ class CityFoundingCharacterizationTest {
 
             fixture.game.turns = 7
             val firstFounder = founder("Peasant" to 29)
+            // Совместимый конструктор основывает город, но не выбирает производство.
             val first = CityInfo(fixture.civilization, Vector2(0f, 0f), firstFounder)
 
             assertEquals("Rome", first.name)
@@ -37,6 +41,7 @@ class CityFoundingCharacterizationTest {
             assertTrue(first.cityConstructions.constructionQueue.isEmpty())
 
             val secondFounder = founder("Peasant" to 15, "Archer" to 15)
+            // addCity дополнительно выбирает производство; это различие точек входа сохраняется.
             fixture.civilization.addCity(Vector2(4f, 0f), secondFounder)
             val second = fixture.civilization.cities.last()
 
@@ -54,8 +59,9 @@ class CityFoundingCharacterizationTest {
             assertTrue(fixture.civilization.hasEverOwnedOriginalCapital == true)
             assertFalse(fixture.civilization.policies.shouldOpenPolicyPicker)
             assertEquals(0, firstFounder.calculateArmyPopulation())
-            // Fractional contributions from different slots combine before truncation.
+            // Дробные вклады разных слотов складываются до усечения до целого числа.
             assertEquals(1, secondFounder.calculateArmyPopulation())
+            // Уничтожение основателя относится к полному действию, а не к созданию города.
             assertFalse(firstFounder.isDestroyed)
             assertFalse(secondFounder.isDestroyed)
 
@@ -64,6 +70,7 @@ class CityFoundingCharacterizationTest {
                 assertEquals("Rome", city.foundingCiv)
                 assertEquals("", city.previousOwner)
                 assertEquals(7, city.turnAcquired)
+                // Старый список и активная армия пока имеют разный состав; тест фиксирует оба.
                 assertEquals(listOf("Archer:30", "Spearman:20", "Horseman:10", "Swordsman:15"),
                     city.garrison.map { "${it.unitName}:${it.amount}" })
                 assertEquals(listOf("Archer:35", "Peasant:20", null, null),

@@ -6,7 +6,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет смену принадлежности на уровне реестра без дополнительных игровых эффектов владения. */
 class CityNeutralMembershipTest {
+    /** Повторный переход игрок → нейтральный → игрок сохраняет объект, армию, историю и локальный прогресс. */
     @Test
     fun membershipTransitionsPreserveCityIdentityAndLocalState() {
         CityTestFixture().use { fixture ->
@@ -30,6 +32,7 @@ class CityNeutralMembershipTest {
                 assertEquals(CityOwnership.Neutral, city.state.ownership)
                 assertNull(city.ownerOrNull)
                 assertNull(city.garrisonInfo.ownerOrNull)
+                // Нейтральность убирает владельца, но сохраняет привязку города к игровому миру.
                 assertSame(fixture.game, city.gameInfo)
                 assertTrue(fixture.civilization.cities.isEmpty())
                 assertSame(city, registry.byId(id))
@@ -56,6 +59,7 @@ class CityNeutralMembershipTest {
         }
     }
 
+    /** Попытка нейтрализовать незарегистрированный город отклоняется до изменения его владельца. */
     @Test
     fun unregisteredCityIsRejectedBeforeOwnershipChanges() {
         CityTestFixture().use { fixture ->

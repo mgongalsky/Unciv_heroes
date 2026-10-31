@@ -1,7 +1,11 @@
 package com.unciv.pure.domain.city
 
-/** Structural validation without a running game, graphics, or dependency injection. */
+/**
+ * Проверяет целостность описаний карты без GameInfo, графики и DI.
+ * Знание конкретных зданий, войск и пригодности рельефа оставлено адаптеру ScenarioMapValidation.
+ */
 object ScenarioCityValidation {
+    /** Проверка только читает входные данные; неполные столицы разрешаются отдельно при запуске. */
     fun validate(
         cities: List<ScenarioCity>,
         slots: List<ScenarioPlayerSlot>,
@@ -13,6 +17,7 @@ object ScenarioCityValidation {
             require(slotIds.add(slot.id)) { "Duplicate scenario player slot ${slot.id}" }
         }
         val cityIds = HashSet<String>()
+        // Общая таблица занятых клеток ловит и повтор внутри города, и пересечение разных городов.
         val claimed = HashMap<CityPosition, String>()
         for (city in cities) {
             val label = "Scenario city ${city.id}"
@@ -22,16 +27,20 @@ object ScenarioCityValidation {
             require(city.position in mapPositions) { "$label: center is outside the map" }
             when (city.owner) {
                 ScenarioCityOwner.Neutral -> {
+                    // Тип нейтрального города нельзя выводить из отсутствующего стартового игрока.
                     require(city.ownerSlotId.isEmpty()) { "$label: neutral city refers to a player slot" }
                     require(city.typeMode == ScenarioCityTypeMode.Fixed) { "$label: neutral city requires a fixed type" }
                 }
+
                 ScenarioCityOwner.PlayerSlot -> {
                     require(city.ownerSlotId in slotIds) { "$label: unknown player slot ${city.ownerSlotId}" }
 
                 }
             }
-            require((city.typeMode == ScenarioCityTypeMode.Fixed && city.fixedType.isNotBlank()) ||
-                (city.typeMode == ScenarioCityTypeMode.FromStartingPlayer && city.fixedType.isEmpty())) {
+            require(
+                (city.typeMode == ScenarioCityTypeMode.Fixed && city.fixedType.isNotBlank()) ||
+                        (city.typeMode == ScenarioCityTypeMode.FromStartingPlayer && city.fixedType.isEmpty())
+            ) {
                 "$label: invalid city type configuration"
             }
             require(city.buildings.distinct().size == city.buildings.size && city.buildings.none { it.isBlank() }) {

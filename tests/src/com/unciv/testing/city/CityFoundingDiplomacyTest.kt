@@ -15,7 +15,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Защищает границу между запросом дипломатического подтверждения и фактическим основанием. */
 class CityFoundingDiplomacyTest {
+    /** До подтверждения обещания мир неизменен; после него выполняются основание и реакция соседа. */
     @Test
     fun brokenPromiseDefersAllFoundingEffectsUntilConfirmation() {
         val previousInput = Gdx.input
@@ -35,7 +37,7 @@ class CityFoundingDiplomacyTest {
                     owner = neighbor.civName
                     army.setTransients(neighbor, this)
                 })
-                // First-contact tutorial persistence is outside this scenario.
+                // Обучение при первом контакте пишет настройки и не относится к этому сценарию.
                 fixture.civilization.isCurrentPlayerOverride = false
                 fixture.civilization.makeCivilizationsMeet(neighbor)
                 fixture.civilization.isCurrentPlayerOverride = true
@@ -66,6 +68,7 @@ class CityFoundingDiplomacyTest {
                     confirmBrokenPromise = { leaders, continuation ->
                         assertEquals(neighbor.getLeaderDisplayName(), leaders)
                         events.add("confirmation")
+                        // Сохраняем продолжение вместо открытия окна и немедленного согласия.
                         confirm = continuation
                     }
                 )
@@ -79,6 +82,7 @@ class CityFoundingDiplomacyTest {
                 assertFalse(diplomacy.hasFlag(DiplomacyFlags.SettledCitiesNearUs))
                 assertNotNull(confirm)
 
+                // Только явное подтверждение разрешает все отложенные игровые эффекты.
                 confirm!!.invoke()
 
                 assertEquals(listOf("confirmation", "tutorial", "world"), events)

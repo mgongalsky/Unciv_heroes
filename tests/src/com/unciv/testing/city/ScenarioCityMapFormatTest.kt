@@ -8,7 +8,9 @@ import com.unciv.pure.domain.city.*
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет хранение описаний городов в карте без создания действующих игровых городов. */
 class ScenarioCityMapFormatTest {
+    /** Заполняет разные поля описания, чтобы их потеря при чтении или копировании была заметна. */
     private fun city() = ScenarioCity(
         id = "town-1", position = CityPosition(2f, 0f), name = "Riverford",
         owner = ScenarioCityOwner.PlayerSlot, ownerSlotId = "player-1",
@@ -18,6 +20,7 @@ class ScenarioCityMapFormatTest {
         isCapital = true, isOriginalCapital = true
     )
 
+    /** Оба формата карты сохраняют описания и слоты; чтение и превью не запускают основание городов. */
     @Test
     fun descriptionsRoundTripInBothFormatsWithoutCreatingCities() {
         CityTestFixture().use { fixture ->
@@ -45,6 +48,7 @@ class ScenarioCityMapFormatTest {
         }
     }
 
+    /** Изменения вложенных списков, стеков гарнизона и слотов копии не затрагивают исходную карту. */
     @Test
     fun clonedDescriptionsDoNotShareMutableCollectionsOrStacks() {
         CityTestFixture().use { fixture ->
@@ -64,6 +68,7 @@ class ScenarioCityMapFormatTest {
         }
     }
 
+    /** Старая карта получает пустые коллекции сценария; неизвестная будущая версия явно отклоняется. */
     @Test
     fun legacyMapsHaveNoDescriptionsAndFutureVersionIsRejected() {
         val legacy = """{"mapParameters":{"mapFormatVersion":1},"tileList":[]}"""
@@ -79,6 +84,7 @@ class ScenarioCityMapFormatTest {
         }
     }
 
+    /** Описания обязаны ссылаться на существующие слоты и не могут делить одну территориальную клетку. */
     @Test
     fun missingSlotAndConflictingTerritoryAreRejected() {
         val positions = setOf(CityPosition(2f, 0f), CityPosition(3f, 0f))

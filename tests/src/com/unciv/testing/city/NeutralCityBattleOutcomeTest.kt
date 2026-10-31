@@ -10,7 +10,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет применение уже определённого результата тактического боя к мировой карте. */
 class NeutralCityBattleOutcomeTest {
+    /** Готовит город с пустым гарнизоном и прогрессом строительства для проверки последствий победы. */
     private fun city(fixture: CityTestFixture) = CityInfo().apply {
         state.ownership = CityOwnership.Neutral
         location = Vector2(4f, 0f)
@@ -26,6 +28,7 @@ class NeutralCityBattleOutcomeTest {
         setTransients()
     }
 
+    /** Победа над очищенным гарнизоном передаёт город и перемещает героя без добычи и потери прогресса. */
     @Test
     fun victoryOverClearedGarrisonAcquiresCityWithoutConquestEffects() {
         CityTestFixture().use { fixture ->
@@ -40,6 +43,7 @@ class NeutralCityBattleOutcomeTest {
             assertSame(city.getCenterTile(), hero.currentTile)
             assertSame(hero, city.getCenterTile().militaryUnit)
             assertNull(previousTile.militaryUnit)
+            // Расход атаки относится к сессии; обработчик результата не должен списывать его повторно.
             assertEquals(movement, hero.currentMovement, 0f)
             assertEquals(attacks, hero.attacksThisTurn)
             assertSame(fixture.civilization, city.ownerOrNull)
@@ -52,6 +56,7 @@ class NeutralCityBattleOutcomeTest {
         }
     }
 
+    /** Одного флага победы недостаточно: живые защитники блокируют передачу города. */
     @Test
     fun reportedVictoryCannotBypassLivingGarrison() {
         CityTestFixture().use { fixture ->
@@ -72,6 +77,7 @@ class NeutralCityBattleOutcomeTest {
         }
     }
 
+    /** При поражении герой удаляется из войск владельца, а город и его гарнизон остаются нейтральными. */
     @Test
     fun defeatedHeroDoesNotAcquireNeutralCity() {
         CityTestFixture().use { fixture ->

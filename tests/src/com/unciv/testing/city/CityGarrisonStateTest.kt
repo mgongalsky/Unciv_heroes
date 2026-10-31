@@ -8,7 +8,9 @@ import com.unciv.pure.domain.troop.Troop
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет, что фасад CityInfo и его ядро используют один активный гарнизон, в том числе после JSON. */
 class CityGarrisonStateTest {
+    /** Изменения через ArmyInfo и напрямую через Army видны друг другу; clone получает другой адаптер. */
     @Test
     fun foundingAndAdapterMutationsShareTheCoreArmy() {
         CityTestFixture().use { fixture ->
@@ -24,6 +26,7 @@ class CityGarrisonStateTest {
         }
     }
 
+    /** Замена армии через любую границу обновляет другую, сохраняя размер слотов и привязку владельца. */
     @Test
     fun replacingEitherEntryPointKeepsTheAdapterOnTheCurrentArmy() {
         CityTestFixture().use { fixture ->
@@ -49,6 +52,7 @@ class CityGarrisonStateTest {
         }
     }
 
+    /** JSON хранит слоты в прежнем поле garrisonInfo, не дублируя state и transient-адаптер. */
     @Test
     fun jsonRestoresOneArmyAndDoesNotWriteAdapterOrCoreFields() {
         CityTestFixture().use { fixture ->

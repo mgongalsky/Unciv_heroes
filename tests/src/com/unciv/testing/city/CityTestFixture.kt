@@ -26,7 +26,12 @@ import org.koin.dsl.module
 import java.io.Closeable
 import java.io.File
 
-/** Owns test globals and restores them even when construction or the test fails. */
+/**
+ * Минимальный настоящий мир для городских тестов: Rome, правила GnK и небольшая карта.
+ * Не запускает GameStarter и не сохраняет настройки пользователя. FakeCivilizationInfo изолирует
+ * внешние эффекты, но операции основания и восстановления города остаются настоящими.
+ * Использовать через use: глобальные зависимости восстанавливаются и при исключении теста.
+ */
 internal class CityTestFixture : Closeable {
     private val globals = mutableListOf<() -> Unit>()
     private val cachedRulesets = HashMap(RulesetCache)
@@ -41,11 +46,12 @@ internal class CityTestFixture : Closeable {
         private set
 
     init {
+        // Чужой DI-контекст не заменяем: такой запуск нельзя безопасно изолировать этой фикстурой.
         check(GlobalContext.getOrNull() == null) {
             "CityTestFixture requires an isolated test process without an active Koin context"
         }
         try {
-            // Preserve backing fields without triggering lazy/default getters.
+            // Читаем backing fields, не вызывая lazy/default-getter, способный создать глобальный объект.
             rememberField(UncivGame::class.java, "Current", null)
             rememberField(MapUnit::class.java, "_monsterCivInfo", null)
             rememberField(MapUnit::class.java, "currID", null)
@@ -76,6 +82,7 @@ internal class CityTestFixture : Closeable {
             startKoin {
                 modules(module {
                     single { ruleset }
+                    // Стабильные боевые параметры отделяют тесты жизненного цикла от баланса войск.
                     single<ITroopDefinitionSource> {
                         HardcodedTroopDefinitionSource(5, 10, 100, 0, false)
                     }
@@ -106,6 +113,7 @@ internal class CityTestFixture : Closeable {
             if (firstTech != null) civilization.tech.techsResearched.add(firstTech.name)
             civilization.setTransients()
         } catch (failure: Throwable) {
+            // Конструктор тоже может упасть после изменения части глобальных зависимостей.
             try {
                 close()
             } catch (cleanupFailure: Throwable) {
@@ -115,6 +123,7 @@ internal class CityTestFixture : Closeable {
         }
     }
 
+    /** Выполняет реальный совместимый конструктор основания, но не полное действие уничтожения основателя. */
     fun foundCity(position: Vector2 = Vector2(0f, 0f)): CityInfo {
         val founder = MapUnit().apply {
             civInfo = civilization
@@ -124,6 +133,7 @@ internal class CityTestFixture : Closeable {
         return CityInfo(civilization, position, founder)
     }
 
+    /** Пытается выполнить всю очистку даже при ошибке одного шага; повторный close безопасен. */
     override fun close() {
         if (closed) return
         closed = true
@@ -144,12 +154,14 @@ internal class CityTestFixture : Closeable {
         }
     }
 
+    /** Reflection ограничен тестом и нужен для точного восстановления прежних приватных значений. */
     private fun rememberField(type: Class<*>, name: String, receiver: Any?) {
         val field = type.getDeclaredField(name).apply { isAccessible = true }
         val previous = field.get(receiver)
         globals.add { field.set(receiver, previous) }
     }
 
+    /** Поддерживает рабочие каталоги IDE и тестового модуля; игровые JSON только читаются. */
     private fun findAssets(): File {
         val candidates = listOf(File("."), File("android/assets"), File("../android/assets"))
         return candidates.firstOrNull { File(it, "jsons/Civ V - Gods & Kings").isDirectory }

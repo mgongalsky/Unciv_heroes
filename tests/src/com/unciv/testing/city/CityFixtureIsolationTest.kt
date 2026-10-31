@@ -12,7 +12,9 @@ import org.junit.Assert.assertSame
 import org.junit.Test
 import org.koin.core.context.GlobalContext
 
+/** Проверяет воспроизводимость последовательных городских тестов и отсутствие утечек статического состояния. */
 class CityFixtureIsolationTest {
+    /** Два основания дают одинаковый значимый снимок; второй запуск намеренно падает после основания. */
     @Test
     fun repeatedFoundingRestoresGlobalsIncludingAfterFailure() {
         val fields = listOf(
@@ -32,6 +34,7 @@ class CityFixtureIsolationTest {
             try {
                 CityTestFixture().use { fixture ->
                     val city = fixture.foundCity()
+                    // Случайный UUID города не сравниваем; состояние и счётчики должны воспроизводиться.
                     snapshots.add(listOf(
                         city.name,
                         city.population.population,

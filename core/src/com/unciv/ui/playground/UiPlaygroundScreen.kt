@@ -37,6 +37,7 @@ class UiPlaygroundScreen : BaseScreen() {
         val show: (BaseScreen) -> Unit
     )
 
+    /** Каталог ручных предпросмотров; форма города использует общую с golden-проверкой фабрику без запущенной партии. */
     private val scenarios = armyPopupScenarios() + listOf(
         Scenario("Scenario city editor", "City description form without a running game.") {
             openScenarioCityEditorPreview(it)

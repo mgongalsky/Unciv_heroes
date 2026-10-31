@@ -12,6 +12,7 @@ import com.unciv.ui.newgamescreen.PlayerPickerTable
 import com.unciv.ui.pickerscreens.PickerScreen
 import com.unciv.ui.utils.BaseScreen
 
+/** Минимальный родитель настоящего PlayerPickerTable с двумя участниками и обычными правилами. */
 private class ScenarioPlayerPickerScreen : PickerScreen(), IPreviousScreen {
     override val ruleset = RulesetCache.getVanillaRuleset()
     override val gameSetupInfo = GameSetupInfo().apply {
@@ -20,7 +21,7 @@ private class ScenarioPlayerPickerScreen : PickerScreen(), IPreviousScreen {
     }
 }
 
-/** Checks the real slot selectors, including automatic defaults and manual changes. */
+/** Проверяет реальные селекторы слотов: автоподбор, обмен назначениями, ручное отсутствие слота и наблюдателя. */
 fun createScenarioPlayerPickerPreview(): BaseScreen {
     val screen = ScenarioPlayerPickerScreen()
     val players = screen.gameSetupInfo.gameParameters.players
@@ -28,6 +29,7 @@ fun createScenarioPlayerPickerPreview(): BaseScreen {
     picker.scenarioSlots = listOf(ScenarioPlayerSlot("first", "Player 1"), ScenarioPlayerSlot("second", "Player 2"))
     picker.update()
     check(players.map { it.scenarioSlotId } == listOf("first", "second"))
+    /** Меняет выбранный элемент виджета, запуская настоящий onChange таблицы участников. */
     fun select(player: Int, choice: Int) {
         picker.findActor<SelectBox<Any>>("scenario-slot-$player").selectedIndex = choice
     }

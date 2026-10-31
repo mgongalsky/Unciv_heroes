@@ -213,16 +213,17 @@ open class TileGroup(
     var showEntireMap = UncivGame.Current.viewEntireMapForDebug
     var forMapEditorIcon = false
 
-    /** Presentation only: a map description is not a live city. */
+    /** Только отображение в редакторе: наличие описания города не создаёт действующий CityInfo на клетке. */
     var hasCityPreview = false
 
+    /** Показывает общий спрайт центра для игрового города или превью, сохраняя проверку видимости текущей клетки. */
     internal fun getShownImprovement(viewingCiv: CivilizationInfo?): String? {
         val canSeeCurrentTile = viewingCiv == null || showEntireMap || isViewable(viewingCiv)
         if (hasCityPreview || (canSeeCurrentTile && tileInfo.isCityCenter())) {
             val cityCenter = if (tileInfo.getOwner()?.isCityState() == true)
                 "Village City center" else "City center"
             return if (tileInfo.ruleset.tileImprovements.containsKey(cityCenter)) cityCenter
-                else "City center"
+            else "City center"
         }
         return tileInfo.getShownImprovement(viewingCiv)
     }

@@ -11,7 +11,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет выбор нейтрального гарнизона общей автоматизацией атаки с учётом соотношения сил. */
 class NeutralCityBattleAutomationTest {
+    /** Сравнивает успешную атаку и отказ: отказ обязан сохранить движение, число атак и защитников. */
     private fun verifyAutomation(attackerAmount: Int, defenderAmount: Int, shouldAttack: Boolean) {
         val previousInput = Gdx.input
         Gdx.input = MockInput()
@@ -54,9 +56,11 @@ class NeutralCityBattleAutomationTest {
         }
     }
 
+    /** Сильная армия выбирает гарнизон, выигрывает настоящий тактический бой и получает город. */
     @Test
     fun strongArmySelectsNeutralGarrisonAndRunsTacticalBattle() = verifyAutomation(50, 1, true)
 
+    /** Слабая армия не начинает заведомо невыгодный бой и не расходует ход. */
     @Test
     fun weakArmyAvoidsStrongerNeutralGarrison() = verifyAutomation(1, 50, false)
 }

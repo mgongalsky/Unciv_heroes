@@ -7,7 +7,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Защищает описание клеток нейтрального города от обращения к отсутствующему владельцу. */
 class NeutralCityTileMarkupTest {
+    /** Игрок и редактор могут прочитать центр и территорию, включая режим просмотра всей карты. */
     @Test
     fun neutralCenterAndTerritoryCanBeInspectedByPlayerAndEditor() {
         CityTestFixture().use { fixture ->
@@ -17,7 +19,7 @@ class NeutralCityTileMarkupTest {
                 location = Vector2(3f, 0f)
                 tiles.add(location)
                 tiles.add(fixture.game.tileMap[location].neighbors.first().position.cpy())
-                // A neutral city must not evaluate a civilization's production even in debug mode.
+                // Заведомо неизвестная постройка выявляет случайный расчёт производства при формировании описания.
                 cityConstructions.constructionQueue.add("Missing neutral construction")
                 bindNeutralWorld(fixture.game)
                 setTransients()

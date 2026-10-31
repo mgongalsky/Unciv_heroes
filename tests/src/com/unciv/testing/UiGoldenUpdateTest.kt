@@ -77,6 +77,8 @@ class UiGoldenUpdateTest {
             )
         )
     }
+
+    /** Явно перезаписывает платформенный эталон формы города; запускать после просмотра снимка, не для проверки регрессий. */
     @Test
     fun cityEditor() {
         UiGoldenTestRunner.main(arrayOf("--update", "--scenario=city-editor"))

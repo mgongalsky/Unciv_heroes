@@ -8,7 +8,9 @@ import com.unciv.pure.domain.city.CityState
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет границу между чистым владением, обязательным legacy-владельцем и восстановлением JSON. */
 class CityOwnershipStateTest {
+    /** Отсутствующая привязка отличается от Neutral; изменение снимка не меняет владельца оригинала. */
     @Test
     fun unboundAndNeutralAreDistinctAndSnapshotsKeepOwnership() {
         val state = CityState(CityId("city-1"))
@@ -21,6 +23,7 @@ class CityOwnershipStateTest {
         assertEquals(CityOwnership.Player("slot-1"), snapshot.ownership)
     }
 
+    /** Обращение к обязательному civInfo до привязки должно явно завершиться ошибкой. */
     @Test(expected = UninitializedPropertyAccessException::class)
     fun emptyCityHasNoLegacyOwner() {
         val city = CityInfo()
@@ -28,6 +31,7 @@ class CityOwnershipStateTest {
         city.civInfo
     }
 
+    /** Основание привязывает владельца; отдельный старый JSON города ждёт владельца от контейнера игры. */
     @Test
     fun foundingBindsCoreOwnerAndLegacyJsonWaitsForContainerBinding() {
         CityTestFixture().use { fixture ->

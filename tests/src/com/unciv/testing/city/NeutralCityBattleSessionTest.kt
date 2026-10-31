@@ -9,7 +9,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет общую тактическую сессию боя с нейтральным гарнизоном без графического экрана. */
 class NeutralCityBattleSessionTest {
+    /** Готовит город с одним защитником, чтобы занятие обязательно требовало боя. */
     private fun city(fixture: CityTestFixture) = CityInfo().apply {
         state.ownership = CityOwnership.Neutral
         location = Vector2(4f, 0f)
@@ -20,6 +22,7 @@ class NeutralCityBattleSessionTest {
         setTransients()
     }
 
+    /** Создание сессии не тратит атаку, а повторное завершение или закрытие учитывает её только один раз. */
     @Test
     fun completionAndClosingConsumeOnlyOneWorldAttack() {
         CityTestFixture().use { fixture ->
@@ -44,6 +47,7 @@ class NeutralCityBattleSessionTest {
             assertEquals(1, city.garrisonInfo.getTroopAt(0)!!.currentAmount)
         }
     }
+    /** Автоматическая сессия завершается победой в заданном лимите, сохраняя гарнизон без владельца. */
     @Test
     fun automatedSessionUsesOwnerlessGarrisonAndTerminatesWithFixedSeed() {
         CityTestFixture().use { fixture ->
@@ -58,11 +62,13 @@ class NeutralCityBattleSessionTest {
             assertEquals(BattleTermination.VICTORY, result.termination)
             assertEquals(true, result.winnerIsAttacker)
             assertTrue(result.turns <= 200)
+            // Симуляция сама не применяет передачу города на мировой карте.
             assertNull(city.ownerOrNull)
             assertNull(city.garrisonInfo.ownerOrNull)
         }
     }
 
+    /** Отсутствие движения запрещает создание сессии до изменения здоровья и численности защитников. */
     @Test
     fun heroWithoutMovementCannotStartBattleOrMutateArmies() {
         CityTestFixture().use { fixture ->

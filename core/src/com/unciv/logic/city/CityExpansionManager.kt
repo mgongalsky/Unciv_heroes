@@ -75,6 +75,7 @@ class CityExpansionManager : IsPartOfGameInfoSerialization {
         return cost.roundToInt()
     }
 
+    /** Для расширения свободны только клетки вне территории любого города, включая нейтральные города. */
     fun getChoosableTiles() = cityInfo.getCenterTile().getTilesInDistance(5)
         .filter { it.getCity() == null }
 
@@ -164,14 +165,7 @@ class CityExpansionManager : IsPartOfGameInfoSerialization {
         cityInfo.cityStats.update()
     }
 
-    /**
-     * Takes one tile into possession of this city, either unowned or owned by any other city.
-     *
-     * Also manages consequences like auto population reassign, stats, and displacing units
-     * that are no longer allowed on that tile.
-     *
-     * @param tileInfo The tile to take over
-     */
+    /** Нейтральная клетка занята городом: получить её можно через смену владения городом, не покупкой земли. */
     private fun requireNotNeutralTerritory(tileInfo: TileInfo) {
         require(tileInfo.getCity()?.state?.ownership != com.unciv.pure.domain.city.CityOwnership.Neutral) {
             "Neutral city territory requires a city ownership operation"

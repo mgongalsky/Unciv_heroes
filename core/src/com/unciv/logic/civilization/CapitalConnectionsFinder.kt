@@ -12,6 +12,7 @@ class CapitalConnectionsFinder(private val civInfo: CivilizationInfo) {
     private var citiesToCheck = mutableListOf(civInfo.getCapital()!!)
     private lateinit var newCitiesToCheck: MutableList<CityInfo>
 
+    /** В торговой сети участвуют города доступных цивилизаций; нейтральные не имеют владельца для проверки границ. */
     private val openBordersCivCities = civInfo.gameInfo.getCities().filter { city ->
         city.ownerOrNull?.let { civInfo.canEnterBordersOf(it) } == true
     }

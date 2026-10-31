@@ -6,6 +6,7 @@ import com.unciv.pure.domain.city.CityPosition
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.TabbedPager
 
+/** Инструмент Edit → Cities: связывает одиночный клик карты с формой описания сценарного города. */
 class MapEditorCitiesTab(
     private val editor: MapEditorScreen,
     private val editTab: MapEditorEditTab
@@ -15,6 +16,7 @@ class MapEditorCitiesTab(
 
     override fun isDisabled() = false
 
+    /** Включает выбор городов вместо кисти; успешная команда отмечает карту изменённой и обновляет превью. */
     override fun activated(index: Int, caption: String, pager: TabbedPager) {
         clear()
         editTab.setCityEditing(true)
@@ -33,6 +35,7 @@ class MapEditorCitiesTab(
         }
     }
 
+    /** Возвращает обычный режим инструментов; неприменённый черновик не записывается в карту автоматически. */
     override fun deactivated(index: Int, caption: String, pager: TabbedPager) {
         editTab.setCityEditing(false)
         editor.hideSelection()

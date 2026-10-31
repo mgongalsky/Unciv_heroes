@@ -92,6 +92,7 @@ object Battle {
             attack(attacker, getMapCombatantOfTile(attackableTile.tileToAttack)!!)
     }
 
+    /** Запускает подходящий бой: нейтральный гарнизон использует общую тактическую сессию без цивилизации защитника. */
     fun attack(attacker: ICombatant, defender: ICombatant) {
         if (defender is CityCombatant &&
             defender.city.state.ownership == com.unciv.pure.domain.city.CityOwnership.Neutral
@@ -104,18 +105,28 @@ object Battle {
                 val session = NeutralCityBattleSession.create(hero, defender.city)
                 val result = session.runAutomated()
                 session.consumeWorldAttack()
+                // Сначала убираем погибших из слотов, затем проверяем возможность получения города.
                 session.manager.finishBattle()
                 if (result.termination == com.unciv.pure.application.battle.BattleTermination.VICTORY ||
                     result.termination == com.unciv.pure.application.battle.BattleTermination.MUTUAL_DEFEAT
                 ) BattleWorldOutcomeHandler(attacker, defender).apply(result.winnerIsAttacker)
             }
+            // Обычный путь ниже требует владельца защитника и не должен выполняться для нейтрального города.
             return
         }
-        debug("%s %s attacked %s %s", attacker.getCivInfo().civName, attacker.getName(), defender.getCivInfo().civName, defender.getName())
+        debug(
+            "%s %s attacked %s %s",
+            attacker.getCivInfo().civName,
+            attacker.getName(),
+            defender.getCivInfo().civName,
+            defender.getName()
+        )
         val attackedTile = defender.getTile()
-        if (attacker is MapUnitCombatant && (defender is MapUnitCombatant || defender is CityCombatant) && attacker.getCivInfo().isPlayerCivilization()) {
+        if (attacker is MapUnitCombatant && (defender is MapUnitCombatant || defender is CityCombatant) && attacker.getCivInfo()
+                .isPlayerCivilization()
+        ) {
             //attacker.unit.runBattle()
-            if(!attacker.isDefeated() && !defender.isDefeated()) {
+            if (!attacker.isDefeated() && !defender.isDefeated()) {
                 //attacker.unit.civInfo.battle.startBattle(attacker.unit, defender.unit)
                 val screen = BattleScreen.fromCombatants(attacker, defender)
                 UncivGame.Current.pushScreen(screen)
@@ -127,11 +138,13 @@ object Battle {
         if (attacker is MapUnitCombatant) {
             attacker.unit.attacksSinceTurnStart.add(Vector2(attackedTile.position))
         } else {
-            attacker.getCivInfo().attacksSinceTurnStart.add(CivilizationInfo.HistoricalAttackMemory(
-                null,
-                Vector2(attacker.getTile().position),
-                Vector2(attackedTile.position)
-            ))
+            attacker.getCivInfo().attacksSinceTurnStart.add(
+                CivilizationInfo.HistoricalAttackMemory(
+                    null,
+                    Vector2(attacker.getTile().position),
+                    Vector2(attackedTile.position)
+                )
+            )
         }
 
         if (attacker is MapUnitCombatant && attacker.unit.baseUnit.isAirUnit()) {
@@ -142,10 +155,16 @@ object Battle {
         // Withdraw from melee ability
         if (attacker is MapUnitCombatant && attacker.isMelee() && defender is MapUnitCombatant) {
             val withdrawUniques = defender.unit.getMatchingUniques(UniqueType.MayWithdraw)
-            val combinedProbabilityToStayPut = withdrawUniques.fold(100) { probabilityToStayPut, unique -> probabilityToStayPut * (100-unique.params[0].toInt()) / 100 }
+            val combinedProbabilityToStayPut =
+                withdrawUniques.fold(100) { probabilityToStayPut, unique -> probabilityToStayPut * (100 - unique.params[0].toInt()) / 100 }
             val baseWithdrawChance = 100 - combinedProbabilityToStayPut
             // If a mod allows multiple withdraw properties, they stack multiplicatively
-            if (baseWithdrawChance != 0 && doWithdrawFromMeleeAbility(attacker, defender, baseWithdrawChance)) return
+            if (baseWithdrawChance != 0 && doWithdrawFromMeleeAbility(
+                    attacker,
+                    defender,
+                    baseWithdrawChance
+                )
+            ) return
         }
 
         val isAlreadyDefeatedCity = defender is CityCombatant && defender.isDefeated()
@@ -157,20 +176,33 @@ object Battle {
         val captureMilitaryUnitSuccess = tryCaptureUnit(attacker, defender, attackedTile)
 
         if (!captureMilitaryUnitSuccess) // capture creates a new unit, but `defender` still is the original, so this function would still show a kill message
-            postBattleNotifications(attacker, defender, attackedTile, attacker.getTile(), damageDealt)
+            postBattleNotifications(
+                attacker,
+                defender,
+                attackedTile,
+                attacker.getTile(),
+                damageDealt
+            )
 
-        if (defender.getCivInfo().isBarbarian() && attackedTile.improvement == Constants.barbarianEncampment)
+        if (defender.getCivInfo()
+                .isBarbarian() && attackedTile.improvement == Constants.barbarianEncampment
+        )
             defender.getCivInfo().gameInfo.barbarians.campAttacked(attackedTile.position)
 
         // This needs to come BEFORE the move-to-tile, because if we haven't conquered it we can't move there =)
         if (defender.isDefeated() && defender is CityCombatant && attacker is MapUnitCombatant
-                && attacker.isMelee() && !attacker.unit.hasUnique(UniqueType.CannotCaptureCities)) {
+            && attacker.isMelee() && !attacker.unit.hasUnique(UniqueType.CannotCaptureCities)
+        ) {
             // Barbarians can't capture cities
             if (attacker.unit.civInfo.isBarbarian()) {
                 defender.takeDamage(-1) // Back to 2 HP
                 val ransom = min(200, defender.city.civInfo.gold)
                 defender.city.civInfo.addGold(-ransom)
-                defender.city.civInfo.addNotification("Barbarians raided [${defender.city.name}] and stole [$ransom] Gold from your treasury!", defender.city.location, NotificationIcon.War)
+                defender.city.civInfo.addNotification(
+                    "Barbarians raided [${defender.city.name}] and stole [$ransom] Gold from your treasury!",
+                    defender.city.location,
+                    NotificationIcon.War
+                )
                 attacker.unit.destroy() // Remove the barbarian
             } else
                 conquerCity(defender.city, attacker)

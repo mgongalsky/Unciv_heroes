@@ -125,6 +125,7 @@ class Minimap(val mapHolder: WorldMapHolder, minimapSize: Int) : Group() {
         }
     }
 
+    /** Обновляет цвет, круг города и границы при смене владельца или открытии клетки наблюдающему игроку. */
     fun update(viewingCiv: CivilizationInfo) {
         for (minimapTile in minimapTiles) {
             val tileInfo = minimapTile.tileInfo
@@ -136,7 +137,7 @@ class Minimap(val mapHolder: WorldMapHolder, minimapSize: Int) : Group() {
             if (revealStatusChanged || ownerChanged)
                 minimapTile.updateColor(shouldBeUnrevealed)
 
-            // Neutral cities have no owner change when first discovered.
+            // При первом обнаружении нейтрального города владелец остаётся null: одного ownerChanged недостаточно.
             if (shouldBeUnrevealed || !(ownerChanged || revealStatusChanged)) continue
             minimapTile.updateCityCircle().updateActorsIn(this)
             minimapTile.updateBorders().updateActorsIn(this)

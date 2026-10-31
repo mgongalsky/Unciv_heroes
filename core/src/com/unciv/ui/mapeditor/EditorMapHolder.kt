@@ -121,11 +121,13 @@ class EditorMapHolder(
         refreshScenarioCityPreviews()
     }
 
-    /** Labels use map descriptions only; the editor has no runtime city world. */
+    /** Рисует подписи и признаки городов по описаниям карты; игрового мира с CityInfo в редакторе нет. */
     fun refreshScenarioCityPreviews() {
         if (editorScreen == null) return
         for (tileGroup in allTileGroups) {
-            tileGroup.findActor<com.badlogic.gdx.scenes.scene2d.Actor>("scenario-city-preview")?.remove()
+            // Пересоздаём подпись, чтобы изменения имени, владельца и удаления не оставляли старые акторы.
+            tileGroup.findActor<com.badlogic.gdx.scenes.scene2d.Actor>("scenario-city-preview")
+                ?.remove()
             val city = tileMap.scenarioCities.firstOrNull {
                 it.position.x == tileGroup.tileInfo.position.x && it.position.y == tileGroup.tileInfo.position.y
             }
@@ -135,13 +137,14 @@ class EditorMapHolder(
                 tileGroup.update()
             }
             if (city == null) continue
-            val owner = if (city.owner == com.unciv.pure.domain.city.ScenarioCityOwner.Neutral) "Neutral".tr()
+            val owner =
+                if (city.owner == com.unciv.pure.domain.city.ScenarioCityOwner.Neutral) "Neutral".tr()
                 else tileMap.scenarioPlayerSlots.firstOrNull { it.id == city.ownerSlotId }?.name.orEmpty()
             val label = com.badlogic.gdx.scenes.scene2d.ui.Label(
                 "${city.name}\n$owner", BaseScreen.skin
             ).apply {
                 name = "scenario-city-preview"
-                touchable = Touchable.disabled
+                touchable = Touchable.disabled // Подпись не перехватывает выбор клетки.
                 color = if (city.owner == com.unciv.pure.domain.city.ScenarioCityOwner.Neutral)
                     com.badlogic.gdx.graphics.Color.LIGHT_GRAY else com.badlogic.gdx.graphics.Color.GOLD
                 setFontScale(0.7f)

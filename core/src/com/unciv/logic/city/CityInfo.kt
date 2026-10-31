@@ -95,7 +95,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     @Transient
     private var worldAdapter: GameInfo? = null
 
-    /** The world is independent of whether a player owns this city. */
+    /** Мир доступен и нейтральному городу: отсутствие цивилизации-владельца не означает отсутствие игры. */
     val gameInfo: GameInfo
         get() = ownerOrNull?.gameInfo ?: checkNotNull(worldAdapter) {
             "City $id has no bound world"
@@ -104,7 +104,10 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     val ownerOrNull: CivilizationInfo?
         get() = if (state.ownership is CityOwnership.Player) civInfo else null
 
-    /** Bind existing neutral state without founding, transferring or creating a player. */
+    /**
+     * Привязывает уже нейтральный город к миру без основания, регистрации или создания цивилизации.
+     * Принадлежность должна быть назначена заранее; привязка также снимает владельца у адаптера гарнизона.
+     */
     fun bindNeutralWorld(game: GameInfo) {
         require(state.ownership == CityOwnership.Neutral) { "City $id is not neutral" }
         check(worldAdapter == null || worldAdapter === game) { "City $id belongs to another world" }
@@ -113,7 +116,11 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         garrisonAdapter?.setTransients(null, null)
     }
 
-    /** Resolves the core owner through the legacy world; does not register or transfer cities. */
+    /**
+     * Совместимый доступ к владельцу из CityState через объекты старого игрового мира.
+     * Нейтральный город не имеет civInfo: для допуска отсутствия владельца используется ownerOrNull.
+     * Setter связывает владельца города и гарнизона, но не выполняет регистрацию или игровые эффекты передачи.
+     */
     var civInfo: CivilizationInfo
         get() {
             val owner = state.ownership as? CityOwnership.Player
@@ -147,10 +154,14 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     // This is so that military units can enter the city, even before we decide what to do with it
     var hasJustBeenConquered = false
 
-    /** Coordinates are owned by the core; returned vectors are boundary values. */
+    /** Координаты хранятся в CityState; возвращаемый Vector2 — копия. Для изменения позиции нужно присвоить location. */
     var location: Vector2
         get() = Vector2(state.position.x, state.position.y)
-        set(value) { state.position = CityPosition(value.x, value.y) }
+        set(value) {
+            state.position = CityPosition(value.x, value.y)
+        }
+
+    /** Локальное состояние города — источник данных для совместимых свойств id, name, history, health и гарнизона. */
     @Transient
     val state = CityState(CityId(UUID.randomUUID().toString()))
 
@@ -212,7 +223,10 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     @Transient
     private var garrisonAdapter: ArmyInfo? = null
 
-    /** Legacy services operate on the same army as the pure city state. */
+    /**
+     * Адаптер старых игровых сервисов над той же Army, которая хранится в CityState.
+     * При замене Army адаптер пересоздаётся вокруг нового объекта, без копирования войск в параллельное хранилище.
+     */
     var garrisonInfo: ArmyInfo
         get() {
             val army = state.garrison
@@ -242,7 +256,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
 
     private var flagsCountdown = HashMap<String, Int>()
 
-    /** Keep the legacy flat save format while the runtime fields delegate to pure state. */
+    /** Сохраняет прежние плоские поля CityInfo, явно записывая свойства, делегирующие данные в CityState. */
     override fun write(json: Json) {
         json.writeFields(this)
         json.writeValue("id", id)
@@ -254,9 +268,14 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         json.writeValue("isCurrentCapital", state.isCurrentCapital)
         json.writeValue("resolvedCityType", state.resolvedCityType)
         json.writeValue("location", location, Vector2::class.java)
-        if (state.garrison != null) json.writeValue("garrisonInfo", garrisonInfo, ArmyInfo::class.java)
+        if (state.garrison != null) json.writeValue(
+            "garrisonInfo",
+            garrisonInfo,
+            ArmyInfo::class.java
+        )
     }
 
+    /** Читает локальные данные без назначения владельца; его определит внешний контейнер сохранения игры. */
     override fun read(json: Json, jsonData: JsonValue) {
         jsonData.get("location")?.let { location = json.readValue(Vector2::class.java, it) }
         jsonData.get("garrisonInfo")?.takeUnless { it.isNull }?.let {
@@ -268,14 +287,26 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         previousOwner = jsonData.getString("previousOwner", previousOwner)
         turnAcquired = jsonData.getInt("turnAcquired", turnAcquired)
         health = jsonData.getInt("health", health)
-        state.isCurrentCapital = jsonData.get("isCurrentCapital")?.takeUnless { it.isNull }?.asBoolean()
+        state.isCurrentCapital =
+                jsonData.get("isCurrentCapital")?.takeUnless { it.isNull }?.asBoolean()
         state.resolvedCityType = jsonData.getString("resolvedCityType", "")
-        // These properties have no backing fields. Hide them from reflective field reading,
-        // then restore the input tree so other consumers can still inspect it.
-        val stateFields = listOf("id", "name", "foundingCiv", "previousOwner", "turnAcquired", "health", "garrisonInfo", "location", "isCurrentCapital", "resolvedCityType")
+        // У делегирующих свойств нет собственных полей: временно скрываем их от рефлексивного чтения.
+        // Затем возвращаем узлы, чтобы вызывающая сторона могла продолжать читать исходное дерево JSON.
+        val stateFields = listOf(
+            "id",
+            "name",
+            "foundingCiv",
+            "previousOwner",
+            "turnAcquired",
+            "health",
+            "garrisonInfo",
+            "location",
+            "isCurrentCapital",
+            "resolvedCityType"
+        )
             .mapNotNull { fieldName ->
                 jsonData.remove(fieldName)?.let {
-                    // JsonValue.remove unlinks the node but retains its sibling references.
+                    // remove отсоединяет узел, но оставляет ссылки на соседей; перед повторным добавлением очищаем их.
                     it.next = null
                     it.prev = null
                     fieldName to it
@@ -366,7 +397,10 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         }
     }
 
-    //region pure functions
+    /**
+     * Копирует локальное состояние, активную армию, её войска и вложенные координаты независимо от оригинала.
+     * Старый список garrison пока разделяется. Связи менеджеров и привязку к новому миру восстанавливает внешний код.
+     */
     fun clone(): CityInfo {
         val toReturn = CityInfo()
         toReturn.location = location
@@ -377,7 +411,11 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         toReturn.name = name
         toReturn.health = health
         toReturn.garrison = garrison
-        toReturn.garrisonInfo = ArmyInfo(garrisonInfo.ownerOrNull, garrisonInfo.maxSlots, garrisonInfo.army.deepCopy())
+        toReturn.garrisonInfo = ArmyInfo(
+            garrisonInfo.ownerOrNull,
+            garrisonInfo.maxSlots,
+            garrisonInfo.army.deepCopy()
+        )
         toReturn.population = population.clone()
         toReturn.cityConstructions = cityConstructions.clone()
         toReturn.expansion = expansion.clone()
@@ -410,10 +448,11 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
     fun getWorkableTiles() = tilesInRange.asSequence().filter { it.getOwner() == civInfo }
     fun isWorked(tileInfo: TileInfo) = workedTiles.contains(tileInfo.position)
 
+    /** Нейтральный город не бывает столицей. Только для старого состояния без явного флага учитывается здание-индикатор. */
     fun isCapital(): Boolean = state.ownership != CityOwnership.Neutral &&
-        (state.isCurrentCapital ?: cityConstructions.getBuiltBuildings().any {
-            it.hasUnique(UniqueType.IndicatesCapital)
-        })
+            (state.isCurrentCapital ?: cityConstructions.getBuiltBuildings().any {
+                it.hasUnique(UniqueType.IndicatesCapital)
+            })
     fun isCoastal(): Boolean = centerTileInfo.isCoastalTile()
     fun capitalCityIndicator(): String {
         val indicatorBuildings = getRuleset().buildings.values
@@ -669,7 +708,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
 
     //endregion
 
-    //region state-changing functions
+    /** Восстанавливает связи с картой и менеджерами без основания города; старый столичный статус определяется однократно. */
     fun setTransients() {
         tileMap = gameInfo.tileMap
         centerTileInfo = tileMap[location]
@@ -684,7 +723,7 @@ open class CityInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         espionage.setTransients(this)
     }
 
-    /** Static neutral policy: preserve all local state and invoke no player systems. */
+    /** Статичная нейтральная фаза: сохраняет локальное состояние и не вызывает производство, рост или системы игрока. */
     open fun completeNeutralRound() {
         require(state.ownership == CityOwnership.Neutral) { "City $id is not neutral" }
     }

@@ -6,13 +6,16 @@ import com.unciv.logic.city.CitySaveValidation
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет территорию сохранённых городов до изменения принадлежности клеток мира. */
 class CitySaveValidationTest {
+    /** Проверяет и тип отказа, и диагностическое сообщение, чтобы случайная ошибка не засчиталась как успех. */
     private fun rejects(message: String, action: () -> Unit) {
         val failure = try { action(); null } catch (error: IllegalArgumentException) { error }
         assertNotNull("Expected $message", failure)
         assertTrue(failure!!.message.orEmpty(), failure.message.orEmpty().contains(message))
     }
 
+    /** Повторная проверка корректной территории не основывает город заново и не меняет владельца центра. */
     @Test
     fun validTerritoryIsAcceptedWithoutChangingTileOwnership() {
         CityTestFixture().use { fixture ->
@@ -23,6 +26,7 @@ class CitySaveValidationTest {
         }
     }
 
+    /** Территория обязана содержать центр и целиком находиться на карте. */
     @Test
     fun missingCenterAndOutOfMapTerritoryAreRejected() {
         CityTestFixture().use { fixture ->
@@ -36,6 +40,7 @@ class CitySaveValidationTest {
         }
     }
 
+    /** Два города не могут заявить одну клетку; отказ сохраняет прежнюю регистрацию и разметку карты. */
     @Test
     fun overlappingTerritoryIsRejectedBeforeOwnershipChanges() {
         CityTestFixture().use { fixture ->

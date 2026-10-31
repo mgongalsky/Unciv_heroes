@@ -13,6 +13,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
+/** Проверяет сериализацию работающей игры в изолированном окружении без записи пользовательских настроек. */
 class SerializationTests {
     private lateinit var game: GameInfo
     private var fixture: CityTestFixture? = null
@@ -20,6 +21,7 @@ class SerializationTests {
     private var previousInput: Input? = null
     private var inputReplaced = false
 
+    /** Получает фактический класс Kotlin lazy через делегат, не привязываясь к его доступности в исходном коде. */
     private val classSynchronizedLazyImpl: Class<*> by lazy {
         class TestWithLazy { val test: Int by lazy { 0 } }
         val instance = TestWithLazy()
@@ -28,6 +30,7 @@ class SerializationTests {
         field.get(instance)::class.java
     }
 
+    /** Создаёт обычные цивилизации, город, контакт и юнита, чтобы сериализация охватила реальные игровые связи. */
     @Before
     fun prepareGame() {
         val environment = CityTestFixture()
@@ -46,13 +49,14 @@ class SerializationTests {
         game.civilizations.add(other)
         game.setTransients()
         UncivGame.Current.startSimulation(game)
-        // Meeting remains real, but the already completed tutorial cannot write settings.
+        // Контакт остаётся настоящим, но уже пройденное обучение не вызывает запись настроек.
         UncivGame.Current.settings.tutorialTasksCompleted.add("Meet another civilization")
         val civ = game.getCurrentPlayerCivilization()
         civ.makeCivilizationsMeet(other)
         assertNotNull(civ.placeUnitNearTile(civ.cities.single().location, "Warrior"))
     }
 
+    /** Игра сериализуется без подавления исключений и без тестового класса цивилизации в формате сохранения. */
     @Test
     fun canSerializeGame() {
         val encoded = json().toJson(game)
@@ -60,6 +64,7 @@ class SerializationTests {
         assertFalse(encoded.contains("FakeCivilizationInfo"))
     }
 
+    /** Внутренний объект lazy не должен попадать в JSON даже после исключения его служебных полей. */
     @Test
     fun serializedLaziesTest() {
         val serializer = json().apply {
@@ -71,6 +76,7 @@ class SerializationTests {
             encoded.contains("kotlin.SynchronizedLazyImpl"))
     }
 
+    /** Восстанавливает дополнительные глобальные ссылки и обязательно закрывает заготовку города. */
     @After
     fun cleanup() {
         try {

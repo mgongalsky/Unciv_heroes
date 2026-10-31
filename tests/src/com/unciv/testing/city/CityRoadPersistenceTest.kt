@@ -7,7 +7,9 @@ import com.unciv.logic.map.RoadStatus
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет копирование и восстановление учёта дорог за пределами городской территории. */
 class CityRoadPersistenceTest {
+    /** Копия цивилизации независимо хранит и набор neutralRoads, и вложенные изменяемые координаты. */
     @Test
     fun clonedNeutralRoadCoordinatesAndCollectionAreIndependent() {
         CityTestFixture().use { fixture ->
@@ -32,6 +34,7 @@ class CityRoadPersistenceTest {
         }
     }
 
+    /** Повторный setTransients учитывает только существующие дороги вне городов, не дублируя основание. */
     @Test
     fun repeatedRestorationTracksOnlyExistingUnownedRoads() {
         CityTestFixture().use { fixture ->
@@ -44,6 +47,7 @@ class CityRoadPersistenceTest {
                 val outside = fixture.game.tileMap.values.filter { it.getCity() == null }.take(2)
                 outside[0].addRoad(RoadStatus.Road, fixture.civilization)
                 outside[1].addRoad(RoadStatus.Road, fixture.civilization)
+                // Удалённая дорога не должна возвращаться в учёт по старому признаку владельца.
                 outside[1].removeRoad()
                 val loaded = json().fromJson(GameInfo::class.java, json().toJson(fixture.game.clone()))
                 repeat(2) {

@@ -10,7 +10,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет вызов нейтральной фазы из настоящего nextTurn и сохранение статичного состояния города. */
 class NeutralCityTurnTest {
+    /** Считает обращения к фазе, сохраняя выполнение её настоящей реализации. */
     private class CountingNeutralCity : CityInfo() {
         var rounds = 0
         override fun completeNeutralRound() {
@@ -19,6 +21,7 @@ class NeutralCityTurnTest {
         }
     }
 
+    /** В каждом раунде город обрабатывается один раз без роста, лечения, производства и эффектов игрока. */
     @Test
     fun neutralPhaseRunsOncePerRoundAndPreservesLocalState() {
         CityTestFixture().use { fixture ->
@@ -29,6 +32,7 @@ class NeutralCityTurnTest {
                 val game = fixture.game.clone()
                 game.turns = 1
                 game.setTransients()
+                // Ненулевые значения позволяют заметить случайный запуск обычных startTurn/endTurn.
                 val city = CountingNeutralCity().apply {
                     state.ownership = CityOwnership.Neutral
                     location = Vector2(4f, 0f)

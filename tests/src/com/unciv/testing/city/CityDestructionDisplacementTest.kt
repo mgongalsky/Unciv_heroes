@@ -10,7 +10,9 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Защищает перемещение юнитов, для которых клетка становится недопустимой после разрушения города. */
 class CityDestructionDisplacementTest {
+    /** Корабль из центра прибрежного города переносится на воду и остаётся в списках клетки и владельца. */
     @Test
     fun destroyingCoastalCityMovesItsShipToWater() {
         val previousInput = Gdx.input
@@ -18,6 +20,7 @@ class CityDestructionDisplacementTest {
         try {
             CityTestFixture().use { fixture ->
                 val center = fixture.game.tileMap[Vector2(0f, 0f)]
+                // Соседнее море обеспечивает допустимое место для вытесненного корабля.
                 val coast = center.neighbors.first()
                 coast.baseTerrain = "Coast"
                 coast.setTerrainTransients()

@@ -187,6 +187,7 @@ class BattleTable(val worldScreen: WorldScreen): Table() {
         add(modifierLabel).width(quarterScreen - upOrDownLabel.minWidth)
     }
 
+    /** Показывает занятие пустого города либо оценку тактических армий; обычная формула урона по городу здесь не подходит. */
     private fun simulateNeutralGarrison(attacker: MapUnitCombatant, defender: CityCombatant) {
         clear()
         add(attacker.getName().tr().toLabel())
@@ -196,9 +197,13 @@ class BattleTable(val worldScreen: WorldScreen): Table() {
         ) {
             val enterButton = "Occupy".toTextButton().apply { name = "neutral-city-occupy" }
             if (!worldScreen.isPlayersTurn ||
-                !com.unciv.logic.city.NeutralCityEntry.canEnterThisTurn(defender.city, attacker.unit)
+                !com.unciv.logic.city.NeutralCityEntry.canEnterThisTurn(
+                    defender.city,
+                    attacker.unit
+                )
             ) enterButton.disable()
             else enterButton.onClick(UncivSound.Silent) {
+                // Состояние может измениться после показа кнопки; проверяем право действия и условия входа заново.
                 if (!worldScreen.canChangeState || !worldScreen.isPlayersTurn) return@onClick
                 com.unciv.logic.city.NeutralCityEntry.enterThisTurn(defender.city, attacker.unit)
                 worldScreen.mapHolder.removeUnitActionOverlay()
@@ -209,16 +214,19 @@ class BattleTable(val worldScreen: WorldScreen): Table() {
             setPosition(worldScreen.stage.width / 2 - width / 2, 5f)
             return
         }
-        add(buildBattleThreatPreview(
-            BattleThreatArmyPreview(
-                attacker.unit.heroAttackSkill, attacker.unit.heroDefenseSkill,
-                attacker.unit.army.getAllTroops().filterNotNull().filter { it.currentAmount > 0 }
-            ),
-            BattleThreatArmyPreview(
-                0, 0, defender.city.garrisonInfo.getAllTroops()
-                    .filterNotNull().filter { it.currentAmount > 0 }
-            )
-        )).colspan(2).growX().row()
+        // У гарнизона нет героя и цивилизации; оценка использует живые войска с нулевыми навыками защитника.
+        add(
+            buildBattleThreatPreview(
+                BattleThreatArmyPreview(
+                    attacker.unit.heroAttackSkill, attacker.unit.heroDefenseSkill,
+                    attacker.unit.army.getAllTroops().filterNotNull()
+                        .filter { it.currentAmount > 0 }
+                ),
+                BattleThreatArmyPreview(
+                    0, 0, defender.city.garrisonInfo.getAllTroops()
+                        .filterNotNull().filter { it.currentAmount > 0 }
+                )
+            )).colspan(2).growX().row()
         val target = BattleHelper.getAttackableEnemies(
             attacker.unit, attacker.unit.movement.getDistanceToTiles()
         ).firstOrNull { it.tileToAttack == defender.getTile() }

@@ -38,7 +38,11 @@ class TileMap : IsPartOfGameInfoSerialization, IBattleField {
     //region Fields, Serialized
 
     var mapParameters = MapParameters()
+
+    /** Исходные описания городов карты: редактор меняет их, а запуск создаёт по ним отдельные игровые города. */
     var scenarioCities = arrayListOf<com.unciv.pure.domain.city.ScenarioCity>()
+
+    /** Стабильные слоты участников карты; их ID не зависят от порядка игроков, выбранных наций и аккаунтов. */
     var scenarioPlayerSlots = arrayListOf<com.unciv.pure.domain.city.ScenarioPlayerSlot>()
 
     private var tileList = ArrayList<TileInfo>()

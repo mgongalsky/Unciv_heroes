@@ -7,7 +7,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет оболочку сохранения, которая хранит явное владение отдельно от данных CityInfo. */
 class CitySaveEntryTest {
+    /** Игровой и нейтральный владелец переживают JSON без привязки к экземпляру цивилизации. */
     @Test
     fun ownershipEnvelopePreservesPlayerAndNeutralWithoutBindingRuntimeOwner() {
         CityTestFixture().use { fixture ->
@@ -15,6 +17,7 @@ class CitySaveEntryTest {
             val originalOwner = city.state.ownership
             try {
                 for (owner in listOf(CityOwnership.Player("Rome"), CityOwnership.Neutral)) {
+                    // Здесь проверяется только формат оболочки, а не игровая операция смены владельца.
                     city.state.ownership = owner
                     val text = json().toJson(CitySaveEntry(city))
                     val tree = JsonReader().parse(text)
@@ -35,6 +38,7 @@ class CitySaveEntryTest {
         }
     }
 
+    /** Отсутствие ID, координат или описания владельца считается повреждением, а не значением по умолчанию. */
     @Test
     fun missingIdentityLocationOrOwnershipIsRejected() {
         CityTestFixture().use { fixture ->

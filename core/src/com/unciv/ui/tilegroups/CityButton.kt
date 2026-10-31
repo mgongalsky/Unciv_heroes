@@ -45,12 +45,14 @@ class CityButton(val city: CityInfo, private val tileGroup: WorldTileGroup): Tab
     private var isButtonMoved = false
     private var showAdditionalInfoTags = false
 
-    fun update(isCityViewable:Boolean) {
+    /** Обновляет подпись с учётом видимости; нейтральная ветвь не обращается к экономике и дипломатии владельца. */
+    fun update(isCityViewable: Boolean) {
         showAdditionalInfoTags = isCityViewable
 
         clear()
         setButtonActions()
         if (city.ownerOrNull == null) {
+            // Нейтральный город показывает население, имя и видимый гарнизон без национальных значков и производства.
             iconTable = Table().apply {
                 touchable = Touchable.enabled
                 background = BaseScreen.skinStrings.getUiBackground(
@@ -74,7 +76,11 @@ class CityButton(val city: CityInfo, private val tileGroup: WorldTileGroup): Tab
         }
         addAirUnitTable()
         if (showAdditionalInfoTags && city.health < city.getMaxHealth().toFloat()) {
-            val healthBar = ImageGetter.getHealthBar(city.health.toFloat(), city.getMaxHealth().toFloat(), 100f)
+            val healthBar = ImageGetter.getHealthBar(
+                city.health.toFloat(),
+                city.getMaxHealth().toFloat(),
+                100f
+            )
             add(healthBar).row()
         }
 
@@ -83,7 +89,10 @@ class CityButton(val city: CityInfo, private val tileGroup: WorldTileGroup): Tab
 
         if (city.civInfo.isCityState() && city.civInfo.knows(worldScreen.viewingCiv)) {
             val diplomacyManager = city.civInfo.getDiplomacyManager(worldScreen.viewingCiv)
-            val influenceBar = getInfluenceBar(diplomacyManager.getInfluence(), diplomacyManager.relationshipLevel())
+            val influenceBar = getInfluenceBar(
+                diplomacyManager.getInfluence(),
+                diplomacyManager.relationshipLevel()
+            )
             add(influenceBar).row()
         }
 

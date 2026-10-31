@@ -35,6 +35,7 @@ internal class MinimapTile(val tileInfo: TileInfo, tileSize: Float, val onClick:
         image.onClick(onClick)
     }
 
+    /** Красит открытые клетки по нации владельца; у нейтрального центра и территории используются серые цвета. */
     fun updateColor(isTileUnrevealed: Boolean) {
         image.isVisible = UncivGame.Current.viewEntireMapForDebug || !isTileUnrevealed
         if (!image.isVisible) return
@@ -96,6 +97,7 @@ internal class MinimapTile(val tileInfo: TileInfo, tileSize: Float, val onClick:
         return ActorChange(imagesBefore - imagesAfter, imagesAfter - imagesBefore)
     }
 
+    /** Пересоздаёт значок центра без обязательной нации; при исчезновении города возвращает удаление прежнего актора. */
     fun updateCityCircle(): ActorChange {
         val prevCircle = cityCircleImage
         val removed = if (prevCircle != null) setOf<Actor>(prevCircle) else emptySet()

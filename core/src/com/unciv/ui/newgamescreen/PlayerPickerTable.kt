@@ -52,8 +52,13 @@ class PlayerPickerTable(
     /** No random civilization is available, used during map editing.*/
     var noRandom = false
 
+    /** После смены набора слотов разрешает однократно добавить недостающих участников сценария. */
     private var fillMissingScenarioPlayers = false
+
+    /** Запоминает явный выбор «без слота» по экземпляру Player, чтобы автоподбор не отменял его при перерисовке. */
     private val manuallyUnassigned = Collections.newSetFromMap(IdentityHashMap<Player, Boolean>())
+
+    /** Слоты выбранной карты; новый набор ID сбрасывает прежние ручные исключения и запускает начальное распределение. */
     var scenarioSlots: List<com.unciv.pure.domain.city.ScenarioPlayerSlot> = emptyList()
         set(value) {
             if (field.map { it.id } != value.map { it.id }) {

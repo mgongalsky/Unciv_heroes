@@ -9,7 +9,9 @@ import com.unciv.logic.civilization.CivilizationInfo
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет сохранение результатов игровых операций получения и нейтрализации города. */
 class NeutralCityOwnershipSaveTest {
+    /** Цепочка игрок → нейтральный → игрок → нейтральный выдерживает загрузки и следующий раунд в обоих форматах. */
     @Test
     fun ownershipTransitionsSurviveBothSaveFormatsAndNeutralTurns() {
         CityTestFixture().use { fixture ->
@@ -29,6 +31,7 @@ class NeutralCityOwnershipSaveTest {
                 val buildings = original.cityConstructions.builtBuildings.toSet()
                 fixture.game.turns = 1
                 for (compressed in listOf(false, true)) {
+                    // После каждой операции получаем новые экземпляры из полноценного загрузчика игры.
                     fun reload(game: GameInfo) = UncivFiles.gameInfoFromString(
                         UncivFiles.gameInfoToString(game.clone(), compressed)
                     )

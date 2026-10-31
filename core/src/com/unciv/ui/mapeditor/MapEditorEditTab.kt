@@ -64,18 +64,58 @@ class MapEditorEditTab(
         val caption: String,
         val key: Char,
         val icon: String,
-        val instantiate: (MapEditorEditTab, Ruleset)->Table
+        val instantiate: (MapEditorEditTab, Ruleset) -> Table
     ) {
-        Terrain("Terrain", 't', "OtherIcons/Terrains", { parent, ruleset -> MapEditorEditTerrainTab(parent, ruleset) }),
-        TerrainFeatures("Features", 'f', "OtherIcons/Star", { parent, ruleset -> MapEditorEditFeaturesTab(parent, ruleset) }),
-        NaturalWonders("Wonders", 'w', "OtherIcons/Star", { parent, ruleset -> MapEditorEditWondersTab(parent, ruleset) }),
-        Resources("Resources", 'r', "OtherIcons/Resources", { parent, ruleset -> MapEditorEditResourcesTab(parent, ruleset) }),
-        Improvements("Improvements", 'i', "OtherIcons/Improvements", { parent, ruleset -> MapEditorEditImprovementsTab(parent, ruleset) }),
-        Monsters("Monsters", 'm', "OtherIcons/Shield", { parent, ruleset -> MapEditorEditMonstersTab(parent, ruleset) }),
-        Rivers("Rivers", 'v', "OtherIcons/Star", { parent, ruleset -> MapEditorEditRiversTab(parent, ruleset) }),
-        Cities("Cities", 'c', "OtherIcons/City", { parent, _ -> MapEditorCitiesTab(parent.editorScreen, parent) }),
-        StartingLocations("Starting locations", 's', "OtherIcons/Nations", { parent, ruleset -> MapEditorEditStartsTab(parent, ruleset) }),
-        // Units("Units", 'u', "OtherIcons/Shield", { parent, ruleset -> MapEditorEditUnitsTab(parent, ruleset) }),
+        Terrain(
+            "Terrain",
+            't',
+            "OtherIcons/Terrains",
+            { parent, ruleset -> MapEditorEditTerrainTab(parent, ruleset) }),
+        TerrainFeatures(
+            "Features",
+            'f',
+            "OtherIcons/Star",
+            { parent, ruleset -> MapEditorEditFeaturesTab(parent, ruleset) }),
+        NaturalWonders(
+            "Wonders",
+            'w',
+            "OtherIcons/Star",
+            { parent, ruleset -> MapEditorEditWondersTab(parent, ruleset) }),
+        Resources(
+            "Resources",
+            'r',
+            "OtherIcons/Resources",
+            { parent, ruleset -> MapEditorEditResourcesTab(parent, ruleset) }),
+        Improvements(
+            "Improvements",
+            'i',
+            "OtherIcons/Improvements",
+            { parent, ruleset -> MapEditorEditImprovementsTab(parent, ruleset) }),
+        Monsters(
+            "Monsters",
+            'm',
+            "OtherIcons/Shield",
+            { parent, ruleset -> MapEditorEditMonstersTab(parent, ruleset) }),
+        Rivers(
+            "Rivers",
+            'v',
+            "OtherIcons/Star",
+            { parent, ruleset -> MapEditorEditRiversTab(parent, ruleset) }),
+        Players(
+            "Players",
+            'p',
+            "OtherIcons/Nations",
+            { parent, _ -> MapEditorPlayersTab(parent.editorScreen, parent) }),
+        Cities(
+            "Cities",
+            'c',
+            "OtherIcons/City",
+            { parent, _ -> MapEditorCitiesTab(parent.editorScreen, parent) }),
+        StartingLocations(
+            "Starting locations",
+            's',
+            "OtherIcons/Nations",
+            { parent, ruleset -> MapEditorEditStartsTab(parent, ruleset) }),
     }
 
     init {
@@ -174,7 +214,10 @@ class MapEditorEditTab(
         }
 
     }
-    fun currentSubTab(): String = if (subTabs.activePage >= 0) subTabs.getPageButton(subTabs.activePage).name else editorScreen.selectedEditSubTab
+
+    /** Возвращает имя активного инструмента; при закрытой вложенной панели использует сохранённый выбор экрана. */
+    fun currentSubTab(): String =
+            if (subTabs.activePage >= 0) subTabs.getPageButton(subTabs.activePage).name else editorScreen.selectedEditSubTab
 
     fun selectPage(caption: String) = subTabs.selectPage(caption)
 
@@ -206,7 +249,6 @@ class MapEditorEditTab(
 
     override fun activated(index: Int, caption: String, pager: TabbedPager) {
         if (editorScreen.editTabsNeedRefresh) {
-            // ruleset has changed
             ruleset = editorScreen.ruleset
             ImageGetter.setNewRuleset(ruleset)
             for (page in AllEditSubTabs.values()) {
@@ -217,14 +259,18 @@ class MapEditorEditTab(
             brushHandlerType = BrushHandlerType.None
             editorScreen.editTabsNeedRefresh = false
         }
-
         setCityEditing(false)
         pager.setScrollDisabled(true)
         tileMatchFuzziness = editorScreen.tileMatchFuzziness
         subTabs.selectPage(editorScreen.selectedEditSubTab)
-        if (subTabs.activePage == subTabs.getPageIndex("Cities")) {
+        if (subTabs.activePage == subTabs.getPageIndex("Cities"))
             citiesTab()?.activated(subTabs.activePage, "Cities", subTabs)
-        }
+        else if (subTabs.activePage == subTabs.getPageIndex("Players"))
+            findActor<MapEditorPlayersTab>("scenario-players-tab")?.activated(
+                subTabs.activePage,
+                "Players",
+                subTabs
+            )
     }
 
     override fun deactivated(index: Int, caption: String, pager: TabbedPager) {
@@ -238,6 +284,7 @@ class MapEditorEditTab(
 
     private fun citiesTab(): MapEditorCitiesTab? = findActor("scenario-cities-tab")
 
+    /** Переключает обычную кисть и панели одиночных команд Cities/Players, включая обработчик клика карты. */
     internal fun setCityEditing(enabled: Boolean) {
         editorScreen.allowDragPainting = !enabled
         brushTable.isVisible = !enabled

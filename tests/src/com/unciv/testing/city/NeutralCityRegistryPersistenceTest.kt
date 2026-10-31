@@ -9,7 +9,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет сохранение нейтрального города в общем реестре независимо от списков цивилизаций. */
 class NeutralCityRegistryPersistenceTest {
+    /** Чтение, восстановление связей, копирование и повторная запись не назначают нейтральному городу владельца. */
     @Test
     fun canonicalNeutralCityReadsAndClonesWithoutEnteringCivilizationLists() {
         CityTestFixture().use { fixture ->
@@ -34,7 +36,7 @@ class NeutralCityRegistryPersistenceTest {
                 assertSame(city, loaded.cityRegistry.at(city.state.position))
                 assertTrue(loaded.civilizations.single().cities.isEmpty())
 
-                // Clone a restored game, including civilization managers and neutral territory.
+                // Копируем полностью восстановленный мир с менеджерами цивилизации и нейтральной территорией.
                 loaded.setTransients()
                 assertSame(city, loaded.tileMap[city.location].getCity())
                 assertTrue(loaded.tileMap[city.location].isCityCenter())
@@ -50,6 +52,7 @@ class NeutralCityRegistryPersistenceTest {
                 assertNull(copiedCity.garrisonInfo.ownerOrNull)
                 assertTrue(copy.civilizations.single().cities.isEmpty())
                 val encoded = JsonReader().parse(json().toJson(copy))
+                // Город записывается один раз в корне, без дублирующего контейнера у цивилизации.
                 assertEquals(1, encoded.get("cities").size)
                 assertEquals("Neutral", encoded.get("cities").get(0).get("ownership").getString("type"))
                 assertFalse(encoded.get("civilizations").get(0).has("cities"))

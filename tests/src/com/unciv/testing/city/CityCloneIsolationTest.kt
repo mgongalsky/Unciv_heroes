@@ -4,7 +4,9 @@ import com.badlogic.gdx.math.Vector2
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет независимость изменяемых данных CityInfo.clone фактическими изменениями копии. */
 class CityCloneIsolationTest {
+    /** Правки войск, строя, вложенных координат и истории копии не затрагивают исходный город. */
     @Test
     fun changingCopiedArmyTerritoryAndHistoryDoesNotChangeOriginal() {
         CityTestFixture().use { fixture ->
@@ -30,6 +32,7 @@ class CityCloneIsolationTest {
             copiedTroop.currentAmount = 1
             copiedTroop.formation.current = 123
             copy.garrisonInfo.setTroopAt(1, null)
+            // Одного нового набора недостаточно: каждый изменяемый Vector2 тоже должен быть скопирован.
             copy.tiles.first().set(99f, 99f)
             copy.tiles.clear()
             copy.workedTiles.first().set(98f, 98f)

@@ -13,7 +13,9 @@ import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 
+/** Загружает исторический JSON города, чтобы новый сериализатор не маскировал ошибки совместимости. */
 class CityLegacyFixtureTest {
+    /** Старые слоты армии и вложенный в цивилизацию город мигрируют в рабочую игру следующего формата. */
     @Test
     fun preRegistryCityWithLegacyArmySlotsLoadsAndRuns() {
         CityTestFixture().use { fixture ->
@@ -38,7 +40,7 @@ class CityLegacyFixtureTest {
                 source.turns = 7
                 source.civilizations.single().cities = arrayListOf(city)
                 source.civilizations.single().hasEverOwnedOriginalCapital = true
-                // Embed the untouched old payload: do not rewrite its legacy army slots first.
+                // Вставляем исходный старый JSON без предварительной перезаписи слотов новым сериализатором.
                 val legacyGame = JsonReader().parse(UncivFiles.gameInfoToString(source, false))
                 legacyGame.remove("cities")
                 val legacyCities = JsonValue(JsonValue.ValueType.array)
@@ -63,7 +65,7 @@ class CityLegacyFixtureTest {
                 assertEquals(8, loaded.turns)
                 assertSame(restored, loaded.getCities().single())
             } catch (failure: Exception) {
-                // Some game exceptions format their message using Current, which cleanup restores.
+                // Форматирование некоторых игровых ошибок использует Current; сохраняем текст до очистки окружения.
                 throw AssertionError(failure.stackTraceToString())
             } finally {
                 CivilizationInfo.monsterGameInfo = previousMonsterGame

@@ -19,6 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
+import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
@@ -201,41 +202,58 @@ fun Actor.onActivation(action: () -> Unit): Actor = onActivation(UncivSound.Clic
 enum class DispatcherVetoResult { Accept, Skip, SkipWithChildren }
 typealias DispatcherVetoer = (associatedActor: Actor?, keyDispatcher: KeyShortcutDispatcher?) -> DispatcherVetoResult
 
-/**
- * Install shorcut dispatcher for this stage. It activates all actions associated with the
- * pressed key in [additionalShortcuts] (if specified) and all actors in the stage. It is
- * possible to temporarily disable or veto some shortcut dispatchers by passing an appropriate
- * [dispatcherVetoerCreator] function. This function may return a [DispatcherVetoer], which
- * will then be used to evaluate all shortcut sources in the stage. This two-step vetoing
- * mechanism allows the callback ([dispatcherVetoerCreator]) perform expensive preparations
- * only one per keypress (doing them in the returned [DispatcherVetoer] would instead be once
- * per keypress/actor combination).
- */
-fun Stage.installShortcutDispatcher(additionalShortcuts: KeyShortcutDispatcher? = null, dispatcherVetoerCreator: (() -> DispatcherVetoer?)? = null) {
-    addListener(object: InputListener() {
+/** Подключает горячие клавиши сцены и её акторов, оставляя обычный ввод и буфер обмена активному текстовому полю. */
+fun Stage.installShortcutDispatcher(
+    additionalShortcuts: KeyShortcutDispatcher? = null,
+    dispatcherVetoerCreator: (() -> DispatcherVetoer?)? = null
+) {
+    addListener(object : InputListener() {
         override fun keyDown(event: InputEvent?, keycode: Int): Boolean {
+            // При вводе имени города или слота буквы не должны переключать инструменты редактора.
+            // Клавиши подтверждения и отмены остаются доступны общему обработчику формы.
+            if (keyboardFocus is TextField && keycode != Input.Keys.ENTER &&
+                keycode != Input.Keys.NUMPAD_ENTER && keycode != Input.Keys.ESCAPE &&
+                keycode != Input.Keys.BACK
+            ) return false
             val key = when {
                 event == null ->
                     KeyCharAndCode.UNKNOWN
-                Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) ||Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT) ->
+
+                Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT) ->
                     KeyCharAndCode.ctrlFromCode(event.keyCode)
+
                 else ->
                     KeyCharAndCode(event.keyCode)
             }
 
             if (key != KeyCharAndCode.UNKNOWN) {
-                var dispatcherVetoer = when { dispatcherVetoerCreator != null -> dispatcherVetoerCreator() else -> null }
-                if (dispatcherVetoer == null) dispatcherVetoer = { _, _ -> DispatcherVetoResult.Accept }
+                var dispatcherVetoer = when {
+                    dispatcherVetoerCreator != null -> dispatcherVetoerCreator()
+                    else -> null
+                }
+                if (dispatcherVetoer == null) dispatcherVetoer =
+                    { _, _ -> DispatcherVetoResult.Accept }
 
                 if (activate(key, dispatcherVetoer))
                     return true
-                // Make both Enter keys equivalent.
-                if ((key == KeyCharAndCode.NUMPAD_ENTER && activate(KeyCharAndCode.RETURN, dispatcherVetoer))
-                    || (key == KeyCharAndCode.RETURN && activate(KeyCharAndCode.NUMPAD_ENTER, dispatcherVetoer)))
+                // Оба варианта Enter выполняют одно и то же действие.
+                if ((key == KeyCharAndCode.NUMPAD_ENTER && activate(
+                        KeyCharAndCode.RETURN,
+                        dispatcherVetoer
+                    ))
+                    || (key == KeyCharAndCode.RETURN && activate(
+                        KeyCharAndCode.NUMPAD_ENTER,
+                        dispatcherVetoer
+                    ))
+                )
                     return true
-                // Likewise always match Back to ESC.
+                // Back и Escape также взаимозаменяемы.
                 if ((key == KeyCharAndCode.ESC && activate(KeyCharAndCode.BACK, dispatcherVetoer))
-                    || (key == KeyCharAndCode.BACK && activate(KeyCharAndCode.ESC, dispatcherVetoer)))
+                    || (key == KeyCharAndCode.BACK && activate(
+                        KeyCharAndCode.ESC,
+                        dispatcherVetoer
+                    ))
+                )
                     return true
             }
 
@@ -246,7 +264,11 @@ fun Stage.installShortcutDispatcher(additionalShortcuts: KeyShortcutDispatcher? 
             val shortcutResolver = KeyShortcutDispatcher.Resolver(key)
             val pendingActors = ArrayDeque<Actor>(getActors().toList())
 
-            if (additionalShortcuts != null && dispatcherVetoer(null, additionalShortcuts) == DispatcherVetoResult.Accept)
+            if (additionalShortcuts != null && dispatcherVetoer(
+                    null,
+                    additionalShortcuts
+                ) == DispatcherVetoResult.Accept
+            )
                 shortcutResolver.updateFor(additionalShortcuts)
 
             while (pendingActors.any()) {

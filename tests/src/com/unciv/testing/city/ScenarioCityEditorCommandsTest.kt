@@ -6,7 +6,9 @@ import com.unciv.pure.domain.city.*
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет команды изменения описаний карты независимо от формы редактора и создания игровых городов. */
 class ScenarioCityEditorCommandsTest {
+    /** Несовместимые после смены правил города можно исправлять по одному, сохраняя остальные описания. */
     @Test
     fun incompatibleCitiesCanBeRepairedOneAtATime() {
         CityTestFixture().use { fixture ->
@@ -26,6 +28,7 @@ class ScenarioCityEditorCommandsTest {
         }
     }
 
+    /** Гарнизон сверх вместимости армии отклоняется до добавления описания в карту. */
     @Test
     fun oversizedGarrisonIsRejectedWithoutChangingTheMap() {
         CityTestFixture().use { fixture ->
@@ -43,10 +46,12 @@ class ScenarioCityEditorCommandsTest {
         }
     }
 
+    /** Корректный нейтральный черновик со зданием и одним стеком для проверки копирования вложенных данных. */
     private fun city() = ScenarioCity(id = "town", name = "Town",
         typeMode = ScenarioCityTypeMode.Fixed, fixedType = "Default",
         buildings = arrayListOf("Granary"), garrison = arrayListOf(ScenarioCityTroop("Spearman", 5)))
 
+    /** Повторный Apply не дублирует город; сохранённое описание не разделяет изменяемый гарнизон с черновиком. */
     @Test
     fun singleCommandsCopyDraftAndDoNotDoubleRegister() {
         CityTestFixture().use { fixture ->
@@ -65,6 +70,7 @@ class ScenarioCityEditorCommandsTest {
         }
     }
 
+    /** Неверное население и удаление используемого слота отклоняются без изменения прежнего описания. */
     @Test
     fun invalidDraftAndUsedSlotRemovalLeaveMapUnchanged() {
         CityTestFixture().use { fixture ->
@@ -87,6 +93,7 @@ class ScenarioCityEditorCommandsTest {
         }
     }
 
+    /** Применённые описания переживают копирование для сохранения и повторное открытие карты. */
     @Test
     fun editedDescriptionsSurviveSaveCloneAndReopening() {
         CityTestFixture().use { fixture ->

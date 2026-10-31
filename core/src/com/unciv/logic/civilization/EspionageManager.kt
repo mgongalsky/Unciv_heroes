@@ -41,7 +41,9 @@ class Spy() : IsPartOfGameInfoSerialization {
         this.civInfo = civInfo
     }
 
+    /** Продвигает задание; при исчезновении города или его владельца сначала возвращает шпиона в убежище. */
     fun endTurn() {
+        // Проверка предшествует таймеру: дальнейшее выполнение задания требует цивилизации у цели.
         if (location != null && getLocation()?.ownerOrNull == null) {
             moveTo(null)
             return
@@ -52,10 +54,12 @@ class Spy() : IsPartOfGameInfoSerialization {
         when (action) {
             SpyAction.Moving -> {
                 action = SpyAction.EstablishNetwork
-                timeTillActionFinish = 3 // Dependent on cultural familiarity level if that is ever implemented
+                timeTillActionFinish = 3 // В будущем может зависеть от культурной осведомлённости.
             }
+
             SpyAction.EstablishNetwork -> {
-                val location = getLocation()!! // This should be impossible to reach as going to the hideout sets your action to None.
+                val location =
+                    getLocation()!! // Переход в убежище выше уже сбросил бы действие в None.
                 action =
                     if (location.civInfo.isCityState()) {
                         SpyAction.RiggingElections
@@ -65,18 +69,20 @@ class Spy() : IsPartOfGameInfoSerialization {
                         SpyAction.StealingTech
                     }
             }
+
             else -> {
-                ++timeTillActionFinish // Not implemented yet, so don't do anything
+                ++timeTillActionFinish // Остальные действия пока не реализованы; не продвигаем таймер дальше.
             }
         }
     }
 
+    /** Назначает город игрока либо убежище (null); недопустимая цель отклоняется до изменения текущего задания. */
     fun moveTo(cityInfo: CityInfo?) {
         require(cityInfo == null || cityInfo.ownerOrNull != null) {
             "A spy requires a city with a player owner"
         }
         location = cityInfo?.id
-        if (cityInfo == null) { // Moving to spy hideout
+        if (cityInfo == null) {
             action = SpyAction.None
             timeTillActionFinish = 0
             return

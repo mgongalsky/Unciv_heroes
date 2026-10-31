@@ -409,12 +409,14 @@ class ReligionManager : IsPartOfGameInfoSerialization {
         return true
     }
 
+    /** Считает города последователей для систем основателя; сохранённая религия нейтральных городов в расчёт не входит. */
     fun numberOfCitiesFollowingThisReligion(): Int {
         if (religion == null) return 0
         return civInfo.gameInfo.getCities()
             .count { it.ownerOrNull != null && it.religion.getMajorityReligion() == religion }
     }
 
+    /** Учитывает последователей только в городах игроков; фильтры владельца нельзя применять к нейтральному городу. */
     fun numberOfFollowersFollowingThisReligion(cityFilter: String): Int {
         if (religion == null) return 0
         return civInfo.gameInfo.getCities()

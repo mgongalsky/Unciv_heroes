@@ -9,7 +9,9 @@ import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Test
 
+/** Сравнивает локальное копирование города и чтение его JSON до привязки к игровому миру. */
 class CityPersistenceCharacterizationTest {
+    /** Копия сохраняет историю и независимо хранит активный гарнизон, территорию и менеджеры. */
     @Test
     fun cloneCopiesTerritoryAndActiveGarrisonAndPreservesPreviousOwner() {
         CityTestFixture().use { fixture ->
@@ -27,6 +29,7 @@ class CityPersistenceCharacterizationTest {
             assertNotSame(city.tiles, copy.tiles)
             assertNotSame(city.workedTiles, copy.workedTiles)
             assertNotSame(city.lockedTiles, copy.lockedTiles)
+            // Старый список garrison всё ещё разделяется; независимость проверяется для активной армии.
             assertSame(city.garrison, copy.garrison)
             assertNotSame(city.garrisonInfo, copy.garrisonInfo)
             assertNotSame(city.population, copy.population)
@@ -39,6 +42,7 @@ class CityPersistenceCharacterizationTest {
         }
     }
 
+    /** JSON сохраняет оба представления гарнизона; назначение владельца не пересоздаёт загруженную армию. */
     @Test
     fun cityJsonPreservesLocalStateAndBothGarrisonsUntilExplicitOwnerBinding() {
         CityTestFixture().use { fixture ->
@@ -62,6 +66,7 @@ class CityPersistenceCharacterizationTest {
                 copy.garrisonInfo.getAllTroops().map { it?.let { "${it.unitName}:${it.amount}" } })
             assertNotSame(city.garrisonInfo, copy.garrisonInfo)
             assertNotSame(city.garrisonInfo.getTroopAt(0), copy.garrisonInfo.getTroopAt(0))
+            // Отдельный CityInfo не содержит внешнюю информацию о владельце из контейнера сохранения.
             assertNull(copy.garrisonInfo.ownerOrNull)
             val detachedClone = copy.clone()
             assertNull(detachedClone.garrisonInfo.ownerOrNull)

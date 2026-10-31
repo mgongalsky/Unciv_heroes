@@ -11,7 +11,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет, что смена владельца города не сдвигает расписание общей нейтральной фазы. */
 class NeutralCityOwnershipScheduleTest {
+    /** Считает только нейтральные раунды, не подменяя саму обработку города. */
     private class CountingCity : CityInfo() {
         var neutralRounds = 0
         override fun completeNeutralRound() {
@@ -20,6 +22,7 @@ class NeutralCityOwnershipScheduleTest {
         }
     }
 
+    /** Получение и нейтрализация до или после границы раунда не создают дополнительных нейтральных ходов. */
     @Test
     fun ownershipChangesDoNotAddNeutralTurnsInsideOrAfterRoundBoundary() {
         CityTestFixture().use { fixture ->
@@ -45,6 +48,7 @@ class NeutralCityOwnershipScheduleTest {
                 game.cityRegistry.register(city)
                 city.setTransients()
 
+                // Полученный город не должен обрабатываться нейтральной фазой при переключении игроков.
                 NeutralCityOwnership.acquireUndefended(city, rome)
                 assertEquals(0, city.neutralRounds)
                 game.nextTurn()
@@ -59,6 +63,7 @@ class NeutralCityOwnershipScheduleTest {
                 assertEquals(2, game.turns)
                 assertEquals(1, city.neutralRounds)
 
+                // Повторные смены принадлежности в том же раунде не запускают уже выполненную фазу заново.
                 NeutralCityOwnership.acquireUndefended(city, rome)
                 NeutralCityOwnership.neutralize(city)
                 assertEquals(2, game.turns)

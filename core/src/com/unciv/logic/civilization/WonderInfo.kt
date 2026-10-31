@@ -90,46 +90,53 @@ class WonderInfo {
         return false
     }
 
+    /** Собирает обзор чудес с учётом знаний игрока; построенные чудеса могут находиться в городах без владельца. */
     fun collectInfo(): Array<WonderInfo> {
         val collator = UncivGame.Current.settings.getCollatorFromLocale()
 
-        // Maps all World Wonders by name to their era for grouping
+        // Группировка построек по эпохам и локализованным именам задаёт стабильный порядок обзора.
         val wonderEraMap: Map<String, Era> =
-                ruleSet.buildings.values.asSequence()
-                    .filter { it.isWonder }
-                    .associate { it.name to (ruleSet.eras[ruleSet.technologies[it.requiredTech]?.era()] ?: viewingPlayer.getEra()) }
+            ruleSet.buildings.values.asSequence()
+                .filter { it.isWonder }
+                .associate {
+                    it.name to (ruleSet.eras[ruleSet.technologies[it.requiredTech]?.era()]
+                        ?: viewingPlayer.getEra())
+                }
 
-        // Maps all World Wonders by their position in sort order to their name
         val allWonderMap: Map<Int, String> =
-                ruleSet.buildings.values.asSequence()
-                    .filter { it.isWonder }
-                    .sortedWith(compareBy<Building> { wonderEraMap[it.name]!!.eraNumber }.thenBy(collator) { it.name.tr() })
-                    .withIndex()
-                    .associate { it.index to it.value.name }
+            ruleSet.buildings.values.asSequence()
+                .filter { it.isWonder }
+                .sortedWith(
+                    compareBy<Building> { wonderEraMap[it.name]!!.eraNumber }.thenBy(
+                        collator
+                    ) { it.name.tr() })
+                .withIndex()
+                .associate { it.index to it.value.name }
         val wonderCount = allWonderMap.size
 
-        // Inverse of the above
         val wonderIndexMap: Map<String, Int> = allWonderMap.map { it.value to it.key }.toMap()
 
-        // Maps all Natural Wonders on the map by name to their tile
         val allNaturalsMap: Map<String, TileInfo> =
-                gameInfo.tileMap.values.asSequence()
-                    .filter { it.isNaturalWonder() }
-                    .associateBy { it.naturalWonder!! }
+            gameInfo.tileMap.values.asSequence()
+                .filter { it.isNaturalWonder() }
+                .associateBy { it.naturalWonder!! }
         val naturalsCount = allNaturalsMap.size
 
-        // Natural Wonders sort order index to name
         val naturalsIndexMap: Map<Int, String> = allNaturalsMap.keys
             .sortedWith(compareBy(collator) { it.tr() })
             .withIndex()
             .associate { it.index to it.value }
 
-        // Pre-populate result with "Unknown" entries
+        // Сначала заполняем все позиции; сведения об известных местах уточняются ниже.
         val wonders = Array(wonderCount + naturalsCount) { index ->
             if (index < wonderCount) {
                 val wonder = ruleSet.buildings[allWonderMap[index]!!]!!
                 val era = wonderEraMap[wonder.name]!!
-                val status = if (shouldBeDisplayed(wonder, era.eraNumber)) WonderStatus.Unbuilt else WonderStatus.Hidden
+                val status = if (shouldBeDisplayed(
+                        wonder,
+                        era.eraNumber
+                    )
+                ) WonderStatus.Unbuilt else WonderStatus.Hidden
                 WonderInfo(
                     allWonderMap[index]!!, CivilopediaCategories.Wonder,
                     era.name, era.getColor(), status, null, null, null
@@ -151,6 +158,7 @@ class WonderInfo {
         for (city in gameInfo.getCities()) {
             for (wonderName in city.cityConstructions.builtBuildings.intersect(wonderIndexMap.keys)) {
                 val index = wonderIndexMap[wonderName]!!
+                // Нейтральное чудо можно знать по исследованной клетке, но оно не принадлежит наблюдателю.
                 val status = when {
                     viewingPlayer == city.ownerOrNull -> WonderStatus.Owned
                     viewingPlayer.hasExplored(city.location) -> WonderStatus.Known
@@ -176,6 +184,7 @@ class WonderInfo {
             val city = if (status == WonderStatus.NotFound) null
             else tile.getTilesInDistance(5)
                 .filter { it.isCityCenter() }
+                // Подпись ближайшей известной цивилизации не должна обращаться к владельцу нейтрального города.
                 .filter { it.getOwner()?.let { owner -> viewingPlayer.knows(owner) } == true }
                 .filter { viewingPlayer.hasExplored(it) }
                 .sortedBy { it.aerialDistanceTo(tile) }

@@ -3,8 +3,13 @@ package com.unciv.logic.city
 import com.unciv.logic.civilization.CivilizationInfo
 import com.unciv.pure.domain.city.CityOwnership
 
-/** World effects for acquisition, separate from registry membership and conquest. */
+/**
+ * Последствия переходов Player ↔ Neutral для игрового мира.
+ * Реестр меняет принадлежность; здесь согласуются территория, столица, ресурсы, видимость и статистика.
+ * Обычное завоевание не вызывается: потерь населения/зданий, наград и дипломатических штрафов нет.
+ */
 object NeutralCityOwnership {
+    /** Снимает владельца, сохраняя локальные данные; сама смена владения не выполняет ход города. */
     fun neutralize(city: CityInfo) {
         val game = city.gameInfo
         val oldOwner = requireNotNull(city.ownerOrNull) { "City ${city.id} has no player owner" }
@@ -20,6 +25,7 @@ object NeutralCityOwnership {
         city.turnAcquired = game.turns
         city.setTransients()
         if (wasCapital && oldOwner.cities.isNotEmpty()) oldOwner.moveCapitalToNextLargest()
+        // Старые связи могут ссылаться на потерянную столицу; пересчёт начинается с пустого кеша.
         oldOwner.citiesConnectedToCapitalToMediums = emptyMap()
         oldOwner.initialSetCitiesConnectedToCapitalTransients()
         oldOwner.updateSightAndResources()
@@ -31,6 +37,7 @@ object NeutralCityOwnership {
         }
     }
 
+    /** Получает уже освобождённый город; живой гарнизон нужно победить до вызова этой операции. */
     fun acquireUndefended(city: CityInfo, newOwner: CivilizationInfo) {
         val game = city.gameInfo
         require(city.state.ownership == CityOwnership.Neutral) { "City ${city.id} is not neutral" }
@@ -48,11 +55,13 @@ object NeutralCityOwnership {
         game.cityRegistry.transfer(city, newOwner)
         city.previousOwner = ""
         city.turnAcquired = game.turns
+        // Получение нейтрального замка не должно оставлять режимы обычного завоевания.
         city.hasJustBeenConquered = false
         city.isPuppet = false
         city.isBeingRazed = false
         city.removeFlag(CityFlags.Resistance)
         city.setTransients()
+        // Palace в полученном городе не заменяет уже существующую столицу игрока.
         if (existingCapital == null && !city.isCapital()) newOwner.moveCapitalTo(city)
 
         newOwner.updateSightAndResources()

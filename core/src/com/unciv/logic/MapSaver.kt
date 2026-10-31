@@ -8,6 +8,7 @@ import com.unciv.logic.map.MapParameters
 import com.unciv.logic.map.TileMap
 import com.unciv.ui.saves.Gzip
 
+/** Читает и записывает исходные карты; сценарные описания сохраняются без создания игровых городов. */
 object MapSaver {
 
     const val mapsFolder = "maps"
@@ -15,6 +16,7 @@ object MapSaver {
 
     private fun getMap(mapName: String) = Gdx.files.local("$mapsFolder/$mapName")
 
+    /** Поддерживает обычный JSON и сжатую строку; проверку старых размеров можно отключить явно. */
     fun mapFromSavedString(mapString: String, checkSizeErrors: Boolean = true): TileMap {
         val unzippedJson = try {
             Gzip.unzip(mapString.trim())
@@ -32,6 +34,7 @@ object MapSaver {
         }
     }
 
+    /** Проверяет ссылки сценария до записи и выставляет текущую версию формата карты. */
     fun mapToSavedString(tileMap: TileMap): String {
         com.unciv.logic.map.ScenarioMapValidation.validateStructure(tileMap)
         tileMap.assignContinents(TileMap.AssignContinentsMode.Reassign)
@@ -51,6 +54,7 @@ object MapSaver {
 
     fun getMaps(): Array<FileHandle> = Gdx.files.local(mapsFolder).list()
 
+    /** Миграция предшествует десериализации; ошибки сценария превращаются в сообщение для пользователя. */
     private fun mapFromJson(jsonText: String): TileMap {
         val migratedJson = MapFormatMigration.migrate(jsonText)
         return json().fromJson(TileMap::class.java, migratedJson).apply {
@@ -63,11 +67,12 @@ object MapSaver {
         }
     }
 
+    /** Небольшая проекция JSON для меню запуска; остальные поля карты намеренно не читаются. */
     private class ScenarioSlotsPreview {
         val scenarioPlayerSlots = arrayListOf<com.unciv.pure.domain.city.ScenarioPlayerSlot>()
     }
 
-    /** Reads only participant slots; does not deserialize tiles, units, or runtime cities. */
+    /** Читает только слоты участников, без создания клеток, юнитов и игровых городов. */
     fun loadScenarioPlayerSlots(mapFile: FileHandle): List<com.unciv.pure.domain.city.ScenarioPlayerSlot> {
         val saved = mapFile.readString()
         val plain = try { Gzip.unzip(saved.trim()) } catch (_: Exception) { saved }
@@ -82,6 +87,7 @@ object MapSaver {
     fun loadMapParameters(mapFile: FileHandle): MapParameters =
             mapParametersFromSavedString(mapFile.readString())
 
+    /** Превью использует ту же миграцию, что полная загрузка, чтобы одинаково понимать старые карты. */
     @Suppress("MemberVisibilityCanBePrivate")
     fun mapParametersFromSavedString(mapString: String): MapParameters {
         val unzippedJson = try {

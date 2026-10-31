@@ -492,6 +492,7 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
 
     fun getBaseTerrain(): Terrain = baseTerrainObject
 
+    /** Возвращает цивилизацию-владельца; null возможен и у занятой территории нейтрального города. */
     fun getOwner(): CivilizationInfo? {
         val containingCity = getCity() ?: return null
         return containingCity.ownerOrNull
@@ -1386,6 +1387,7 @@ open class TileInfo : IsPartOfGameInfoSerialization, IBattleTile {
         }
     }
 
+    /** Восстанавливает учёт существующей дороги вне владений игроков, включая территорию нейтрального города. */
     fun setOwnerTransients() {
         if (getOwner() == null && roadStatus != RoadStatus.None && roadOwner != "")
             getRoadOwner()!!.neutralRoads.add(this.position)

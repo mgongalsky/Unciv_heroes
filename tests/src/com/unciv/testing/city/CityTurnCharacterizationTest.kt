@@ -9,7 +9,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Проверяет наблюдаемые эффекты начала и конца хода, накопления культуры и разрушения города. */
 class CityTurnCharacterizationTest {
+    /** Закрепляет обновление флагов, производство, рост и лечение, затем освобождение территории. */
     @Test
     fun turnUpdatesFlagsProductionPopulationAndHealingBeforeDestruction() {
         CityTestFixture().use { fixture ->
@@ -32,6 +34,7 @@ class CityTurnCharacterizationTest {
             assertEquals(9, city.getFlag(CityFlags.ResourceDemand))
             assertEquals(1f, city.cityStats.currentCityStats.production, 0f)
             assertEquals(0f, city.cityStats.currentCityStats.food, 0f)
+            // Задаём доход конца хода явно, чтобы проверить его применение независимо от расчёта статистики.
             city.cityStats.currentCityStats = Stats(food = 4f, production = 3f, culture = 50f)
 
             city.endTurn()
@@ -44,6 +47,7 @@ class CityTurnCharacterizationTest {
             assertEquals(mapOf("Scout" to 3), city.cityConstructions.inProgressConstructions)
             val territoryBeforeDestruction = city.tiles.toSet()
 
+            // Исходную столицу защищает обычный вызов; принудительное разрушение обходит эту защиту.
             city.destroyCity()
             assertTrue(fixture.civilization.cities.contains(city))
             city.destroyCity(overrideSafeties = true)
@@ -60,6 +64,7 @@ class CityTurnCharacterizationTest {
         }
     }
 
+    /** Превышение порога культуры само по себе не расширяет город; рост населения здесь исключён. */
     @Test
     fun cultureAccumulatesWithoutAutomaticallyClaimingTiles() {
         CityTestFixture().use { fixture ->

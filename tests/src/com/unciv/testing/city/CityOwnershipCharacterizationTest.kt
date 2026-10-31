@@ -11,7 +11,9 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Сравнивает последствия мирной передачи и завоевания на одинаковом исходном городе. */
 class CityOwnershipCharacterizationTest {
+    /** Добавляет получателя в тот же мир и устанавливает контакт без записи учебного прогресса. */
     private fun recipient(fixture: CityTestFixture): FakeCivilizationInfo {
         val recipient = FakeCivilizationInfo().apply {
             civName = "Greece"
@@ -26,16 +28,19 @@ class CityOwnershipCharacterizationTest {
         return recipient
     }
 
+    /** Мирная передача сохраняет жителей и здоровье, не выдаёт добычу и не вводит сопротивление. */
     @Test
     fun peacefulTransferPreservesPopulationAndHealthWithoutConquestRewards() {
         characterizeTransfer(capture = false)
     }
 
+    /** Завоевание уменьшает население, лечит до наблюдаемого значения и даёт добычу с сопротивлением. */
     @Test
     fun conquestReducesPopulationAndAddsResistanceAndPlunder() {
         characterizeTransfer(capture = true)
     }
 
+    /** Общая подготовка позволяет отделить эффекты смены владельца от дополнительных эффектов захвата. */
     private fun characterizeTransfer(capture: Boolean) {
         CityTestFixture().use { fixture ->
             val city = fixture.foundCity()
@@ -53,6 +58,7 @@ class CityOwnershipCharacterizationTest {
 
             if (capture) city.puppetCity(next) else city.moveToCiv(next)
 
+            // Меняется владелец существующего города; ID, координаты и история основания сохраняются.
             assertEquals(originalId, city.id)
             assertEquals(originalPosition, city.location)
             assertSame(next, city.civInfo)
@@ -78,9 +84,10 @@ class CityOwnershipCharacterizationTest {
                 assertSame(next, tile.getOwner())
             }
 
-            // Garrison ownership follows the city; legacy defeat conditions remain unchanged.
+            // Армия не пересоздаётся, но получает нового владельца вместе с городом.
             assertSame(originalGarrison, city.garrisonInfo)
             assertSame(next, city.garrisonInfo.civInfo)
+            // Фиксируем прежнее правило поражения: без истории столицы одного города недостаточно.
             assertTrue(fixture.civilization.isDefeated())
             assertNull(next.hasEverOwnedOriginalCapital)
             assertTrue(next.isDefeated())
@@ -90,6 +97,7 @@ class CityOwnershipCharacterizationTest {
             assertEquals(if (capture) 100 else 37, city.health)
             assertEquals(capture, city.isInResistance())
             if (capture) {
+                // Сумма и порядок уведомлений характеризуют именно эти входные данные.
                 assertEquals(3, city.getFlag(CityFlags.Resistance))
                 assertEquals(109, next.gold)
                 assertEquals(listOf("Nothing"), city.cityConstructions.constructionQueue)

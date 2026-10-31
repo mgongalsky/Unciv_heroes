@@ -74,6 +74,8 @@ class UiGoldenTest {
     fun armySetupLaptop() {
         UiGoldenTestRunner.main(arrayOf("--scenario=army-setup-laptop"))
     }
+
+    /** Сравнивает снимок формы города с платформенным эталоном; отсутствие эталона не считается успехом. */
     @Test
     fun cityEditor() {
         UiGoldenTestRunner.main(arrayOf("--scenario=city-editor"))

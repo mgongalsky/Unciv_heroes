@@ -172,21 +172,27 @@ class Milestone(val uniqueDescription: String, private val parentVictory: Victor
         }
     }
 
-    fun getVictoryScreenButtons(completionStatus: Victory.CompletionStatus, civInfo: CivilizationInfo): List<TextButton> {
+    /** Строит общий статус этапа и подробности незавершённых подцелей с учётом доступной игроку информации. */
+    fun getVictoryScreenButtons(
+        completionStatus: Victory.CompletionStatus,
+        civInfo: CivilizationInfo
+    ): List<TextButton> {
         val headerButton = getMilestoneButton(
-            getVictoryScreenButtonHeaderText(completionStatus == Victory.CompletionStatus.Completed, civInfo),
+            getVictoryScreenButtonHeaderText(
+                completionStatus == Victory.CompletionStatus.Completed,
+                civInfo
+            ),
             completionStatus == Victory.CompletionStatus.Completed
         )
         if (completionStatus == Victory.CompletionStatus.Completed || completionStatus == Victory.CompletionStatus.Incomplete) {
-            // When done or not working on this milestone, only show the header button
             return listOf(headerButton)
         }
-        // Otherwise, append the partial buttons of each step
         val buttons = mutableListOf(headerButton)
         when (type) {
-            // No extra buttons necessary
             MilestoneType.BuiltBuilding, MilestoneType.BuildingBuiltGlobally,
-            MilestoneType.ScoreAfterTimeOut, MilestoneType.WinDiplomaticVote -> {}
+            MilestoneType.ScoreAfterTimeOut, MilestoneType.WinDiplomaticVote -> {
+            }
+
             MilestoneType.AddedSSPartsInCapital -> {
                 val completedSpaceshipParts = civInfo.victoryManager.currentsSpaceshipParts
                 val incompleteSpaceshipParts = getIncompleteSpaceshipParts(civInfo)
@@ -204,7 +210,8 @@ class Milestone(val uniqueDescription: String, private val parentVictory: Victor
             }
 
             MilestoneType.DestroyAllPlayers -> {
-                val majorCivs = civInfo.gameInfo.civilizations.filter { it.isMajorCiv() && it != civInfo }
+                val majorCivs =
+                    civInfo.gameInfo.civilizations.filter { it.isMajorCiv() && it != civInfo }
                 for (civ in majorCivs) {
                     val milestoneText =
                         if (civInfo.knows(civ) || !civ.isAlive()) "Destroy [${civ.civName}]"
@@ -214,6 +221,7 @@ class Milestone(val uniqueDescription: String, private val parentVictory: Victor
             }
 
             MilestoneType.CaptureAllCapitals -> {
+                // Исходная столица остаётся целью и после нейтрализации; выполнена только при владении этим игроком.
                 val originalCapitals = civInfo.gameInfo.getCities().filter { it.isOriginalCapital }
                 for (city in originalCapitals) {
                     val milestoneText =
@@ -229,8 +237,10 @@ class Milestone(val uniqueDescription: String, private val parentVictory: Victor
                     buttons.add(getMilestoneButton(finisher, civInfo.policies.isAdopted(finisher)))
                 }
             }
+
             MilestoneType.WorldReligion -> {
-                val majorCivs = civInfo.gameInfo.civilizations.filter { it.isMajorCiv() && it.isAlive() }
+                val majorCivs =
+                    civInfo.gameInfo.civilizations.filter { it.isMajorCiv() && it.isAlive() }
                 val civReligion = civInfo.religionManager.religion
                 for (civ in majorCivs) {
                     val milestoneText =
@@ -242,6 +252,7 @@ class Milestone(val uniqueDescription: String, private val parentVictory: Victor
                     buttons.add(getMilestoneButton(milestoneText, milestoneMet))
                 }
             }
+
             null -> {}
         }
         return buttons

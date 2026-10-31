@@ -18,7 +18,9 @@ import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 
+/** Проверяет сценарные города через настоящий запуск новой игры с картой из временного файла. */
 class ScenarioGameStarterTest {
+    /** Готовит карту с нужным вариантом сценария и восстанавливает глобальные зависимости после проверки. */
     private fun withMap(scenario: Boolean, preplacedHero: Boolean = false, emptyNeutral: Boolean = false, check: (File, CityTestFixture) -> Unit) {
         val previousInput = Gdx.input
         Gdx.input = MockInput()
@@ -57,6 +59,7 @@ class ScenarioGameStarterTest {
         }
     }
 
+    /** Изменённая карта проходит запуск, нейтральный ход, вход героя, загрузку и повторный независимый запуск. */
     @Test
     fun editedMapSurvivesStartupAcquisitionSaveAndRestart() {
         withMap(true, emptyNeutral = true) { file, fixture ->
@@ -71,6 +74,7 @@ class ScenarioGameStarterTest {
             file.writeText(MapSaver.mapToSavedString(map.clone().apply {
                 setTransients(setUnitCivTransients = false)
             }))
+            // Пустой callback изолирует запись настроек; создание мира выполняется настоящим GameStarter.
             val game = GameStarter.startNewGame(setup(file, true)) { }
             game.turns = 1
             val owner = game.civilizations.single()
@@ -97,6 +101,7 @@ class ScenarioGameStarterTest {
             assertEquals(2, loaded.getCities().count())
             loaded.nextTurn()
             assertEquals(2, loaded.getCities().count())
+            // Состояние сыгранной партии не должно попадать в исходные описания карты.
             val restarted = GameStarter.startNewGame(setup(file, true)) { }
             assertNull(restarted.cityRegistry.byId(CityId("neutral"))!!.ownerOrNull)
             assertEquals(2, restarted.getCities().count())
@@ -104,6 +109,7 @@ class ScenarioGameStarterTest {
         }
     }
 
+    /** Столица выбирается из старого флага или первого города; её центр приоритетнее старой стартовой метки нации. */
     @Test
     fun legacyCapitalAndMissingFlagsStartAutomaticallyWithNationMarkers() {
         withMap(true) { file, fixture ->
@@ -144,6 +150,7 @@ class ScenarioGameStarterTest {
         }
     }
 
+    /** Минимальные параметры запуска: один человек, без варваров и городов-государств, с явным слотом сценария. */
     private fun setup(file: File, scenario: Boolean) = GameSetupInfo().apply {
         mapParameters.name = "Test map"
         mapFile = FileHandle(file)
@@ -157,6 +164,7 @@ class ScenarioGameStarterTest {
         }
     }
 
+    /** Повторный старт создаёт независимые города с теми же ID и не добавляет поселенца владельцу готовой столицы. */
     @Test
     fun scenarioStartsTwiceWithIndependentCitiesAndNoExtraSettler() {
         withMap(true) { file, _ ->
@@ -177,6 +185,7 @@ class ScenarioGameStarterTest {
         }
     }
 
+    /** Карта без сценарных городов сохраняет обычный старт с военным юнитом и основателем. */
     @Test
     fun ordinaryMapStillStartsWithUnitsAndWithoutCities() {
         withMap(false) { file, _ ->
@@ -188,6 +197,7 @@ class ScenarioGameStarterTest {
             assertFalse(owner.isDefeated())
         }
     }
+    /** Уже размещённый герой регистрируется один раз; дополнительный стартовый отряд не появляется. */
     @Test
     fun preplacedHeroDoesNotReceiveAdditionalStartingUnits() {
         withMap(true, preplacedHero = true) { file, _ ->
@@ -198,6 +208,7 @@ class ScenarioGameStarterTest {
         }
     }
 
+    /** Расстановка стартовых войск не должна случайно занимать пустой нейтральный город. */
     @Test
     fun startingUnitsDoNotAcquireEmptyNeutralCity() {
         withMap(true, emptyNeutral = true) { file, _ ->

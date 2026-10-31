@@ -7,7 +7,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет перевод города игрока в нейтральный и обновление связей прежнего владельца. */
 class NeutralCityReleaseTest {
+    /** Потеря последнего города очищает столичные связи, сохраняя город, его армию и локальный прогресс. */
     @Test
     fun releasingLastCityPreservesLocalStateAndClearsCapitalConnections() {
         CityTestFixture().use { fixture ->
@@ -39,6 +41,7 @@ class NeutralCityReleaseTest {
             assertNull(fixture.civilization.getCapital())
             assertEquals(buildings, city.cityConstructions.builtBuildings.toSet())
             assertEquals(territory, city.tiles.toSet())
+            // Клетки остаются территорией города, хотя цивилизации-владельца у них больше нет.
             assertTrue(city.getTiles().all { it.getCity() === city && it.getOwner() == null })
             assertEquals(91, city.health)
             assertEquals(17, city.population.foodStored)
@@ -51,6 +54,7 @@ class NeutralCityReleaseTest {
         }
     }
 
+    /** После нейтрализации столицы оставшийся город становится столицей, а здания прежней сохраняются. */
     @Test
     fun releasingCapitalAssignsRemainingCityWithoutRemovingNeutralBuildings() {
         CityTestFixture().use { fixture ->

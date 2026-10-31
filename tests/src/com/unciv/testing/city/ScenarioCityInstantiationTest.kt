@@ -9,7 +9,9 @@ import com.unciv.pure.domain.city.*
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет превращение исходных описаний карты в города мира при запуске сценария. */
 class ScenarioCityInstantiationTest {
+    /** Готовит столицу участника и нейтральный город с фиксированным типом и защитниками. */
     private fun prepare(fixture: CityTestFixture) {
         fixture.game.tileMap.apply {
             scenarioPlayerSlots.add(ScenarioPlayerSlot("first", "First player"))
@@ -24,6 +26,7 @@ class ScenarioCityInstantiationTest {
         }
     }
 
+    /** Создаёт заданные население, здания, гарнизон и тип без наград завоевания или обычных эффектов основания. */
     @Test
     fun createsSpecifiedStateWithoutFoundingOrConquestEffects() {
         CityTestFixture().use { fixture ->
@@ -56,6 +59,7 @@ class ScenarioCityInstantiationTest {
         }
     }
 
+    /** Ошибка во втором описании выявляется до регистрации первого города и захвата клеток. */
     @Test
     fun invalidLaterDescriptionLeavesWorldUntouched() {
         CityTestFixture().use { fixture ->
@@ -73,6 +77,7 @@ class ScenarioCityInstantiationTest {
         }
     }
 
+    /** Загрузка восстанавливает уже созданные города и разрешённые типы; повторная инициализация запрещена. */
     @Test
     fun saveLoadingPreservesResolvedTypesWithoutInstantiatingAgain() {
         CityTestFixture().use { fixture ->

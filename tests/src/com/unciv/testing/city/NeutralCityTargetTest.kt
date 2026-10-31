@@ -11,7 +11,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет обнаружение нейтрального гарнизона как боевой цели средствами общей автоматизации. */
 class NeutralCityTargetTest {
+    /** Создаёт зарегистрированный нейтральный город с одним живым защитником. */
     private fun city(fixture: CityTestFixture) = CityInfo().apply {
         state.ownership = CityOwnership.Neutral
         location = Vector2(4f, 0f)
@@ -22,6 +24,7 @@ class NeutralCityTargetTest {
         setTransients()
     }
 
+    /** Цель доступна только с соседних клеток; сам поиск не начинает бой и не меняет город. */
     @Test
     fun neutralTargetUsesOnlyAdjacentApproachesWithoutChangingOwnership() {
         val previousInput = Gdx.input
@@ -49,6 +52,7 @@ class NeutralCityTargetTest {
         }
     }
 
+    /** Герой без живых войск не получает нейтральную боевую цель ни в одной из проверяемых точек входа. */
     @Test
     fun heroWithoutLivingArmyHasNoNeutralBattleTarget() {
         val previousInput = Gdx.input

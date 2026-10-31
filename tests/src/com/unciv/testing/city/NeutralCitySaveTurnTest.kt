@@ -10,7 +10,9 @@ import com.unciv.logic.civilization.CivilizationInfo
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет сохранность нейтрального города при чередовании ходов, копирования и загрузки игры. */
 class NeutralCitySaveTurnTest {
+    /** Обычный и сжатый форматы сохраняют статичное состояние города и отсутствие владельца после трёх ходов. */
     @Test
     fun loadedNeutralCitySurvivesTurnsAndBothSaveFormats() {
         CityTestFixture().use { fixture ->
@@ -28,6 +30,7 @@ class NeutralCitySaveTurnTest {
                 }
                 fixture.game.turns = 1
                 val tree = JsonReader().parse(json().toJson(fixture.game.clone()))
+                // Формируем входной JSON нейтрального города напрямую: здесь проверяется загрузка, не операция владения.
                 tree.get("cities").get(0).get("ownership").apply {
                     get("type").set("Neutral")
                     remove("civName")

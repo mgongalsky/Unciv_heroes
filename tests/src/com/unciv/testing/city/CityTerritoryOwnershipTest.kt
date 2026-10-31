@@ -5,7 +5,9 @@ import com.unciv.testing.pure.fakes.FakeCivilizationInfo
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет согласованность городской территории, отдельного владельца дороги и центра города. */
 class CityTerritoryOwnershipTest {
+    /** Переданная с городом дорога остаётся у получателя после освобождения клетки из территории. */
     @Test
     fun transferredRoadBelongsToRecipientAfterTileIsRelinquished() {
         CityTestFixture().use { fixture ->
@@ -35,6 +37,7 @@ class CityTerritoryOwnershipTest {
 
             city.expansion.relinquishOwnership(road)
 
+            // Клетка больше не принадлежит городу, но существующая дорога сохраняет своего владельца.
             assertNull(road.getCity())
             assertNull(road.getOwner())
             assertSame(next, road.getRoadOwner())
@@ -45,6 +48,7 @@ class CityTerritoryOwnershipTest {
         }
     }
 
+    /** Повторное присвоение занятого центра запрещено и не повреждает территорию или регистрацию. */
     @Test
     fun occupiedCenterCannotBeClaimedAgain() {
         CityTestFixture().use { fixture ->

@@ -11,7 +11,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет операцию занятия пустого города, которую вызывает действие интерфейса. */
 class NeutralCityOccupyActionTest {
+    /** Готовит соседнего героя и пустой город; восстанавливает ввод LibGDX после проверки. */
     private fun withTarget(check: (CityTestFixture, CityInfo, MapUnit) -> Unit) {
         val previousInput = Gdx.input
         Gdx.input = MockInput()
@@ -35,6 +37,7 @@ class NeutralCityOccupyActionTest {
         }
     }
 
+    /** Занятие действительно перемещает героя в центр и тратит движение, сохраняя число атак. */
     @Test
     fun occupyEntersCenterUsingMovementWithoutSpendingAnAttack() {
         withTarget { fixture, city, hero ->
@@ -50,6 +53,7 @@ class NeutralCityOccupyActionTest {
         }
     }
 
+    /** Без движения операция отказывает и не переносит героя или владение городом. */
     @Test
     fun noMovementPreventsOccupation() {
         withTarget { _, city, hero ->
@@ -61,6 +65,7 @@ class NeutralCityOccupyActionTest {
         }
     }
 
+    /** Условия проверяются снова при выполнении: появившийся после проверки гарнизон блокирует занятие. */
     @Test
     fun newlyAddedGarrisonPreventsPreviouslyAvailableOccupation() {
         withTarget { _, city, hero ->

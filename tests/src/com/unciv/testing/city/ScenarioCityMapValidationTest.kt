@@ -8,7 +8,9 @@ import com.unciv.pure.domain.city.*
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет ошибки сценария на границе загрузки карты и совместимости с выбранными правилами. */
 class ScenarioCityMapValidationTest {
+    /** Ссылка на отсутствующий слот вызывает понятный отказ без создания города или подмены нейтральностью. */
     @Test
     fun loaderRejectsMissingOwnerSlotInsteadOfMakingCityNeutral() {
         CityTestFixture().use { fixture ->
@@ -26,6 +28,7 @@ class ScenarioCityMapValidationTest {
         }
     }
 
+    /** Структурно корректный город может быть несовместим с правилами; отсутствующие определения сообщаются без удаления. */
     @Test
     fun rulesetCompatibilityReportsMissingBuildingsAndTroops() {
         CityTestFixture().use { fixture ->

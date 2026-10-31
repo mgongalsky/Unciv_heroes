@@ -7,7 +7,9 @@ import com.unciv.pure.domain.city.CityOwnership
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Защищает территорию нейтрального города от присвоения через обычное расширение соседнего города. */
 class NeutralCityExpansionTest {
+    /** Нейтральные клетки исключены из выбора; покупка и прямое присвоение отказывают без списания золота. */
     @Test
     fun neutralTerritoryCannotBeChosenBoughtOrClaimedByAnotherCity() {
         CityTestFixture().use { fixture ->
@@ -30,6 +32,7 @@ class NeutralCityExpansionTest {
             val playerTiles = playerCity.tiles.toSet()
             val neutralTiles = neutral.tiles.toSet()
 
+            // Проверяем и центр, и обычную клетку: отсутствие цивилизации не означает свободную территорию.
             for (tile in territory) {
                 for (buy in listOf(false, true)) {
                     try {

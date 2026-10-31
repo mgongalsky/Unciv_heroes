@@ -9,7 +9,9 @@ import com.unciv.pure.domain.city.ScenarioPlayerSlot
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет явное соответствие слотов карты участникам запуска независимо от нации и учётной записи. */
 class ScenarioPlayerBindingsTest {
+    /** Назначения переживают копирование и JSON, даже если порядок игроков изменён, а аккаунт совпадает. */
     @Test
     fun explicitAssignmentsSurviveSerializationAndReordering() {
         val first = Player(Constants.random).apply { scenarioSlotId = "first"; playerId = "same-account" }
@@ -23,6 +25,7 @@ class ScenarioPlayerBindingsTest {
         assertNotSame(bindings.getValue("first"), bindings.getValue("second"))
     }
 
+    /** Каждый слот требует ровно одного назначения; неизвестные ID не допускаются. */
     @Test
     fun missingDuplicateAndUnknownAssignmentsAreRejected() {
         val slots = listOf(ScenarioPlayerSlot("first"))

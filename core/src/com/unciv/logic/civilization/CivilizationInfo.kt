@@ -214,15 +214,17 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization, Json.Serializable {
      */
     val temporaryUniques = ArrayList<TemporaryUnique>()
 
-    // if we only use lists, and change the list each time the cities are changed,
-    // we won't get concurrent modification exceptions.
-    // This is basically a way to ensure our lists are immutable.
+    /** Временный контейнер старого формата до подключения цивилизации к реестру мира. */
     @Transient
     private var pendingCities: List<CityInfo> = emptyList()
 
     @Transient
     private var attachedCityRegistry: WorldCityRegistry? = null
 
+    /**
+     * Совместимое представление городов владельца: после подключения состав вычисляется из общего реестра.
+     * Setter заменяет принадлежность через реестр; до подключения сохраняет независимый снимок входного списка.
+     */
     var cities: List<CityInfo>
         get() = attachedCityRegistry?.ownedBy(this) ?: pendingCities
         set(value) {
@@ -231,19 +233,25 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization, Json.Serializable {
             else registry.replaceOwned(this, value)
         }
 
+    /** Подключает единый реестр после переноса временных городов; второй независимый список больше не хранится. */
     internal fun attachCityRegistry(registry: WorldCityRegistry) {
         check(attachedCityRegistry == null || attachedCityRegistry === registry)
         attachedCityRegistry = registry
         pendingCities = emptyList()
     }
 
-    /** Explicit legacy container mapping, independent of the runtime city storage. */
+    /**
+     * Записывает совместимый контейнер цивилизации независимо от способа хранения городов во время игры.
+     * При записи полной игры GameInfo переносит города в единую корневую коллекцию формата 5.
+     */
     override fun write(json: Json) {
         json.writeFields(this)
         json.writeValue("cities", ArrayList(cities), ArrayList::class.java, CityInfo::class.java)
     }
 
+    /** Читает старую вложенную коллекцию городов во временный контейнер до восстановления общего реестра. */
     override fun read(json: Json, jsonData: JsonValue) {
+        // У cities нет собственного поля; читаем его отдельно от обычных полей сериализатора.
         val cityData = jsonData.remove("cities")
         if (cityData != null) {
             cityData.next = null
@@ -253,10 +261,16 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization, Json.Serializable {
             json.readFields(this, jsonData)
             if (cityData != null) {
                 val loadedCities = ArrayList<CityInfo>()
-                for (entry in cityData) loadedCities.add(json.readValue(CityInfo::class.java, entry))
+                for (entry in cityData) loadedCities.add(
+                    json.readValue(
+                        CityInfo::class.java,
+                        entry
+                    )
+                )
                 cities = loadedCities
             }
         } finally {
+            // Исходное дерево остаётся доступным для последующих проверок и миграции полной игры.
             if (cityData != null) jsonData.addChild("cities", cityData)
         }
     }
@@ -1354,6 +1368,7 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization, Json.Serializable {
         return gameInfo.tileMap.placeUnitNearTile(location, unitName, this)
     }
 
+    /** Основывает город через общий сервис и затем выбирает производство; основателя уничтожает полное действие. */
     fun addCity(location: Vector2, foundingUnit: MapUnit) {
         val newCity = CityFounding.create(this, location, foundingUnit)
         newCity.cityConstructions.chooseNextConstruction()
@@ -1383,9 +1398,7 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization, Json.Serializable {
 
     fun updateProximity(otherCiv: CivilizationInfo, preCalculated: Proximity? = null): Proximity = transients().updateProximity(otherCiv, preCalculated)
 
-    /**
-     * Removes current capital then moves capital to argument city if not null
-     */
+    /** Переносит явный столичный статус и здание-индикатор; null только снимает прежнюю столицу. */
     fun moveCapitalTo(city: CityInfo?) {
         if (cities.isNotEmpty() && getCapital() != null) {
             val oldCapital = getCapital()!!
@@ -1393,11 +1406,10 @@ open class CivilizationInfo : IsPartOfGameInfoSerialization, Json.Serializable {
             oldCapital.cityConstructions.removeBuilding(oldCapital.capitalCityIndicator())
         }
 
-        if (city == null) return // can't move a non-existent city but we can always remove our old capital
-        // move new capital
+        if (city == null) return // Новую столицу не назначаем, но прежний статус уже снят.
         city.state.isCurrentCapital = true
         city.cityConstructions.addBuilding(city.capitalCityIndicator())
-        city.isBeingRazed = false // stop razing the new capital if it was being razed
+        city.isBeingRazed = false // Новую столицу нельзя продолжать разорять.
     }
 
     fun moveCapitalToNextLargest() {

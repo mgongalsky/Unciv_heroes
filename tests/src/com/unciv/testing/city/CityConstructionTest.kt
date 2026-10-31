@@ -8,8 +8,9 @@ import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Exercises the JSON construction path without a game, a GDX runner, or DI setup. */
+/** Проверяет пустое создание CityInfo для JSON без игры, графического runner и DI. */
 class CityConstructionTest {
+    /** Конструктор создаёт локальные значения по умолчанию, но не основывает город на карте. */
     @Test
     fun defaultConstructorCreatesUnregisteredCityState() {
         val city = CityInfo()
@@ -28,6 +29,7 @@ class CityConstructionTest {
         assertFalse(city.isInResistance())
     }
 
+    /** Пища, очередь и коллекции двух новых городов не должны разделять изменяемое состояние. */
     @Test
     fun separatelyConstructedCitiesDoNotSharePopulationOrConstructionState() {
         val first = CityInfo()
@@ -46,6 +48,7 @@ class CityConstructionTest {
         assertTrue(second.cityConstructions.constructionQueue.isEmpty())
     }
 
+    /** Флаг сопротивления — локальные данные: его установка и снятие не требуют игрового мира. */
     @Test
     fun resistanceFlagCanBeChangedWithoutAttachingAGame() {
         val city = CityInfo()

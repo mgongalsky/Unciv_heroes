@@ -51,6 +51,7 @@ class CityReligionManager : IsPartOfGameInfoSerialization {
         updateNumberOfFollowers(false)
     }
 
+    /** Нейтральная религия остаётся статичной; обычное влияние соседних городов действует только у города игрока. */
     fun endTurn() {
         if (cityInfo.ownerOrNull == null) return
         getAffectedBySurroundingCities()
@@ -223,6 +224,7 @@ class CityReligionManager : IsPartOfGameInfoSerialization {
         }
     }
 
+    /** Читает религию из мира города, поэтому доступно и при отсутствии цивилизации-владельца. */
     fun getMajorityReligion(): Religion? {
         return cityInfo.gameInfo.religions[getMajorityReligionName()]
     }

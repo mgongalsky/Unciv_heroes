@@ -6,7 +6,9 @@ import com.unciv.models.ruleset.CityEvent
 import org.junit.Assert.*
 import org.junit.Test
 
+/** Проверяет ссылки сохранённого строительства на определения выбранного набора правил. */
 class CityDefinitionValidationTest {
+    /** Разрешены здания, юниты, события, бесконечные проекты и пустой элемент очереди. */
     @Test
     fun acceptsBuildingsUnitsEventsPerpetualProjectsAndEmptyQueueEntry() {
         CityTestFixture().use { fixture ->
@@ -22,6 +24,7 @@ class CityDefinitionValidationTest {
         }
     }
 
+    /** Неизвестные определения дают ошибку с ID города, но не удаляют здания, очередь или накопленное производство. */
     @Test
     fun rejectsUnknownDefinitionsWithCityIdWithoutDiscardingData() {
         CityTestFixture().use { fixture ->
@@ -48,6 +51,7 @@ class CityDefinitionValidationTest {
                 assertTrue(message, message.contains(city.id))
                 assertTrue(message, message.contains("Missing definition"))
                 val constructions = city.cityConstructions
+                // Проверка сообщает о несовместимости, сохраняя проблемные данные для исправления.
                 assertTrue("Validation must preserve invalid data for diagnosis",
                     "Missing definition" in constructions.builtBuildings ||
                         "Missing definition" in constructions.preparedCityEvents ||

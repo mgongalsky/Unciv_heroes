@@ -12,20 +12,24 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
+/** Проверяет получение нейтрального города через настоящее перемещение юнита на мировой карте. */
 class NeutralCityMovementTest {
     private var previousInput: Input? = null
 
+    /** Даёт игровому коду ввод LibGDX без графического окна, сохраняя прежнюю ссылку. */
     @Before
     fun prepareInput() {
         previousInput = Gdx.input
         Gdx.input = MockInput()
     }
 
+    /** Возвращает ввод после каждого сценария, в том числе после неудачного утверждения. */
     @After
     fun restoreInput() {
         Gdx.input = previousInput
     }
 
+    /** Создаёт пустой нейтральный город и связывает его центр с реальной картой. */
     private fun neutralCity(fixture: CityTestFixture) = CityInfo().apply {
         state.ownership = CityOwnership.Neutral
         location = Vector2(4f, 0f)
@@ -36,6 +40,7 @@ class NeutralCityMovementTest {
         setTransients()
     }
 
+    /** Проверки доступности пути не меняют владельца; город переходит герою только после входа в центр. */
     @Test
     fun heroAcquiresCityOnlyWhenActuallyEnteringEmptyCenter() {
         CityTestFixture().use { fixture ->
@@ -57,6 +62,7 @@ class NeutralCityMovementTest {
         }
     }
 
+    /** Живой гарнизон блокирует обычный вход; проверки движения не убивают защитников и не передают город. */
     @Test
     fun defendedCenterBlocksMovementWithoutChangingOwnershipOrGarrison() {
         CityTestFixture().use { fixture ->

@@ -93,7 +93,7 @@ object UnitActions {
         addSwapAction(unit, actionList, worldScreen)
         addDisbandAction(actionList, unit, worldScreen)
         addGiftAction(unit, actionList, tile)
-        
+
         // Less frequently used actions moved here to save space in main menu
         addActionsWithLimitedUses(unit, actionList, tile)
         addAutomateBuildingImprovementsAction(unit, actionList)
@@ -170,14 +170,11 @@ object UnitActions {
         if (getFoundCityAction != null) actionList += getFoundCityAction
     }
 
-    /** Produce a [UnitAction] for founding a city.
-     * @param unit The unit to do the founding.
-     * @param tile The tile to found a city on.
-     * @return null if impossible (the unit lacks the ability to found),
-     * or else a [UnitAction] 'defining' the founding.
-     * The [action][UnitAction.action] field will be null if the action cannot be done here and now
-     * (no movement left, too close to another city).
-      */
+    /**
+     * Создаёт действие основания: null скрывает его, а action == null оставляет отключённую кнопку.
+     * Доступность и подтверждение обещаний остаются на этой границе; игровые эффекты выполняет CityFounding.
+     * Обработчики по умолчанию работают с UI и настройками, а тесты могут изолировать эти внешние эффекты.
+     */
     fun getFoundCityAction(
         unit: MapUnit,
         tile: TileInfo,
@@ -189,22 +186,30 @@ object UnitActions {
         },
         confirmBrokenPromise: (String, () -> Unit) -> Unit = { leaders, foundAction ->
             val text = "Do you want to break your promise to [$leaders]?"
-            ConfirmPopup(UncivGame.Current.worldScreen!!, text, "Break promise", action = foundAction).open(force = true)
+            ConfirmPopup(
+                UncivGame.Current.worldScreen!!,
+                text,
+                "Break promise",
+                action = foundAction
+            ).open(force = true)
         }
     ): UnitAction? {
         if (!unit.hasUnique(UniqueType.FoundCity)
-                || tile.isWater || tile.isImpassible()) return null
-        // Spain should still be able to build Conquistadors in a one city challenge - but can't settle them
+            || tile.isWater || tile.isImpassible()
+        ) return null
+        // Режим одного города запрещает основание после владения исходной столицей, но не создание самого юнита.
         if (unit.civInfo.isOneCityChallenger() && unit.civInfo.hasEverOwnedOriginalCapital == true) return null
 
-        // Player civilizations can only found cities on Small village tiles
+        // Требование Small village относится к человеку; прежние правила AI сохраняются.
         if (unit.civInfo.isPlayerCivilization() && tile.improvement != "Small village") return null
 
         if (unit.currentMovement <= 0 ||
-                !tile.canBeSettled())
+            !tile.canBeSettled()
+        )
             return UnitAction(UnitActionType.FoundCity, action = null)
 
         val foundAction = {
+            // Порядок важен: обучение видит мир до основания, а экран обновляется после всех игровых изменений.
             onFoundingTutorial()
             CityFounding.complete(unit, tile)
             onWorldUpdated()
@@ -214,20 +219,18 @@ object UnitActions {
             return UnitAction(UnitActionType.FoundCity, action = foundAction)
 
         return UnitAction(
-                type = UnitActionType.FoundCity,
-                uncivSound = UncivSound.Chimes,
-                action = {
-                    // check if we would be breaking a promise
-                    val leaders = testPromiseNotToSettle(unit.civInfo, tile)
-                    if (leaders == null)
-                        foundAction()
-                    else {
-                        // ask if we would be breaking a promise
-
-                        confirmBrokenPromise(leaders, foundAction)
-                    }
+            type = UnitActionType.FoundCity,
+            uncivSound = UncivSound.Chimes,
+            action = {
+                val leaders = testPromiseNotToSettle(unit.civInfo, tile)
+                if (leaders == null)
+                    foundAction()
+                else {
+                    // До вызова продолжения из подтверждения город и основатель остаются неизменными.
+                    confirmBrokenPromise(leaders, foundAction)
                 }
-            )
+            }
+        )
     }
 
     /**

@@ -154,7 +154,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
     //endregion
     //region Pure functions
 
-    /** Version 5 stores cities once, independently of civilization containers. */
+    /** Формат 5 хранит все города, включая нейтральные, в одной корневой коллекции с явным владением. */
     override fun write(json: Json) {
         val savedCities = getCities().toList()
         json.writeFields(this)
@@ -162,15 +162,19 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         json.writeArrayStart("civilizations")
         for (civ in civilizations) {
             json.writeObjectStart(civ.javaClass, CivilizationInfo::class.java)
-            // cities has no backing field; standalone CivilizationInfo.write retains its legacy contract.
+            // Пишем поля напрямую, обходя отдельный CivilizationInfo.write с его старым контейнером cities.
+            // У вычисляемого свойства cities нет собственного поля, поэтому дубликат городов здесь не появляется.
             json.writeFields(civ)
             json.writeObjectEnd()
         }
         json.writeArrayEnd()
-        json.writeValue("cities", ArrayList(savedCities.map { CitySaveEntry(it) }),
-            ArrayList::class.java, CitySaveEntry::class.java)
+        json.writeValue(
+            "cities", ArrayList(savedCities.map { CitySaveEntry(it) }),
+            ArrayList::class.java, CitySaveEntry::class.java
+        )
     }
 
+    /** Читает единый формат или мигрирует старые контейнеры цивилизаций, затем восстанавливает реестр городов. */
     override fun read(json: Json, jsonData: JsonValue) {
         version = jsonData.get("version")?.let {
             json.readValue(CompatibilityVersion::class.java, it)
@@ -183,11 +187,13 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         require(civData == null || civData.isArray) { "civilizations must be an array" }
         require(cityData == null || cityData.isArray) { "cities must be an array" }
         require(version.number < 5 || cityData != null) { "Version 5 game save has no cities collection" }
+        // Два источника городов неоднозначны: вместо выбора одного явно отклоняем смешанное сохранение.
         if (cityData != null && civData != null) {
             require(civData.none { it.has("cities") }) {
                 "Game save mixes canonical cities with legacy civilization city containers"
             }
         }
+        // Эти коллекции читаются вручную; временно исключаем их из рефлексивного чтения обычных полей.
         val explicitFields = listOf("version", "civilizations", "cities").mapNotNull { name ->
             jsonData.remove(name)?.let {
                 it.next = null
@@ -199,12 +205,23 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
             json.readFields(this, jsonData)
             civilizations = ArrayList()
             if (civData != null) {
-                for (entry in civData) civilizations.add(json.readValue(CivilizationInfo::class.java, entry))
+                for (entry in civData) civilizations.add(
+                    json.readValue(
+                        CivilizationInfo::class.java,
+                        entry
+                    )
+                )
             }
             val loadedCities = ArrayList<CityInfo>()
             if (cityData != null) {
-                for (entry in cityData) loadedCities.add(json.readValue(CitySaveEntry::class.java, entry).city)
+                for (entry in cityData) loadedCities.add(
+                    json.readValue(
+                        CitySaveEntry::class.java,
+                        entry
+                    ).city
+                )
             } else {
+                // В старом формате принадлежность задавалась контейнером, а не самим JSON города.
                 for (civ in civilizations) {
                     for (city in civ.cities) {
                         city.state.ownership = CityOwnership.Player(civ.civName)
@@ -212,15 +229,19 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
                     }
                 }
             }
+            // Реестр проверяет весь набор до публикации состава и связывания городов с владельцами.
             worldCityRegistry.restore(loadedCities)
         } finally {
             for ((name, value) in explicitFields) jsonData.addChild(name, value)
         }
     }
+
+    /** Копирует мир; игровые связи копии восстанавливаются отдельно, а gameParameters сохраняет прежний контракт общей ссылки. */
     fun clone(): GameInfo {
         val toReturn = GameInfo()
         toReturn.tileMap = tileMap.clone()
         toReturn.civilizations.addAll(civilizations.map { it.clone() })
+        // Города игроков уже скопированы вместе с цивилизациями; нейтральные отсутствуют в их списках.
         for (city in getCities().filter { it.state.ownership == CityOwnership.Neutral }) {
             val copiedCity = city.clone()
             copiedCity.bindNeutralWorld(toReturn)
@@ -271,12 +292,14 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
     @Transient
     private val worldCityRegistry = WorldCityRegistry(this)
 
+    /** Единый реестр мира; при первом обращении принимает временные списки уже добавленных цивилизаций. */
     val cityRegistry: WorldCityRegistry
         get() {
             worldCityRegistry.attachCivilizations()
             return worldCityRegistry
         }
 
+    /** Возвращает все города мира, включая нейтральные, которые отсутствуют в списках цивилизаций. */
     fun getCities() = cityRegistry.all().asSequence()
     fun getAliveCityStates() = civilizations.filter { it.isAlive() && it.isCityState() }
     fun getAliveMajorCivs() = civilizations.filter { it.isAlive() && it.isMajorCiv() }
@@ -334,9 +357,11 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
     //endregion
     //region State changing functions
 
+    /** Передаёт управление следующему человеку, выполняя промежуточные ходы AI и общую фазу на границе раунда. */
     fun nextTurn() {
         val previousHumanPlayer = getCurrentPlayerCivilization()
-        var thisPlayer = previousHumanPlayer // not calling it currentPlayer because that's already taken and I can't think of a better name
+        var thisPlayer =
+                previousHumanPlayer // Имя currentPlayer уже занято строковым идентификатором игрока.
         var currentPlayerIndex = civilizations.indexOf(thisPlayer)
 
 
@@ -345,6 +370,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
             currentPlayerIndex = (currentPlayerIndex + 1) % civilizations.size
             if (currentPlayerIndex == 0) {
                 turns++
+                // Нейтральные города обрабатываются один раз за полный раунд, а не после каждого игрока.
                 for (city in getCities().filter { it.state.ownership == CityOwnership.Neutral })
                     city.completeNeutralRound()
                 if (UncivGame.Current.simulateUntilTurnForDebug != 0)
@@ -353,9 +379,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
             thisPlayer = civilizations[currentPlayerIndex]
         }
 
-        //check is important or else switchTurn
-        //would skip a turn if an AI civ calls nextTurn
-        //this happens when resigning a multiplayer game
+        // AI тоже может вызвать nextTurn, например при выходе из сетевой партии; его ход нельзя пропустить.
         if (thisPlayer.isPlayerCivilization()) {
             endTurn()
         }
@@ -363,21 +387,18 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         while (thisPlayer.playerType == PlayerType.AI
                 || turns < UncivGame.Current.simulateUntilTurnForDebug
                 || turns < simulateMaxTurns && simulateUntilWin
-                // For multiplayer, if there are 3+ players and one is defeated or spectator,
-                // we'll want to skip over their turn
+                // В сетевой игре пропускаем побеждённых игроков и чужих наблюдателей.
                 || gameParameters.isOnlineMultiplayer && (thisPlayer.isDefeated() || thisPlayer.isSpectator() && thisPlayer.playerId != UncivGame.Current.settings.multiplayer.userId)
         ) {
             thisPlayer.startTurn()
             if (!thisPlayer.isDefeated() || thisPlayer.isBarbarian()) {
                 NextTurnAutomation.automateCivMoves(thisPlayer)
 
-                // Placing barbarians after their turn
+                // Лагеря варваров обновляются после их действий.
                 if (thisPlayer.isBarbarian() && !gameParameters.noBarbarians)
                     barbarians.updateEncampments()
 
-                // exit simulation mode when player wins
                 if (thisPlayer.victoryManager.hasWon() && simulateUntilWin) {
-                    // stop simulation
                     simulateUntilWin = false
                     break
                 }
@@ -391,19 +412,17 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         currentPlayer = thisPlayer.civName
         currentPlayerCiv = getCivilization(currentPlayer)
         thisPlayer.startTurn()
-        if (currentPlayerCiv.isSpectator()) currentPlayerCiv.popupAlerts.clear() // no popups for spectators
+        if (currentPlayerCiv.isSpectator()) currentPlayerCiv.popupAlerts.clear() // Наблюдателю не нужны игровые уведомления-окна.
 
-        if (turns % 10 == 0) //todo measuring actual play time might be nicer
+        if (turns % 10 == 0) // TODO: Возможно, лучше учитывать фактическое время игры.
             UncivGame.Current.musicController.chooseTrack(
                 currentPlayerCiv.civName,
                 MusicMood.peaceOrWar(currentPlayerCiv.isAtWar()), MusicTrackChooserFlags.setNextTurn
             )
 
-        // Update counters in all regular visitables
         visitableUpdater()
 
-        // Start our turn immediately before the player can make decisions - affects
-        // whether our units can commit automated actions and then be attacked immediately etc.
+        // Уведомляем об угрозах после подготовки хода, непосредственно перед решениями человека.
         notifyOfCloseEnemyUnits(thisPlayer)
     }
 
@@ -598,20 +617,18 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
 
     }
 
-    // All cross-game data which needs to be altered (e.g. when removing or changing a name of a building/tech)
-    // will be done here, and not in CivInfo.setTransients or CityInfo
+    /** Проверяет сохранённые города и восстанавливает внешние связи в порядке зависимостей мира, карты и цивилизаций. */
     fun setTransients() {
+        // Геометрию проверяем до разметки карты; определения — сразу после загрузки выбранных правил.
         CitySaveValidation.validateTerritory(getCities().toList(), tileMap)
 
-        // Load only the part, which is necessary for loading maps in the editor, not for the whole game.
+        // Загружаем правила тем же путём, который доступен редактору без полной инициализации партии.
         loadRulesetForMap()
         CitySaveValidation.validateDefinitions(getCities().toList(), ruleSet)
 
-        // This needs to go before tileMap.setTransients, as units need to access
-        // the nation of their civilization when setting transients
+        // Юнитам при восстановлении карты уже нужны нации владельцев и дипломатические свойства.
         for (civInfo in civilizations) civInfo.gameInfo = this
         for (civInfo in civilizations) civInfo.setNationTransient()
-        // must be done before updating tileMap, since unit uniques depend on civ uniques depend on allied city-state uniques depend on diplomacy
         for (civInfo in civilizations) {
             for (diplomacyManager in civInfo.diplomacy.values) {
                 diplomacyManager.civInfo = civInfo
@@ -621,7 +638,8 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
 
         tileMap.setTransients(ruleSet)
 
-        if (currentPlayer == "") currentPlayer = civilizations.first { it.isPlayerCivilization() }.civName
+        if (currentPlayer == "") currentPlayer =
+                civilizations.first { it.isPlayerCivilization() }.civName
         currentPlayerCiv = getCivilization(currentPlayer)
 
         difficultyObject = ruleSet.difficulties[difficulty]!!
@@ -631,7 +649,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         for (religion in religions.values) religion.setTransients(this)
 
 
-        // Neutral cities restore their own map and manager links without a civilization.
+        // Нейтральные города восстанавливаются явно: ни одна цивилизация не обойдёт их в своём setTransients.
         for (city in getCities().filter { it.state.ownership == CityOwnership.Neutral })
             city.setTransients()
         for (civInfo in civilizations) civInfo.setTransients()
@@ -639,40 +657,34 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
             civInfo.thingsToFocusOnForVictory =
                     civInfo.getPreferredVictoryTypeObject()?.getThingsToFocus(civInfo) ?: setOf()
         }
-        tileMap.setNeutralTransients() // has to happen after civInfo.setTransients() sets owningCity
+        // Принадлежность городских клеток уже восстановлена; теперь можно пересчитать дороги вне владений игроков.
+        tileMap.setNeutralTransients()
 
         convertFortify()
 
         for (civInfo in sequence {
-            // update city-state resource first since the happiness of major civ depends on it.
-            // See issue: https://github.com/yairm210/Unciv/issues/7781
+            // Ресурсы городов-государств влияют на счастье крупных цивилизаций, поэтому обновляются первыми.
             yieldAll(civilizations.filter { it.isCityState() })
             yieldAll(civilizations.filter { !it.isCityState() })
         }) {
             for (unit in civInfo.getCivUnits())
-                unit.updateVisibleTiles(false) // this needs to be done after all the units are assigned to their civs and all other transients are set
-            civInfo.updateSightAndResources() // only run ONCE and not for each unit - this is a huge performance saver!
+                unit.updateVisibleTiles(false) // Все юниты уже назначены владельцам и получили игровые связи.
+            civInfo.updateSightAndResources() // Один общий пересчёт вместо повторения для каждого юнита.
 
-            // Since this depends on the cities of ALL civilizations,
-            // we need to wait until we've set the transients of all the cities before we can run this.
-            // Hence why it's not in CivInfo.setTransients().
+            // Торговые связи зависят от городов всех владельцев; их можно считать только после общего восстановления.
             civInfo.initialSetCitiesConnectedToCapitalTransients()
 
-            // We need to determine the GLOBAL happiness state in order to determine the city stats
             for (cityInfo in civInfo.cities) cityInfo.cityStats.updateCityHappiness(
                 cityInfo.cityConstructions.getStats()
             )
 
             for (cityInfo in civInfo.cities) {
-                /** We remove constructions from the queue that aren't defined in the ruleset.
-                 * This can lead to situations where the city is puppeted and had its construction removed, and there's no way to user-set it
-                 * So for cities like those, we'll auto-set the construction
-                 * Also set construction for human players who have automate production turned on
-                 */
+                // Если очередь пуста, возвращаем обычный выбор производства для города игрока.
+                // Неизвестные определения теперь отклоняются выше, без удаления сохранённого прогресса.
                 if (cityInfo.cityConstructions.constructionQueue.isEmpty())
                     cityInfo.cityConstructions.chooseNextConstruction()
 
-                // We also remove resources that the city may be demanding but are no longer in the ruleset
+                // Устаревший запрос ресурса можно сбросить, если такого ресурса больше нет в правилах.
                 if (!ruleSet.tileResources.containsKey(cityInfo.demandedResource))
                     cityInfo.demandedResource = ""
 

@@ -6,7 +6,9 @@ import com.badlogic.gdx.math.Vector2
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+/** Защищает построение пути улучшений от зацикливания на ошибочных связях в правилах. */
 class UnitUpgradeCycleTest {
+    /** Временно задаёт граф улучшений, проверяет путь реального юнита и восстанавливает исходные определения. */
     private fun checkPath(links: Map<String, String?>, expected: List<String>) {
         val previousInput = Gdx.input
         Gdx.input = MockInput()
@@ -28,23 +30,27 @@ class UnitUpgradeCycleTest {
         }
     }
 
+    /** Ссылка на собственный тип даёт пустой путь; таймаут выявляет бесконечный обход. */
     @Test(timeout = 10000)
     fun selfUpgradeDoesNotIncludeCurrentUnit() {
         checkPath(mapOf("Scout" to "Scout"), emptyList())
     }
 
+    /** Цикл между последующими типами обрывается до повторного добавления уже посещённого юнита. */
     @Test(timeout = 10000)
     fun cycleStopsBeforeRepeatedUnit() {
         checkPath(mapOf("Scout" to "Archer", "Archer" to "Spearman", "Spearman" to "Archer"),
             listOf("Archer", "Spearman"))
     }
 
+    /** Защита от циклов не сокращает корректную цепочку, оканчивающуюся отсутствием улучшения. */
     @Test(timeout = 10000)
     fun ordinaryChainRemainsComplete() {
         checkPath(mapOf("Scout" to "Archer", "Archer" to "Spearman", "Spearman" to null),
             listOf("Archer", "Spearman"))
     }
 
+    /** Возврат к исходному типу завершает обход, не добавляя сам исходный юнит в путь улучшений. */
     @Test(timeout = 10000)
     fun cycleReturningToCurrentUnitExcludesIt() {
         checkPath(mapOf("Scout" to "Archer", "Archer" to "Scout"), listOf("Archer"))
