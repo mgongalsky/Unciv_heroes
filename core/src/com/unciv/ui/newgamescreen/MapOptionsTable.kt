@@ -43,15 +43,12 @@ class MapOptionsTable(private val newGameScreen: NewGameScreen): Table() {
         val mapTypes = arrayListOf("Generated")
         if (mapFilesSequence.any()) mapTypes.add(MapType.custom)
         mapTypeSelectBox = TranslatedSelectBox(mapTypes, "Generated", BaseScreen.skin)
-
         savedMapOptionsTable.defaults().pad(5f)
         savedMapOptionsTable.add("{Map file}:".toLabel()).left()
-        // because SOME people gotta give the hugest names to their maps
-        val columnWidth = newGameScreen.stage.width / (if (newGameScreen.isNarrowerThan4to3()) 1 else 3)
+        val columnWidth =
+            newGameScreen.stage.width / (if (newGameScreen.isNarrowerThan4to3()) 1 else 3)
         savedMapOptionsTable.add(mapFileSelectBox)
-            .maxWidth((columnWidth - 120f).coerceAtLeast(120f))
-            .right().row()
-
+            .maxWidth((columnWidth - 120f).coerceAtLeast(120f)).right().row()
 
         fun updateOnMapTypeChange() {
             mapTypeSpecificTable.clear()
@@ -61,7 +58,7 @@ class MapOptionsTable(private val newGameScreen: NewGameScreen): Table() {
                 mapParameters.name = mapFileSelectBox.selected.toString()
                 mapTypeSpecificTable.add(savedMapOptionsTable)
                 newGameScreen.unlockTables()
-            } else { // generated map
+            } else {
                 mapParameters.name = ""
                 mapParameters.type = generatedMapOptionsTable.mapTypeSelectBox.selected.value
                 mapTypeSpecificTable.add(generatedMapOptionsTable)
@@ -71,16 +68,18 @@ class MapOptionsTable(private val newGameScreen: NewGameScreen): Table() {
             newGameScreen.updateTables()
         }
 
-        // Pre-select custom if any map saved within last 15 minutes
-        if (mapFilesSequence.any { it.fileHandle.lastModified() > System.currentTimeMillis() - 900000 })
+        // Недавняя карта — подсказка только при первом открытии, а не замена выбора при recreate.
+        val initialized = newGameScreen.gameSetupInfo.gameParameters.victorySelectionInitialized
+        val hasSelectedMap =
+            mapParameters.name.isNotEmpty() && newGameScreen.gameSetupInfo.mapFile != null
+        if (MapType.custom in mapTypes && (hasSelectedMap || (!initialized &&
+                    mapFilesSequence.any { it.fileHandle.lastModified() > System.currentTimeMillis() - 900000 }))
+        )
             mapTypeSelectBox.selected = TranslatedSelectBox.TranslatedString(MapType.custom)
 
-        // activate once, so when we had a file map before we'll have the right things set for another one
         updateOnMapTypeChange()
-
         mapTypeSelectBox.onChange { updateOnMapTypeChange() }
-
-        val mapTypeSelectWrapper = Table()  // wrap to center-align Label and SelectBox easier
+        val mapTypeSelectWrapper = Table()
         mapTypeSelectWrapper.add("{Map Type}:".toLabel()).left().expandX()
         mapTypeSelectWrapper.add(mapTypeSelectBox).right()
         add(mapTypeSelectWrapper).pad(10f).fillX().row()
@@ -121,19 +120,24 @@ class MapOptionsTable(private val newGameScreen: NewGameScreen): Table() {
         mapFilesSequence
             .sortedWith(compareBy(UncivGame.Current.settings.getCollatorFromLocale()) { it.toString() })
             .forEach { mapFiles.add(it) }
-        mapFileSelectBox.items = mapFiles
-
-        // Pre-select: a) map saved within last 15min or b) map named in mapParameters or c) alphabetically first
-        // This is a kludge - the better way would be to have a "play this map now" menu button in the editor
-        // (which would ideally not even require a save file - which makes implementation non-trivial)
-        val selectedItem =
-            mapFiles.maxByOrNull { it.fileHandle.lastModified() }
-                ?.takeIf { it.fileHandle.lastModified() > System.currentTimeMillis() - 900000 }
+        // Первый ChangeEvent при заполнении items не должен подменять сохранённую карту.
+        val selectedFile = newGameScreen.gameSetupInfo.mapFile
+        val selectedItem = mapFiles.firstOrNull { it.fileHandle == selectedFile }
             ?: mapFiles.firstOrNull { it.fileHandle.name() == mapParameters.name }
+            ?: mapFiles.maxByOrNull { it.fileHandle.lastModified() }
+                ?.takeIf { it.fileHandle.lastModified() > System.currentTimeMillis() - 900000 }
             ?: mapFiles.firstOrNull()
             ?: return
-        mapFileSelectBox.selected = selectedItem
-        newGameScreen.gameSetupInfo.mapFile = selectedItem.fileHandle
+        val listeners = mapFileSelectBox.listeners.toList()
+        for (listener in listeners) mapFileSelectBox.removeListener(listener)
+        try {
+            mapFileSelectBox.items = mapFiles
+            mapFileSelectBox.selected = selectedItem
+        } finally {
+            for (listener in listeners) mapFileSelectBox.addListener(listener)
+        }
+        // Загружаем ruleset и ограничения только окончательно выбранной карты.
+        mapFileSelectBox.fire(com.badlogic.gdx.scenes.scene2d.utils.ChangeListener.ChangeEvent())
     }
 
     // The SelectBox auto displays the text a object.toString(), which on the FileHandle itself includes the folder path.

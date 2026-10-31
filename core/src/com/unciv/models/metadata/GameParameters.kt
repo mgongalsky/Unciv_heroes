@@ -42,20 +42,28 @@ class GameParameters : IsPartOfGameInfoSerialization { // Default values are the
 
     var maxTurns = 500
 
+    /** Копирует параметры без потери флагов; список игроков сохраняет прежний контракт общей ссылки на элементы. */
     fun clone(): GameParameters {
         val parameters = GameParameters()
         parameters.difficulty = difficulty
         parameters.speed = speed
+        parameters.gameSpeed = gameSpeed
         parameters.players = ArrayList(players)
         parameters.numberOfCityStates = numberOfCityStates
+        parameters.noCityRazing = noCityRazing
         parameters.noBarbarians = noBarbarians
         parameters.ragingBarbarians = ragingBarbarians
         parameters.oneCityChallenge = oneCityChallenge
+        parameters.godMode = godMode
         parameters.nuclearWeaponsEnabled = nuclearWeaponsEnabled
         parameters.religionEnabled = religionEnabled
+        parameters.espionageEnabled = espionageEnabled
+        parameters.noStartBias = noStartBias
         parameters.victoryTypes = ArrayList(victoryTypes)
+        parameters.victorySelectionInitialized = victorySelectionInitialized
         parameters.startingEra = startingEra
         parameters.isOnlineMultiplayer = isOnlineMultiplayer
+        parameters.anyoneCanSpectate = anyoneCanSpectate
         parameters.baseRuleset = baseRuleset
         parameters.mods = LinkedHashSet(mods)
         parameters.maxTurns = maxTurns
@@ -82,4 +90,7 @@ class GameParameters : IsPartOfGameInfoSerialization { // Default values are the
     fun getModsAndBaseRuleset(): HashSet<String> {
         return mods.toHashSet().apply { add(baseRuleset) }
     }
+
+    /** Отличает первоначальную настройку побед от явного выбора, включая пустой список. */
+    var victorySelectionInitialized = false
 }

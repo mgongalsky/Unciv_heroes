@@ -245,29 +245,73 @@ class GameOptionsTable(
         { gameParameters.startingEra = it; null }
     }
 
+    /** Required обозначается красным штатным индикатором; пользователь изменяет только Optional. */
     private fun addVictoryTypeCheckboxes() {
         add("{Victory Conditions}:".toLabel()).colspan(2).row()
+        val table = Table().apply { defaults().pad(5f) }
+        val policy = scenarioVictorySettings?.rules.orEmpty().associateBy { it.victoryType }
+        var hasRequired = false
 
-        // Create a checkbox for each VictoryType existing
-        val victoryConditionsTable = Table().apply { defaults().pad(5f) }
-        for ((i, victoryType) in ruleset.victories.values.withIndex()) {
-            val victoryCheckbox = victoryType.name.toCheckBox(gameParameters.victoryTypes.contains(victoryType.name)) {
-                // If the checkbox is checked, adds the victoryTypes else remove it
-                if (it) {
-                    gameParameters.victoryTypes.add(victoryType.name)
-                } else {
-                    gameParameters.victoryTypes.remove(victoryType.name)
-                }
-                // show or hide the max turns select box
-                if (victoryType.enablesMaxTurns())
-                    update()
-            }
-            victoryCheckbox.name = victoryType.name
-            victoryCheckbox.isDisabled = locked
-            victoryConditionsTable.add(victoryCheckbox).left()
-            if ((i + 1) % 2 == 0) victoryConditionsTable.row()
+        // Копируем стиль, чтобы красный цвет не затронул остальные checkbox в общей skin.
+        fun markRequired(checkbox: com.badlogic.gdx.scenes.scene2d.ui.CheckBox) {
+            val indicator = BaseScreen.skin.newDrawable(
+                "Checkbox-pressed",
+                com.badlogic.gdx.graphics.Color.RED
+            )
+            checkbox.style =
+                    com.badlogic.gdx.scenes.scene2d.ui.CheckBox.CheckBoxStyle(checkbox.style)
+                        .apply {
+                            checkboxOn = indicator
+                            checkboxOnDisabled = indicator
+                        }
         }
-        add(victoryConditionsTable).colspan(2).row()
+
+        for ((i, victory) in ruleset.victories.values.withIndex()) {
+            val mode = policy[victory.name]?.mode
+            val required = mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Required
+            val captureUnavailable =
+                    victory.name == com.unciv.pure.domain.victory.CaptureCityObjective.VICTORY_TYPE &&
+                            scenarioVictorySettings?.captureObjectives.isNullOrEmpty()
+            val label = if (mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Forbidden)
+                "${victory.name.tr()} (${mode.name.tr()})" else victory.name.tr()
+            val checkbox =
+                    label.toCheckBox(gameParameters.victoryTypes.contains(victory.name)) { checked ->
+                        gameParameters.victorySelectionInitialized = true
+                        if (checked) {
+                            if (victory.name !in gameParameters.victoryTypes)
+                                gameParameters.victoryTypes.add(victory.name)
+                        } else gameParameters.victoryTypes.remove(victory.name)
+                        if (victory.enablesMaxTurns()) update()
+                    }
+            checkbox.name = victory.name
+            checkbox.isDisabled = locked || captureUnavailable || required ||
+                    mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Forbidden
+            if (required) {
+                hasRequired = true
+                markRequired(checkbox)
+            }
+            table.add(checkbox).left()
+            if ((i + 1) % 2 == 0) table.row()
+        }
+        add(table).colspan(2).row()
+        if (hasRequired) {
+            // Легенда повторяет сам заблокированный индикатор, а не отдельный символ возле текста.
+            val legend = "Required".toCheckBox(true) {}.apply {
+                name = "victory-required-legend"
+                isDisabled = true
+                touchable = com.badlogic.gdx.scenes.scene2d.Touchable.disabled
+            }
+            markRequired(legend)
+            add(legend).colspan(2).padTop(0f).row()
+        }
+        // При первом вызове из init поздние поля класса ещё имеют JVM-значения по умолчанию.
+        val errorMessage: String? = scenarioVictoryError
+        if (!errorMessage.isNullOrEmpty()) {
+            add(
+                errorMessage.toLabel(com.badlogic.gdx.graphics.Color.SALMON)
+                    .apply { setWrap(true) })
+                .width(300f).colspan(2).row()
+        }
     }
 
     fun reloadRuleset() {
@@ -308,5 +352,11 @@ class GameOptionsTable(
 
         updatePlayerPickerTable(desiredCiv)
     }
+
+    /** Прочитанные настройки карты; форма отображает их, а запуск повторно проверяет полный сценарий. */
+    var scenarioVictorySettings: com.unciv.pure.domain.scenario.ScenarioVictorySettings? = null
+
+    /** Ошибка разрешения условий не заменяется молчаливым включением всех побед. */
+    var scenarioVictoryError: String = ""
 }
 

@@ -146,38 +146,44 @@ class Ruleset {
         units.putAll(ruleset.units)
         unitTypes.putAll(ruleset.unitTypes)
         victories.putAll(ruleset.victories)
+        // Сценарный тип поддерживается движком и не содержит ссылок на конкретную карту.
+        // Читаем стандартную модель тем же JSON-механизмом, что определения базовых правил и модов.
+        val captureType = com.unciv.pure.domain.victory.CaptureCityObjective.VICTORY_TYPE
+        if (captureType !in victories) {
+            victories[captureType] = json().fromJson(
+                Victory::class.java, """{
+            "name":"CaptureCity",
+            "victoryScreenHeader":"Capture and hold all your objective cities to win!",
+            "milestones":[],
+            "victoryString":"Your armies have captured the objective cities. Victory is yours!"
+        }"""
+            )
+        }
         cityStateTypes.putAll(ruleset.cityStateTypes)
         cityEvents.putAll(ruleset.cityEvents)
         gameMechanics.putAll(ruleset.gameMechanics)
         for (unitToRemove in ruleset.modOptions.unitsToRemove) units.remove(unitToRemove)
         modOptions.uniques.addAll(ruleset.modOptions.uniques)
         modOptions.constants.merge(ruleset.modOptions.constants)
-
-        // Allow each mod to define their own columns, and if there's a conflict, later mods will be shifted right
-        // We should never be editing the original ruleset objects, only copies
+        // Клонируем продвижения до смещения конфликтующих колонок, не меняя исходные правила.
         val addRulesetUnitPromotionClones = ruleset.unitPromotions.values.map { it.clone() }
         val existingPromotionLocations =
-                unitPromotions.values.map { "${it.row}/${it.column}" }.toHashSet()
+            unitPromotions.values.map { "${it.row}/${it.column}" }.toHashSet()
         val promotionsWithConflictingLocations = addRulesetUnitPromotionClones.filter {
             existingPromotionLocations.contains("${it.row}/${it.column}")
         }
         val columnsWithConflictingLocations =
-                promotionsWithConflictingLocations.map { it.column }.distinct()
-
+            promotionsWithConflictingLocations.map { it.column }.distinct()
         if (columnsWithConflictingLocations.isNotEmpty()) {
             var highestExistingColumn = unitPromotions.values.maxOf { it.column }
             for (conflictingColumn in columnsWithConflictingLocations) {
                 highestExistingColumn += 1
                 val newColumn = highestExistingColumn
                 for (promotion in addRulesetUnitPromotionClones)
-                    if (promotion.column == conflictingColumn)
-                        promotion.column = newColumn
+                    if (promotion.column == conflictingColumn) promotion.column = newColumn
             }
         }
-        val finalModUnitPromotionsMap = addRulesetUnitPromotionClones.associateBy { it.name }
-
-        unitPromotions.putAll(finalModUnitPromotionsMap)
-
+        unitPromotions.putAll(addRulesetUnitPromotionClones.associateBy { it.name })
         mods += ruleset.mods
     }
 

@@ -35,13 +35,14 @@ object NeutralCityEntry {
         return unit.currentTile == city.getCenterTile() && city.ownerOrNull === unit.civInfo
     }
 
-    /** Вызывается при перемещении: приобрести город можно только уже находясь в его пустом центре. */
+    /** Приобретает пустой нейтральный город после фактического входа и проверяет сценарную победу. */
     fun tryAcquireOnEntry(unit: MapUnit, tile: TileInfo): Boolean {
         if (!tile.isCityCenter()) return false
         val city = tile.getCity() ?: return false
         if (city.state.ownership != com.unciv.pure.domain.city.CityOwnership.Neutral) return false
         if (unit.currentTile !== tile || decision(city, unit) != Decision.ACQUIRE) return false
         NeutralCityOwnership.acquireUndefended(city, unit.civInfo)
+        unit.civInfo.victoryManager.onCityCaptured(city.id)
         return true
     }
 }

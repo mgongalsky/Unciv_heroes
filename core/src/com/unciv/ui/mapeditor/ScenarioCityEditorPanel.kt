@@ -50,18 +50,17 @@ class ScenarioCityEditorPanel(
         refresh()
     }
 
-    /** Перестраивает виджеты из черновика и заново связывает чтение полей с текущей формой. */
+    /** Перестраивает виджеты черновика; ошибки команд, включая ссылочную защиту удаления, остаются в форме. */
     fun refresh() {
         form.clear()
-        // Не оставляем callback на удалённые виджеты, в том числе после удаления города.
         captureDraft = { }
         form.defaults().pad(4f).left()
         error.setText(ScenarioMapValidation.definitionErrors(map, ruleset).joinToString("\n"))
         val city = draft ?: return
         form.add("Position: [${city.position.x.toInt()}, ${city.position.y.toInt()}]".toLabel())
             .colspan(2).row()
-        val name = UncivTextField.create("City name", city.name)
-            .apply { this.name = "scenario-city-name" }
+        val name =
+            UncivTextField.create("City name", city.name).apply { this.name = "scenario-city-name" }
         val population = UncivTextField.create("Population", city.population.toString())
         val food = UncivTextField.create("Stored food", city.foodStored.toString())
         fun field(label: String, widget: com.badlogic.gdx.scenes.scene2d.Actor) {
@@ -69,7 +68,6 @@ class ScenarioCityEditorPanel(
             form.add(widget).width(panelWidth * 0.5f).growX().row()
         }
         field("Name", name)
-        // Пустой ID в выборе означает нейтральность; создание самих слотов вынесено во вкладку Players.
         val owners = listOf(OwnerChoice("", "Neutral".tr())) + map.scenarioPlayerSlots.map {
             OwnerChoice(it.id, it.name.ifBlank { it.id })
         }
@@ -81,11 +79,10 @@ class ScenarioCityEditorPanel(
         field("Owner", owner)
         field("Population", population)
         field("Stored food", food)
-        // Одна отметка в редакторе выражает предпочтение; окончательную столицу определяет запуск сценария.
         val capital = CheckBox("Capital".tr(), skin).apply {
             this.name = "scenario-city-capital"
             isChecked =
-                    city.owner == ScenarioCityOwner.PlayerSlot && (city.isCapital || city.isOriginalCapital)
+                city.owner == ScenarioCityOwner.PlayerSlot && (city.isCapital || city.isOriginalCapital)
         }
         form.add(capital).colspan(2).row()
         val fromOwner = CheckBox("Type from starting player".tr(), skin).apply {
@@ -94,7 +91,6 @@ class ScenarioCityEditorPanel(
         form.add(fromOwner).colspan(2).row()
         val fixedType = UncivTextField.create("Fixed city type", city.fixedType)
         field("City type", fixedType)
-        // Территория сохраняется в описании; эта форма показывает её размер, но не рисует её кистью.
         form.add("Territory: [${city.territory.size.coerceAtLeast(1)}] tiles".toLabel()).colspan(2)
             .row()
         form.add("Buildings".toLabel()).colspan(2).row()
@@ -112,7 +108,6 @@ class ScenarioCityEditorPanel(
             }
             form.add(building).width(panelWidth * 0.4f).growX()
             form.add("Add building".toTextButton().onClick {
-                // Перед перестроением формы переносим значения остальных полей в черновик.
                 capture()
                 if (building.selected !in city.buildings) city.buildings.add(building.selected)
                 refresh()
@@ -137,8 +132,8 @@ class ScenarioCityEditorPanel(
             form.add("Add troops".toTextButton().onClick {
                 attempt {
                     capture()
-                    val count = amount.text.toIntOrNull()
-                        ?: kotlin.error("Enter a positive troop count")
+                    val count =
+                        amount.text.toIntOrNull() ?: kotlin.error("Enter a positive troop count")
                     require(count > 0) { "Enter a positive troop count" }
                     city.garrison.add(ScenarioCityTroop(unit.selected, count))
                     refresh()
@@ -147,29 +142,31 @@ class ScenarioCityEditorPanel(
         }
         val apply = "Apply city".toTextButton().apply { this.name = "scenario-city-apply" }
         form.add(apply).growX()
-        form.add("Delete city".toTextButton().onClick {
-            if (ScenarioCityEditorCommands.removeCity(map, city.id)) changed()
-            draft = null
-            refresh()
+        form.add("Delete city".toTextButton().apply { this.name = "scenario-city-delete" }.onClick {
+            attempt {
+                if (ScenarioCityEditorCommands.removeCity(map, city.id)) changed()
+                draft = null
+                refresh()
+            }
         }).row()
-        // Этот callback относится только к текущим виджетам и меняет черновик, а не данные карты.
         captureDraft = {
             city.name = name.text.trim()
             population.text.toIntOrNull()?.let { city.population = it }
             food.text.toIntOrNull()?.let { city.foodStored = it }
             city.ownerSlotId = owner.selected.id
             city.owner =
-                    if (owner.selected.id.isEmpty()) ScenarioCityOwner.Neutral else ScenarioCityOwner.PlayerSlot
+                if (owner.selected.id.isEmpty()) ScenarioCityOwner.Neutral else ScenarioCityOwner.PlayerSlot
             city.isCapital = city.owner == ScenarioCityOwner.PlayerSlot && capital.isChecked
             city.isOriginalCapital = city.isCapital
             city.typeMode =
-                    if (fromOwner.isChecked) ScenarioCityTypeMode.FromStartingPlayer else ScenarioCityTypeMode.Fixed
+                if (fromOwner.isChecked) ScenarioCityTypeMode.FromStartingPlayer else ScenarioCityTypeMode.Fixed
             city.fixedType = if (fromOwner.isChecked) "" else fixedType.text.trim()
         }
         apply.onClick {
             attempt {
-                // Неразбираемые числа не должны незаметно оставлять прежнее значение при Apply.
-                require(population.text.toIntOrNull() != null && food.text.toIntOrNull() != null) { "Enter whole numbers for population and food" }
+                require(population.text.toIntOrNull() != null && food.text.toIntOrNull() != null) {
+                    "Enter whole numbers for population and food"
+                }
                 capture()
                 if (ScenarioCityEditorCommands.putCity(map, ruleset, city)) changed()
                 refresh()

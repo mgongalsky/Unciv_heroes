@@ -80,4 +80,28 @@ class UiGoldenTest {
     fun cityEditor() {
         UiGoldenTestRunner.main(arrayOf("--scenario=city-editor"))
     }
+
+    /** Проверяет команды и размеры формы; захват кадра отдельно не утверждает визуальный эталон. */
+    @Test
+    fun victoryEditorRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=victory-editor"))
+    }
+
+    /** Сравнивает форму побед с платформенным эталоном. */
+    @Test
+    fun victoryEditor() {
+        UiGoldenTestRunner.main(arrayOf("--scenario=victory-editor"))
+    }
+
+    /** Проверяет реальные ограничения и выбор меню; capture-only не утверждает визуальный эталон. */
+    @Test
+    fun victorySelectionRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=victory-selection"))
+    }
+
+    /** Проверяет команды и размеры прежней формы без подмены отсутствующего визуального эталона. */
+    @Test
+    fun cityEditorRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=city-editor"))
+    }
 }

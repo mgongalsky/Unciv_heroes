@@ -75,9 +75,8 @@ data class CompatibilityVersion(
 
 class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion, Json.Serializable {
     companion object {
-        /** The current compatibility version of [GameInfo]. This number is incremented whenever changes are made to the save file structure that guarantee that
-         * previous versions of the game will not be able to load or play a game normally. */
-        const val CURRENT_COMPATIBILITY_NUMBER = 5
+        /** Формат 6 добавляет сценарные условия и сохраняемый результат победы, неизвестные старым версиям. */
+        const val CURRENT_COMPATIBILITY_NUMBER = 6
 
         val CURRENT_COMPATIBILITY_VERSION = CompatibilityVersion(CURRENT_COMPATIBILITY_NUMBER, UncivGame.VERSION)
 
@@ -236,12 +235,12 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         }
     }
 
-    /** Копирует мир; игровые связи копии восстанавливаются отдельно, а gameParameters сохраняет прежний контракт общей ссылки. */
+    /** Копирует мир и результат партии; gameParameters сохраняет прежний контракт общей ссылки. */
     fun clone(): GameInfo {
         val toReturn = GameInfo()
         toReturn.tileMap = tileMap.clone()
         toReturn.civilizations.addAll(civilizations.map { it.clone() })
-        // Города игроков уже скопированы вместе с цивилизациями; нейтральные отсутствуют в их списках.
+        // Города игроков скопированы с цивилизациями, нейтральные восстанавливаем отдельно.
         for (city in getCities().filter { it.state.ownership == CityOwnership.Neutral }) {
             val copiedCity = city.clone()
             copiedCity.bindNeutralWorld(toReturn)
@@ -258,15 +257,21 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         toReturn.diplomaticVictoryVotesCast.putAll(diplomaticVictoryVotesCast)
         toReturn.oneMoreTurnMode = oneMoreTurnMode
         toReturn.customSaveLocation = customSaveLocation
+        toReturn.victoryWinner = victoryWinner
+        toReturn.victoryType = victoryType
+        toReturn.scenarioVictoryParticipants.putAll(scenarioVictoryParticipants)
         return toReturn
     }
 
+    /** Выбирает наблюдаемого игрока; при остановке AI на победе человек сохраняет свой экран результата. */
     fun getPlayerToViewAs(): CivilizationInfo {
-        if (!gameParameters.isOnlineMultiplayer) return getCurrentPlayerCivilization() // non-online, play as human player
+        if (!gameParameters.isOnlineMultiplayer) {
+            if (victoryWinner.isNotEmpty() && getCurrentPlayerCivilization().playerType == PlayerType.AI)
+                civilizations.firstOrNull { it.playerType == PlayerType.Human && !it.isSpectator() }
+                    ?.let { return it }
+            return getCurrentPlayerCivilization()
+        }
         val userId = UncivGame.Current.settings.multiplayer.userId
-
-        // Iterating on all civs, starting from the the current player, gives us the one that will have the next turn
-        // This allows multiple civs from the same UserID
         if (civilizations.any { it.playerId == userId }) {
             var civIndex = civilizations.map { it.civName }.indexOf(currentPlayer)
             while (true) {
@@ -274,10 +279,8 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
                 if (civToCheck.playerId == userId) return civToCheck
                 civIndex++
             }
-        } else {
-            // you aren't anyone. How did you even get this game? Can you spectate?
-            return getSpectator(userId)
         }
+        return getSpectator(userId)
     }
 
     /** Get a civ by name
@@ -357,72 +360,70 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
     //endregion
     //region State changing functions
 
-    /** Передаёт управление следующему человеку, выполняя промежуточные ходы AI и общую фазу на границе раунда. */
+    /** Выполняет цепочку ходов до человека либо сохраняемого результата победы. */
     fun nextTurn() {
+        if (shouldStopForVictory) {
+            simulateUntilWin = false
+            return
+        }
         val previousHumanPlayer = getCurrentPlayerCivilization()
-        var thisPlayer =
-                previousHumanPlayer // Имя currentPlayer уже занято строковым идентификатором игрока.
+        var thisPlayer = previousHumanPlayer
         var currentPlayerIndex = civilizations.indexOf(thisPlayer)
-
+        // После остановки на победе AI его ход уже начат: продолжение не восстанавливает движение повторно.
+        var resumeStartedAiTurn =
+                victoryWinner.isNotEmpty() && oneMoreTurnMode && thisPlayer.playerType == PlayerType.AI
 
         fun endTurn() {
             thisPlayer.endTurn()
             currentPlayerIndex = (currentPlayerIndex + 1) % civilizations.size
             if (currentPlayerIndex == 0) {
                 turns++
-                // Нейтральные города обрабатываются один раз за полный раунд, а не после каждого игрока.
-                for (city in getCities().filter { it.state.ownership == CityOwnership.Neutral })
-                    city.completeNeutralRound()
-                if (UncivGame.Current.simulateUntilTurnForDebug != 0)
-                    debug("Starting simulation of turn %s", turns)
+                for (city in getCities().filter { it.state.ownership == CityOwnership.Neutral }) city.completeNeutralRound()
+                if (UncivGame.Current.simulateUntilTurnForDebug != 0) debug(
+                    "Starting simulation of turn %s",
+                    turns
+                )
             }
             thisPlayer = civilizations[currentPlayerIndex]
         }
-
-        // AI тоже может вызвать nextTurn, например при выходе из сетевой партии; его ход нельзя пропустить.
-        if (thisPlayer.isPlayerCivilization()) {
-            endTurn()
-        }
-
+        if (thisPlayer.isPlayerCivilization()) endTurn()
         while (thisPlayer.playerType == PlayerType.AI
                 || turns < UncivGame.Current.simulateUntilTurnForDebug
                 || turns < simulateMaxTurns && simulateUntilWin
-                // В сетевой игре пропускаем побеждённых игроков и чужих наблюдателей.
-                || gameParameters.isOnlineMultiplayer && (thisPlayer.isDefeated() || thisPlayer.isSpectator() && thisPlayer.playerId != UncivGame.Current.settings.multiplayer.userId)
+                || gameParameters.isOnlineMultiplayer && (thisPlayer.isDefeated() ||
+                        thisPlayer.isSpectator() && thisPlayer.playerId != UncivGame.Current.settings.multiplayer.userId)
         ) {
-            thisPlayer.startTurn()
+            if (!resumeStartedAiTurn) thisPlayer.startTurn()
+            resumeStartedAiTurn = false
             if (!thisPlayer.isDefeated() || thisPlayer.isBarbarian()) {
                 NextTurnAutomation.automateCivMoves(thisPlayer)
-
-                // Лагеря варваров обновляются после их действий.
-                if (thisPlayer.isBarbarian() && !gameParameters.noBarbarians)
-                    barbarians.updateEncampments()
-
-                if (thisPlayer.victoryManager.hasWon() && simulateUntilWin) {
+                thisPlayer.victoryManager.hasWon()
+                if (shouldStopForVictory) {
+                    // Сохраняем точную границу остановки без endTurn и повторного startTurn.
+                    currentPlayer = thisPlayer.civName
+                    currentPlayerCiv = thisPlayer
+                    currentTurnStartTime = System.currentTimeMillis()
                     simulateUntilWin = false
-                    break
+                    return
                 }
+                if (thisPlayer.isBarbarian() && !gameParameters.noBarbarians) barbarians.updateEncampments()
             }
             endTurn()
         }
-        if (turns == UncivGame.Current.simulateUntilTurnForDebug)
-            UncivGame.Current.simulateUntilTurnForDebug = 0
-
+        if (turns == UncivGame.Current.simulateUntilTurnForDebug) UncivGame.Current.simulateUntilTurnForDebug =
+                0
         currentTurnStartTime = System.currentTimeMillis()
         currentPlayer = thisPlayer.civName
         currentPlayerCiv = getCivilization(currentPlayer)
         thisPlayer.startTurn()
-        if (currentPlayerCiv.isSpectator()) currentPlayerCiv.popupAlerts.clear() // Наблюдателю не нужны игровые уведомления-окна.
-
-        if (turns % 10 == 0) // TODO: Возможно, лучше учитывать фактическое время игры.
+        if (currentPlayerCiv.isSpectator()) currentPlayerCiv.popupAlerts.clear()
+        if (turns % 10 == 0)
             UncivGame.Current.musicController.chooseTrack(
                 currentPlayerCiv.civName,
-                MusicMood.peaceOrWar(currentPlayerCiv.isAtWar()), MusicTrackChooserFlags.setNextTurn
+                MusicMood.peaceOrWar(currentPlayerCiv.isAtWar()),
+                MusicTrackChooserFlags.setNextTurn
             )
-
         visitableUpdater()
-
-        // Уведомляем об угрозах после подготовки хода, непосредственно перед решениями человека.
         notifyOfCloseEnemyUnits(thisPlayer)
     }
 
@@ -710,6 +711,28 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
 
     fun asPreview() = GameInfoPreview(this)
 
+    /** Первый победитель партии; пустая строка означает отсутствие зафиксированного результата. */
+    var victoryWinner = ""
+
+    /** Тип зафиксированной победы сохраняется и после продолжения партии или потери цели. */
+    var victoryType = ""
+
+    /** Стабильный слот сценария → нация после разрешения Random; не сетевой аккаунт. */
+    var scenarioVictoryParticipants = linkedMapOf<String, String>()
+
+    /** Фиксирует первый результат; повторная проверка и продолжение не заменяют победителя. */
+    fun recordVictory(winner: String, type: String): Boolean {
+        require(winner.isNotBlank() && type.isNotBlank()) { "Victory winner and type must not be empty" }
+        require(civilizations.any { it.civName == winner && it.isMajorCiv() }) { "Unknown victory participant $winner" }
+        if (victoryWinner.isNotEmpty()) return false
+        victoryType = type
+        victoryWinner = winner
+        return true
+    }
+
+    /** Автоматизация останавливается на результате; явное продолжение разрешает её вне симуляции до победы. */
+    val shouldStopForVictory: Boolean
+        get() = victoryWinner.isNotEmpty() && (!oneMoreTurnMode || simulateUntilWin)
 }
 
 /**

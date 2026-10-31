@@ -374,103 +374,109 @@ class WorldScreen(
         }
     }
 
-    // This is private so that we will set the shouldUpdate to true instead.
-    // That way, not only do we save a lot of unnecessary updates, we also ensure that all updates are called from the main GL thread
-    // and we don't get any silly concurrency problems!
+    /** Обновляет мировой экран; сохранённый результат AI доступен и вне хода просматриваемого игрока. */
     private fun update() {
-
-        if(uiEnabled){
+        if (uiEnabled) {
             displayTutorialsOnUpdate()
-
             bottomUnitTable.update()
             bottomTileInfoTable.updateTileTable(mapHolder.selectedTile)
             bottomTileInfoTable.x = stage.width - bottomTileInfoTable.width
             bottomTileInfoTable.y = if (game.settings.showMinimap) minimapWrapper.height else 0f
             battleTable.update()
-
             updateSelectedCiv()
-
             tutorialTaskTable.clear()
             val tutorialTask = getCurrentTutorialTask()
             if (tutorialTask == "" || !game.settings.showTutorials || viewingCiv.isDefeated()) {
                 tutorialTaskTable.isVisible = false
             } else {
                 tutorialTaskTable.isVisible = true
-                tutorialTaskTable.add(tutorialTask.toLabel()
-                    .apply { setAlignment(Align.center) }).pad(10f)
+                tutorialTaskTable.add(tutorialTask.toLabel().apply { setAlignment(Align.center) })
+                    .pad(10f)
                 tutorialTaskTable.pack()
                 tutorialTaskTable.centerX(stage)
                 tutorialTaskTable.y = topBar.y - tutorialTaskTable.height
             }
-
-            if (fogOfWar) minimapWrapper.update(selectedCiv)
-            else minimapWrapper.update(viewingCiv)
-
+            if (fogOfWar) minimapWrapper.update(selectedCiv) else minimapWrapper.update(viewingCiv)
             unitActionsTable.update(bottomUnitTable.selectedUnit)
             unitActionsTable.y = bottomUnitTable.height
         }
-
         mapHolder.resetArrows()
         if (UncivGame.Current.settings.showUnitMovements) {
             val allUnits = gameInfo.civilizations.asSequence().flatMap { it.getCivUnits() }
-            val allAttacks = allUnits.map { unit -> unit.attacksSinceTurnStart.asSequence().map { attacked -> Triple(unit.civInfo, unit.getTile().position, attacked) } }.flatten() +
-                gameInfo.civilizations.asSequence().flatMap { civInfo -> civInfo.attacksSinceTurnStart.asSequence().map { Triple(civInfo, it.source, it.target) } }
+            val allAttacks = allUnits.flatMap { unit ->
+                unit.attacksSinceTurnStart.asSequence().map { attacked ->
+                    Triple(unit.civInfo, unit.getTile().position, attacked)
+                }
+            } + gameInfo.civilizations.asSequence().flatMap { civ ->
+                civ.attacksSinceTurnStart.asSequence().map {
+                    Triple(civ, it.source, it.target)
+                }
+            }
             mapHolder.updateMovementOverlay(
                 allUnits.filter(mapVisualization::isUnitPastVisible),
                 allUnits.filter(mapVisualization::isUnitFutureVisible),
-                allAttacks.filter { (attacker, source, target) -> mapVisualization.isAttackVisible(attacker, source, target) }
-                        .map { (_, source, target) -> source to target }
+                allAttacks.filter { (attacker, source, target) ->
+                    mapVisualization.isAttackVisible(
+                        attacker,
+                        source,
+                        target
+                    )
+                }
+                    .map { (_, source, target) -> source to target }
             )
         }
-
         zoomController.isVisible = UncivGame.Current.settings.showZoomButtons
-
-        // if we use the clone, then when we update viewable tiles
-        // it doesn't update the explored tiles of the civ... need to think about that harder
-        // it causes a bug when we move a unit to an unexplored tile (for instance a cavalry unit which can move far)
-
-        if (fogOfWar) mapHolder.updateTiles(selectedCiv)
-        else mapHolder.updateTiles(viewingCiv)
-
+        if (fogOfWar) mapHolder.updateTiles(selectedCiv) else mapHolder.updateTiles(viewingCiv)
         topBar.update(selectedCiv)
-
-        if (techPolicyAndDiplomacy.update())
-            displayTutorial(TutorialTrigger.OtherCivEncountered)
-
+        if (techPolicyAndDiplomacy.update()) displayTutorial(TutorialTrigger.OtherCivEncountered)
         fogOfWarButton.isEnabled = !selectedCiv.isSpectator()
         fogOfWarButton.setPosition(10f, topBar.y - fogOfWarButton.height - 10f)
-
-        if (!hasOpenPopups() && isPlayersTurn) {
+        if (!hasOpenPopups() && !gameInfo.oneMoreTurnMode && gameInfo.victoryWinner.isNotEmpty()) {
+            game.pushScreen(VictoryScreen(this))
+        } else if (!hasOpenPopups() && isPlayersTurn) {
             when {
                 viewingCiv.shouldShowDiplomaticVotingResults() ->
-                    UncivGame.Current.pushScreen(DiplomaticVoteResultScreen(gameInfo.diplomaticVictoryVotesCast, viewingCiv))
+                    UncivGame.Current.pushScreen(
+                        DiplomaticVoteResultScreen(
+                            gameInfo.diplomaticVictoryVotesCast,
+                            viewingCiv
+                        )
+                    )
+
                 !gameInfo.oneMoreTurnMode && (viewingCiv.isDefeated() || gameInfo.civilizations.any { it.victoryManager.hasWon() }) ->
                     game.pushScreen(VictoryScreen(this))
-                viewingCiv.greatPeople.freeGreatPeople > 0 ->
-                    game.pushScreen(GreatPersonPickerScreen(viewingCiv))
-                viewingCiv.popupAlerts.any() -> AlertPopup(this, viewingCiv.popupAlerts.first()).open()
-                viewingCiv.tradeRequests.isNotEmpty() -> {
-                    // In the meantime this became invalid, perhaps because we accepted previous trades
-                    for (tradeRequest in viewingCiv.tradeRequests.toList())
-                        if (!TradeEvaluation().isTradeValid(tradeRequest.trade, viewingCiv,
-                                gameInfo.getCivilization(tradeRequest.requestingCiv)))
-                            viewingCiv.tradeRequests.remove(tradeRequest)
 
-                    if (viewingCiv.tradeRequests.isNotEmpty()) // if a valid one still exists
-                        TradePopup(this).open()
+                viewingCiv.greatPeople.freeGreatPeople > 0 -> game.pushScreen(
+                    GreatPersonPickerScreen(viewingCiv)
+                )
+
+                viewingCiv.popupAlerts.any() -> AlertPopup(
+                    this,
+                    viewingCiv.popupAlerts.first()
+                ).open()
+
+                viewingCiv.tradeRequests.isNotEmpty() -> {
+                    for (request in viewingCiv.tradeRequests.toList())
+                        if (!TradeEvaluation().isTradeValid(
+                                request.trade, viewingCiv,
+                                gameInfo.getCivilization(request.requestingCiv)
+                            )
+                        ) viewingCiv.tradeRequests.remove(request)
+                    if (viewingCiv.tradeRequests.isNotEmpty()) TradePopup(this).open()
                 }
             }
         }
-
         updateGameplayButtons()
-
-        val maxNotificationsHeight = statusButtons.y -
-                (if (game.settings.showMinimap) minimapWrapper.height else 0f) - 5f
-        notificationsScroll.update(viewingCiv.notifications, maxNotificationsHeight, bottomTileInfoTable.height)
+        val maxNotificationsHeight =
+            statusButtons.y - (if (game.settings.showMinimap) minimapWrapper.height else 0f) - 5f
+        notificationsScroll.update(
+            viewingCiv.notifications,
+            maxNotificationsHeight,
+            bottomTileInfoTable.height
+        )
         notificationsScroll.setTopRight(stage.width - 10f, statusButtons.y - 5f)
-
-        val posZoomFromRight = if (game.settings.showMinimap) minimapWrapper.width
-        else bottomTileInfoTable.width
+        val posZoomFromRight =
+            if (game.settings.showMinimap) minimapWrapper.width else bottomTileInfoTable.width
         zoomController.setPosition(stage.width - posZoomFromRight - 10f, 10f, Align.bottomRight)
     }
 

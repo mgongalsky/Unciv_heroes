@@ -153,13 +153,14 @@ class TileMap : IsPartOfGameInfoSerialization, IBattleField {
     //endregion
     //region Operators and Standards
 
-    /** @return a deep-copy clone of the serializable fields, no transients initialized */
+    /** Копирует сохраняемые данные; изменяемые настройки сценария принадлежат только копии. */
     fun clone(): TileMap {
         val toReturn = TileMap()
         toReturn.tileList.addAll(tileList.map { it.clone() })
         toReturn.mapParameters = mapParameters
         toReturn.scenarioCities.addAll(scenarioCities.map { it.deepCopy() })
         toReturn.scenarioPlayerSlots.addAll(scenarioPlayerSlots.map { it.copy() })
+        toReturn.scenarioVictorySettings = scenarioVictorySettings?.deepCopy()
         toReturn.ruleset = ruleset
         toReturn.startingLocations.clear()
         toReturn.startingLocations.ensureCapacity(startingLocations.size)
@@ -853,4 +854,6 @@ class TileMap : IsPartOfGameInfoSerialization, IBattleField {
         }
     }
     //endregion
+    /** Авторские условия победы; null сохраняет поведение карт без сценарных ограничений. */
+    var scenarioVictorySettings: com.unciv.pure.domain.scenario.ScenarioVictorySettings? = null
 }
