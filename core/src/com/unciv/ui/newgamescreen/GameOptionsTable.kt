@@ -245,12 +245,27 @@ class GameOptionsTable(
         { gameParameters.startingEra = it; null }
     }
 
-    /** Отображает ограничения; красная точка обозначает Required, пользователь изменяет только Optional. */
+    /** Required обозначается красным штатным индикатором; пользователь изменяет только Optional. */
     private fun addVictoryTypeCheckboxes() {
         add("{Victory Conditions}:".toLabel()).colspan(2).row()
         val table = Table().apply { defaults().pad(5f) }
         val policy = scenarioVictorySettings?.rules.orEmpty().associateBy { it.victoryType }
         var hasRequired = false
+
+        // Копируем стиль, чтобы красный цвет не затронул остальные checkbox в общей skin.
+        fun markRequired(checkbox: com.badlogic.gdx.scenes.scene2d.ui.CheckBox) {
+            val indicator = BaseScreen.skin.newDrawable(
+                "Checkbox-pressed",
+                com.badlogic.gdx.graphics.Color.RED
+            )
+            checkbox.style =
+                    com.badlogic.gdx.scenes.scene2d.ui.CheckBox.CheckBoxStyle(checkbox.style)
+                        .apply {
+                            checkboxOn = indicator
+                            checkboxOnDisabled = indicator
+                        }
+        }
+
         for ((i, victory) in ruleset.victories.values.withIndex()) {
             val mode = policy[victory.name]?.mode
             val required = mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Required
@@ -271,23 +286,22 @@ class GameOptionsTable(
             checkbox.name = victory.name
             checkbox.isDisabled = locked || captureUnavailable || required ||
                     mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Forbidden
-            val entry = Table()
-            entry.add(checkbox).left()
             if (required) {
                 hasRequired = true
-                entry.add("●".toLabel(com.badlogic.gdx.graphics.Color.RED)).padLeft(6f)
+                markRequired(checkbox)
             }
-            table.add(entry).left()
+            table.add(checkbox).left()
             if ((i + 1) % 2 == 0) table.row()
         }
         add(table).colspan(2).row()
-        // Общая легенда заменяет повторяющуюся подпись у каждого обязательного условия.
         if (hasRequired) {
-            val legend = Table().apply {
+            // Легенда повторяет сам заблокированный индикатор, а не отдельный символ возле текста.
+            val legend = "Required".toCheckBox(true) {}.apply {
                 name = "victory-required-legend"
-                add("●".toLabel(com.badlogic.gdx.graphics.Color.RED)).padRight(6f)
-                add("Required".toLabel())
+                isDisabled = true
+                touchable = com.badlogic.gdx.scenes.scene2d.Touchable.disabled
             }
+            markRequired(legend)
             add(legend).colspan(2).padTop(0f).row()
         }
         // При первом вызове из init поздние поля класса ещё имеют JVM-значения по умолчанию.
