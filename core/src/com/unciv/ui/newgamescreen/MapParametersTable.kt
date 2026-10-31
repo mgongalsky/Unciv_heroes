@@ -255,71 +255,69 @@ class MapParametersTable(
 
     private fun addAdvancedControls(table: Table) {
         table.defaults().pad(5f)
-
         seedTextField = UncivTextField.create("RNG Seed", mapParameters.seed.toString())
         seedTextField.textFieldFilter = DigitsOnlyFilter()
-
-        // If the field is empty, fallback seed value to 0
         seedTextField.onChange {
-            mapParameters.seed = try {
-                seedTextField.text.toLong()
-            } catch (e: Exception) {
-                0L
-            }
+            mapParameters.seed = seedTextField.text.toLongOrNull() ?: 0L
         }
-
         table.add("RNG Seed".toLabel()).left()
         table.add(seedTextField).fillX().padBottom(10f).row()
 
-        fun addSlider(text: String, getValue:()->Float, min: Float, max: Float, onChange: (value: Float)->Unit): UncivSlider {
-            val slider = UncivSlider(min, max, (max - min) / 20, onChange = onChange, initial = getValue())
-            table.add(text.toLabel()).left()
-            table.add(slider).fillX().row()
-            advancedSliders[slider] = getValue
-            return slider
-        }
-
-        fun addSlider(text: String, getValue:()->Float, min: Float, max: Float, step: Float, onChange: (value: Float)->Unit): UncivSlider {
+        fun addSlider(
+            text: String, getValue: () -> Float, min: Float, max: Float,
+            step: Float = (max - min) / 20, onChange: (Float) -> Unit
+        ): UncivSlider {
             val slider = UncivSlider(min, max, step, onChange = onChange, initial = getValue())
             table.add(text.toLabel()).left()
             table.add(slider).fillX().row()
             advancedSliders[slider] = getValue
             return slider
         }
-
-        addSlider("Map Elevation", {mapParameters.elevationExponent}, 0.6f, 0.8f)
-        { mapParameters.elevationExponent = it }
-
-        addSlider("Temperature extremeness", {mapParameters.temperatureExtremeness}, 0.4f, 0.8f)
-        { mapParameters.temperatureExtremeness = it }
-
-        addSlider("Temperature shift", {mapParameters.temperatureShift}, -0.4f, 0.4f, 0.1f)
-        { mapParameters.temperatureShift = it }
-
-        addSlider("Resource richness", {mapParameters.resourceRichness},0f, 0.5f)
-        { mapParameters.resourceRichness = it }
-
-        addSlider("Vegetation richness", {mapParameters.vegetationRichness}, 0f, 1f)
-        { mapParameters.vegetationRichness = it }
-
-        addSlider("Rare features richness", {mapParameters.rareFeaturesRichness}, 0f, 0.5f)
-        { mapParameters.rareFeaturesRichness = it }
-
-        addSlider("Max Coast extension", {mapParameters.maxCoastExtension.toFloat()}, 0f, 5f)
-        { mapParameters.maxCoastExtension = it.toInt() }.apply { stepSize = 1f }
-
-        addSlider("Biome areas extension", {mapParameters.tilesPerBiomeArea.toFloat()}, 1f, 15f)
-        { mapParameters.tilesPerBiomeArea = it.toInt() }.apply { stepSize = 1f }
-
-        addSlider("Water level", {mapParameters.waterThreshold}, -0.1f, 0.1f)
-        { mapParameters.waterThreshold = it }
-
+        addSlider("Map Elevation", { mapParameters.elevationExponent }, 0.6f, 0.8f) {
+            mapParameters.elevationExponent = it
+        }
+        // Диапазоны предназначены для исследования масштаба, а не задают новый баланс по умолчанию.
+        addSlider("Elevation scale", { mapParameters.elevationScale.toFloat() }, 0.5f, 30f, 0.5f) {
+            mapParameters.elevationScale = it.toDouble()
+        }
+        addSlider("Temperature extremeness", { mapParameters.temperatureExtremeness }, 0.4f, 0.8f) {
+            mapParameters.temperatureExtremeness = it
+        }
+        addSlider("Temperature shift", { mapParameters.temperatureShift }, -0.4f, 0.4f, 0.1f) {
+            mapParameters.temperatureShift = it
+        }
+        addSlider("Resource richness", { mapParameters.resourceRichness }, 0f, 0.5f) {
+            mapParameters.resourceRichness = it
+        }
+        addSlider("Vegetation richness", { mapParameters.vegetationRichness }, 0f, 1f) {
+            mapParameters.vegetationRichness = it
+        }
+        addSlider(
+            "Vegetation scale",
+            { mapParameters.vegetationScale.toFloat() },
+            0.5f,
+            30f,
+            0.5f
+        ) {
+            mapParameters.vegetationScale = it.toDouble()
+        }
+        addSlider("Rare features richness", { mapParameters.rareFeaturesRichness }, 0f, 0.5f) {
+            mapParameters.rareFeaturesRichness = it
+        }
+        addSlider("Max Coast extension", { mapParameters.maxCoastExtension.toFloat() }, 0f, 5f) {
+            mapParameters.maxCoastExtension = it.toInt()
+        }.apply { stepSize = 1f }
+        addSlider("Biome areas extension", { mapParameters.tilesPerBiomeArea.toFloat() }, 1f, 15f) {
+            mapParameters.tilesPerBiomeArea = it.toInt()
+        }.apply { stepSize = 1f }
+        addSlider("Water level", { mapParameters.waterThreshold }, -0.1f, 0.1f) {
+            mapParameters.waterThreshold = it
+        }
         val resetToDefaultButton = "Reset to defaults".toTextButton()
         resetToDefaultButton.onClick {
             mapParameters.resetAdvancedSettings()
             seedTextField.text = mapParameters.seed.toString()
-            for (entry in advancedSliders)
-                entry.key.value = entry.value()
+            for (entry in advancedSliders) entry.key.value = entry.value()
         }
         table.add(resetToDefaultButton).colspan(2).padTop(10f).row()
     }

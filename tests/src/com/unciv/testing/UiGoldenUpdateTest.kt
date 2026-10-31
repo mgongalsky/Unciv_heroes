@@ -89,4 +89,16 @@ class UiGoldenUpdateTest {
     fun victoryEditor() {
         UiGoldenTestRunner.main(arrayOf("--update", "--scenario=victory-editor"))
     }
+
+    /** Создаёт эталон только после просмотра фактического изображения. */
+    @Test
+    fun terrainPlayground() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=terrain-playground"))
+    }
+
+    /** Создаёт эталон дополнительных настроек после просмотра кадра. */
+    @Test
+    fun terrainParameters() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=terrain-parameters"))
+    }
 }

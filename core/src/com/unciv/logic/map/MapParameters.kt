@@ -163,6 +163,8 @@ class MapParameters : IsPartOfGameInfoSerialization {
         it.baseRuleset = baseRuleset
         it.seed = seed
         it.tilesPerBiomeArea = tilesPerBiomeArea
+        it.vegetationScale = vegetationScale
+        it.elevationScale = elevationScale
         it.maxCoastExtension = maxCoastExtension
         it.elevationExponent = elevationExponent
         it.temperatureExtremeness = temperatureExtremeness
@@ -181,6 +183,8 @@ class MapParameters : IsPartOfGameInfoSerialization {
     fun resetAdvancedSettings() {
         reseed()
         tilesPerBiomeArea = 6
+        vegetationScale = 3.0
+        elevationScale = 2.0
         maxCoastExtension = 2
         elevationExponent = 0.7f
         temperatureExtremeness = 0.6f
@@ -221,9 +225,11 @@ class MapParameters : IsPartOfGameInfoSerialization {
         if (type != MapType.custom && type != MapType.empty) yield("{Map Generation Type}: {$type}, ")
         yield("{RNG Seed} $seed")
         yield(", {Map Elevation}=" + elevationExponent.niceToString(2))
+        yield(", {Elevation scale}=$elevationScale")
         yield(", {Temperature extremeness}=" + temperatureExtremeness.niceToString(2))
         yield(", {Resource richness}=" + resourceRichness.niceToString(3))
         yield(", {Vegetation richness}=" + vegetationRichness.niceToString(2))
+        yield(", {Vegetation scale}=$vegetationScale")
         yield(", {Rare features richness}=" + rareFeaturesRichness.niceToString(3))
         yield(", {Max Coast extension}=$maxCoastExtension")
         yield(", {Biome areas extension}=$tilesPerBiomeArea")
@@ -233,4 +239,10 @@ class MapParameters : IsPartOfGameInfoSerialization {
     fun numberOfTiles() = if (shape == MapShape.hexagonal || shape == MapShape.flatEarth)
         1 + 3 * mapSize.radius * (mapSize.radius - 1)
     else mapSize.width * mapSize.height
+
+    /** Пространственный масштаб растительности; отсутствие поля в старой карте сохраняет прежнее значение. */
+    var vegetationScale = 3.0
+
+    /** Пространственный масштаб шума рельефа, независимый от показателя преобразования высоты. */
+    var elevationScale = 2.0
 }

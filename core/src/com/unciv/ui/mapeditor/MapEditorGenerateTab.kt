@@ -61,89 +61,109 @@ class MapEditorGenerateTab(
         partialTab.generateButton.setText( (if(enable) "Generate" else "Working...").tr())
     }
 
+    /** Снимает настройки на UI-потоке: рабочий поток не читает изменяемые параметры формы. */
     private fun generate(step: MapGeneratorSteps) {
         if (step <= MapGeneratorSteps.Landmass && step in seedUsedForStep) {
-            // reseed visibly when starting from scratch (new seed shows in advanced settings widget)
             newTab.mapParametersTable.reseed()
             seedUsedForStep -= step
         }
-        val mapParameters = editorScreen.newMapParameters.clone()  // this clone is very important here
+        val mapParameters = editorScreen.newMapParameters.clone()
         val message = mapParameters.mapSize.fixUndesiredSizes(mapParameters.worldWrap)
         if (message != null) {
             Gdx.app.postRunnable {
-                ToastPopup( message, editorScreen, 4000 )
-                newTab.mapParametersTable.run { mapParameters.mapSize.also {
-                    customMapSizeRadius.text = it.radius.toString()
-                    customMapWidth.text = it.width.toString()
-                    customMapHeight.text = it.height.toString()
-                } }
+                ToastPopup(message, editorScreen, 4000)
+                newTab.mapParametersTable.run {
+                    mapParameters.mapSize.also {
+                        customMapSizeRadius.text = it.radius.toString()
+                        customMapWidth.text = it.width.toString()
+                        customMapHeight.text = it.height.toString()
+                    }
+                }
             }
             return
         }
-
         if (step == MapGeneratorSteps.Landmass && mapParameters.type == MapType.empty) {
-            ToastPopup("Please don't use step 'Landmass' with map type 'Empty', create a new empty map instead.", editorScreen)
+            ToastPopup(
+                "Please don't use step 'Landmass' with map type 'Empty', create a new empty map instead.",
+                editorScreen
+            )
             return
         }
+        if (step in seedUsedForStep) mapParameters.reseed()
+        else seedUsedForStep += step
 
-        if (step in seedUsedForStep) {
-            mapParameters.reseed()
-        } else {
-            seedUsedForStep += step
+        val targetMap = editorScreen.tileMap
+        val targetRuleset = editorScreen.ruleset
+        val savedScale = editorScreen.mapHolder.scaleX
+        val requestedType = mapParameters.type
+        // Сохраняем настройки остальных этапов текущей карты и копируем только выбранный этап.
+        val partialParameters = targetMap.mapParameters.clone().also {
+            step.copyParameters?.invoke(mapParameters, it)
+            it.seed = mapParameters.seed
         }
-
-        Gdx.input.inputProcessor = null // remove input processing - nothing will be clicked!
+        Gdx.input.inputProcessor = null
         setButtonsEnabled(false)
 
-        fun freshMapCompleted(generatedMap: TileMap, mapParameters: MapParameters, newRuleset: Ruleset, selectPage: Int) {
-            MapEditorScreen.saveDefaultParameters(mapParameters)
-            editorScreen.loadMap(generatedMap, newRuleset, selectPage) // also reactivates inputProcessor
+        fun freshMapCompleted(
+            generatedMap: TileMap,
+            parameters: MapParameters,
+            newRuleset: Ruleset,
+            selectPage: Int
+        ) {
+            MapEditorScreen.saveDefaultParameters(parameters)
+            editorScreen.loadMap(generatedMap, newRuleset, selectPage)
             editorScreen.isDirty = true
             setButtonsEnabled(true)
+            editorScreen.mapHolder.zoom(savedScale)
         }
-        fun stepCompleted(step: MapGeneratorSteps) {
-            if (step == MapGeneratorSteps.NaturalWonders) editorScreen.naturalWondersNeedRefresh = true
+
+        fun stepCompleted() {
+            if (step == MapGeneratorSteps.NaturalWonders) editorScreen.naturalWondersNeedRefresh =
+                true
             editorScreen.mapHolder.updateTileGroups()
             editorScreen.isDirty = true
             setButtonsEnabled(true)
             Gdx.input.inputProcessor = editorScreen.stage
         }
-
-        // Map generation can take a while and we don't want ANRs
         thread(name = "MapGenerator", isDaemon = true) {
             try {
                 val (newRuleset, generator) = if (step > MapGeneratorSteps.Landmass) null to null
-                    else {
-                        val newRuleset = RulesetCache.getComplexRuleset(mapParameters)
-                        newRuleset to MapGenerator(newRuleset)
-                    }
+                else {
+                    val newRuleset = RulesetCache.getComplexRuleset(mapParameters)
+                    newRuleset to MapGenerator(newRuleset)
+                }
                 when (step) {
                     MapGeneratorSteps.All -> {
                         val generatedMap = generator!!.generateMap(mapParameters)
-                        val savedScale = editorScreen.mapHolder.scaleX
                         Gdx.app.postRunnable {
-                            freshMapCompleted(generatedMap, mapParameters, newRuleset!!, selectPage = 0)
-                            editorScreen.mapHolder.zoom(savedScale)
+                            freshMapCompleted(
+                                generatedMap,
+                                mapParameters,
+                                newRuleset!!,
+                                selectPage = 0
+                            )
                         }
                     }
+
                     MapGeneratorSteps.Landmass -> {
-                        // This step _could_ run on an existing tileMap, but that opens a loophole where you get hills on water - fixing that is more expensive than always recreating
                         mapParameters.type = MapType.empty
                         val generatedMap = generator!!.generateMap(mapParameters)
-                        mapParameters.type = editorScreen.newMapParameters.type
+                        mapParameters.type = requestedType
                         generator.generateSingleStep(generatedMap, step)
-                        val savedScale = editorScreen.mapHolder.scaleX
                         Gdx.app.postRunnable {
-                            freshMapCompleted(generatedMap, mapParameters, newRuleset!!, selectPage = 1)
-                            editorScreen.mapHolder.zoom(savedScale)
+                            freshMapCompleted(
+                                generatedMap,
+                                mapParameters,
+                                newRuleset!!,
+                                selectPage = 1
+                            )
                         }
                     }
+
                     else -> {
-                        editorScreen.tileMap.mapParameters.seed = mapParameters.seed
-                        MapGenerator(editorScreen.ruleset).generateSingleStep(editorScreen.tileMap, step)
-                        Gdx.app.postRunnable {
-                            stepCompleted(step)
-                        }
+                        targetMap.mapParameters = partialParameters
+                        MapGenerator(targetRuleset).generateSingleStep(targetMap, step)
+                        Gdx.app.postRunnable { stepCompleted() }
                     }
                 }
             } catch (exception: Exception) {
@@ -204,17 +224,15 @@ class MapEditorGenerateTab(
             for (option in MapGeneratorSteps.values()) {
                 if (option <= MapGeneratorSteps.All) continue
                 val checkBox = option.label.toCheckBox {
-                        choice = option
-                        generateButton.enable()
-                    }
+                    choice = option
+                    generateButton.enable()
+                }
                 add(checkBox).row()
                 optionGroup.add(checkBox)
             }
             add(generateButton).padTop(15f).row()
-            generateButton.onClick {
-                parent.generate(choice)
-                choice.copyParameters?.invoke(newMapParameters, actualMapParameters)
-            }
+            // generate сам снимает параметры до запуска потока; позднее копирование создавало гонку.
+            generateButton.onClick { parent.generate(choice) }
         }
     }
 }

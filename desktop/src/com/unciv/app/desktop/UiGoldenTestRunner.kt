@@ -87,6 +87,8 @@ object UiGoldenTestRunner {
     }
 
     private fun scenarios() = listOf(
+        Scenario("terrain-playground") {},
+        Scenario("terrain-parameters") { TerrainParametersGoldenChecks.open(it) },
         Scenario("network-room") {},
         Scenario("network-battle") {},
         arenaScenario("arena-start", 0),
@@ -164,7 +166,7 @@ object UiGoldenTestRunner {
             game.create()
         }
 
-        /** Ждёт готовности нужного экрана, снимает кадр и выполняет выбранный режим: захват, сравнение или обновление. */
+        /** Ждёт готовности экрана и фонового результата перед захватом стабильного кадра. */
         override fun render() {
             Gdx.graphics.isContinuousRendering = true
             if (System.currentTimeMillis() - startedAt > 30_000L) {
@@ -178,18 +180,25 @@ object UiGoldenTestRunner {
                 stableFrames = 0
                 return
             }
+            val terrainScreen = expectedScreen as? com.unciv.ui.mapeditor.TerrainPlaygroundScreen
+            if (terrainScreen != null && !TerrainPlaygroundGoldenChecks.ready(terrainScreen)) {
+                stableFrames = 0
+                return
+            }
             stableFrames++
             if (stableFrames < STABLE_FRAMES_BEFORE_CAPTURE) return
             val framebuffer = ScreenUtils.getFrameBufferPixmap(
-                0, 0, Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight
+                0,
+                0,
+                Gdx.graphics.backBufferWidth,
+                Gdx.graphics.backBufferHeight
             )
             val actual = flipVertically(framebuffer)
             framebuffer.dispose()
             if (captureOnly) {
-                // Сценарий уже выполнил встроенные проверки, но этот режим не сравнивает и не утверждает изображение.
-                // Пишется только actual в results; эталоны baseline остаются прежними.
-                val platform = System.getProperty("os.name").lowercase()
-                    .replace(Regex("[^a-z0-9]+"), "-").trim('-')
+                val platform =
+                        System.getProperty("os.name").lowercase().replace(Regex("[^a-z0-9]+"), "-")
+                            .trim('-')
                 val name = scenarios[scenarioIndex].name
                 writePng(
                     File(projectRoot, "tests/golden/results/$platform/$name-actual.png"),
@@ -198,10 +207,10 @@ object UiGoldenTestRunner {
                 println("RENDERED $name: form/layout checks passed; visual comparison not performed")
             } else {
                 allPassed = compareOrUpdate(
-                    scenario = scenarios[scenarioIndex].name,
-                    actual = actual,
-                    projectRoot = projectRoot,
-                    update = update
+                    scenarios[scenarioIndex].name,
+                    actual,
+                    projectRoot,
+                    update
                 ) && allPassed
             }
             actual.dispose()
@@ -220,6 +229,7 @@ object UiGoldenTestRunner {
             "network-room" -> NetworkBattleGoldenScreens.room()
             "network-battle" -> NetworkBattleGoldenScreens.battle()
             "army-setup-laptop" -> ArmySetupGoldenChecks.screen()
+            "terrain-playground" -> TerrainPlaygroundGoldenChecks.screen()
             "city-editor-tabs" -> com.unciv.ui.playground.createScenarioCityEditorTabsPreview()
             "scenario-player-slots" -> com.unciv.ui.playground.createScenarioPlayerPickerPreview()
             "victory-selection" -> com.unciv.ui.playground.createScenarioVictorySelectionPreview()

@@ -10,16 +10,20 @@ private object MapGeneratorStepsHelpers {
     }
     val applyElevation = fun(newParameters: MapParameters, actualParameters: MapParameters) {
         actualParameters.elevationExponent = newParameters.elevationExponent
+        actualParameters.elevationScale = newParameters.elevationScale
     }
-    val applyHumidityAndTemperature = fun(newParameters: MapParameters, actualParameters: MapParameters) {
-        actualParameters.temperatureExtremeness = newParameters.temperatureExtremeness
-        actualParameters.temperatureShift = newParameters.temperatureShift
-    }
+    val applyHumidityAndTemperature =
+            fun(newParameters: MapParameters, actualParameters: MapParameters) {
+                actualParameters.temperatureExtremeness = newParameters.temperatureExtremeness
+                actualParameters.temperatureShift = newParameters.temperatureShift
+                actualParameters.tilesPerBiomeArea = newParameters.tilesPerBiomeArea
+            }
     val applyLakesAndCoast = fun(newParameters: MapParameters, actualParameters: MapParameters) {
         actualParameters.maxCoastExtension = newParameters.maxCoastExtension
     }
     val applyVegetation = fun(newParameters: MapParameters, actualParameters: MapParameters) {
         actualParameters.vegetationRichness = newParameters.vegetationRichness
+        actualParameters.vegetationScale = newParameters.vegetationScale
     }
     val applyRareFeatures = fun(newParameters: MapParameters, actualParameters: MapParameters) {
         actualParameters.rareFeaturesRichness = newParameters.rareFeaturesRichness

@@ -104,4 +104,27 @@ class UiGoldenTest {
     fun cityEditorRender() {
         UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=city-editor"))
     }
+
+    /** Проверяет фоновой снимок и независимые поля; захват не утверждает визуальный эталон. */
+    @Test
+    fun terrainPlaygroundRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=terrain-playground"))
+    }
+
+    /** Сравнивает песочницу с просмотренным платформенным эталоном. */
+    @Test
+    fun terrainPlayground() {
+        UiGoldenTestRunner.main(arrayOf("--scenario=terrain-playground"))
+    }
+
+    /** Проверяет реальные ползунки и Reset; захват не является сравнением с эталоном. */
+    @Test
+    fun terrainParametersRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=terrain-parameters"))
+    }
+
+    @Test
+    fun terrainParameters() {
+        UiGoldenTestRunner.main(arrayOf("--scenario=terrain-parameters"))
+    }
 }

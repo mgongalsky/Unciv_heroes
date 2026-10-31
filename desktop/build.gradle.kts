@@ -24,10 +24,10 @@ val assetsDir = file("../android/assets")
 val discordDir = file("discord_rpc")
 val deployFolder = file("../deploy")
 
-// Android Studio creates this JavaExec task when running Arena's main method.
-// Configure lazily so tasks added by the IDE's init script also receive the assets directory.
+// IDE-created launch tasks need the same assets directory as the explicit launchers.
 tasks.withType<JavaExec>().configureEach {
-    if (name == "com.unciv.app.desktop.DesktopLauncherArena.main()") {
+    if (name in setOf("com.unciv.app.desktop.DesktopLauncherArena.main()",
+            "com.unciv.app.desktop.DesktopLauncherTerrain.main()")) {
         workingDir = assetsDir
     }
 }
@@ -39,6 +39,15 @@ tasks.register<JavaExec>("runArena") {
     mainClass.set("com.unciv.app.desktop.DesktopLauncherArena")
     classpath = sourceSets.main.get().runtimeClasspath
     standardInput = System.`in`
+    workingDir = assetsDir
+}
+
+tasks.register<JavaExec>("runTerrain") {
+    group = "application"
+    description = "Launch terrain experiments; optionally supply --input=<absolute snapshot path> via --args."
+    dependsOn(tasks.getByName("classes"))
+    mainClass.set("com.unciv.app.desktop.DesktopLauncherTerrain")
+    classpath = sourceSets.main.get().runtimeClasspath
     workingDir = assetsDir
 }
 

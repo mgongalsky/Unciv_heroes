@@ -61,6 +61,16 @@ tasks.register<JavaExec>("runBattleBalanceCli") {
     workingDir = rootProject.projectDir
 }
 
+tasks.register<JavaExec>("runTerrainExperimentCli") {
+    group = "application"
+    description = "Export terrain experiments from a saved snapshot; use --args=\"--help\" for options."
+    dependsOn(tasks.named("testClasses"))
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.unciv.testing.simulations.terrain.TerrainExperimentCli")
+    workingDir = rootProject.projectDir
+    systemProperty("java.awt.headless", "true")
+}
+
 eclipse.project {
     name = "${BuildConfig.appName}-tests"
 }
