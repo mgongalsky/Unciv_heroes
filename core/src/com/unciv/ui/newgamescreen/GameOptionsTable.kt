@@ -245,29 +245,45 @@ class GameOptionsTable(
         { gameParameters.startingEra = it; null }
     }
 
+    /** Отображает авторские ограничения; пользователь изменяет только Optional. */
     private fun addVictoryTypeCheckboxes() {
         add("{Victory Conditions}:".toLabel()).colspan(2).row()
-
-        // Create a checkbox for each VictoryType existing
-        val victoryConditionsTable = Table().apply { defaults().pad(5f) }
-        for ((i, victoryType) in ruleset.victories.values.withIndex()) {
-            val victoryCheckbox = victoryType.name.toCheckBox(gameParameters.victoryTypes.contains(victoryType.name)) {
-                // If the checkbox is checked, adds the victoryTypes else remove it
-                if (it) {
-                    gameParameters.victoryTypes.add(victoryType.name)
-                } else {
-                    gameParameters.victoryTypes.remove(victoryType.name)
-                }
-                // show or hide the max turns select box
-                if (victoryType.enablesMaxTurns())
-                    update()
-            }
-            victoryCheckbox.name = victoryType.name
-            victoryCheckbox.isDisabled = locked
-            victoryConditionsTable.add(victoryCheckbox).left()
-            if ((i + 1) % 2 == 0) victoryConditionsTable.row()
+        val table = Table().apply { defaults().pad(5f) }
+        val policy = scenarioVictorySettings?.rules.orEmpty().associateBy { it.victoryType }
+        for ((i, victory) in ruleset.victories.values.withIndex()) {
+            val mode = policy[victory.name]?.mode
+            val captureUnavailable =
+                    victory.name == com.unciv.pure.domain.victory.CaptureCityObjective.VICTORY_TYPE &&
+                            scenarioVictorySettings?.captureObjectives.isNullOrEmpty()
+            val label =
+                    if (mode == null || mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Optional)
+                        victory.name.tr() else "${victory.name.tr()} (${mode.name.tr()})"
+            val checkbox =
+                    label.toCheckBox(gameParameters.victoryTypes.contains(victory.name)) { checked ->
+                        gameParameters.victorySelectionInitialized = true
+                        if (checked) {
+                            if (victory.name !in gameParameters.victoryTypes) gameParameters.victoryTypes.add(
+                                victory.name
+                            )
+                        } else gameParameters.victoryTypes.remove(victory.name)
+                        if (victory.enablesMaxTurns()) update()
+                    }
+            checkbox.name = victory.name
+            checkbox.isDisabled = locked || captureUnavailable ||
+                    mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Required ||
+                    mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Forbidden
+            table.add(checkbox).left()
+            if ((i + 1) % 2 == 0) table.row()
         }
-        add(victoryConditionsTable).colspan(2).row()
+        add(table).colspan(2).row()
+        // При первом вызове из init поздние поля класса ещё имеют JVM-значения по умолчанию.
+        val errorMessage: String? = scenarioVictoryError
+        if (!errorMessage.isNullOrEmpty()) {
+            add(
+                errorMessage.toLabel(com.badlogic.gdx.graphics.Color.SALMON)
+                    .apply { setWrap(true) })
+                .width(300f).colspan(2).row()
+        }
     }
 
     fun reloadRuleset() {
@@ -308,5 +324,11 @@ class GameOptionsTable(
 
         updatePlayerPickerTable(desiredCiv)
     }
+
+    /** Прочитанные настройки карты; форма отображает их, а запуск повторно проверяет полный сценарий. */
+    var scenarioVictorySettings: com.unciv.pure.domain.scenario.ScenarioVictorySettings? = null
+
+    /** Ошибка разрешения условий не заменяется молчаливым включением всех побед. */
+    var scenarioVictoryError: String = ""
 }
 

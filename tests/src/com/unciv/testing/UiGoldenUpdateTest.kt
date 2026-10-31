@@ -83,4 +83,10 @@ class UiGoldenUpdateTest {
     fun cityEditor() {
         UiGoldenTestRunner.main(arrayOf("--update", "--scenario=city-editor"))
     }
+
+    /** Явное создание эталона новой формы побед; не используется вместо проверки регрессии. */
+    @Test
+    fun victoryEditor() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=victory-editor"))
+    }
 }

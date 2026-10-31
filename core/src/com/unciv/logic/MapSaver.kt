@@ -98,4 +98,24 @@ object MapSaver {
         val migratedJson = MapFormatMigration.migrate(unzippedJson)
         return json().fromJson(TileMapPreview::class.java, migratedJson).mapParameters
     }
+
+    /** Проекция настроек побед для меню без загрузки клеток, юнитов и городов. */
+    private class ScenarioVictoryPreview {
+        var scenarioVictorySettings: com.unciv.pure.domain.scenario.ScenarioVictorySettings? = null
+    }
+
+    /** Использует ту же миграцию, что полный загрузчик; возвращает независимые настройки карты. */
+    fun loadScenarioVictorySettings(mapFile: FileHandle): com.unciv.pure.domain.scenario.ScenarioVictorySettings? {
+        val saved = mapFile.readString()
+        val plain = try {
+            Gzip.unzip(saved.trim())
+        } catch (_: Exception) {
+            saved
+        }
+        val migrated = MapFormatMigration.migrate(plain)
+        return json().fromJson(
+            ScenarioVictoryPreview::class.java,
+            migrated
+        ).scenarioVictorySettings?.deepCopy()
+    }
 }

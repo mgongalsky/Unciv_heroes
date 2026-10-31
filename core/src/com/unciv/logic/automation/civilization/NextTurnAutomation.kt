@@ -47,47 +47,42 @@ import kotlin.math.min
 
 object NextTurnAutomation {
 
-    /** Top-level AI turn task list */
+    /** Выполняет фазы AI до победы; завершённые игровые операции не прерываются посередине. */
     fun automateCivMoves(civInfo: CivilizationInfo) {
+        if (civInfo.gameInfo.shouldStopForVictory) return
         if (civInfo.isBarbarian()) return BarbarianAutomation(civInfo).automate()
-
         respondToPopupAlerts(civInfo)
+        if (civInfo.gameInfo.shouldStopForVictory) return
         respondToTradeRequests(civInfo)
-
         if (civInfo.isMajorCiv()) {
             if (!civInfo.gameInfo.ruleSet.modOptions.hasUnique(ModOptionsConstants.diplomaticRelationshipsCannotChange)) {
                 declareWar(civInfo)
                 offerPeaceTreaty(civInfo)
-//            offerDeclarationOfFriendship(civInfo)
             }
-            if (civInfo.gameInfo.isReligionEnabled()) {
-                ReligionAutomation.spendFaithOnReligion(civInfo)
-            }
+            if (civInfo.gameInfo.isReligionEnabled()) ReligionAutomation.spendFaithOnReligion(
+                civInfo
+            )
             offerResearchAgreement(civInfo)
             exchangeLuxuries(civInfo)
             issueRequests(civInfo)
-            adoptPolicy(civInfo)  // todo can take a second - why?
+            adoptPolicy(civInfo)
             freeUpSpaceResources(civInfo)
         } else {
             civInfo.cityStateFunctions.getFreeTechForCityState()
             civInfo.cityStateFunctions.updateDiplomaticRelationshipForCityState()
         }
-
         chooseTechToResearch(civInfo)
         automateCityBombardment(civInfo)
+        if (civInfo.gameInfo.shouldStopForVictory) return
         useGold(civInfo)
         if (!civInfo.isCityState()) {
             protectCityStates(civInfo)
             bullyCityStates(civInfo)
         }
-        automateUnits(civInfo)  // this is the most expensive part
-
-        if (civInfo.isMajorCiv()) {
-            // Can only be done now, as the prophet first has to decide to found/enhance a religion
-            chooseReligiousBeliefs(civInfo)
-        }
-
-        reassignWorkedTiles(civInfo)  // second most expensive
+        automateUnits(civInfo)
+        if (civInfo.gameInfo.shouldStopForVictory) return
+        if (civInfo.isMajorCiv()) chooseReligiousBeliefs(civInfo)
+        reassignWorkedTiles(civInfo)
         trainSettler(civInfo)
         tryVoteForDiplomaticVictory(civInfo)
     }
@@ -859,17 +854,21 @@ object NextTurnAutomation {
     }
 
 
+    /** Заканчивает текущую операцию юнита, но не запускает следующий юнит после победы. */
     private fun automateUnits(civInfo: CivilizationInfo) {
         val sortedUnits = civInfo.getCivUnits().sortedBy { unit ->
             when {
                 unit.baseUnit.isAirUnit() -> 2
                 unit.baseUnit.isRanged() -> 3
                 unit.baseUnit.isMelee() -> 4
-                unit.isGreatPersonOfType("War") -> 5 // Generals move after military units
-                else -> 1 // Civilian
+                unit.isGreatPersonOfType("War") -> 5
+                else -> 1
             }
         }
-        for (unit in sortedUnits) UnitAutomation.automateUnitMoves(unit)
+        for (unit in sortedUnits) {
+            if (civInfo.gameInfo.shouldStopForVictory) break
+            UnitAutomation.automateUnitMoves(unit)
+        }
     }
 
     private fun automateCityBombardment(civInfo: CivilizationInfo) {

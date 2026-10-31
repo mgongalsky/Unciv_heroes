@@ -76,29 +76,33 @@ class VictoryScreen(val worldScreen: WorldScreen) : PickerScreen() {
 
 
     private fun wonOrLost(description: String, victoryType: String?, hasWon: Boolean) {
-        val endGameMessage =
-            when {
-                hasWon && (victoryType == null || victoryType !in gameInfo.ruleSet.victories) -> "Your civilization stands above all others! The exploits of your people shall be remembered until the end of civilization itself!"
-                victoryType == null || victoryType !in gameInfo.ruleSet.victories -> "You have been defeated. Your civilization has been overwhelmed by its many foes. But your people do not despair, for they know that one day you shall return - and lead them forward to victory!"
-                hasWon -> playerCivInfo.gameInfo.ruleSet.victories[victoryType]!!.victoryString
-                else -> playerCivInfo.gameInfo.ruleSet.victories[victoryType]!!.defeatString
-            }
+        val endGameMessage = when {
+            hasWon && (victoryType == null || victoryType !in gameInfo.ruleSet.victories) ->
+                "Your civilization stands above all others! The exploits of your people shall be remembered until the end of civilization itself!"
 
+            victoryType == null || victoryType !in gameInfo.ruleSet.victories ->
+                "You have been defeated. Your civilization has been overwhelmed by its many foes. But your people do not despair, for they know that one day you shall return - and lead them forward to victory!"
+
+            hasWon -> gameInfo.ruleSet.victories[victoryType]!!.victoryString
+            else -> gameInfo.ruleSet.victories[victoryType]!!.defeatString
+        }
         descriptionLabel.setText(description.tr() + "\n" + endGameMessage.tr())
-
         rightSideButton.setText("Start new game".tr())
         rightSideButton.isVisible = true
         rightSideButton.enable()
         rightSideButton.onClick {
-            val newGameSetupInfo = GameSetupInfo(gameInfo)
-            newGameSetupInfo.mapParameters.reseed()
-            game.pushScreen(NewGameScreen(newGameSetupInfo))
+            val setup = GameSetupInfo(gameInfo)
+            setup.mapParameters.reseed()
+            game.pushScreen(NewGameScreen(setup))
         }
-
         closeButton.setText("One more turn...!".tr())
         closeButton.onClick {
+            val resumeAi = gameInfo.victoryWinner.isNotEmpty() &&
+                    gameInfo.currentPlayerCiv.playerType == com.unciv.logic.civilization.PlayerType.AI
             gameInfo.oneMoreTurnMode = true
             game.popScreen()
+            // Приостановленный ход AI возобновляется тем же асинхронным путём, что обычная смена хода.
+            if (resumeAi) worldScreen.nextTurn()
         }
     }
 
@@ -126,23 +130,25 @@ class VictoryScreen(val worldScreen: WorldScreen) : PickerScreen() {
     }
 
     private fun getOurVictoryColumn(victory: String): Table {
+        if (victory == com.unciv.pure.domain.victory.CaptureCityObjective.VICTORY_TYPE)
+            return captureCityColumn(playerCivInfo)
         val victoryObject = gameInfo.ruleSet.victories[victory]!!
-        val table = Table()
-        table.defaults().pad(5f)
+        val table = Table().apply { defaults().pad(5f) }
         var firstIncomplete = true
         for (milestone in victoryObject.milestoneObjects) {
-            val completionStatus =
-                when {
-                    milestone.hasBeenCompletedBy(playerCivInfo) -> Victory.CompletionStatus.Completed
-                    firstIncomplete -> {
-                        firstIncomplete = false
-                        Victory.CompletionStatus.Partially
-                    }
-                    else -> Victory.CompletionStatus.Incomplete
+            val completionStatus = when {
+                milestone.hasBeenCompletedBy(playerCivInfo) -> Victory.CompletionStatus.Completed
+                firstIncomplete -> {
+                    firstIncomplete = false
+                    Victory.CompletionStatus.Partially
                 }
-            for (button in milestone.getVictoryScreenButtons(completionStatus, playerCivInfo)) {
-                table.add(button).row()
+
+                else -> Victory.CompletionStatus.Incomplete
             }
+            for (button in milestone.getVictoryScreenButtons(
+                completionStatus,
+                playerCivInfo
+            )) table.add(button).row()
         }
         return table
     }
@@ -161,22 +167,29 @@ class VictoryScreen(val worldScreen: WorldScreen) : PickerScreen() {
     }
 
     private fun getGlobalVictoryColumn(majorCivs: List<CivilizationInfo>, victory: String): Table {
-        val victoryColumn = Table().apply { defaults().pad(10f) }
-
-        victoryColumn.add("[$victory] Victory".toLabel()).row()
-        victoryColumn.addSeparator()
-
-        for (civ in majorCivs.filter { !it.isDefeated() }.sortedByDescending { it.victoryManager.amountMilestonesCompleted(victory) }) {
-            val buttonText = civ.victoryManager.getNextMilestone(victory)?.getVictoryScreenButtonHeaderText(false, civ) ?: "Done!"
-            victoryColumn.add(getCivGroup(civ, "\n" + buttonText.tr(), playerCivInfo)).fillX().row()
+        val column = Table().apply { defaults().pad(10f) }
+        column.add("[$victory] Victory".toLabel()).row()
+        column.addSeparator()
+        if (victory == com.unciv.pure.domain.victory.CaptureCityObjective.VICTORY_TYPE) {
+            for (civ in majorCivs) {
+                column.add(getCivGroup(civ, "", playerCivInfo)).fillX().row()
+                column.add(captureCityColumn(civ)).row()
+            }
+            return column
         }
-
-        for (civ in majorCivs.filter { it.isDefeated() }.sortedByDescending { it.victoryManager.amountMilestonesCompleted(victory) }) {
-            val buttonText = civ.victoryManager.getNextMilestone(victory)?.getVictoryScreenButtonHeaderText(false, civ) ?: "Done!"
-            victoryColumn.add(getCivGroup(civ, "\n" + buttonText.tr(), playerCivInfo)).fillX().row()
+        for (civ in majorCivs.filter { !it.isDefeated() }
+            .sortedByDescending { it.victoryManager.amountMilestonesCompleted(victory) }) {
+            val text = civ.victoryManager.getNextMilestone(victory)
+                ?.getVictoryScreenButtonHeaderText(false, civ) ?: "Done!"
+            column.add(getCivGroup(civ, "\n" + text.tr(), playerCivInfo)).fillX().row()
         }
-
-        return victoryColumn
+        for (civ in majorCivs.filter { it.isDefeated() }
+            .sortedByDescending { it.victoryManager.amountMilestonesCompleted(victory) }) {
+            val text = civ.victoryManager.getNextMilestone(victory)
+                ?.getVictoryScreenButtonHeaderText(false, civ) ?: "Done!"
+            column.add(getCivGroup(civ, "\n" + text.tr(), playerCivInfo)).fillX().row()
+        }
+        return column
     }
 
     private fun setCivRankingsTable() {
@@ -290,5 +303,24 @@ class VictoryScreen(val worldScreen: WorldScreen) : PickerScreen() {
         civGroup.add(label).padLeft(10f)
         civGroup.pack()
         return civGroup
+    }
+
+    /** Вычисляет состояние целей из мира; отдельного изменяемого прогресса нет. */
+    private fun captureCityColumn(civ: CivilizationInfo): Table {
+        val table = Table().apply { defaults().pad(5f) }
+        val slot =
+            gameInfo.scenarioVictoryParticipants.entries.firstOrNull { it.value == civ.civName }?.key
+        val objectives = gameInfo.tileMap.scenarioVictorySettings?.captureObjectives.orEmpty()
+            .filter { slot != null && slot in it.eligibleSlotIds }
+        if (objectives.isEmpty()) table.add("No capture objectives assigned".toLabel()).row()
+        for (objective in objectives) {
+            val city = gameInfo.getCities().firstOrNull { it.id == objective.cityId }
+            val visible =
+                city != null && (playerCivInfo.isSpectator() || playerCivInfo.hasExplored(city.location))
+            val cityName = if (visible) city!!.name else Constants.unknownCityName
+            val owned = city?.ownerOrNull === civ
+            table.add("Capture [$cityName]".toLabel(if (owned) Color.GREEN else Color.GRAY)).row()
+        }
+        return table
     }
 }

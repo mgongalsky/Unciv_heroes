@@ -56,149 +56,127 @@ class NewGameScreen(
     private val mapOptionsTable: MapOptionsTable
 
     init {
-        updateRuleset()  // must come before playerPickerTable so mod nations from fromSettings
-        // Has to be initialized before the mapOptionsTable, since the mapOptionsTable refers to it on init
-
-        // remove the victory types which are not in the rule set (e.g. were in the recently disabled mod)
-        gameSetupInfo.gameParameters.victoryTypes.removeAll { it !in ruleset.victories.keys }
-
-        if (gameSetupInfo.gameParameters.victoryTypes.isEmpty())
-            gameSetupInfo.gameParameters.victoryTypes.addAll(ruleset.victories.keys)
-
+        updateRuleset()
         playerPickerTable = PlayerPickerTable(
             this, gameSetupInfo.gameParameters,
             if (isNarrowerThan4to3()) stage.width - 20f else 0f
         )
-        newGameOptionsTable = GameOptionsTable(this, isNarrowerThan4to3()) { desiredCiv: String -> playerPickerTable.update(desiredCiv) }
+        newGameOptionsTable = GameOptionsTable(
+            this,
+            isNarrowerThan4to3()
+        ) { desiredCiv -> playerPickerTable.update(desiredCiv) }
         mapOptionsTable = MapOptionsTable(this)
         updateTables()
         setDefaultCloseAction()
-
-        if (isNarrowerThan4to3()) initPortrait()
-        else initLandscape()
-
-        pickerPane.bottomTable.background = skinStrings.getUiBackground("NewGameScreen/BottomTable", tintColor = skinStrings.skinConfig.clearColor)
-        pickerPane.topTable.background = skinStrings.getUiBackground("NewGameScreen/TopTable", tintColor = skinStrings.skinConfig.clearColor)
-
+        if (isNarrowerThan4to3()) initPortrait() else initLandscape()
+        pickerPane.bottomTable.background = skinStrings.getUiBackground(
+            "NewGameScreen/BottomTable",
+            tintColor = skinStrings.skinConfig.clearColor
+        )
+        pickerPane.topTable.background = skinStrings.getUiBackground(
+            "NewGameScreen/TopTable",
+            tintColor = skinStrings.skinConfig.clearColor
+        )
         if (UncivGame.Current.settings.lastGameSetup != null) {
             rightSideGroup.addActorAt(0, VerticalGroup().padBottom(5f))
-            val resetToDefaultsButton = "Reset to defaults".toTextButton()
-            rightSideGroup.addActorAt(0, resetToDefaultsButton)
-            resetToDefaultsButton.onClick {
+            val reset = "Reset to defaults".toTextButton()
+            rightSideGroup.addActorAt(0, reset)
+            reset.onClick {
                 ConfirmPopup(
                     this,
                     "Are you sure you want to reset all game options to defaults?",
-                    "Reset to defaults",
+                    "Reset to defaults"
                 ) {
                     game.replaceCurrentScreen(NewGameScreen(GameSetupInfo()))
                 }.open(true)
             }
         }
-
         rightSideButton.enable()
         rightSideButton.setText("Start game!".tr())
         rightSideButton.onClick {
+            // Повторно применяем ограничения непосредственно перед стартом, включая смену модов.
+            updateTables()
+            if (newGameOptionsTable.scenarioVictoryError.isNotEmpty()) {
+                Popup(this).apply {
+                    addGoodSizedLabel(newGameOptionsTable.scenarioVictoryError).row()
+                    addCloseButton()
+                    open()
+                }
+                return@onClick
+            }
             if (gameSetupInfo.gameParameters.isOnlineMultiplayer) {
                 if (!checkConnectionToMultiplayerServer()) {
-                    val noInternetConnectionPopup = Popup(this)
-                    val label = if (OnlineMultiplayer.usesCustomServer()) "Couldn't connect to Multiplayer Server!" else "Couldn't connect to Dropbox!"
-                    noInternetConnectionPopup.addGoodSizedLabel(label.tr()).row()
-                    noInternetConnectionPopup.addCloseButton()
-                    noInternetConnectionPopup.open()
+                    Popup(this).apply {
+                        addGoodSizedLabel((if (OnlineMultiplayer.usesCustomServer()) "Couldn't connect to Multiplayer Server!" else "Couldn't connect to Dropbox!").tr()).row()
+                        addCloseButton()
+                        open()
+                    }
                     return@onClick
                 }
-
                 for (player in gameSetupInfo.gameParameters.players.filter { it.playerType == PlayerType.Human }) {
                     try {
                         UUID.fromString(IdChecker.checkAndReturnPlayerUuid(player.playerId))
-                    } catch (ex: Exception) {
-                        val invalidPlayerIdPopup = Popup(this)
-                        invalidPlayerIdPopup.addGoodSizedLabel("Invalid player ID!".tr()).row()
-                        invalidPlayerIdPopup.addCloseButton()
-                        invalidPlayerIdPopup.open()
+                    } catch (_: Exception) {
+                        Popup(this).apply { addGoodSizedLabel("Invalid player ID!".tr()).row(); addCloseButton(); open() }
                         return@onClick
                     }
                 }
-
-                if (!gameSetupInfo.gameParameters.anyoneCanSpectate) {
-                    if (gameSetupInfo.gameParameters.players.none { it.playerId == UncivGame.Current.settings.multiplayer.userId }) {
-                        val notAllowedToSpectate = Popup(this)
-                        notAllowedToSpectate.addGoodSizedLabel("You are not allowed to spectate!".tr()).row()
-                        notAllowedToSpectate.addCloseButton()
-                        notAllowedToSpectate.open()
-                        return@onClick
-                    }
+                if (!gameSetupInfo.gameParameters.anyoneCanSpectate && gameSetupInfo.gameParameters.players.none {
+                            it.playerId == UncivGame.Current.settings.multiplayer.userId
+                        }) {
+                    Popup(this).apply { addGoodSizedLabel("You are not allowed to spectate!".tr()).row(); addCloseButton(); open() }
+                    return@onClick
                 }
             }
-
             if (gameSetupInfo.gameParameters.players.none {
-                it.playerType == PlayerType.Human &&
-                    // do not allow multiplayer with only remote spectator(s) and AI(s) - non-MP that works
-                    !(it.chosenCiv == Constants.spectator && gameSetupInfo.gameParameters.isOnlineMultiplayer &&
-                            it.playerId != UncivGame.Current.settings.multiplayer.userId)
-            }) {
-                val noHumanPlayersPopup = Popup(this)
-                noHumanPlayersPopup.addGoodSizedLabel("No human players selected!".tr()).row()
-                noHumanPlayersPopup.addCloseButton()
-                noHumanPlayersPopup.open()
+                        it.playerType == PlayerType.Human && !(it.chosenCiv == Constants.spectator &&
+                                gameSetupInfo.gameParameters.isOnlineMultiplayer && it.playerId != UncivGame.Current.settings.multiplayer.userId)
+                    }) {
+                Popup(this).apply { addGoodSizedLabel("No human players selected!".tr()).row(); addCloseButton(); open() }
                 return@onClick
             }
-
             if (gameSetupInfo.gameParameters.victoryTypes.isEmpty()) {
-                val noVictoryTypesPopup = Popup(this)
-                noVictoryTypesPopup.addGoodSizedLabel("No victory conditions were selected!".tr()).row()
-                noVictoryTypesPopup.addCloseButton()
-                noVictoryTypesPopup.open()
+                Popup(this).apply { addGoodSizedLabel("No victory conditions were selected!".tr()).row(); addCloseButton(); open() }
                 return@onClick
             }
-
-            Gdx.input.inputProcessor = null // remove input processing - nothing will be clicked!
-
+            Gdx.input.inputProcessor = null
             if (mapOptionsTable.mapTypeSelectBox.selected.value == MapType.custom) {
                 val map = try {
                     MapSaver.loadMap(gameSetupInfo.mapFile!!)
-                } catch (ex: Throwable) {
+                } catch (_: Throwable) {
                     Gdx.input.inputProcessor = stage
                     ToastPopup("Could not load map!", this)
                     return@onClick
                 }
-
                 try {
-
                     com.unciv.pure.application.scenario.ScenarioPlayerBindings.resolve(
                         map.scenarioPlayerSlots,
-                        gameSetupInfo.gameParameters.players.map { it.scenarioSlotId to it }
-                    )
+                        gameSetupInfo.gameParameters.players.map { it.scenarioSlotId to it })
                     require(gameSetupInfo.gameParameters.players.none {
                         it.scenarioSlotId.isNotEmpty() && it.chosenCiv == Constants.spectator
                     }) { "A spectator cannot occupy a scenario player slot" }
                 } catch (invalid: IllegalArgumentException) {
+                    Popup(this).apply { addGoodSizedLabel(invalid.message.orEmpty()).row(); addCloseButton(); open() }
+                    Gdx.input.inputProcessor = stage
+                    return@onClick
+                }
+                val incompatibilities = map.getRulesetIncompatibility(ruleset)
+                if (incompatibilities.isNotEmpty()) {
                     Popup(this).apply {
-                        addGoodSizedLabel(invalid.message.orEmpty()).row()
+                        addGoodSizedLabel("Map is incompatible with the chosen ruleset!".tr()).row()
+                        for (incompatibility in incompatibilities) addGoodSizedLabel(incompatibility).row()
                         addCloseButton()
                         open()
                     }
                     Gdx.input.inputProcessor = stage
                     return@onClick
                 }
-                val rulesetIncompatibilities = map.getRulesetIncompatibility(ruleset)
-                if (rulesetIncompatibilities.isNotEmpty()) {
-                    val incompatibleMap = Popup(this)
-                    incompatibleMap.addGoodSizedLabel("Map is incompatible with the chosen ruleset!".tr()).row()
-                    for(incompatibility in rulesetIncompatibilities)
-                        incompatibleMap.addGoodSizedLabel(incompatibility).row()
-                    incompatibleMap.addCloseButton()
-                    incompatibleMap.open()
-                    Gdx.input.inputProcessor = stage
-                    return@onClick
-                }
             } else {
-                // Generated map - check for sensible dimensions and if exceeded correct them and notify user
                 val mapSize = gameSetupInfo.mapParameters.mapSize
                 val message = mapSize.fixUndesiredSizes(gameSetupInfo.mapParameters.worldWrap)
                 if (message != null) {
-                    ToastPopup( message, UncivGame.Current.screen!!, 4000 )
-                    with (mapOptionsTable.generatedMapOptionsTable) {
+                    ToastPopup(message, UncivGame.Current.screen!!, 4000)
+                    with(mapOptionsTable.generatedMapOptionsTable) {
                         customMapSizeRadius.text = mapSize.radius.toString()
                         customMapWidth.text = mapSize.width.toString()
                         customMapHeight.text = mapSize.height.toString()
@@ -207,15 +185,10 @@ class NewGameScreen(
                     return@onClick
                 }
             }
-
             rightSideButton.disable()
             rightSideButton.setText("Working...".tr())
-
             setSkin()
-            // Creating a new game can take a while and we don't want ANRs
-            Concurrency.runOnNonDaemonThreadPool("NewGame") {
-                startNewGame()
-            }
+            Concurrency.runOnNonDaemonThreadPool("NewGame") { startNewGame() }
         }
     }
 
@@ -357,23 +330,45 @@ class NewGameScreen(
         newGameOptionsTable.locked = false
     }
 
-    /** Обновляет параметры и назначения участников при выборе карты или изменении настроек запуска. */
+    /** Обновляет назначения и эффективные победы; defaults не заменяют явный выбор пользователя. */
     fun updateTables() {
-        // Для формы нужны только слоты: полная загрузка и обязательная проверка карты выполняются при старте.
-        val slots = if (gameSetupInfo.mapParameters.name.isNotEmpty()) {
+        val mapFile =
+                if (gameSetupInfo.mapParameters.name.isNotEmpty()) gameSetupInfo.mapFile else null
+        val slots = if (mapFile != null) {
             try {
-                gameSetupInfo.mapFile?.let { MapSaver.loadScenarioPlayerSlots(it) } ?: emptyList()
+                MapSaver.loadScenarioPlayerSlots(mapFile)
             } catch (_: Exception) {
                 emptyList()
             }
         } else emptyList()
         playerPickerTable.scenarioSlots = slots
-        // Ссылки на слоты прежней карты сбрасываются до автоподбора в таблице игроков.
         for (player in gameSetupInfo.gameParameters.players)
             if (slots.none { it.id == player.scenarioSlotId }) player.scenarioSlotId = ""
         playerPickerTable.gameParameters = gameSetupInfo.gameParameters
         playerPickerTable.update()
-        newGameOptionsTable.gameParameters = gameSetupInfo.gameParameters
+        val parameters = gameSetupInfo.gameParameters
+        newGameOptionsTable.gameParameters = parameters
+        newGameOptionsTable.scenarioVictoryError = ""
+        newGameOptionsTable.scenarioVictorySettings = null
+        try {
+            val settings = mapFile?.let { MapSaver.loadScenarioVictorySettings(it) }
+            newGameOptionsTable.scenarioVictorySettings = settings
+            val available = ruleset.victories.keys.filter {
+                it != com.unciv.pure.domain.victory.CaptureCityObjective.VICTORY_TYPE || !settings?.captureObjectives.isNullOrEmpty()
+            }
+            val selected =
+                    if (parameters.victorySelectionInitialized || parameters.victoryTypes.isNotEmpty())
+                        parameters.victoryTypes else null
+            val resolved = com.unciv.pure.application.scenario.ResolveVictoryOptionsUseCase.execute(
+                available,
+                settings,
+                selected
+            )
+            parameters.victoryTypes = ArrayList(resolved)
+            parameters.victorySelectionInitialized = true
+        } catch (invalid: Exception) {
+            newGameOptionsTable.scenarioVictoryError = invalid.message.orEmpty()
+        }
         newGameOptionsTable.update()
     }
 

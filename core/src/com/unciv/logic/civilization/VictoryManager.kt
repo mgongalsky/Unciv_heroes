@@ -54,15 +54,30 @@ class VictoryManager : IsPartOfGameInfoSerialization {
         return (results.none { it != bestCiv && it.value == bestCiv.value })
     }
 
+    /** Возвращает зафиксированный результат либо определяет обычную победу в прежнем порядке типов. */
     fun getVictoryTypeAchieved(): String? {
+        val game = civInfo.gameInfo
+        if (game.victoryWinner.isNotEmpty())
+            return if (game.victoryWinner == civInfo.civName) game.victoryType else null
         if (!civInfo.isMajorCiv()) return null
-        for (victoryName in civInfo.gameInfo.gameParameters.victoryTypes
-            .filter { it != Constants.neutralVictoryType && it in civInfo.gameInfo.ruleSet.victories}) {
-            if (getNextMilestone(victoryName) == null)
+        for (victoryName in game.gameParameters.victoryTypes.filter {
+            it != Constants.neutralVictoryType &&
+                    it != com.unciv.pure.domain.victory.CaptureCityObjective.VICTORY_TYPE &&
+                    it in game.ruleSet.victories
+        }) {
+            if (getNextMilestone(victoryName) == null) {
+                game.recordVictory(civInfo.civName, victoryName)
                 return victoryName
+            }
         }
-        if (civInfo.hasUnique(UniqueType.TriggersVictory))
+        val triggerForbidden = game.tileMap.scenarioVictorySettings?.rules.orEmpty().any {
+            it.victoryType == Constants.neutralVictoryType &&
+                    it.mode == com.unciv.pure.domain.scenario.ScenarioVictoryMode.Forbidden
+        }
+        if (!triggerForbidden && civInfo.hasUnique(UniqueType.TriggersVictory)) {
+            game.recordVictory(civInfo.civName, Constants.neutralVictoryType)
             return Constants.neutralVictoryType
+        }
         return null
     }
 
@@ -86,4 +101,29 @@ class VictoryManager : IsPartOfGameInfoSerialization {
     }
 
     fun hasWon() = getVictoryTypeAchieved() != null
+
+    /** Вызывается только после законченного захвата; общая передача и загрузка сюда не обращаются. */
+    fun onCityCaptured(cityId: String) {
+        val game = civInfo.gameInfo
+        if (game.victoryWinner.isNotEmpty() || !civInfo.isMajorCiv()) return
+        val settings = game.tileMap.scenarioVictorySettings ?: return
+        // Уже выполненная обычная победа имеет приоритет перед новым событием захвата.
+        for (participant in game.civilizations) {
+            if (participant.victoryManager.getVictoryTypeAchieved() != null) return
+        }
+        val slotId =
+                game.scenarioVictoryParticipants.entries.singleOrNull { it.value == civInfo.civName }?.key
+                    ?: return
+        val owners = game.getCities().associate { it.id to it.ownerOrNull?.civName }
+        if (com.unciv.pure.application.victory.ProcessCityCapturedUseCase.execute(
+                    cityId, civInfo.civName, slotId, settings.captureObjectives, owners,
+                    game.gameParameters.victoryTypes, game.victoryWinner.isNotEmpty()
+                )
+        ) {
+            game.recordVictory(
+                civInfo.civName,
+                com.unciv.pure.domain.victory.CaptureCityObjective.VICTORY_TYPE
+            )
+        }
+    }
 }

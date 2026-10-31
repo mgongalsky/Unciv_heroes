@@ -10,7 +10,7 @@ class BattleWorldOutcomeHandler(
     private val attacker: ICombatant?,
     private val defender: ICombatant?
 ) {
-    /** true — победа нападающего, false — защитника, null — взаимное поражение юнитов. */
+    /** Применяет результат боя; сценарная победа проверяется после передачи города и перемещения героя. */
     fun apply(winnerIsAttacker: Boolean?) {
         if (winnerIsAttacker == null) {
             if (attacker is MapUnitCombatant) removeUnit(attacker)
@@ -24,27 +24,37 @@ class BattleWorldOutcomeHandler(
                     if (defeated.city.state.ownership == CityOwnership.Neutral) {
                         val hero = (attacker as? MapUnitCombatant)?.unit
                             ?: throw IllegalArgumentException("A neutral city requires a hero attacker")
-                        // Результат боя не заменяет проверку: finishBattle должен уже убрать живых защитников.
-                        require(NeutralCityEntry.decision(defeated.city, hero) == Decision.ACQUIRE) {
+                        // Сессия должна уже завершить бой и удалить живых защитников гарнизона.
+                        require(
+                            NeutralCityEntry.decision(
+                                defeated.city,
+                                hero
+                            ) == Decision.ACQUIRE
+                        ) {
                             "Neutral city victory requires an eligible hero and no living defenders"
                         }
                         val center = defeated.city.getCenterTile()
-                        require(hero.currentTile.aerialDistanceTo(center) == 1 && hero.movement.canMoveTo(center)) {
+                        require(
+                            hero.currentTile.aerialDistanceTo(center) == 1 && hero.movement.canMoveTo(
+                                center
+                            )
+                        ) {
                             "Neutral city victory requires an accessible adjacent center"
                         }
                         NeutralCityOwnership.acquireUndefended(defeated.city, hero.civInfo)
-                        // Атака и движение уже учтены сессией; здесь только переносим героя между клетками.
+                        // Расход движения и атаки учтён сессией; здесь завершаем перенос героя.
                         hero.removeFromTile()
                         hero.putInTile(center)
+                        hero.civInfo.victoryManager.onCityCaptured(defeated.city.id)
                     } else {
                         val attackerCiv = attacker?.getCivInfo() ?: return
                         defeated.city.moveToCiv(attackerCiv)
+                        attackerCiv.victoryManager.onCityCaptured(defeated.city.id)
                     }
                 }
             }
             return
         }
-
         val defeated = attacker
         if (defeated is MapUnitCombatant) removeUnit(defeated)
     }

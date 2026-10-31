@@ -33,8 +33,11 @@ object ScenarioCityEditorCommands {
         return true
     }
 
-    /** Удаляет описание по стабильному ID; повторное удаление возвращает false. */
+    /** Не удаляет город, пока сценарная цель ссылается на его стабильный ID. */
     fun removeCity(map: TileMap, id: String): Boolean {
+        require(map.scenarioVictorySettings?.captureObjectives.orEmpty().none { it.cityId == id }) {
+            "This city is still used by a capture objective"
+        }
         if (map.scenarioCities.none { it.id == id }) return false
         map.scenarioCities = ArrayList(map.scenarioCities.filterNot { it.id == id })
         return true
@@ -52,10 +55,15 @@ object ScenarioCityEditorCommands {
         return true
     }
 
-    /** Запрещает удаление слота, на который ссылается город; отсутствие неиспользуемого слота даёт false. */
+    /** Защищает ссылки владельцев и целей победы до удаления слота участника. */
     fun removeSlot(map: TileMap, id: String): Boolean {
         require(map.scenarioCities.none { it.owner == ScenarioCityOwner.PlayerSlot && it.ownerSlotId == id }) {
             "This player slot is still used by a city"
+        }
+        require(
+            map.scenarioVictorySettings?.captureObjectives.orEmpty()
+                .none { id in it.eligibleSlotIds }) {
+            "This player slot is still used by a capture objective"
         }
         if (map.scenarioPlayerSlots.none { it.id == id }) return false
         map.scenarioPlayerSlots = ArrayList(map.scenarioPlayerSlots.filterNot { it.id == id })

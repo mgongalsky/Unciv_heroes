@@ -94,23 +94,28 @@ object UiGoldenTestRunner {
         arenaScenario("arena-complete", 3),
         Scenario("split-troop-empty") { com.unciv.ui.playground.openSplitTroopPreview(it) },
         Scenario("split-troop-occupied") {
-            com.unciv.ui.playground.openSplitTroopPreview(it, targetAmount = 12)
+            com.unciv.ui.playground.openSplitTroopPreview(
+                it,
+                targetAmount = 12
+            )
         },
         Scenario("army-troop-info") { com.unciv.ui.playground.openArmyTroopInfoPreview(it) },
         Scenario("city-editor") { com.unciv.ui.playground.openScenarioCityEditorPreview(it) },
+        Scenario("victory-editor") { com.unciv.ui.playground.openScenarioVictoryEditorPreview(it) },
+        Scenario("victory-selection") {},
         Scenario("neutral-city-minimap") { com.unciv.ui.playground.openNeutralCityMinimapPreview(it) },
         Scenario("city-editor-tabs") {},
         Scenario("scenario-player-slots") {},
-        Scenario("battle-troops") { screen -> openBattleTroopPreview(screen) },
-        Scenario("battle-turn-queue") { screen -> openBattleTurnQueuePreview(screen) },
-        Scenario("battle-troop-info") { screen -> openBattleTroopInfoPreview(screen) },
-        Scenario("battle-threat-preview") { screen -> openBattleThreatPreview(screen) },
-        Scenario("battle-tile-highlights") { screen ->
-            com.unciv.ui.playground.openBattleTileHighlightPreview(screen)
+        Scenario("battle-troops") { openBattleTroopPreview(it) },
+        Scenario("battle-turn-queue") { openBattleTurnQueuePreview(it) },
+        Scenario("battle-troop-info") { openBattleTroopInfoPreview(it) },
+        Scenario("battle-threat-preview") { openBattleThreatPreview(it) },
+        Scenario("battle-tile-highlights") {
+            com.unciv.ui.playground.openBattleTileHighlightPreview(
+                it
+            )
         },
-        Scenario("battle-flanking") { screen ->
-            com.unciv.ui.playground.openBattleFlankingPreview(screen)
-        },
+        Scenario("battle-flanking") { com.unciv.ui.playground.openBattleFlankingPreview(it) },
         Scenario("battle-result-attacker-victory") { screen ->
             BattleResultPopup(
                 screen, BattleReport(
@@ -210,13 +215,14 @@ object UiGoldenTestRunner {
             }
         }
 
-        /** Сценарии навигации получают настоящий экран; отдельные формы открываются в общем контейнере предпросмотра. */
+        /** Навигационные сценарии используют настоящие экраны; формы — общий контейнер предпросмотра. */
         private fun scenarioScreen(scenario: Scenario): BaseScreen = when (scenario.name) {
             "network-room" -> NetworkBattleGoldenScreens.room()
             "network-battle" -> NetworkBattleGoldenScreens.battle()
             "army-setup-laptop" -> ArmySetupGoldenChecks.screen()
             "city-editor-tabs" -> com.unciv.ui.playground.createScenarioCityEditorTabsPreview()
             "scenario-player-slots" -> com.unciv.ui.playground.createScenarioPlayerPickerPreview()
+            "victory-selection" -> com.unciv.ui.playground.createScenarioVictorySelectionPreview()
             else -> GoldenScenarioScreen(scenario.open)
         }.also { expectedScreen = it }
 

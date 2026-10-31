@@ -127,28 +127,21 @@ class CityInfoConquestFunctions(val city: CityInfo){
     }
 
 
-    /** This happens when we either puppet OR annex, basically whenever we conquer a city and don't liberate it */
+    /** Завершает завоевание перед проверкой победы; освобождение использует отдельную операцию. */
     fun puppetCity(conqueringCiv: CivilizationInfo) {
-        // Gain gold for plundering city
-        @Suppress("UNUSED_VARIABLE")  // todo: use this val
+        @Suppress("UNUSED_VARIABLE")
         val goldPlundered = getGoldForCapturingCity(conqueringCiv)
         city.apply {
-
             val oldCiv = civInfo
-
-            // must be before moving the city to the conquering civ,
-            // so the repercussions are properly checked
             diplomaticRepercussionsForConqueringCity(oldCiv, conqueringCiv)
-
             conquerCity(conqueringCiv, oldCiv, conqueringCiv)
-
             isPuppet = true
             cityStats.update()
-            // The city could be producing something that puppets shouldn't, like units
             cityConstructions.currentConstructionIsUserSet = false
             cityConstructions.constructionQueue.clear()
             cityConstructions.chooseNextConstruction()
         }
+        conqueringCiv.victoryManager.onCityCaptured(city.id)
     }
 
     fun annexCity() {
