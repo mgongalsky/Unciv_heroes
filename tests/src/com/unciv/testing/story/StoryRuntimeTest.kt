@@ -218,4 +218,61 @@ class StoryRuntimeTest {
             assertTrue(StoryRuntime.isMapActionBlocked(fixture.game))
         }
     }
+
+    /** Вступление второго человека не удерживает первого; отметки участников переживают JSON и копирование. */
+    @Test
+    fun humanOpeningsWaitForTheirOwnersTurn() {
+        CityTestFixture().use { fixture ->
+            val game = fixture.game
+            val other = com.unciv.testing.pure.fakes.FakeCivilizationInfo().apply {
+                civName = "Greece"
+                nation = fixture.ruleset.nations.getValue(civName)
+                gameInfo = game
+                playerType = PlayerType.Human
+            }
+            game.civilizations.add(other)
+            other.setTransients()
+            game.tileMap.story = scenario().apply { triggers.single().once = false }
+            StoryRuntime.startMission(game)
+            assertEquals(listOf("Rome"), game.storyProgress.pending.map { it.event.ownerName })
+            assertEquals(setOf("Rome"), game.storyProgress.startedParticipants)
+            val first = game.storyProgress.deepCopy()
+            StoryRuntime.respond(game, "Rome", first.pending.first().sequence, first.revision, "no")
+            assertFalse(StoryRuntime.isBlocked(game))
+            StoryRuntime.startParticipant(game, "Greece")
+            assertTrue(game.storyProgress.pending.isEmpty())
+            game.currentPlayer = "Greece"
+            game.currentPlayerCiv = other
+            StoryRuntime.startParticipant(game, "Greece")
+            assertEquals("Greece", game.storyProgress.pending.single().event.ownerName)
+            val second = game.storyProgress.deepCopy()
+            try {
+                StoryRuntime.respond(
+                    game,
+                    "Rome",
+                    second.pending.single().sequence,
+                    second.revision,
+                    "yes"
+                )
+                fail("Another participant must not answer")
+            } catch (_: IllegalArgumentException) {
+            }
+            assertEquals(second, game.storyProgress)
+            StoryRuntime.respond(
+                game,
+                "Greece",
+                second.pending.single().sequence,
+                second.revision,
+                "no"
+            )
+            game.storyProgress =
+                    json().fromJson(StoryProgress::class.java, json().toJson(game.storyProgress))
+            StoryRuntime.startMission(game)
+            assertTrue(game.storyProgress.pending.isEmpty())
+            assertEquals(setOf("Rome", "Greece"), game.storyProgress.startedParticipants)
+            val copy = game.storyProgress.deepCopy()
+            copy.startedParticipants.clear()
+            assertEquals(2, game.storyProgress.startedParticipants.size)
+        }
+    }
 }

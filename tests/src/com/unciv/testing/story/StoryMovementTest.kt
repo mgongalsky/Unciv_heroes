@@ -205,4 +205,83 @@ class StoryMovementTest {
             assertTrue(StoryRuntime.isBlocked(game))
         }
     }
+
+    /** Создание войск не является обнаружением; движение открывает только ближнюю армию и сохраняет её ID. */
+    @Test
+    fun armyDiscoveryRequiresNewHeroVisibility() {
+        CityTestFixture().use { fixture ->
+            val game = fixture.game
+            game.tileMap.story = StoryScenario(
+                dialogues = arrayListOf(
+                    StoryDialogue(
+                        id = "seen", startNodeId = "line",
+                        nodes = arrayListOf(StoryDialogueNode(id = "line", text = "Вижу войско."))
+                    )
+                ),
+                triggers = arrayListOf(
+                    StoryTrigger(
+                        id = "near-army", event = StoryEventKind.ArmySeen, heroId = "scout",
+                        targetPosition = CityPosition(3f, 0f),
+                        effects = arrayListOf(StoryEffect(StoryEffectKind.Dialogue, "seen"))
+                    ),
+                    StoryTrigger(
+                        id = "far-army", event = StoryEventKind.ArmySeen, heroId = "scout",
+                        targetPosition = CityPosition(6f, 0f),
+                        effects = arrayListOf(StoryEffect(StoryEffectKind.SetFlag, "far-seen"))
+                    )
+                )
+            )
+            val hero = fixture.civilization.placeUnitNearTile(Vector2.Zero, "Warrior")!!
+            hero.scenarioHeroId = "scout"
+            val nearby = fixture.civilization.placeUnitNearTile(Vector2(3f, 0f), "Warrior")!!
+            val distant = fixture.civilization.placeUnitNearTile(Vector2(6f, 0f), "Warrior")!!
+            assertEquals(Vector2(3f, 0f), nearby.currentTile.position)
+            assertEquals(Vector2(6f, 0f), distant.currentTile.position)
+            assertTrue(game.storyProgress.pending.isEmpty())
+            assertTrue(game.storyProgress.firedTriggers.isEmpty())
+            hero.updateVisibleTiles()
+            assertFalse(nearby.currentTile in hero.viewableTiles)
+            assertFalse(distant.currentTile in hero.viewableTiles)
+            hero.currentMovement = 10f
+            hero.movement.moveToTile(game.tileMap[Vector2(1f, 0f)])
+            assertTrue(nearby.currentTile in hero.viewableTiles)
+            assertFalse(distant.currentTile in hero.viewableTiles)
+            val pending = game.storyProgress.pending.single()
+            assertEquals(StoryEventKind.ArmySeen, pending.event.kind)
+            assertEquals(
+                com.unciv.logic.story.StoryWorldEffects.actorKey(nearby),
+                pending.event.targetKey
+            )
+            assertEquals("scout", pending.event.heroId)
+            assertFalse("far-army" in game.storyProgress.firedTriggers)
+            StoryRuntime.respond(game, "Rome", pending.sequence, game.storyProgress.revision)
+            hero.movement.moveToTile(game.tileMap[Vector2.Zero])
+            hero.movement.moveToTile(game.tileMap[Vector2(1f, 0f)])
+            assertTrue(game.storyProgress.pending.isEmpty())
+            assertEquals(setOf("near-army"), game.storyProgress.firedTriggers)
+        }
+    }
+
+    /** Назначенное действие не обходит обязательный ответ и не расходует движение при повторном запуске. */
+    @Test
+    fun assignedActionWaitsForMandatoryDialogue() {
+        CityTestFixture().use { fixture ->
+            val game = fixture.game
+            val hero = fixture.civilization.placeUnitNearTile(Vector2.Zero, "Warrior")!!
+            hero.currentMovement = 10f
+            game.tileMap.story = story()
+            hero.movement.moveToTile(game.tileMap[Vector2(2f, 0f)])
+            assertTrue(StoryRuntime.isBlocked(game))
+            val position = hero.currentTile.position.cpy()
+            val movement = hero.currentMovement
+            val progress = game.storyProgress.deepCopy()
+            hero.action = "Explore"
+            hero.doAction()
+            hero.doAction()
+            assertEquals(position, hero.currentTile.position)
+            assertEquals(movement, hero.currentMovement, 0f)
+            assertEquals(progress, game.storyProgress)
+            assertSame(hero, hero.currentTile.militaryUnit)
+        }
+    }
 }

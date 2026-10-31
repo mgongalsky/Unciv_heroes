@@ -290,4 +290,183 @@ class ScenarioGameStarterTest {
             assertEquals(game.storyProgress, loaded.storyProgress)
         }
     }
+
+    /** Демонстрация проходит настоящий запуск и загрузку ожидающей атаки для обоих исходов. */
+    @Test
+    fun storyDemoSupportsPeaceAndBattleAfterReload() {
+        withMap(false) { file, fixture ->
+            val demo = com.unciv.logic.story.StoryDemoScenario.create(fixture.ruleset)
+            file.writeText(MapSaver.mapToSavedString(demo))
+            fun respond(game: GameInfo, choice: String? = null) {
+                val progress = game.storyProgress
+                com.unciv.logic.story.StoryRuntime.respond(
+                    game, "Rome", progress.pending.first().sequence, progress.revision, choice
+                )
+            }
+
+            fun reload(game: GameInfo): GameInfo = com.unciv.logic.UncivFiles.gameInfoFromString(
+                com.unciv.logic.UncivFiles.gameInfoToString(game.clone(), true)
+            )
+            for (choice in listOf("peace", "fight")) {
+                var game = GameStarter.startNewGame(setup(file, true)) { }
+                assertTrue(game.storyProgress.flags.isEmpty())
+                assertEquals(1, game.civilizations.single().getCivUnits().count())
+                assertEquals(
+                    "guide",
+                    game.civilizations.single().getCivUnits().single().scenarioHeroId
+                )
+                assertEquals(
+                    com.unciv.pure.domain.story.StoryEffectKind.Cinematic,
+                    game.storyProgress.pending.first().effect.kind
+                )
+                val opening = game.storyProgress
+                com.unciv.logic.story.StoryRuntime.finishCinematic(
+                    game, "Rome", opening.pending.first().sequence, opening.revision
+                )
+                respond(game)
+                var hero = game.civilizations.single().getCivUnits().single()
+                hero.currentMovement = 10f
+                hero.movement.moveToTile(game.tileMap[com.badlogic.gdx.math.Vector2(3f, 0f)])
+                assertEquals(com.badlogic.gdx.math.Vector2(2f, 0f), hero.currentTile.position)
+                assertEquals("approach", game.storyProgress.pending.first().effect.reference)
+                respond(game)
+                hero.movement.moveToTile(game.tileMap[com.badlogic.gdx.math.Vector2(3f, 0f)])
+                hero.army.fillArmy("Spearman", 50)
+                hero.updateVisibleTiles()
+                game.civilizations.single().updateSightAndResources()
+                val gate = game.cityRegistry.byId(CityId("gate"))!!
+                com.unciv.logic.battle.Battle.attack(
+                    com.unciv.logic.battle.MapUnitCombatant(hero),
+                    com.unciv.logic.battle.CityCombatant(gate)
+                )
+                assertNotNull(game.storyPendingAttack)
+                assertEquals("parley", game.storyProgress.pending.first().effect.reference)
+                val pending = game.storyProgress.deepCopy()
+                val attack = game.storyPendingAttack!!.copy()
+                game = reload(game)
+                assertEquals(pending, game.storyProgress)
+                assertEquals(attack, game.storyPendingAttack)
+                hero = game.civilizations.single().getCivUnits().single()
+                assertSame(hero, hero.currentTile.militaryUnit)
+                val owner = game.civilizations.single()
+                val restoredGate = game.cityRegistry.byId(CityId("gate"))!!
+                val gold = owner.gold
+                val attacks = hero.attacksThisTurn
+                val movement = hero.currentMovement
+                respond(game, "ask")
+                assertEquals("answer", game.storyProgress.pending.first().nodeId)
+                respond(game)
+                assertEquals("offer", game.storyProgress.pending.first().nodeId)
+                val command = game.storyProgress.deepCopy()
+                respond(game, choice)
+                assertTrue(choice in game.storyProgress.flags)
+                try {
+                    com.unciv.logic.story.StoryRuntime.respond(
+                        game, "Rome",
+                        command.pending.first().sequence, command.revision, choice
+                    )
+                    fail("Duplicate response must be rejected")
+                } catch (_: IllegalArgumentException) {
+                }
+                // AI исполняет тактический бой без графического экрана; сюжетный ответ уже выбран человеком.
+                if (choice == "fight") owner.playerType = PlayerType.AI
+                com.unciv.logic.story.StoryBattleEvents.resume(game, "Rome")
+                assertNull(game.storyPendingAttack)
+                if (choice == "peace") {
+                    assertEquals(gold + 17, owner.gold)
+                    assertEquals(attacks, hero.attacksThisTurn)
+                    assertEquals(movement, hero.currentMovement, 0f)
+                    assertNull(restoredGate.ownerOrNull)
+                    assertEquals(1, restoredGate.garrisonInfo.getTroopAt(0)!!.currentAmount)
+                } else {
+                    assertEquals(gold, owner.gold)
+                    assertEquals(attacks + 1, hero.attacksThisTurn)
+                    assertSame(owner, restoredGate.ownerOrNull)
+                }
+                val completedAttacks = hero.attacksThisTurn
+                com.unciv.logic.story.StoryBattleEvents.resume(game, "Rome")
+                assertEquals(completedAttacks, hero.attacksThisTurn)
+                owner.playerType = PlayerType.Human
+                hero.currentMovement = 10f
+                hero.movement.moveToTile(game.tileMap[com.badlogic.gdx.math.Vector2(2f, 0f)])
+                assertTrue("$choice-reaction" in game.storyProgress.firedTriggers)
+                while (game.storyProgress.pending.isNotEmpty()) respond(game)
+                val loaded = reload(game)
+                assertEquals(game.storyProgress, loaded.storyProgress)
+                assertEquals(owner.gold, loaded.civilizations.single().gold)
+                assertNull(loaded.storyPendingAttack)
+                assertEquals(demo.story, MapSaver.loadMap(FileHandle(file)).story)
+            }
+        }
+    }
+
+    /** Второе человеческое вступление появляется на своём ходу и не повторяется после полного восстановления мира. */
+    @Test
+    fun secondHumanOpeningRunsOnActualTurnTransfer() {
+        withMap(false) { file, fixture ->
+            val map = com.unciv.logic.story.StoryDemoScenario.create(fixture.ruleset)
+            map.scenarioPlayerSlots.add(ScenarioPlayerSlot("second", "Second traveller"))
+            // Раздельная видимость исключает знакомство цивилизаций и запись настроек обучения.
+            map.scenarioHeroes.add(
+                com.unciv.pure.domain.hero.ScenarioHero(
+                    "second-guide", "Другой проводник", "Warrior", "second", CityPosition(-5f, 0f)
+                )
+            )
+            map.story!!.triggers.add(
+                com.unciv.pure.domain.story.StoryTrigger(
+                    id = "second-opening",
+                    event = com.unciv.pure.domain.story.StoryEventKind.MissionStarted,
+                    ownerSlotId = "second",
+                    once = false,
+                    effects = arrayListOf(
+                        com.unciv.pure.domain.story.StoryEffect(
+                            com.unciv.pure.domain.story.StoryEffectKind.Dialogue, "intro"
+                        )
+                    )
+                )
+            )
+            file.writeText(MapSaver.mapToSavedString(map))
+            val parameters = setup(file, true).apply {
+                gameParameters.players.add(Player("Greece").apply {
+                    playerType = PlayerType.Human
+                    scenarioSlotId = "second"
+                })
+            }
+            var game = GameStarter.startNewGame(parameters) { }
+            assertEquals("Rome", game.currentPlayer)
+            assertTrue(game.storyProgress.pending.all { it.event.ownerName == "Rome" })
+            var progress = game.storyProgress
+            com.unciv.logic.story.StoryRuntime.finishCinematic(
+                game, "Rome", progress.pending.first().sequence, progress.revision
+            )
+            progress = game.storyProgress
+            com.unciv.logic.story.StoryRuntime.respond(
+                game, "Rome", progress.pending.first().sequence, progress.revision
+            )
+            assertTrue(game.storyProgress.pending.isEmpty())
+            game.turns = 1
+            game.nextTurn()
+            assertEquals("Greece", game.currentPlayer)
+            assertEquals("Greece", game.storyProgress.pending.single().event.ownerName)
+            val waiting = game.storyProgress.deepCopy()
+            game.nextTurn()
+            assertEquals("Greece", game.currentPlayer)
+            assertEquals(waiting, game.storyProgress)
+            game = com.unciv.logic.UncivFiles.gameInfoFromString(
+                com.unciv.logic.UncivFiles.gameInfoToString(game.clone(), true)
+            )
+            assertEquals(waiting, game.storyProgress)
+            progress = game.storyProgress
+            com.unciv.logic.story.StoryRuntime.respond(
+                game, "Greece", progress.pending.single().sequence, progress.revision
+            )
+            game.nextTurn()
+            assertEquals("Rome", game.currentPlayer)
+            assertTrue(game.storyProgress.pending.isEmpty())
+            game.nextTurn()
+            assertEquals("Greece", game.currentPlayer)
+            assertTrue(game.storyProgress.pending.isEmpty())
+            assertEquals(setOf("Rome", "Greece"), game.storyProgress.startedParticipants)
+        }
+    }
 }

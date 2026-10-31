@@ -24,7 +24,7 @@ object ScenarioMapValidation {
         }
     }
 
-    /** Собирает отсутствующие определения, сохраняя данные сценария для исправления автором. */
+    /** Собирает ошибки определений без игровой инициализации и изменения авторских данных. */
     fun definitionErrors(map: TileMap, ruleset: Ruleset): List<String> {
         val errors = arrayListOf<String>()
         for (city in map.scenarioCities) {
@@ -33,13 +33,30 @@ object ScenarioMapValidation {
             for (troop in city.garrison) if (troop.unitName !in ruleset.units)
                 errors.add("Scenario city ${city.id}: unknown garrison unit [${troop.unitName}]")
         }
-        for (hero in map.scenarioHeroes) {
-            val unit = ruleset.units[hero.unitName]
-            if (unit == null)
-                errors.add("Scenario hero ${hero.id}: unknown unit [${hero.unitName}]")
-            else if (!unit.isLandUnit() || unit.isCivilian())
-                errors.add("Scenario hero ${hero.id}: a land military unit is required")
+        fun checkArmy(unitName: String, context: String) {
+            val unit = ruleset.units[unitName]
+            if (unit == null) errors.add("$context: unknown unit [$unitName]")
+            else if (ruleset.unitTypes[unit.unitType]?.isLandUnit() != true || unit.isCivilian())
+                errors.add("$context: a land military unit is required")
         }
+        for (hero in map.scenarioHeroes) checkArmy(hero.unitName, "Scenario hero ${hero.id}")
+        fun checkEffects(effects: List<com.unciv.pure.domain.story.StoryEffect>, context: String) {
+            for (effect in effects) {
+                if (effect.kind == com.unciv.pure.domain.story.StoryEffectKind.SpawnArmy ||
+                        effect.kind == com.unciv.pure.domain.story.StoryEffectKind.SetGarrison
+                )
+                    checkArmy(effect.unitName, context)
+            }
+        }
+        for (trigger in map.story?.triggers.orEmpty())
+            checkEffects(trigger.effects, "Story trigger ${trigger.id}")
+        for (dialogue in map.story?.dialogues.orEmpty())
+            for (node in dialogue.nodes)
+                for (choice in node.choices)
+                    checkEffects(
+                        choice.effects,
+                        "Story choice ${dialogue.id}/${node.id}/${choice.id}"
+                    )
         return errors
     }
 }

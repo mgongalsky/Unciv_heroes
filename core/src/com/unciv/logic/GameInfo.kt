@@ -384,8 +384,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
                 turns++
                 for (city in getCities().filter { it.state.ownership == CityOwnership.Neutral }) city.completeNeutralRound()
                 if (UncivGame.Current.simulateUntilTurnForDebug != 0) debug(
-                    "Starting simulation of turn %s",
-                    turns
+                    "Starting simulation of turn %s", turns
                 )
             }
             thisPlayer = civilizations[currentPlayerIndex]
@@ -403,7 +402,6 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
                 NextTurnAutomation.automateCivMoves(thisPlayer)
                 thisPlayer.victoryManager.hasWon()
                 if (shouldStopForVictory) {
-                    // Сохраняем точную границу остановки без endTurn и повторного startTurn.
                     currentPlayer = thisPlayer.civName
                     currentPlayerCiv = thisPlayer
                     currentTurnStartTime = System.currentTimeMillis()
@@ -420,6 +418,8 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion,
         currentPlayer = thisPlayer.civName
         currentPlayerCiv = getCivilization(currentPlayer)
         thisPlayer.startTurn()
+        // Чужое человеческое вступление не блокирует предыдущего игрока; очередь создаётся на своём ходу.
+        com.unciv.logic.story.StoryRuntime.startParticipant(this, currentPlayer)
         if (currentPlayerCiv.isSpectator()) currentPlayerCiv.popupAlerts.clear()
         if (turns % 10 == 0)
             UncivGame.Current.musicController.chooseTrack(

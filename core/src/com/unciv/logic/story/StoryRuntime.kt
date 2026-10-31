@@ -8,17 +8,14 @@ import com.unciv.pure.domain.story.*
 
 /** Координирует чистые переходы и игровые последствия без зависимости от WorldScreen. */
 object StoryRuntime {
-    /** Вызывается только после подготовки новой миссии; восстановление сохранения не публикует события. */
+    /** Вступления других людей ждут их первого хода, иначе общая очередь не позволит передать управление. */
     fun startMission(game: GameInfo) {
         if (game.tileMap.story == null) return
-        for (owner in game.civilizations.filter { !it.isBarbarian() && !it.isSpectator() }
-            .sortedBy { it.playerType != PlayerType.Human }) {
-            emit(game, StoryEvent(
-                kind = StoryEventKind.MissionStarted,
-                ownerName = owner.civName,
-                ownerSlotId = game.scenarioVictoryParticipants.entries.firstOrNull { it.value == owner.civName }?.key.orEmpty()
-            ))
-        }
+        val owners = game.civilizations.filter { !it.isBarbarian() && !it.isSpectator() }
+        owners.firstOrNull { it.civName == game.currentPlayer && it.playerType == PlayerType.Human }
+            ?.let { startParticipant(game, it.civName) }
+        for (owner in owners.filter { it.playerType == PlayerType.AI })
+            startParticipant(game, owner.civName)
     }
 
     /** Сначала публикует сохраняемую очередь, затем исполняет её до ближайшей сцены человека. */
@@ -106,5 +103,23 @@ object StoryRuntime {
                 dialogue == null || dialogue.pauseWorld || dialogue.nodes.any { it.choices.isNotEmpty() }
             }
         }
+    }
+
+    /** Публикует начало миссии один раз для участника; отметка сохраняется вместе с очередью. */
+    fun startParticipant(game: GameInfo, ownerName: String) {
+        val scenario = game.tileMap.story ?: return
+        if (ownerName in game.storyProgress.startedParticipants) return
+        val owner = game.civilizations.firstOrNull { it.civName == ownerName } ?: return
+        if (owner.isBarbarian() || owner.isSpectator()) return
+        if (owner.playerType == PlayerType.Human && ownerName != game.currentPlayer) return
+        val event = StoryEvent(
+            kind = StoryEventKind.MissionStarted, ownerName = ownerName,
+            ownerSlotId = game.scenarioVictoryParticipants.entries
+                .firstOrNull { it.value == ownerName }?.key.orEmpty()
+        )
+        val next = ProcessStoryEvent.execute(scenario, game.storyProgress, event)
+        next.startedParticipants.add(ownerName)
+        game.storyProgress = next
+        drain(game)
     }
 }

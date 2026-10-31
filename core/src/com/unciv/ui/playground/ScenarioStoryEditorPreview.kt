@@ -49,9 +49,10 @@ private fun showStoryEditorPanel(screen: BaseScreen, panel: Table) {
     check(panel.prefWidth <= 510f) { "Story editor exceeds available width: ${panel.prefWidth}" }
 }
 
-/** Проверяет навигацию, Apply, отказ и повторное открытие формы героя. */
+/** Проверяет создание примера, навигацию, Apply, отказ и повторное открытие формы героя. */
 fun openScenarioHeroEditorPreview(screen: BaseScreen) {
     checkStoryEditorNavigation()
+    checkStoryExampleCreation()
     val ruleset = RulesetCache.getComplexRuleset(GameParameters())
     val map = TileMap(3, ruleset, false)
     map.scenarioPlayerSlots.add(ScenarioPlayerSlot("one", "First player"))
@@ -183,6 +184,33 @@ private fun checkStoryEditorNavigation() {
         check(storyEditorInput(restored.stage.root, "Saved hero").text == "Saved hero")
     } finally {
         recreated?.dispose()
+        editor.dispose()
+    }
+}
+
+/** Создание примера обновляет карту и открытую форму, не оставляя обработчики прежнего черновика. */
+private fun checkStoryExampleCreation() {
+    val ruleset = RulesetCache.getComplexRuleset(GameParameters())
+    val original = TileMap(3, ruleset, false)
+    val editor = com.unciv.ui.mapeditor.MapEditorScreen(original)
+    try {
+        editor.tabs.selectPage("Edit")
+        editor.tabs.edit.selectPage("Story")
+        check(!editor.isDirty)
+        clickStoryEditorButton(editor.stage.root, "Create story example map")
+        check(editor.tileMap !== original) { "Example did not replace the editor map" }
+        check(editor.isDirty) { "Example map was not marked for saving" }
+        check(editor.tileMap.scenarioHeroes.single().id == "guide")
+        check(editor.tileMap.scenarioCities.single().id == "gate")
+        check(editor.tabs.edit.currentSubTab() == "Story" && !editor.allowDragPainting)
+        clickStoryEditorButton(editor.stage.root, "Dialogues")
+        check(storyEditorInput(editor.stage.root, "parley").text == "parley") {
+            "Story form still displays the previous map"
+        }
+        clickStoryEditorButton(editor.stage.root, "Apply story")
+        check(editor.tileMap.story!!.dialogues.any { it.id == "parley" })
+        check(original.story == null && original.scenarioHeroes.isEmpty())
+    } finally {
         editor.dispose()
     }
 }

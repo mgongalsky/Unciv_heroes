@@ -32,10 +32,13 @@ data class StoryProgress(
     var pending: ArrayList<PendingStoryEffect> = arrayListOf(),
     var nextSequence: Long = 1,
     /** Отличает повторно доставленную команду выбора даже при возврате к той же реплике. */
-    var revision: Long = 0
+    var revision: Long = 0,
+    /** Участники, для которых уже опубликовано начало миссии; чужое человеческое вступление ждёт его хода. */
+    var startedParticipants: LinkedHashSet<String> = linkedSetOf()
 ) {
     fun deepCopy() = copy(
         flags = LinkedHashSet(flags), firedTriggers = LinkedHashSet(firedTriggers),
-        pending = ArrayList(pending.map { it.deepCopy() })
+        pending = ArrayList(pending.map { it.deepCopy() }),
+        startedParticipants = LinkedHashSet(startedParticipants)
     )
 }

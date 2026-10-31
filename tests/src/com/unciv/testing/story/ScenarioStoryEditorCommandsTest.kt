@@ -223,4 +223,63 @@ class ScenarioStoryEditorCommandsTest {
             assertEquals("leave", map.story!!.dialogues.single().aiChoices["question"])
         }
     }
+
+    /** Проверка карты работает с авторскими определениями без BaseUnit.ruleset и видит последствия ответов. */
+    @Test
+    fun definitionValidationUsesExplicitRulesetAndChecksStoryArmies() {
+        CityTestFixture().use { fixture ->
+            val map = fixture.game.tileMap
+            val ruleset = com.unciv.models.ruleset.Ruleset()
+            ruleset.unitTypes["Infantry"] =
+                    com.unciv.models.ruleset.unit.UnitType("Infantry", "Land")
+            ruleset.units["Guard"] = com.unciv.models.ruleset.unit.BaseUnit().apply {
+                name = "Guard"
+                unitType = "Infantry"
+                strength = 10
+            }
+            map.scenarioHeroes.add(hero().copy(unitName = "Guard"))
+            map.story = StoryScenario(
+                triggers = arrayListOf(
+                    StoryTrigger(
+                        id = "spawn", effects = arrayListOf(
+                            StoryEffect(
+                                StoryEffectKind.SpawnArmy, amount = 1, unitName = "Missing",
+                                position = CityPosition(1f, 0f)
+                            )
+                        )
+                    )
+                ),
+                dialogues = arrayListOf(
+                    StoryDialogue(
+                        id = "talk", nodes = arrayListOf(
+                            StoryDialogueNode(
+                                id = "offer", choices = arrayListOf(
+                                    StoryChoice(
+                                        id = "reward", effects = arrayListOf(
+                                            StoryEffect(
+                                                StoryEffectKind.SetGarrison,
+                                                "fort",
+                                                amount = 1,
+                                                unitName = "Missing"
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+            val before = map.story!!.deepCopy()
+            val errors = com.unciv.logic.map.ScenarioMapValidation.definitionErrors(map, ruleset)
+            assertEquals(2, errors.size)
+            assertTrue(errors.any { "Story trigger spawn" in it && "Missing" in it })
+            assertTrue(errors.any { "Story choice talk/offer/reward" in it && "Missing" in it })
+            assertEquals(before, map.story)
+            ruleset.units["Guard"]!!.unitType = "Unknown type"
+            assertTrue(
+                com.unciv.logic.map.ScenarioMapValidation.definitionErrors(map, ruleset)
+                    .any { "Scenario hero scout" in it })
+        }
+    }
 }
