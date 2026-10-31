@@ -92,4 +92,19 @@ object StoryRuntime {
             }
         }
     }
+
+    /** Немодальные линейные реплики допускают действия на карте, но не передачу хода или бой.
+     * Выбор, последствия за репликой и ожидающая атака удерживают мир независимо от pauseWorld.
+     */
+    fun isMapActionBlocked(game: GameInfo): Boolean {
+        val scenario = game.tileMap.story ?: return false
+        if (game.storyPendingAttack != null) return true
+        return game.storyProgress.pending.any { pending ->
+            if (pending.effect.kind != StoryEffectKind.Dialogue) true
+            else {
+                val dialogue = scenario.dialogues.firstOrNull { it.id == pending.effect.reference }
+                dialogue == null || dialogue.pauseWorld || dialogue.nodes.any { it.choices.isNotEmpty() }
+            }
+        }
+    }
 }

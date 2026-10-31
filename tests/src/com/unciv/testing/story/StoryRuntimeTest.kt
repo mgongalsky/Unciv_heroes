@@ -93,4 +93,129 @@ class StoryRuntimeTest {
             assertTrue(StoryRuntime.isBlocked(restored))
         }
     }
+
+    /** Восстановленный прогресс ролика не выдаёт награду до подтверждения владельцем. */
+    @Test
+    fun cinematicRestoresAndCompletesExactlyOnce() {
+        CityTestFixture().use { fixture ->
+            val game = fixture.game
+            game.tileMap.story = StoryScenario(
+                cinematics = arrayListOf(
+                    StoryCinematic(
+                        "arrival",
+                        "movies/arrival.webm",
+                        "Герой прибыл."
+                    )
+                ),
+                triggers = arrayListOf(
+                    StoryTrigger(
+                        id = "opening", event = StoryEventKind.MissionStarted,
+                        effects = arrayListOf(
+                            StoryEffect(StoryEffectKind.Cinematic, "arrival"),
+                            StoryEffect(StoryEffectKind.GrantGold, amount = 11)
+                        )
+                    )
+                )
+            )
+            val gold = fixture.civilization.gold
+            StoryRuntime.startMission(game)
+            val saved = game.storyProgress.deepCopy()
+            game.storyProgress = json().fromJson(StoryProgress::class.java, json().toJson(saved))
+            assertEquals(saved, game.storyProgress)
+            assertEquals(gold, fixture.civilization.gold)
+            assertTrue(StoryRuntime.isBlocked(game))
+            val sequence = saved.pending.first().sequence
+            for ((owner, revision) in listOf(
+                "Other" to saved.revision,
+                "Rome" to (saved.revision - 1)
+            )) {
+                try {
+                    StoryRuntime.finishCinematic(game, owner, sequence, revision)
+                    fail("Чужое или устаревшее подтверждение должно быть отклонено")
+                } catch (_: IllegalArgumentException) {
+                }
+                assertEquals(saved, game.storyProgress)
+                assertEquals(gold, fixture.civilization.gold)
+            }
+            StoryRuntime.finishCinematic(game, "Rome", sequence, saved.revision)
+            assertEquals(gold + 11, fixture.civilization.gold)
+            assertTrue(game.storyProgress.pending.isEmpty())
+            try {
+                StoryRuntime.finishCinematic(game, "Rome", sequence, saved.revision)
+                fail("Повторное завершение должно быть отклонено")
+            } catch (_: IllegalArgumentException) {
+            }
+            assertEquals(gold + 11, fixture.civilization.gold)
+        }
+    }
+
+    /** AI завершает ролик без декодера и продолжает очередь последствий. */
+    @Test
+    fun aiCompletesCinematicWithoutPresentation() {
+        CityTestFixture().use { fixture ->
+            fixture.civilization.playerType = PlayerType.AI
+            fixture.game.tileMap.story = StoryScenario(
+                cinematics = arrayListOf(StoryCinematic("arrival", "", "Герой прибыл.")),
+                triggers = arrayListOf(
+                    StoryTrigger(
+                        id = "opening", event = StoryEventKind.MissionStarted,
+                        effects = arrayListOf(
+                            StoryEffect(StoryEffectKind.Cinematic, "arrival"),
+                            StoryEffect(StoryEffectKind.SetFlag, "arrived")
+                        )
+                    )
+                )
+            )
+            StoryRuntime.startMission(fixture.game)
+            assertTrue("arrived" in fixture.game.storyProgress.flags)
+            assertTrue(fixture.game.storyProgress.pending.isEmpty())
+        }
+    }
+
+    /** Свободная реплика допускает действия, но сохраняет очередь до явного продолжения. */
+    @Test
+    fun nonModalLinearDialogueAllowsMapActionsButHoldsTurn() {
+        CityTestFixture().use { fixture ->
+            val story = scenario()
+            story.dialogues.first().apply {
+                pauseWorld = false
+                nodes.first().choices.clear()
+                aiChoices.clear()
+            }
+            fixture.game.tileMap.story = story
+            StoryRuntime.startMission(fixture.game)
+            assertFalse(StoryRuntime.isMapActionBlocked(fixture.game))
+            assertTrue(StoryRuntime.isBlocked(fixture.game))
+            val progress = fixture.game.storyProgress
+            StoryRuntime.respond(
+                fixture.game,
+                "Rome",
+                progress.pending.first().sequence,
+                progress.revision
+            )
+            assertFalse(StoryRuntime.isBlocked(fixture.game))
+        }
+    }
+
+    /** pauseWorld=false не обходит обязательный выбор или ожидающее изменение мира. */
+    @Test
+    fun nonModalFlagDoesNotBypassChoiceOrQueuedReward() {
+        CityTestFixture().use { fixture ->
+            val story = scenario()
+            story.dialogues.first().pauseWorld = false
+            fixture.game.tileMap.story = story
+            StoryRuntime.startMission(fixture.game)
+            assertTrue(StoryRuntime.isMapActionBlocked(fixture.game))
+            story.dialogues.first().nodes.first().choices.clear()
+            assertFalse(StoryRuntime.isMapActionBlocked(fixture.game))
+            fixture.game.storyProgress.pending.add(
+                PendingStoryEffect(
+                    sequence = fixture.game.storyProgress.nextSequence++,
+                    effect = StoryEffect(StoryEffectKind.GrantGold, amount = 3),
+                    event = StoryEvent(ownerName = "Rome")
+                )
+            )
+            assertTrue(StoryRuntime.isMapActionBlocked(fixture.game))
+        }
+    }
 }

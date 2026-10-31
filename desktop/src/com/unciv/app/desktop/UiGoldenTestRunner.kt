@@ -105,6 +105,7 @@ object UiGoldenTestRunner {
         Scenario("army-troop-info") { com.unciv.ui.playground.openArmyTroopInfoPreview(it) },
         Scenario("city-editor") { com.unciv.ui.playground.openScenarioCityEditorPreview(it) },
         Scenario("victory-editor") { com.unciv.ui.playground.openScenarioVictoryEditorPreview(it) },
+        Scenario("story-dialogue") { com.unciv.ui.playground.openStoryDialoguePreview(it) },
         Scenario("victory-selection") {},
         Scenario("neutral-city-minimap") { com.unciv.ui.playground.openNeutralCityMinimapPreview(it) },
         Scenario("city-editor-tabs") {},

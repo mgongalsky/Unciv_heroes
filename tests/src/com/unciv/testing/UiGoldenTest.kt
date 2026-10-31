@@ -145,4 +145,10 @@ class UiGoldenTest {
             )
         )
     }
+
+    /** Сравнивает производственное окно сюжетного выбора с платформенным эталоном. */
+    @Test
+    fun storyDialogue() {
+        UiGoldenTestRunner.main(arrayOf("--scenario=story-dialogue"))
+    }
 }

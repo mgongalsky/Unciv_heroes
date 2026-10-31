@@ -451,7 +451,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                 it
             )
         }
-        if (unit is MapUnit && com.unciv.logic.story.StoryRuntime.isBlocked(unit.civInfo.gameInfo)) return
+        if (unit is MapUnit && com.unciv.logic.story.StoryRuntime.isMapActionBlocked(unit.civInfo.gameInfo)) return
         if (unit is MapUnit && unit.baseUnit.movesLikeAirUnits()) {
             unit.action = null
             unit.removeFromTile()
@@ -470,8 +470,8 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             unit.useMovementPoints(1f)
             unit.attacksThisTurn += 1
             if (unit.canGarrison()
-                && (unit.getTile().isCityCenter() || destination.isCityCenter())
-                && unit.civInfo.hasUnique(UniqueType.UnitsInCitiesNoMaintenance)
+                    && (unit.getTile().isCityCenter() || destination.isCityCenter())
+                    && unit.civInfo.hasUnique(UniqueType.UnitsInCitiesNoMaintenance)
             ) unit.civInfo.updateStatsForNextTurn()
             if (storyUnit != null) {
                 com.unciv.logic.story.StoryMapEvents.queueStep(storyUnit, from, visible)
@@ -485,7 +485,6 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
         val lastReachableTile = movableTiles.lastOrNull { canMoveTo(it) } ?: return
         if (unit is MapUnit) unit.mostRecentMoveType = UnitMovementMemoryType.UnitMoved
         val pathToLastReachableTile = distanceToTiles.getPathToTile(lastReachableTile)
-
         // На сюжетной карте нельзя собирать дальнюю цель до прохождения промежуточных событий.
         if (storyUnit == null && unit is MapUnit && lastReachableTile == destination) {
             val visitable = destination.visitable
@@ -508,7 +507,7 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             }
         }
         if (unit is MapUnit && (unit.isFortified() || unit.isSetUpForSiege() || unit.isSleeping())) unit.action =
-            null
+                null
         val origin = unit.getTile()
         var needToFindNewRoute = false
         var lastReachedEnterableTile = unit.getTile()
@@ -543,9 +542,9 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                 )
             previousTile = tile
             // На проходной занятой клетке останавливаться нельзя; завершаем размещение на следующей доступной.
-            if (storyUnit != null && canStop && com.unciv.logic.story.StoryRuntime.isBlocked(
-                    storyUnit.civInfo.gameInfo
-                )
+            if (storyUnit != null && canStop && com.unciv.logic.story.StoryRuntime.isMapActionBlocked(
+                        storyUnit.civInfo.gameInfo
+                    )
             ) {
                 storyInterrupted = true
                 storyUnit.action = null
@@ -569,12 +568,11 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
             payload.mostRecentMoveType = UnitMovementMemoryType.UnitMoved
         }
         if (unit is MapUnit && unit.canGarrison()
-            && (origin.isCityCenter() || finalTileReached.isCityCenter())
-            && unit.civInfo.hasUnique(UniqueType.UnitsInCitiesNoMaintenance)
+                && (origin.isCityCenter() || finalTileReached.isCityCenter())
+                && unit.civInfo.hasUnique(UniqueType.UnitsInCitiesNoMaintenance)
         ) unit.civInfo.updateStatsForNextTurn()
         if (!storyInterrupted && needToFindNewRoute && unit.currentTile != origin)
             moveToTile(destination, considerZoneOfControl)
-
         if (storyUnit != null) {
             // В мире снова есть размещённый герой. Сначала сохраняем факт посещения, затем исполняем очередь.
             if (!storyUnit.isDestroyed) {
@@ -582,14 +580,14 @@ class UnitMovementAlgorithms(val unit: MovableUnit) {
                 if (reached.improvement != null || reached.isCityCenter()) {
                     val scenario = storyUnit.civInfo.gameInfo.tileMap.story!!
                     storyUnit.civInfo.gameInfo.storyProgress =
-                        com.unciv.pure.application.story.ProcessStoryEvent.execute(
-                            scenario, storyUnit.civInfo.gameInfo.storyProgress,
-                            com.unciv.logic.story.StoryMapEvents.event(
-                                storyUnit,
-                                com.unciv.pure.domain.story.StoryEventKind.ObjectVisited,
-                                reached
+                            com.unciv.pure.application.story.ProcessStoryEvent.execute(
+                                scenario, storyUnit.civInfo.gameInfo.storyProgress,
+                                com.unciv.logic.story.StoryMapEvents.event(
+                                    storyUnit,
+                                    com.unciv.pure.domain.story.StoryEventKind.ObjectVisited,
+                                    reached
+                                )
                             )
-                        )
                 }
                 storyUnit.visitPlace(reached)
             }

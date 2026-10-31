@@ -175,4 +175,34 @@ class StoryMovementTest {
             assertTrue(game.storyProgress.pending.isEmpty())
         }
     }
+
+    /** Немодальная линейная реплика не обрывает маршрут, но удерживает передачу хода. */
+    @Test
+    fun nonModalLineAllowsMovementAndKeepsTurn() {
+        CityTestFixture().use { fixture ->
+            val game = fixture.game
+            val hero = fixture.civilization.placeUnitNearTile(Vector2.Zero, "Warrior")!!
+            hero.currentMovement = 10f
+            game.tileMap.story = story().apply {
+                dialogues.single().apply {
+                    pauseWorld = false
+                    nodes.single().choices.clear()
+                    aiChoices.clear()
+                }
+            }
+            hero.movement.moveToTile(game.tileMap[Vector2(2f, 0f)])
+            assertEquals(Vector2(2f, 0f), hero.currentTile.position)
+            assertTrue(StoryRuntime.isBlocked(game))
+            assertFalse(StoryRuntime.isMapActionBlocked(game))
+            hero.movement.moveToTile(game.tileMap[Vector2(3f, 0f)])
+            assertEquals(Vector2(3f, 0f), hero.currentTile.position)
+            assertSame(hero, hero.currentTile.militaryUnit)
+            val movement = hero.currentMovement
+            val turn = game.turns
+            game.nextTurn()
+            assertEquals(turn, game.turns)
+            assertEquals(movement, hero.currentMovement, 0f)
+            assertTrue(StoryRuntime.isBlocked(game))
+        }
+    }
 }

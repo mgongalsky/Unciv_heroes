@@ -907,9 +907,9 @@ open class MapUnit(val isMonster: Boolean = false) : IsPartOfGameInfoSerializati
         return currentTile.tileMap[destinationVector]
     }
 
-    /** Продолжает назначенное действие только вне ожидающего сюжетного взаимодействия. */
+    /** Продолжает назначенное действие вне обязательного сюжетного взаимодействия. */
     fun doAction() {
-        if (com.unciv.logic.story.StoryRuntime.isBlocked(civInfo.gameInfo)) return
+        if (com.unciv.logic.story.StoryRuntime.isMapActionBlocked(civInfo.gameInfo)) return
         if (action == null) return
         if (currentMovement == 0f) return
         val enemyUnitsInWalkingDistance = movement.getDistanceToTiles().keys

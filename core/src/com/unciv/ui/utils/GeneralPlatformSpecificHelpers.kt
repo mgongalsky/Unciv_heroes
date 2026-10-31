@@ -39,4 +39,8 @@ interface GeneralPlatformSpecificHelpers {
      */
     fun addImprovements(textField: TextField): TextField = textField
 
+    /** Создаёт плеер относительного ресурса сценария или возвращает null, если видео не поддерживается.
+     * Вызывается в GL-потоке. При исключении фабрика сама освобождает частично созданные ресурсы.
+     */
+    fun createStoryVideoPlayer(assetPath: String): com.unciv.ui.story.StoryVideoPlayer? = null
 }

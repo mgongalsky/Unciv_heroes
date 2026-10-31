@@ -1,21 +1,31 @@
 # Файлы задачи
 
-Все пути относительно корня проекта. Перечень отражает героев, сюжетное ядро и текущую интеграцию движения и боя. Удалений и переносов нет.
+Пути относительно корня проекта. Удалений и переносов нет. Пользовательский wiki и посторонние ресурсы не входят в задачу.
 
-## Созданы: код
+## Созданы: герои и сюжет
 
-- `core/src/com/unciv/pure/domain/hero/ScenarioHero.kt` — описание героя.
-- `core/src/com/unciv/pure/application/scenario/PrepareScenarioHeroesUseCase.kt` — проверка расстановки и владельцев.
-- `core/src/com/unciv/logic/scenario/InstantiateScenarioHeroesUseCase.kt` — точное создание без посещения.
-- `core/src/com/unciv/pure/domain/story/StoryScenario.kt` — авторские описания.
-- `core/src/com/unciv/pure/domain/story/StoryProgress.kt` — события и сохраняемый прогресс.
-- `core/src/com/unciv/pure/application/story/ValidateStoryScenario.kt` — проверка связей.
-- `core/src/com/unciv/pure/application/story/ProcessStoryEvent.kt` — подбор триггеров и очередь.
-- `core/src/com/unciv/pure/application/story/AdvanceStory.kt` — переходы и подтверждения.
-- `core/src/com/unciv/logic/story/StoryRuntime.kt` — исполнение очереди и ответы AI.
-- `core/src/com/unciv/logic/story/StoryWorldEffects.kt` — подготовка и применение игровых последствий.
-- `core/src/com/unciv/logic/story/StoryMapEvents.kt` — события движения и видимости.
-- `core/src/com/unciv/logic/story/StoryBattleEvents.kt` — отложенная атака, отмена и повторная проверка.
+- `core/src/com/unciv/pure/domain/hero/ScenarioHero.kt`
+- `core/src/com/unciv/pure/application/scenario/PrepareScenarioHeroesUseCase.kt`
+- `core/src/com/unciv/logic/scenario/InstantiateScenarioHeroesUseCase.kt`
+- `core/src/com/unciv/pure/domain/story/StoryScenario.kt`
+- `core/src/com/unciv/pure/domain/story/StoryProgress.kt`
+- `core/src/com/unciv/pure/application/story/ValidateStoryScenario.kt`
+- `core/src/com/unciv/pure/application/story/ProcessStoryEvent.kt`
+- `core/src/com/unciv/pure/application/story/AdvanceStory.kt`
+- `core/src/com/unciv/logic/story/StoryRuntime.kt`
+- `core/src/com/unciv/logic/story/StoryWorldEffects.kt`
+- `core/src/com/unciv/logic/story/StoryMapEvents.kt`
+- `core/src/com/unciv/logic/story/StoryBattleEvents.kt`
+
+## Созданы: представление
+
+- `core/src/com/unciv/ui/story/StoryDialoguePopup.kt`
+- `core/src/com/unciv/ui/story/StoryPresentation.kt`
+- `core/src/com/unciv/ui/story/StoryChatterPanel.kt`
+- `core/src/com/unciv/ui/story/StoryCinematicScreen.kt`
+- `core/src/com/unciv/ui/story/StoryVideoPlayer.kt`
+- `core/src/com/unciv/ui/story/StoryVideoSession.kt`
+- `core/src/com/unciv/ui/playground/StoryDialoguePreview.kt`
 
 ## Созданы: тесты
 
@@ -30,20 +40,25 @@
 - `tests/src/com/unciv/testing/story/StoryRuntimeTest.kt`
 - `tests/src/com/unciv/testing/story/StoryMovementTest.kt`
 - `tests/src/com/unciv/testing/story/StoryBattleEventsTest.kt`
+- `tests/src/com/unciv/testing/StoryVideoSessionTest.java`
 
-## Изменены: код и тесты
+## Изменены: существующие код и тесты
 
-- `core/src/com/unciv/logic/GameStarter.kt` — герои и вступительное событие.
-- `core/src/com/unciv/logic/GameInfo.kt` — совместимость 8, прогресс, контекст атаки, копирование и удержание хода.
-- `core/src/com/unciv/logic/MapFormatMigration.kt` — формат карты 5 и миграции.
-- `core/src/com/unciv/logic/map/TileMap.kt` — герои, сюжет и независимое копирование.
-- `core/src/com/unciv/logic/map/MapUnit.kt` — ID героя и остановка автоматического действия.
-- `core/src/com/unciv/logic/map/ScenarioMapValidation.kt` — структура и определения сценария.
-- `core/src/com/unciv/logic/map/ScenarioCityEditorCommands.kt` — защита используемого слота.
-- `core/src/com/unciv/logic/map/UnitMovementAlgorithms.kt` — очередь событий и остановка маршрута.
-- `core/src/com/unciv/logic/battle/Battle.kt` — предбоевой сюжетный вызов.
-- `core/src/com/unciv/ui/worldscreen/WorldScreen.kt` — проверка очереди перед передачей хода.
-- `tests/src/com/unciv/testing/city/ScenarioGameStarterTest.kt` — герои, сохранение, повторный старт и вступление.
+- `core/src/com/unciv/logic/GameStarter.kt`
+- `core/src/com/unciv/logic/GameInfo.kt`
+- `core/src/com/unciv/logic/MapFormatMigration.kt`
+- `core/src/com/unciv/logic/map/TileMap.kt`
+- `core/src/com/unciv/logic/map/MapUnit.kt`
+- `core/src/com/unciv/logic/map/ScenarioMapValidation.kt`
+- `core/src/com/unciv/logic/map/ScenarioCityEditorCommands.kt`
+- `core/src/com/unciv/logic/map/UnitMovementAlgorithms.kt`
+- `core/src/com/unciv/logic/battle/Battle.kt`
+- `core/src/com/unciv/ui/worldscreen/WorldScreen.kt`
+- `core/src/com/unciv/ui/utils/GeneralPlatformSpecificHelpers.kt`
+- `desktop/src/com/unciv/app/desktop/UiGoldenTestRunner.kt`
+- `tests/src/com/unciv/testing/city/ScenarioGameStarterTest.kt`
+- `tests/src/com/unciv/testing/UiGoldenTest.kt`
+- `tests/src/com/unciv/testing/UiGoldenUpdateTest.kt`
 
 ## Созданная документация
 
@@ -61,4 +76,4 @@
 
 ## Предстоящие области
 
-UI в `core/src/com/unciv/ui/story/`, формы в `core/src/com/unciv/ui/mapeditor/`, дополнительные проверки автоматизации и восстановления, порт видеосцен и демонстрационный сценарий. Точные пути будут внесены после реализации. Пользовательский wiki и посторонние ресурсы не входят в изменения задачи.
+Формы редактора, дополнительные проверки автоматизации и восстановления, демонстрационный сценарий. Точные пути будут внесены после реализации. Эталон story-dialogue ещё не создан; actual является результатом проверки, а не утверждённым ресурсом.

@@ -101,4 +101,10 @@ class UiGoldenUpdateTest {
     fun terrainParameters() {
         UiGoldenTestRunner.main(arrayOf("--update", "--scenario=terrain-parameters"))
     }
+
+    /** Создаёт эталон сюжетного диалога после просмотра фактического кадра. */
+    @Test
+    fun storyDialogue() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=story-dialogue"))
+    }
 }

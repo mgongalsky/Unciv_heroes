@@ -102,9 +102,10 @@ class WorldScreen(
     var fogOfWar = true
         private set
 
-    /** `true` when it's the player's turn unless he is a spectator*/
+    /** Изменение мира доступно в свой ход после завершения обязательной сюжетной сцены. */
     val canChangeState
-        get() = isPlayersTurn && !viewingCiv.isSpectator()
+        get() = isPlayersTurn && !viewingCiv.isSpectator() &&
+                !com.unciv.logic.story.StoryRuntime.isMapActionBlocked(gameInfo) && gameInfo.storyPendingAttack == null
 
     val mapHolder = WorldMapHolder(this, gameInfo.tileMap)
 
@@ -823,21 +824,18 @@ class WorldScreen(
 
 
     override fun render(delta: Float) {
-        //  This is so that updates happen in the MAIN THREAD, where there is a GL Context,
-        //    otherwise images will not load properly!
+        // Сцены создаются только в GL-потоке; очередь может измениться после движения без полного обновления карты.
+        storyPresentation.update()
+        if (game.screen !== this) return
         if (shouldUpdate) {
             shouldUpdate = false
-
-            // Since updating the worldscreen can take a long time, *especially* the first time, we disable input processing to avoid ANRs
+            // Disable input while updating the world screen to avoid ANRs.
             Gdx.input.inputProcessor = null
             update()
             showTutorialsOnNextTurn()
-            if (Gdx.input.inputProcessor == null) // Update may have replaced the worldscreen with a GreatPersonPickerScreen etc, so the input would already be set
+            if (Gdx.input.inputProcessor == null)
                 Gdx.input.inputProcessor = stage
         }
-//        topBar.selectedCivLabel.setText(Gdx.graphics.framesPerSecond) // for framerate testing
-
-
         super.render(delta)
     }
 
@@ -896,6 +894,9 @@ class WorldScreen(
             shouldUpdate = true
         }
     }
+
+    /** Представление читает сохраняемую очередь, поэтому переживает пересоздание экрана. */
+    private val storyPresentation by lazy { com.unciv.ui.story.StoryPresentation(this) }
 }
 
 /** This exists so that no reference to the current world screen remains, so the old world screen can get garbage collected during [UncivGame.loadGame]. */
