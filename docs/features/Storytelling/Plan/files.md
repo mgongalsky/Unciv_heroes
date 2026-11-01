@@ -108,3 +108,25 @@
 Сценарии story-dialogue, hero-editor и story-editor зарегистрированы в GL-runner. PNG в tests/golden/results — результаты запуска, не утверждённые эталоны. Baseline не обновлялся.
 
 [План](PLAN.md) · [Этапы](STEPS.md) · [Путеводитель](../CODE_GUIDE.md)
+
+## Этап 09 — управление графом
+
+Созданы:
+
+- core/src/com/unciv/ui/mapeditor/StoryDialogueGraphState.kt — локальные позиции, выбор, размер текста и история.
+- core/src/com/unciv/ui/playground/StoryDialogueGraphGesturesPreview.kt — координатная проверка жестов и границ текста.
+- tests/src/com/unciv/testing/StoryDialogueGraphStateTest.kt — проверки состояния представления без GL.
+- docs/features/Storytelling/Plan/STEP_09_GraphInteraction.md — решения, проверки и ручная приёмка.
+
+Изменены:
+
+- core/src/com/unciv/pure/application/story/EditStoryDialogue.kt — изменение конкретного перехода на копии.
+- tests/src/com/unciv/testing/pure/application/story/EditStoryDialogueTest.kt — переходы, отказы и сохранение данных.
+- core/src/com/unciv/ui/mapeditor/StoryDialogueGraphCanvas.kt — ограничение текста, порты и жесты.
+- core/src/com/unciv/ui/mapeditor/StoryDialogueGraphScreen.kt — команды, история, размер текста и клавиатура.
+- core/src/com/unciv/ui/playground/ScenarioStoryEditorPreview.kt — подключение проверки жестов.
+- docs/features/Storytelling/Plan/PLAN.md — поведение и границы.
+- docs/features/Storytelling/Plan/STEPS.md — статус этапа.
+- docs/features/Storytelling/Plan/files.md — фактический состав изменений.
+- docs/features/Storytelling/Research/RESEARCH.md — источники и выводы.
+- docs/features/Storytelling/CODE_GUIDE.md — текущие вызовы, управление и проверки.

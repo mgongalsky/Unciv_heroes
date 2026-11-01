@@ -103,4 +103,48 @@ class EditStoryDialogueTest {
         rejects { EditStoryDialogue.replaceNode(source, "question", replacement) }
         assertEquals(listOf("again", "finish"), source.nodes.first().choices.map { it.id })
     }
+
+    /** Соединение адресует один выход, допускает возврат и отключение, сохраняет данные и отклоняет неверный drop. */
+    @Test
+    fun transitionsAddressOneOutputWithoutMutatingSource() {
+        val source = dialogue()
+        val saved = source.deepCopy()
+        val linked = EditStoryDialogue.setTransition(source, "question", "again", "end")
+        assertEquals("end", linked.nodes.first().choices.first().nextNodeId)
+        assertEquals(saved.nodes.first().choices.last(), linked.nodes.first().choices.last())
+        assertEquals(saved.aiChoices, linked.aiChoices)
+        assertEquals(
+            saved.nodes.first().choices.first().condition,
+            linked.nodes.first().choices.first().condition
+        )
+        assertEquals(
+            saved.nodes.first().choices.first().effects,
+            linked.nodes.first().choices.first().effects
+        )
+        val disconnected = EditStoryDialogue.setTransition(linked, "question", "again", "")
+        assertEquals("", disconnected.nodes.first().choices.first().nextNodeId)
+        assertEquals("end", linked.nodes.first().choices.first().nextNodeId)
+        val loop = EditStoryDialogue.setTransition(disconnected, "question", "again", "question")
+        assertEquals("question", loop.nodes.first().choices.first().nextNodeId)
+
+        val continuation = EditStoryDialogue.setTransition(source, "entry", null, "end")
+        assertEquals("end", continuation.nodes.last().nextNodeId)
+        assertEquals(
+            "",
+            EditStoryDialogue.setTransition(continuation, "entry", null, "").nodes.last().nextNodeId
+        )
+        rejects { EditStoryDialogue.setTransition(source, "missing", null, "end") }
+        rejects { EditStoryDialogue.setTransition(source, "entry", null, "missing") }
+        rejects { EditStoryDialogue.setTransition(source, "question", null, "end") }
+        rejects { EditStoryDialogue.setTransition(source, "question", "missing", "end") }
+        rejects { EditStoryDialogue.setTransition(source, "entry", "again", "end") }
+        linked.nodes.first().choices.first().condition.requiredFlags.add("external")
+        linked.nodes.first().choices.first().effects.first().reference = "external"
+        assertEquals(saved, source)
+        assertEquals(
+            listOf("known"),
+            disconnected.nodes.first().choices.first().condition.requiredFlags
+        )
+        assertEquals("asked", disconnected.nodes.first().choices.first().effects.first().reference)
+    }
 }

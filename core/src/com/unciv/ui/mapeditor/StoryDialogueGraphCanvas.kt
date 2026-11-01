@@ -1,9 +1,15 @@
 package com.unciv.ui.mapeditor
 
+import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.Image
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.pure.domain.story.StoryDialogue
 import com.unciv.ui.images.ImageGetter
@@ -13,117 +19,273 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** Полотно графа: расположение и стрелки являются представлением, не частью сохраняемого сюжета. */
+/** Полотно отвечает за геометрию и жесты; публикацию сюжета и историю выполняет экран. */
 class StoryDialogueGraphCanvas(
-    dialogue: StoryDialogue,
-    selectedId: String,
-    select: (String) -> Unit
+    private val state: StoryDialogueGraphState,
+    private val callbacks: Callbacks
 ) : Group() {
-    private val cardWidth = 240f
-    private val cardHeight = maxOf(150f, (dialogue.nodes.maxOfOrNull { it.choices.size } ?: 0) * 60f + 70f)
+    data class Output(val nodeId: String, val choiceId: String?)
+    class Callbacks(
+        val select: (String) -> Unit = {},
+        val move: (String, Float, Float) -> Unit = { _, _, _ -> },
+        val connect: (Output, String) -> Unit = { _, _ -> },
+        val selectOutput: (Output) -> Unit = {}
+    )
+    /** Совместимость отдельных предпросмотров, которым достаточно выбора карточки. */
+    constructor(dialogue: StoryDialogue, selectedId: String, select: (String) -> Unit) :
+        this(StoryDialogueGraphState(dialogue).apply { select(selectedId) }, Callbacks(select = select))
+
+    private val dialogue = state.dialogue.deepCopy()
+    private val cardWidth = 300f
+    private val cards = linkedMapOf<String, Group>()
+    private val inputs = linkedMapOf<String, Actor>()
+    private val outputs = linkedMapOf<Output, Actor>()
+    private val targets = linkedMapOf<Output, String>()
+    private val wires = Group().apply { touchable = Touchable.disabled }
+    private val temporary = Group().apply { touchable = Touchable.disabled }
+    private val end = Table()
+    private var moving: String? = null
+    private var originalPosition: Vector2? = null
+    private var connecting: Output? = null
+    private var hoverTarget: String? = null
+    val gestureActive get() = moving != null || connecting != null
 
     init {
         name = "story-dialogue-graph-canvas"
-        // Кратчайшее расстояние от старта определяет колонку; циклы не запускают повторный обход.
+        addActor(wires)
         val depths = linkedMapOf(dialogue.startNodeId to 0)
-        val pending = java.util.ArrayDeque<String>()
-        pending.add(dialogue.startNodeId)
-        val byId = dialogue.nodes.associateBy { it.id }
-        while (pending.isNotEmpty()) {
-            val id = pending.removeFirst()
-            val node = byId[id] ?: continue
-            val targets = if (node.choices.isEmpty()) listOf(node.nextNodeId) else node.choices.map { it.nextNodeId }
-            for (target in targets) {
-                if (target.isEmpty() || target !in byId || target in depths) continue
-                depths[target] = depths.getValue(id) + 1
-                pending.add(target)
+        val queue = java.util.ArrayDeque<String>().apply { add(dialogue.startNodeId) }
+        val nodes = dialogue.nodes.associateBy { it.id }
+        while (queue.isNotEmpty()) {
+            val id = queue.removeFirst()
+            val node = nodes[id] ?: continue
+            val destinations = if (node.choices.isEmpty()) listOf(node.nextNodeId) else node.choices.map { it.nextNodeId }
+            for (destination in destinations) if (destination in nodes && destination !in depths) {
+                depths[destination] = depths.getValue(id) + 1
+                queue.add(destination)
             }
         }
-        val unreachableDepth = (depths.values.maxOrNull() ?: 0) + 1
-        val columns = dialogue.nodes.groupBy { depths[it.id] ?: unreachableDepth }
-        val rows = columns.values.maxOfOrNull { it.size } ?: 1
-        val endColumn = (columns.keys.maxOrNull() ?: 0) + 1
-        val rowHeight = cardHeight + 150f
-        setSize((endColumn + 1) * 460f + 120f, rows * rowHeight + 180f)
-        val positions = linkedMapOf<String, Vector2>()
-        for ((column, nodes) in columns) {
-            for ((row, node) in nodes.withIndex()) {
-                positions[node.id] = Vector2(60f + column * 460f, height - cardHeight - 60f - row * rowHeight)
-            }
-        }
-        val endPosition = Vector2(60f + endColumn * 460f, height - cardHeight - 60f)
-
-        // Каждому ответу принадлежит отдельный выход: подписи соседних ответов не накладываются.
+        val unreachable = (depths.values.maxOrNull() ?: 0) + 1
+        val rows = hashMapOf<Int, Int>()
+        val rowHeight = 210f + maxOf(1, dialogue.nodes.maxOfOrNull { it.choices.size } ?: 1) * 48f
         var edgeIndex = 0
         for (node in dialogue.nodes) {
-            val source = positions.getValue(node.id)
-            val transitions = if (node.choices.isEmpty()) listOf("Continue" to node.nextNodeId)
-                else node.choices.map { it.text.ifBlank { it.id } to it.nextNodeId }
-            for ((answerIndex, transition) in transitions.withIndex()) {
-                val (label, targetId) = transition
-                val target = if (targetId.isEmpty()) endPosition else positions[targetId] ?: continue
-                val start = Vector2(source.x + cardWidth, source.y + cardHeight - 45f - answerIndex * 60f)
-                val finish = Vector2(target.x, target.y + cardHeight / 2f)
-                val tint = if (node.id == selectedId) Color.GOLD else Color.LIGHT_GRAY
-                val lane = source.y - 35f - (edgeIndex % 4) * 22f
-                val points = if (finish.x > start.x) {
-                    val middle = start.x + 180f + (answerIndex % 3) * 10f
-                    listOf(start, Vector2(middle, start.y), Vector2(middle, finish.y), finish)
-                } else {
-                    val outer = start.x + 180f + (answerIndex % 3) * 10f
-                    listOf(start, Vector2(outer, start.y), Vector2(outer, lane),
-                        Vector2(finish.x - 30f, lane), Vector2(finish.x - 30f, finish.y), finish)
-                }
-                for (index in 0 until points.lastIndex) line(points[index], points[index + 1], tint)
-                val before = points[points.lastIndex - 1]
-                val angle = atan2(finish.y - before.y, finish.x - before.x)
-                for (offset in listOf(-0.5f, 0.5f)) {
-                    line(finish, Vector2(finish.x - cos(angle + offset) * 12f,
-                        finish.y - sin(angle + offset) * 12f), tint)
-                }
-                addActor(label.take(72).toLabel(tint).apply {
-                    name = "story-graph-edge:${node.id}:$edgeIndex"
-                    wrap = true
-                    setFontScale(0.65f)
-                    setBounds(start.x + 6f, start.y + 3f, 166f, 48f)
-                    touchable = Touchable.disabled
-                })
-                edgeIndex++
-            }
-        }
-        for (node in dialogue.nodes) {
-            val position = positions.getValue(node.id)
-            val tint = if (node.id == selectedId) Color(0.18f, 0.32f, 0.48f, 1f)
-                else Color(0.14f, 0.17f, 0.22f, 1f)
-            addActor(Table().apply {
+            val column = depths[node.id] ?: unreachable
+            val row = rows[column] ?: 0
+            rows[column] = row + 1
+            val position = state.ensurePosition(node.id,
+                StoryDialogueGraphState.Position(60f + column * 440f, 60f + row * rowHeight))
+            val transitions = if (node.choices.isEmpty()) listOf(Triple<String?, String, String>(null, "Continue", node.nextNodeId))
+                else node.choices.map { Triple(it.id, it.text.ifBlank { it.id }, it.nextNodeId) }
+            val cardHeight = 156f + transitions.size * 48f
+            val card = Group().apply {
                 name = "story-graph-node:${node.id}"
-                background = ImageGetter.getDrawable("OtherIcons/whiteDot").tint(tint)
-                defaults().pad(5f).growX()
-                val heading = (if (node.id == dialogue.startNodeId) "▶ " else "") + node.id
-                add(heading.toLabel(Color.GOLD).apply { wrap = true }).width(cardWidth - 20f).row()
-                add(node.speaker.toLabel(Color.SKY).apply { wrap = true }).width(cardWidth - 20f).row()
-                add(node.text.take(100).toLabel().apply { wrap = true; setFontScale(0.75f) })
-                    .width(cardWidth - 20f).growY().row()
                 setBounds(position.x, position.y, cardWidth, cardHeight)
-                touchable = Touchable.enabled
-                onClick { select(node.id) }
+            }
+            cards[node.id] = card
+            card.addActor(Image(ImageGetter.getDrawable("OtherIcons/whiteDot")).apply {
+                color = if (node.id == state.selectedId) Color(0.18f, 0.32f, 0.48f, 1f) else Color(0.12f, 0.16f, 0.22f, 1f)
+                setSize(cardWidth, cardHeight); touchable = Touchable.disabled
             })
+            val header = Table().apply {
+                name = "story-graph-drag:${node.id}"
+                setBounds(22f, cardHeight - 40f, cardWidth - 44f, 36f)
+                touchable = Touchable.enabled
+                setClip(true)
+            }
+            header.addActor(fitted((if (node.id == dialogue.startNodeId) "▶ " else "") + node.id,
+                Color.GOLD, header.width, header.height))
+            header.addListener(moveListener(node.id, card))
+            card.addActor(header)
+            card.addActor(fitted(node.speaker, Color.SKY, cardWidth - 44f, 24f).apply {
+                setPosition(22f, cardHeight - 68f)
+            })
+            card.addActor(fitted(node.text, Color.WHITE, cardWidth - 44f, 68f).apply {
+                name = "story-graph-text:${node.id}"; setPosition(22f, cardHeight - 140f)
+            })
+            card.onClick { if (!gestureActive) callbacks.select(node.id) }
+            val input = port("story-graph-input:${node.id}", Color.SKY).apply {
+                setPosition(0f, cardHeight - 32f)
+            }
+            inputs[node.id] = input
+            card.addActor(input)
+            for ((index, transition) in transitions.withIndex()) {
+                val (choiceId, caption, target) = transition
+                val output = Output(node.id, choiceId)
+                val y = cardHeight - 164f - index * 48f
+                card.addActor(fitted(caption, Color.LIGHT_GRAY, cardWidth - 48f, 38f).apply {
+                    name = "story-graph-edge:${node.id}:${edgeIndex++}"
+                    setPosition(22f, y - 16f)
+                })
+                val handle = port("story-graph-output:${node.id}:${choiceId ?: "continue"}", Color.GOLD).apply {
+                    setPosition(cardWidth - 24f, y - 10f)
+                    addListener(connectionListener(output))
+                }
+                outputs[output] = handle
+                targets[output] = target
+                card.addActor(handle)
+            }
+            addActor(card)
         }
-        addActor(Table().apply {
+        end.apply {
             name = "story-graph-end"
             background = ImageGetter.getDrawable("OtherIcons/whiteDot").tint(Color(0.22f, 0.18f, 0.18f, 1f))
-            add("End dialogue".toLabel(Color.SALMON)).pad(12f)
-            setBounds(endPosition.x, endPosition.y, cardWidth, cardHeight)
+            add(fitted("End dialogue", Color.SALMON, 170f, 50f)).pad(12f)
+            setSize(200f, 80f)
             touchable = Touchable.disabled
-        })
+        }
+        addActor(end)
+        addActor(temporary)
+        updateExtent()
+        redrawWires()
     }
 
-    /** Линии рисуются обычным Batch вместе с виджетами, без отдельного GL-прохода. */
-    private fun line(from: Vector2, to: Vector2, tint: Color) {
-        if (from.epsilonEquals(to, 0.01f)) return
-        addActor(ImageGetter.getLine(from.x, from.y, to.x, to.y, 2f).apply {
+    /** Измеряет текст при фиксированной ширине; родительская Table не сужает wrap-label до нуля. */
+    private fun fitted(
+        text: String,
+        tint: Color,
+        availableWidth: Float,
+        availableHeight: Float
+    ): Label {
+        val label = object : Label(text, com.unciv.ui.utils.BaseScreen.skin) {
+            override fun getPrefWidth(): Float = availableWidth
+        }.apply {
+            name = "story-graph-label"
             color = tint.cpy()
+            wrap = true
+            setFontScale(state.textScale)
+            setSize(availableWidth, availableHeight)
             touchable = Touchable.disabled
+        }
+        if (label.prefHeight > availableHeight) {
+            var low = 0
+            var high = text.length
+            while (low < high) {
+                val middle = (low + high + 1) / 2
+                label.setText(text.take(middle).trimEnd() + "…")
+                if (label.prefHeight <= availableHeight) low = middle else high = middle - 1
+            }
+            label.setText(text.take(low).trimEnd() + "…")
+            // Короткие подписи не должны выходить за область даже при большой высоте строки выбранного шрифта.
+            var scale = state.textScale
+            while (label.prefHeight > availableHeight && scale > 0.1f) {
+                scale *= 0.9f
+                label.setFontScale(scale)
+            }
+        }
+        return label
+    }
+
+    private fun port(id: String, tint: Color) = Image(ImageGetter.getDrawable("OtherIcons/whiteDot")).apply {
+        name = id; color = tint.cpy(); setSize(24f, 24f); touchable = Touchable.enabled
+    }
+
+    private fun point(actor: Actor): Vector2 = actor.localToActorCoordinates(this, Vector2(actor.width / 2f, actor.height / 2f))
+    private fun mouse(event: InputEvent) = stageToLocalCoordinates(Vector2(event.stageX, event.stageY))
+
+    /** Заголовок забирает жест у ScrollPane; координаты drag учитывают масштаб полотна. */
+    private fun moveListener(id: String, card: Group) = object : InputListener() {
+        private var down = Vector2()
+        private var dragged = false
+        override fun touchDown(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int): Boolean {
+            if (button != Input.Buttons.LEFT || gestureActive) return false
+            event.stop()
+            stage.keyboardFocus = null
+            down = mouse(event)
+            originalPosition = Vector2(card.x, card.y)
+            moving = id
+            dragged = false
+            return true
+        }
+        override fun touchDragged(event: InputEvent, x: Float, y: Float, pointer: Int) {
+            if (moving != id) return
+            event.stop()
+            val delta = mouse(event).sub(down)
+            if (delta.len2() > 16f) dragged = true
+            if (!dragged) return
+            val origin = originalPosition ?: return
+            card.setPosition((origin.x + delta.x).coerceAtLeast(20f), (origin.y + delta.y).coerceAtLeast(20f))
+            redrawWires()
+        }
+        override fun touchUp(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int) {
+            event.stop()
+            if (moving != id) return
+            if (event.isTouchFocusCancel) { cancelGesture(); return }
+            moving = null
+            originalPosition = null
+            if (dragged) callbacks.move(id, card.x, card.y) else callbacks.select(id)
+        }
+    }
+
+    /** Drop вне входа отменяется; отключение связи является отдельной явной командой. */
+    private fun connectionListener(output: Output) = object : InputListener() {
+        override fun touchDown(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int): Boolean {
+            if (button != Input.Buttons.LEFT || gestureActive) return false
+            event.stop()
+            stage.keyboardFocus = null
+            connecting = output
+            callbacks.selectOutput(output)
+            return true
+        }
+        override fun touchDragged(event: InputEvent, x: Float, y: Float, pointer: Int) {
+            if (connecting != output) return
+            event.stop()
+            val cursor = mouse(event)
+            hoverTarget = inputs.entries.firstOrNull { point(it.value).dst2(cursor) <= 32f * 32f }?.key
+            inputs.forEach { (id, actor) -> actor.color = if (id == hoverTarget) Color.LIME else Color.SKY }
+            temporary.clearChildren()
+            line(temporary, point(outputs.getValue(output)), cursor, Color.GOLD)
+        }
+        override fun touchUp(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int) {
+            event.stop()
+            if (connecting != output) return
+            val target = if (event.isTouchFocusCancel) null else inputs.entries
+                .firstOrNull { point(it.value).dst2(mouse(event)) <= 32f * 32f }?.key
+            cancelGesture()
+            if (target != null) callbacks.connect(output, target)
+        }
+    }
+
+    fun cancelGesture(): Boolean {
+        if (!gestureActive) return false
+        moving?.let { id -> originalPosition?.let { cards[id]?.setPosition(it.x, it.y) } }
+        moving = null; originalPosition = null; connecting = null; hoverTarget = null
+        inputs.values.forEach { it.color = Color.SKY }
+        temporary.clearChildren()
+        redrawWires()
+        return true
+    }
+
+    private fun updateExtent() {
+        val right = cards.values.maxOfOrNull { it.x + it.width } ?: 300f
+        val top = cards.values.maxOfOrNull { it.y + it.height } ?: 300f
+        end.setPosition(right + 140f, 60f)
+        setSize(right + 400f, top + 100f)
+    }
+
+    private fun redrawWires() {
+        wires.clearChildren()
+        for ((output, targetId) in targets) {
+            val from = point(outputs.getValue(output))
+            val to = if (targetId.isEmpty()) Vector2(end.x, end.y + end.height / 2f)
+                else inputs[targetId]?.let(::point) ?: continue
+            val middle = maxOf(from.x + 50f, (from.x + to.x) / 2f)
+            val route = if (to.x > from.x) listOf(from, Vector2(middle, from.y), Vector2(middle, to.y), to)
+                else listOf(from, Vector2(from.x + 45f, from.y), Vector2(from.x + 45f, cards.getValue(output.nodeId).y - 20f),
+                    Vector2(to.x - 35f, cards.getValue(output.nodeId).y - 20f), Vector2(to.x - 35f, to.y), to)
+            val tint = if (output.nodeId == state.selectedId) Color.GOLD else Color.LIGHT_GRAY
+            for (i in 0 until route.lastIndex) line(wires, route[i], route[i + 1], tint)
+            val before = route[route.lastIndex - 1]
+            val angle = atan2(to.y - before.y, to.x - before.x)
+            for (offset in listOf(-0.5f, 0.5f)) line(wires, to,
+                Vector2(to.x - cos(angle + offset) * 12f, to.y - sin(angle + offset) * 12f), tint)
+        }
+    }
+
+    private fun line(group: Group, from: Vector2, to: Vector2, tint: Color) {
+        if (from.epsilonEquals(to, 0.01f)) return
+        group.addActor(ImageGetter.getLine(from.x, from.y, to.x, to.y, 2f).apply {
+            color = tint.cpy(); touchable = Touchable.disabled
         })
     }
 }

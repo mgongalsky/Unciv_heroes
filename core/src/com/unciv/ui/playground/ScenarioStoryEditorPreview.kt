@@ -92,7 +92,7 @@ private fun storyEditorInput(root: Actor, value: String): TextField =
             it.text == value && (value.isNotEmpty() || it.name == "story-field:Node ID")
         }
 
-/** Проверяет ширину формы и откладывает проверку графа до появления экрана-владельца в стеке. */
+/** Проверяет ширину формы и откладывает проверки графа до появления экрана-владельца в стеке. */
 private fun showStoryEditorPanel(screen: BaseScreen, panel: Table) {
     val scroll = AutoScrollPane(panel).apply {
         setScrollingDisabled(true, false)
@@ -110,6 +110,7 @@ private fun showStoryEditorPanel(screen: BaseScreen, panel: Table) {
     if (panel is ScenarioStoryEditorPanel) screen.stage.addAction(
         com.badlogic.gdx.scenes.scene2d.actions.Actions.run {
             checkStoryGraphInteraction(screen, ::clickStoryEditorButton)
+            checkStoryGraphGestures(screen, ::clickStoryEditorButton)
         }
     )
 }

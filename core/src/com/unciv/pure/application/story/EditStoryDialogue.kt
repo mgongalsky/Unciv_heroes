@@ -85,4 +85,30 @@ object EditStoryDialogue {
         }
         require(dialogue.aiChoices.keys.all { it in ids }) { "AI assignment points to an unknown node" }
     }
+
+    /** Меняет цель одного выхода. null в choiceId обозначает продолжение, пустая цель — завершение.
+     * Идентификатор ответа сохраняется вместе с условиями, последствиями и назначением AI.
+     */
+    fun setTransition(
+        source: StoryDialogue,
+        nodeId: String,
+        choiceId: String?,
+        targetNodeId: String
+    ): StoryDialogue {
+        val node = source.nodes.firstOrNull { it.id == nodeId }
+        require(node != null) { "Unknown node: $nodeId" }
+        require(targetNodeId.isEmpty() || source.nodes.any { it.id == targetNodeId }) {
+            "Transition points to an unknown node: $targetNodeId"
+        }
+        if (choiceId == null) {
+            require(node.choices.isEmpty()) { "Select an answer output for a node with answers" }
+        } else {
+            require(node.choices.any { it.id == choiceId }) { "Unknown answer: $choiceId" }
+        }
+        return source.deepCopy().apply {
+            val changed = nodes.first { it.id == nodeId }
+            if (choiceId == null) changed.nextNodeId = targetNodeId
+            else changed.choices.first { it.id == choiceId }.nextNodeId = targetNodeId
+        }.also(::validate)
+    }
 }

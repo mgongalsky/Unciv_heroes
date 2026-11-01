@@ -1,16 +1,19 @@
 package com.unciv.ui.mapeditor
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.unciv.logic.map.TileMap
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.pure.application.story.EditStoryDialogue
 import com.unciv.pure.domain.story.StoryDialogue
 import com.unciv.pure.domain.story.StoryDialogueNode
+import com.unciv.ui.popup.Popup
 import com.unciv.ui.utils.AutoScrollPane
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.ZoomableScrollPane
@@ -18,30 +21,29 @@ import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toTextButton
 
-/** Полноэкранный редактор владеет копией разговора до явного применения в черновик Story. */
+/** Координирует независимый черновик, историю и жесты; карта изменяется только владельцем после Apply. */
 class StoryDialogueGraphScreen(
     source: StoryDialogue,
     private val map: TileMap,
     private val ruleset: Ruleset,
     private val applyDialogue: (StoryDialogue) -> Unit
 ) : BaseScreen() {
-    private var draft = source.deepCopy()
-    private var selectedId = source.startNodeId
+    private val editorState = StoryDialogueGraphState(source)
+    private val draft get() = editorState.dialogue
+    private val selectedId get() = editorState.selectedId
+    private var properties = source.deepCopy()
     private var editedNode: StoryDialogueNode? = null
     private var aiChoice = ""
     private var nodeForm: StoryEditorForm? = null
     private var metadataForm: StoryEditorForm? = null
+    private var selectedOutput: StoryDialogueGraphCanvas.Output? = null
     private val error = "".toLabel(Color.SALMON).apply { wrap = true; name = "story-graph-error" }
+    private val selection = "".toLabel(Color.SKY).apply { wrap = true; setFontScale(0.7f) }
     private val root = Table().apply { setFillParent(true) }
     private val sidebar = Table().apply { top(); defaults().pad(4f).growX() }
     private val graph = object : ZoomableScrollPane(minZoom = 0.35f, maxZoom = 1.6f) {
-        fun refreshContentSize() {
-            sizeChanged()
-            invalidate()
-            validate()
-        }
+        fun refreshContentSize() { sizeChanged(); invalidate(); validate() }
     }
-    // Table размещает контейнер, а размер масштабируемой панели задаётся в её локальных координатах.
     private val graphViewport = object : Group() {
         override fun sizeChanged() {
             super.sizeChanged()
@@ -50,11 +52,10 @@ class StoryDialogueGraphScreen(
         }
     }.apply { addActor(graph) }
     private val sidebarScroll = AutoScrollPane(sidebar).apply {
-        setScrollingDisabled(true, false)
-        setFadeScrollBars(false)
+        setScrollingDisabled(true, false); setFadeScrollBars(false)
     }
-    private var sidebarCell: com.badlogic.gdx.scenes.scene2d.ui.Cell<AutoScrollPane>? = null
     private var closed = false
+    private val canvas get() = graph.actor as? StoryDialogueGraphCanvas
 
     init {
         stage.addActor(root)
@@ -63,76 +64,91 @@ class StoryDialogueGraphScreen(
         fun button(text: String, action: () -> Unit) {
             toolbar.add(text.toTextButton().onClick { attempt(action) })
         }
-        button("Apply dialogue") {
-            capture()
-            applyDialogue(draft.deepCopy())
-            close()
-        }
+        button("Apply dialogue") { capture(); applyDialogue(draft.deepCopy()); close() }
         button("Cancel") { close() }
         button("Add node") {
             capture()
             var number = 1
             while (draft.nodes.any { it.id == "node$number" }) number++
             val node = StoryDialogueNode(id = "node$number", text = "New dialogue line")
-            draft = EditStoryDialogue.addNode(draft, node)
-            selectedId = node.id
+            editorState.publish(EditStoryDialogue.addNode(draft, node), node.id)
+            selectedOutput = null
             rebuild(true)
         }
         button("Set as start") {
             capture()
-            draft = EditStoryDialogue.setStart(draft, selectedId)
+            editorState.publish(EditStoryDialogue.setStart(draft, selectedId), selectedId)
             rebuild(false)
         }
-        button("Delete node") {
-            capture()
-            draft = EditStoryDialogue.removeNode(draft, selectedId)
-            selectedId = draft.startNodeId
-            rebuild(true)
-        }
-        val toolbarScroll = AutoScrollPane(toolbar).apply { setScrollingDisabled(false, true) }
-        root.add(toolbarScroll).colspan(2).growX().height(58f).row()
+        button("Delete node") { deleteNode() }
+        button("Disconnect output") { disconnect() }
+        button("Undo") { undo() }
+        button("Redo") { redo() }
+        root.add(AutoScrollPane(toolbar).apply { setScrollingDisabled(false, true) })
+            .colspan(2).growX().height(58f).row()
         val navigation = Table().apply { defaults().pad(3f) }
         navigation.add("−".toTextButton().onClick { graph.zoomOut() })
         navigation.add("+".toTextButton().onClick { graph.zoomIn() })
+        navigation.add("Text −".toTextButton().onClick {
+            attempt { capture(); editorState.changeTextScale(editorState.textScale - 0.1f); rebuild(false) }
+        })
+        navigation.add("Text +".toTextButton().onClick {
+            attempt { capture(); editorState.changeTextScale(editorState.textScale + 0.1f); rebuild(false) }
+        })
         navigation.add("Center selected node".toTextButton().onClick { centerSelected() })
-        navigation.add("Drag to pan • Select a node to edit".toLabel().apply { setFontScale(0.75f) })
+        navigation.add("Auto layout".toTextButton().onClick {
+            attempt { capture(); editorState.autoLayout(); rebuild(true) }
+        })
+        navigation.add("Controls".toTextButton().onClick {
+            Popup(this).apply {
+                addGoodSizedLabel("Click a card to edit. Drag its title to move it. Drag the background to pan. Drag an answer output to a blue input to connect. Drop outside an input to cancel. Select an output and use Disconnect output to end that branch.").row()
+                addGoodSizedLabel("Delete: selected output or node. Ctrl+Z: undo. Ctrl+Shift+Z / Ctrl+Y: redo. Escape: cancel the current gesture, otherwise close without applying. Shortcuts are disabled while typing. Text − / Text + change card text independently of zoom.").row()
+                addCloseButton()
+            }.open()
+        })
         root.add(AutoScrollPane(navigation).apply { setScrollingDisabled(false, true) })
             .colspan(2).growX().height(48f).row()
         root.add(graphViewport).grow()
-        sidebarCell = root.add(sidebarScroll).width(sidebarWidth()).growY()
+        root.add(sidebarScroll).width(300f).growY()
         root.row()
-        root.add(error).colspan(2).growX().minHeight(36f).pad(6f).row()
-        // Escape/Android Back имеют ту же семантику, что Cancel; карта не изменяется.
+        root.add(selection).colspan(2).growX().height(28f).padHorizontal(6f).row()
+        root.add(error).colspan(2).growX().minHeight(32f).pad(6f).row()
         stage.addListener(object : InputListener() {
             override fun keyDown(event: InputEvent?, keycode: Int): Boolean {
-                if (keycode != Input.Keys.ESCAPE && keycode != Input.Keys.BACK) return false
-                close()
+                if (keycode == Input.Keys.ESCAPE || keycode == Input.Keys.BACK) {
+                    if (canvas?.cancelGesture() != true) close()
+                    return true
+                }
+                if (stage.keyboardFocus is TextField) return false
+                val ctrl = Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT)
+                val shift = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)
+                when {
+                    keycode == Input.Keys.FORWARD_DEL -> attempt { if (selectedOutput != null) disconnect() else deleteNode() }
+                    ctrl && keycode == Input.Keys.Z -> attempt { if (shift) redo() else undo() }
+                    ctrl && keycode == Input.Keys.Y -> attempt { redo() }
+                    else -> return false
+                }
                 return true
             }
         })
         rebuild(true)
     }
 
-    /** Фиксированная ширина сохраняет доступность уже созданных полей при resize без потери ввода. */
-    private fun sidebarWidth() = 300f
-
     private fun attempt(action: () -> Unit) {
         if (closed) return
-        try {
-            action()
-            if (!closed) error.setText("")
-        } catch (invalid: IllegalArgumentException) {
-            error.setText(invalid.message.orEmpty())
-        }
+        try { action(); if (!closed) error.setText("") }
+        catch (invalid: IllegalArgumentException) { error.setText(invalid.message.orEmpty()) }
     }
 
-    /** Поля меняют локальную реплику; команда публикует её в локальный граф только после проверки. */
+    /** Сначала собирает поля в независимой копии, затем публикует одну проверенную команду. */
     private fun capture() {
         metadataForm?.capture()
         nodeForm?.capture()
         val node = editedNode ?: return
-        draft = EditStoryDialogue.replaceNode(draft, selectedId, node, aiChoice.ifBlank { null })
-        selectedId = node.id
+        val oldId = selectedId
+        val updated = EditStoryDialogue.replaceNode(properties, oldId, node, aiChoice.ifBlank { null })
+        editorState.publish(updated, node.id, oldId)
+        properties = draft.deepCopy()
     }
 
     private fun mutateNode(action: () -> Unit) = attempt {
@@ -140,52 +156,98 @@ class StoryDialogueGraphScreen(
         nodeForm?.capture()
         action()
         val node = requireNotNull(editedNode)
-        draft = EditStoryDialogue.replaceNode(draft, selectedId, node, aiChoice.ifBlank { null })
-        selectedId = node.id
+        editorState.publish(EditStoryDialogue.replaceNode(properties, selectedId, node, aiChoice.ifBlank { null }), node.id, selectedId)
         rebuild(false)
+    }
+
+    /** Поля могли переименовать узел или ответ после создания портов: разрешаем их актуальные ID перед командой. */
+    private fun connect(output: StoryDialogueGraphCanvas.Output, target: String) {
+        val previousId = selectedId
+        val choiceIndex = draft.nodes.firstOrNull { it.id == output.nodeId }?.choices
+            ?.indexOfFirst { it.id == output.choiceId } ?: -1
+        capture()
+        val sourceId = if (output.nodeId == previousId) selectedId else output.nodeId
+        val targetId = if (target == previousId) selectedId else target
+        val choiceId = if (output.choiceId == null) null else {
+            requireNotNull(draft.nodes.firstOrNull { it.id == sourceId }?.choices?.getOrNull(choiceIndex)?.id) {
+                "The selected answer no longer exists"
+            }
+        }
+        editorState.publish(EditStoryDialogue.setTransition(draft, sourceId, choiceId, targetId), selectedId)
+        selectedOutput = StoryDialogueGraphCanvas.Output(sourceId, choiceId)
+        rebuild(false)
+    }
+
+    private fun disconnect() {
+        val output = requireNotNull(selectedOutput) { "Select an output port first" }
+        connect(output, "")
+    }
+
+    private fun deleteNode() {
+        capture()
+        editorState.publish(EditStoryDialogue.removeNode(draft, selectedId), draft.startNodeId)
+        selectedOutput = null
+        rebuild(true)
+    }
+
+    private fun undo() {
+        canvas?.cancelGesture()
+        capture()
+        if (editorState.undo()) { selectedOutput = null; rebuild(false) }
+    }
+
+    private fun redo() {
+        canvas?.cancelGesture()
+        capture()
+        if (editorState.redo()) { selectedOutput = null; rebuild(false) }
     }
 
     private fun rebuild(center: Boolean) {
         val previousX = graph.scrollX
         val previousY = graph.scrollY
-        val node = draft.nodes.firstOrNull { it.id == selectedId } ?: draft.nodes.firstOrNull()
-        selectedId = node?.id.orEmpty()
-        editedNode = node?.deepCopy()
+        properties = draft.deepCopy()
+        editedNode = draft.nodes.firstOrNull { it.id == selectedId }?.deepCopy()
         aiChoice = draft.aiChoices[selectedId].orEmpty()
-        graph.actor = StoryDialogueGraphCanvas(draft, selectedId) { target ->
-            attempt {
-                val previousId = selectedId
+        graph.actor = StoryDialogueGraphCanvas(editorState, StoryDialogueGraphCanvas.Callbacks(
+            select = { target -> attempt {
+                val oldId = selectedId
                 capture()
-                // При клике на переименовываемую карточку сохраняем её новый ID.
-                if (target != previousId) selectedId = target
+                if (target != oldId) editorState.select(target)
+                stage.keyboardFocus = null
+                selectedOutput = null
                 rebuild(false)
+            } },
+            move = { id, x, y -> attempt {
+                val oldId = selectedId
+                capture()
+                editorState.move(if (id == oldId) selectedId else id, x, y)
+                rebuild(false)
+            } },
+            connect = { output, target -> attempt { connect(output, target) } },
+            selectOutput = { output ->
+                selectedOutput = output
+                selection.setText("Output: ${output.nodeId} / ${output.choiceId ?: "Continue"} • Disconnect output → End dialogue")
             }
-        }
+        ))
         sidebar.clear()
-        val fieldWidth = sidebarWidth() - 32f
+        val fieldWidth = 268f
         metadataForm = StoryEditorForm(fieldWidth).also { form ->
-            form.text("Dialogue ID", draft.id) { draft.id = it.trim() }
-            form.flag("Pause world", draft.pauseWorld) { draft.pauseWorld = it }
-            form.position("Camera focus (x,y; optional)", draft.focus) { draft.focus = it }
+            form.text("Dialogue ID", draft.id) { properties.id = it.trim() }
+            form.flag("Pause world", draft.pauseWorld) { properties.pauseWorld = it }
+            form.position("Camera focus (x,y; optional)", draft.focus) { properties.focus = it }
             sidebar.add(form).growX().row()
         }
         editedNode?.let { editable ->
-            nodeForm = StoryDialogueEditor.createNode(
-                draft, editable, map, ruleset, fieldWidth, aiChoice,
-                { aiChoice = it }, ::mutateNode
-            )
+            nodeForm = StoryDialogueEditor.createNode(draft, editable, map, ruleset, fieldWidth, aiChoice,
+                { aiChoice = it }, ::mutateNode)
             sidebar.add(nodeForm).growX().row()
-            sidebar.add("Update node".toTextButton().onClick {
-                attempt { capture(); rebuild(false) }
-            }).minHeight(44f).row()
+            sidebar.add("Update node".toTextButton().onClick { attempt { capture(); rebuild(false) } }).minHeight(44f).row()
         }
-        root.invalidateHierarchy()
-        root.validate()
-        graph.refreshContentSize()
+        selection.setText(selectedOutput?.let { "Output: ${it.nodeId} / ${it.choiceId ?: "Continue"} • Disconnect output → End dialogue" }
+            ?: "Drag title: move • Drag output to input: connect • Text: ${(editorState.textScale * 100).toInt()}%")
+        root.invalidateHierarchy(); root.validate(); graph.refreshContentSize()
         if (center) centerSelected() else {
-            graph.scrollX = previousX
-            graph.scrollY = previousY
-            graph.updateVisualScroll()
+            graph.scrollX = previousX; graph.scrollY = previousY; graph.updateVisualScroll()
         }
     }
 
@@ -202,11 +264,15 @@ class StoryDialogueGraphScreen(
         game.popScreen()
     }
 
-    /** Resize сохраняет незавершённый ввод: меняются размеры контейнеров, а не экземпляр черновика. */
+    /** Resize не пересоздаёт поля и сохраняет незавершённый ввод. */
     override fun resize(width: Int, height: Int) {
         super.resize(width, height)
-        sidebarCell?.width(sidebarWidth())
-        root.invalidateHierarchy()
-        root.validate()
+        root.invalidateHierarchy(); root.validate()
     }
+
+    /** Задаёт боковые отступы ячейки средствами используемой версии Scene2D. */
+    private fun <T : com.badlogic.gdx.scenes.scene2d.Actor> com.badlogic.gdx.scenes.scene2d.ui.Cell<T>.padHorizontal(
+        value: Float
+    ): com.badlogic.gdx.scenes.scene2d.ui.Cell<T> =
+            padLeft(value).padRight(value)
 }
