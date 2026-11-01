@@ -161,6 +161,17 @@ class MapEditorViewTab(
     override fun activated(index: Int, caption: String, pager: TabbedPager) {
         editorScreen.tileClickHandler = this::tileClickHandler
         update()
+        // Переключение слоя относится только к просмотру и не помечает карту изменённой.
+        val zones = "Show all story zones".toTextButton().apply {
+            name = "scenario-view-zones-toggle"
+            color = if (editorScreen.storyZonesVisible) Color.SKY else Color.WHITE
+        }
+        zones.onClick {
+            editorScreen.storyZonesVisible = !editorScreen.storyZonesVisible
+            zones.color = if (editorScreen.storyZonesVisible) Color.SKY else Color.WHITE
+            editorScreen.mapHolder.refreshStoryZoneOverlays()
+        }
+        add(zones).growX().row()
     }
 
     override fun deactivated(index: Int, caption: String, pager: TabbedPager) {

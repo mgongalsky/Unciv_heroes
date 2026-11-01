@@ -86,10 +86,13 @@ private fun clickStoryEditorButton(root: Actor, caption: String) {
     renderLayout()
 }
 
+/** Пустое значение используется проверкой неверного ID узла; остальные поля ищутся по уникальному тексту. */
 private fun storyEditorInput(root: Actor, value: String): TextField =
-    storyEditorActors(root).filterIsInstance<TextField>().single { it.text == value }
+        storyEditorActors(root).filterIsInstance<TextField>().single {
+            it.text == value && (value.isNotEmpty() || it.name == "story-field:Node ID")
+        }
 
-/** Общий контейнер проверяет ширину формы; экранные переходы проверяются после установки экрана в стек. */
+/** Проверяет ширину формы и откладывает проверку графа до появления экрана-владельца в стеке. */
 private fun showStoryEditorPanel(screen: BaseScreen, panel: Table) {
     val scroll = AutoScrollPane(panel).apply {
         setScrollingDisabled(true, false)
@@ -104,16 +107,16 @@ private fun showStoryEditorPanel(screen: BaseScreen, panel: Table) {
     container.validate()
     scroll.validate()
     check(panel.prefWidth <= 510f) { "Story editor exceeds available width: ${panel.prefWidth}" }
-    if (panel is ScenarioStoryEditorPanel) {
-        screen.stage.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.run {
-            checkCinematicEditorPreview(screen)
-            checkStorySaveAndPlay(screen)
-        })
-    }
+    if (panel is ScenarioStoryEditorPanel) screen.stage.addAction(
+        com.badlogic.gdx.scenes.scene2d.actions.Actions.run {
+            checkStoryGraphInteraction(screen, ::clickStoryEditorButton)
+        }
+    )
 }
 
-/** Проверяет жизненный цикл спрайта, создание примера, навигацию и команды формы героя. */
+/** Проверяет контуры зон, спрайт героя, навигацию и команды формы через настоящий ввод. */
 fun openScenarioHeroEditorPreview(screen: BaseScreen) {
+    checkStoryZoneContours(::clickStoryEditorButton)
     checkHeroPreviewLifecycle()
     checkStoryEditorNavigation()
     checkStoryExampleCreation()
@@ -131,17 +134,15 @@ fun openScenarioHeroEditorPreview(screen: BaseScreen) {
     clickStoryEditorButton(panel, "Apply hero")
     check(changes == 1 && map.scenarioHeroes.single().name == "Renamed hero")
     clickStoryEditorButton(panel, "Apply hero")
-    check(changes == 1) { "Repeated hero Apply emitted a change" }
+    check(changes == 1)
     storyEditorInput(panel, "hero").text = ""
     clickStoryEditorButton(panel, "Apply hero")
-    check(changes == 1 && map.scenarioHeroes.single().id == "hero") {
-        "Invalid hero draft changed the map"
-    }
+    check(changes == 1 && map.scenarioHeroes.single().id == "hero")
     panel.select(position)
     check(storyEditorInput(panel, "Renamed hero").text == map.scenarioHeroes.single().name)
 }
 
-/** Проверяет редактирование и предпросмотр через экранный ввод, включая изоляцию последствий. */
+/** Проверяет граф через Stage, изоляцию двух уровней черновика и производственный предпросмотр. */
 fun openScenarioStoryEditorPreview(screen: BaseScreen) {
     val ruleset = RulesetCache.getComplexRuleset(GameParameters())
     val map = TileMap(3, ruleset, false)
@@ -152,59 +153,125 @@ fun openScenarioStoryEditorPreview(screen: BaseScreen) {
                 id = "meeting", startNodeId = "question",
                 nodes = arrayListOf(
                     StoryDialogueNode(
-                        id = "question", speaker = "Gatekeeper",
-                        text = "Will you help the village?", choices = arrayListOf(
+                        id = "question",
+                        speaker = "Gatekeeper",
+                        text = "Will you help the village?",
+                        choices = arrayListOf(
                             StoryChoice(
-                                id = "accept", text = "I will help", effects = arrayListOf(
+                                "accept", "I will help", effects = arrayListOf(
                                     StoryEffect(StoryEffectKind.SetFlag, "accepted"),
                                     StoryEffect(StoryEffectKind.GrantGold, amount = 17)
                                 )
                             ),
-                            StoryChoice(id = "leave", text = "I must leave")
+                            StoryChoice("leave", "I must leave")
                         )
                     )
                 ), aiChoices = linkedMapOf("question" to "leave")
             )
         )
     )
+    val original = map.story!!.deepCopy()
     var changes = 0
     val panel = ScenarioStoryEditorPanel(map, ruleset, 500f, { changes++ }, {})
     panel.previewScreen = screen
     showStoryEditorPanel(screen, panel)
     clickStoryEditorButton(panel, "Dialogues")
-    storyEditorInput(panel, "I will help").text = "I will help the village"
-    check(map.story!!.dialogues.single().nodes.single().choices.first().text == "I will help")
-    clickStoryEditorButton(panel, "Cinematics")
-    check(storyEditorActors(panel).any { it.name == "scenario-story-empty-section" })
-    clickStoryEditorButton(panel, "Dialogues")
-    check(storyEditorInput(panel, "I will help the village").text.isNotBlank())
-    clickStoryEditorButton(panel, "Apply story")
-    check(changes == 1)
-    val saved = map.story!!.deepCopy()
-    check(saved.dialogues.single().nodes.single().choices.first().text == "I will help the village")
-    check(saved.dialogues.single().nodes.single().choices.first().effects.size == 2)
-    clickStoryEditorButton(panel, "Apply story")
-    check(changes == 1) { "Repeated story Apply emitted a change" }
-    storyEditorInput(panel, "question").text = ""
-    clickStoryEditorButton(panel, "Apply story")
-    check(changes == 1 && map.story == saved) { "Invalid story draft changed the map" }
-    clickStoryEditorButton(panel, "Discard changes")
-    check(storyEditorInput(panel, "question").text == "question")
-    check(storyEditorInput(panel, "I will help the village").text.isNotBlank())
-    clickStoryEditorButton(panel, "Preview dialogue: meeting")
-    check(storyEditorActors(screen.stage.root).any { it.name == "story-text" })
-    clickStoryEditorButton(screen.stage.root, "I will help the village")
-    clickStoryEditorButton(screen.stage.root, "Continue")
-    clickStoryEditorButton(screen.stage.root, "Continue")
-    check(
-        storyEditorActors(screen.stage.root).filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>()
-            .any { it.text.toString() == "Preview complete".tr() })
-    clickStoryEditorButton(screen.stage.root, "Close")
-    check(changes == 1 && map.story == saved) { "Preview published changes to the map" }
-    clickStoryEditorButton(panel, "Preview dialogue: meeting")
-    clickStoryEditorButton(screen.stage.root, "Close preview")
-    check(storyEditorActors(screen.stage.root).none { it is com.unciv.ui.story.StoryDialoguePopup })
-    check(changes == 1 && map.story == saved) { "Closing preview changed the map" }
+    check(storyEditorActors(panel).none { it is TextField }) { "Dialogue list still contains inline node forms" }
+    screen.stage.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.run {
+        check(screen.game.screen === screen)
+        fun graph() = screen.game.screen as? com.unciv.ui.mapeditor.StoryDialogueGraphScreen
+            ?: error("Full-screen dialogue graph did not open")
+
+        // Кнопки возврата уничтожают свой Stage; после touchUp к нему больше не обращаемся.
+        fun closeGraph(caption: String) {
+            val current = graph()
+            current.render(0f)
+            val button = storyEditorActors(current.stage.root).filterIsInstance<TextButton>()
+                .single { it.text.toString() == caption.tr() }
+            val center = button.localToStageCoordinates(
+                com.badlogic.gdx.math.Vector2(
+                    button.width / 2f,
+                    button.height / 2f
+                )
+            )
+            val hit = current.stage.hit(center.x, center.y, true)
+            check(hit != null && generateSequence(hit) { it.parent }.any { it === button })
+            val point = current.stage.stageToScreenCoordinates(center)
+            current.stage.touchDown(
+                point.x.toInt(),
+                point.y.toInt(),
+                0,
+                com.badlogic.gdx.Input.Buttons.LEFT
+            )
+            current.stage.touchUp(
+                point.x.toInt(),
+                point.y.toInt(),
+                0,
+                com.badlogic.gdx.Input.Buttons.LEFT
+            )
+            check(screen.game.screen === screen) { "Graph did not return to its owner after $caption" }
+        }
+        clickStoryEditorButton(panel, "Edit dialogue: meeting")
+        val first = graph()
+        first.render(0f)
+        check(storyEditorActors(first.stage.root).any { it.name == "story-graph-node:question" })
+        check(storyEditorActors(first.stage.root).any { it.name == "story-graph-end" })
+        check(storyEditorActors(first.stage.root).count { it.name?.startsWith("story-graph-edge:") == true } == 2)
+        storyEditorInput(first.stage.root, "I will help").text = "I will help the village"
+        storyEditorInput(first.stage.root, "question").text = "renamed"
+        clickStoryEditorButton(first.stage.root, "Update node")
+        check(storyEditorActors(first.stage.root).any { it.name == "story-graph-node:renamed" })
+        check(map.story == original && changes == 0)
+        storyEditorInput(first.stage.root, "renamed").text = ""
+        clickStoryEditorButton(first.stage.root, "Update node")
+        check(
+            storyEditorActors(first.stage.root).filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>()
+                .single { it.name == "story-graph-error" }.text.isNotEmpty()
+        )
+        check(storyEditorActors(first.stage.root).any { it.name == "story-graph-node:renamed" })
+        storyEditorInput(first.stage.root, "").text = "renamed"
+        clickStoryEditorButton(first.stage.root, "Update node")
+        clickStoryEditorButton(first.stage.root, "Add node")
+        check(storyEditorActors(first.stage.root).any { it.name == "story-graph-node:node1" })
+        clickStoryEditorButton(first.stage.root, "Delete node")
+        check(storyEditorActors(first.stage.root).none { it.name == "story-graph-node:node1" })
+        clickStoryEditorButton(first.stage.root, "−")
+        clickStoryEditorButton(first.stage.root, "+")
+        closeGraph("Apply dialogue")
+        check(map.story == original && changes == 0) { "Graph Apply bypassed Apply story" }
+        clickStoryEditorButton(panel, "Cinematics")
+        check(storyEditorActors(panel).any { it.name == "scenario-story-empty-section" })
+        clickStoryEditorButton(panel, "Dialogues")
+        clickStoryEditorButton(panel, "Apply story")
+        check(changes == 1)
+        val saved = map.story!!.deepCopy()
+        val dialogue = saved.dialogues.single()
+        check(dialogue.startNodeId == "renamed" && dialogue.aiChoices["renamed"] == "leave")
+        check(dialogue.nodes.single().choices.first().text == "I will help the village")
+        check(dialogue.nodes.single().choices.first().effects.size == 2)
+        clickStoryEditorButton(panel, "Apply story")
+        check(changes == 1)
+        clickStoryEditorButton(panel, "Edit dialogue: meeting")
+        storyEditorInput(graph().stage.root, "I will help the village").text = "Cancelled edit"
+        closeGraph("Cancel")
+        clickStoryEditorButton(panel, "Apply story")
+        check(map.story == saved && changes == 1) { "Cancel changed the shared draft" }
+        clickStoryEditorButton(panel, "Preview dialogue: meeting")
+        check(storyEditorActors(screen.stage.root).any { it.name == "story-text" })
+        clickStoryEditorButton(screen.stage.root, "I will help the village")
+        clickStoryEditorButton(screen.stage.root, "Continue")
+        clickStoryEditorButton(screen.stage.root, "Continue")
+        check(
+            storyEditorActors(screen.stage.root).filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>()
+                .any { it.text.toString() == "Preview complete".tr() })
+        clickStoryEditorButton(screen.stage.root, "Close")
+        check(map.story == saved && changes == 1)
+        clickStoryEditorButton(panel, "Preview dialogue: meeting")
+        clickStoryEditorButton(screen.stage.root, "Close preview")
+        check(storyEditorActors(screen.stage.root).none { it is com.unciv.ui.story.StoryDialoguePopup })
+        checkCinematicEditorPreview(screen)
+        checkStorySaveAndPlay(screen)
+    })
 }
 
 /** Проверяет маршрутизацию кликов и восстановление инструментов на настоящем экране редактора. */
@@ -278,7 +345,7 @@ private fun checkStoryEditorNavigation() {
     }
 }
 
-/** Создание примера обновляет карту и открытую форму, не оставляя обработчики прежнего черновика. */
+/** Создание примера заменяет карту и компактный список диалогов открытой формы. */
 private fun checkStoryExampleCreation() {
     val ruleset = RulesetCache.getComplexRuleset(GameParameters())
     val original = TileMap(3, ruleset, false)
@@ -288,14 +355,14 @@ private fun checkStoryExampleCreation() {
         editor.tabs.edit.selectPage("Story")
         check(!editor.isDirty)
         clickStoryEditorButton(editor.stage.root, "Create story example map")
-        check(editor.tileMap !== original) { "Example did not replace the editor map" }
-        check(editor.isDirty) { "Example map was not marked for saving" }
+        check(editor.tileMap !== original)
+        check(editor.isDirty)
         check(editor.tileMap.scenarioHeroes.single().id == "guide")
         check(editor.tileMap.scenarioCities.single().id == "gate")
         check(editor.tabs.edit.currentSubTab() == "Story" && !editor.allowDragPainting)
         clickStoryEditorButton(editor.stage.root, "Dialogues")
-        check(storyEditorInput(editor.stage.root, "parley").text == "parley") {
-            "Story form still displays the previous map"
+        check(storyEditorActors(editor.stage.root).any { it.name == "scenario-edit-dialogue:parley" }) {
+            "Story list still displays the previous map"
         }
         clickStoryEditorButton(editor.stage.root, "Apply story")
         check(editor.tileMap.story!!.dialogues.any { it.id == "parley" })
@@ -364,65 +431,85 @@ private fun checkHeroPreviewLifecycle() {
     }
 }
 
-/** Проверяет кнопку видеосцены, текстовую замену и возврат в редактор через настоящий стек экранов. */
+/** Проверяет кадр подготовки, причины заглушки и возврат после подтверждения через стек экранов. */
 private fun checkCinematicEditorPreview(host: BaseScreen) {
     check(host.game.screen === host)
     val ruleset = RulesetCache.getComplexRuleset(GameParameters())
-    val map = TileMap(3, ruleset, false)
-    map.story = StoryScenario(
-        cinematics = arrayListOf(
-            StoryCinematic("arrival", "", "Preview arrival text", true)
-        )
-    )
-    val saved = map.story!!.deepCopy()
-    val editor = com.unciv.ui.mapeditor.MapEditorScreen(map)
-    host.game.pushScreen(editor)
-    try {
-        editor.tabs.selectPage("Edit")
-        editor.tabs.edit.selectPage("Story")
-        clickStoryEditorButton(editor.stage.root, "Cinematics")
-        // Открытие меняет экран; послекликовая отрисовка редактора безопасна, он остаётся в стеке.
-        clickStoryEditorButton(editor.stage.root, "Preview cinematic: arrival")
-        val cinematic = host.game.screen as? com.unciv.ui.story.StoryCinematicScreen
-            ?: error("Cinematic preview did not open its production screen")
-        cinematic.render(0f)
-        check(
-            storyEditorActors(cinematic.stage.root)
-                .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>()
-                .any { it.name == "story-text" && it.text.toString() == "Preview arrival text" })
-        val button = storyEditorActors(cinematic.stage.root).filterIsInstance<TextButton>()
-            .single { it.name == "story-choice:continue" }
-        val center = button.localToStageCoordinates(
-            com.badlogic.gdx.math.Vector2(
-                button.width / 2f,
-                button.height / 2f
+    for ((path, reason) in listOf(
+        "" to "No video file has been assigned to this scene.",
+        "Videos/__story_ui_missing_video__.webm" to "The video file was not found."
+    )) {
+        val map = TileMap(3, ruleset, false).apply {
+            story = StoryScenario(
+                cinematics = arrayListOf(
+                    StoryCinematic("arrival", path, "Preview arrival text", false)
+                )
             )
-        )
-        val hit = cinematic.stage.hit(center.x, center.y, true)
-        check(hit != null && generateSequence(hit) { it.parent }.any { it === button })
-        val point = cinematic.stage.stageToScreenCoordinates(center)
-        cinematic.stage.touchDown(
-            point.x.toInt(),
-            point.y.toInt(),
-            0,
-            com.badlogic.gdx.Input.Buttons.LEFT
-        )
-        // Подтверждение уничтожает экран ролика: после touchUp больше не обращаемся к его Stage.
-        cinematic.stage.touchUp(
-            point.x.toInt(),
-            point.y.toInt(),
-            0,
-            com.badlogic.gdx.Input.Buttons.LEFT
-        )
-        check(host.game.screen === editor) { "Cinematic preview did not return to the editor" }
-        editor.stage.act(0f)
-        check(
-            storyEditorActors(editor.stage.root).filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>()
-                .any { it.text.toString() == "Preview complete".tr() })
-        clickStoryEditorButton(editor.stage.root, "Close")
-        check(map.story == saved && !editor.isDirty) { "Cinematic preview changed the map" }
-    } finally {
-        while (host.game.screen !== host && host.game.screenStack.size > 1) host.game.popScreen()
+        }
+        val saved = map.story!!.deepCopy()
+        val editor = com.unciv.ui.mapeditor.MapEditorScreen(map)
+        host.game.pushScreen(editor)
+        try {
+            editor.tabs.selectPage("Edit")
+            editor.tabs.edit.selectPage("Story")
+            clickStoryEditorButton(editor.stage.root, "Cinematics")
+            clickStoryEditorButton(editor.stage.root, "Preview cinematic: arrival")
+            val cinematic = host.game.screen as? com.unciv.ui.story.StoryCinematicScreen
+                ?: error("Cinematic preview did not open its production screen")
+            cinematic.render(0f)
+            check(storyEditorActors(cinematic.stage.root).any { it.name == "story-video-preparing" })
+            check(storyEditorActors(cinematic.stage.root).none { it.name == "story-choice:continue" })
+            cinematic.render(0f)
+            check(storyEditorActors(cinematic.stage.root).any { it.name == "story-video-placeholder" })
+            val labels =
+                    storyEditorActors(cinematic.stage.root).filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>()
+            check(labels.any { it.name == "story-text" && it.text.toString() == "Preview arrival text" })
+            check(labels.any { it.name == "story-video-reason" && it.text.toString() == reason.tr() })
+            if (path.isNotEmpty()) check(labels.any { it.name == "story-video-path" && it.text.toString() == path })
+            cinematic.render(0f)
+            check(host.game.screen === cinematic) { "Fallback completed without confirmation" }
+            val button = storyEditorActors(cinematic.stage.root).filterIsInstance<TextButton>()
+                .single { it.name == "story-choice:continue" }
+            for (scroll in generateSequence(button.parent) { it.parent }
+                .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.ScrollPane>()) {
+                val content = scroll.actor ?: continue
+                val position =
+                        button.localToActorCoordinates(content, com.badlogic.gdx.math.Vector2())
+                scroll.scrollTo(position.x, position.y, button.width, button.height)
+                scroll.updateVisualScroll()
+            }
+            cinematic.stage.draw()
+            val center = button.localToStageCoordinates(
+                com.badlogic.gdx.math.Vector2(
+                    button.width / 2f,
+                    button.height / 2f
+                )
+            )
+            val hit = cinematic.stage.hit(center.x, center.y, true)
+            check(hit != null && generateSequence(hit) { it.parent }.any { it === button })
+            val point = cinematic.stage.stageToScreenCoordinates(center)
+            cinematic.stage.touchDown(
+                point.x.toInt(),
+                point.y.toInt(),
+                0,
+                com.badlogic.gdx.Input.Buttons.LEFT
+            )
+            cinematic.stage.touchUp(
+                point.x.toInt(),
+                point.y.toInt(),
+                0,
+                com.badlogic.gdx.Input.Buttons.LEFT
+            )
+            check(host.game.screen === editor)
+            editor.stage.act(0f)
+            check(
+                storyEditorActors(editor.stage.root).filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>()
+                    .any { it.text.toString() == "Preview complete".tr() })
+            clickStoryEditorButton(editor.stage.root, "Close")
+            check(map.story == saved && !editor.isDirty)
+        } finally {
+            while (host.game.screen !== host && host.game.screenStack.size > 1) host.game.popScreen()
+        }
     }
 }
 

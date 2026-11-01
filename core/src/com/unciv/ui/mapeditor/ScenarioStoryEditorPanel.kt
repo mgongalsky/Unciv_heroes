@@ -187,26 +187,45 @@ class ScenarioStoryEditorPanel(
 
     private fun dialogues(fields: StoryEditorForm) {
         for (dialogue in draft.dialogues) {
-            fields.add("Preview dialogue: ${dialogue.id}".toTextButton().apply {
-                name = "scenario-preview-dialogue:${dialogue.id}"
+            fields.add("${dialogue.id} (${dialogue.nodes.size})".toLabel().apply { wrap = true })
+                .width(widthForFields).row()
+            fields.add("Edit dialogue: ${dialogue.id}".toTextButton().apply {
+                name = "scenario-edit-dialogue:${dialogue.id}"
             }.onClick {
                 attempt {
                     form?.capture()
-                    preview(StoryEffect(StoryEffectKind.Dialogue, dialogue.id))
+                    val screen =
+                            requireNotNull(previewScreen) { "Dialogue editing requires an editor screen" }
+                    screen.game.pushScreen(
+                        StoryDialogueGraphScreen(
+                            dialogue,
+                            map,
+                            ruleset
+                        ) { edited ->
+                            // Проверяем весь кандидат до замены общего черновика, включая внешние ссылки на диалог.
+                            val candidate = draft.deepCopy()
+                            val index = draft.dialogues.indexOf(dialogue)
+                            require(index >= 0) { "Dialogue is no longer present in the draft" }
+                            candidate.dialogues[index] = edited.deepCopy()
+                            com.unciv.pure.application.story.ValidateStoryScenario.execute(
+                                candidate,
+                                map.scenarioHeroes.map { it.id }.toSet(),
+                                map.scenarioPlayerSlots.map { it.id }.toSet(),
+                                map.scenarioCities.map { it.id }.toSet(),
+                                map.values.map { CityPosition(it.position.x, it.position.y) }
+                                    .toSet()
+                            )
+                            draft = candidate
+                            refresh()
+                        })
                 }
             }).row()
-            fields.include(
-                StoryDialogueEditor.create(
-                    dialogue,
-                    map,
-                    ruleset,
-                    widthForFields,
-                    ::mutate
-                )
-            )
-            fields.add(
-                "Delete dialogue".toTextButton()
-                    .onClick { mutate { draft.dialogues.remove(dialogue) } }).row()
+            fields.add("Preview dialogue: ${dialogue.id}".toTextButton().apply {
+                name = "scenario-preview-dialogue:${dialogue.id}"
+            }.onClick { preview(StoryEffect(StoryEffectKind.Dialogue, dialogue.id)) }).row()
+            fields.add("Delete dialogue: ${dialogue.id}".toTextButton().onClick {
+                mutate { draft.dialogues.remove(dialogue) }
+            }).row()
         }
         fields.add("Add dialogue".toTextButton().onClick {
             mutate {
@@ -275,4 +294,7 @@ class ScenarioStoryEditorPanel(
         )
         StoryScenePreview(screen, draft, effect).open()
     }
+
+    /** Отдаёт независимый снимок зон для слоя просмотра; карта до Apply не изменяется. */
+    fun zonePreviewSnapshot(): List<StoryZone> = draft.zones.map { it.deepCopy() }
 }

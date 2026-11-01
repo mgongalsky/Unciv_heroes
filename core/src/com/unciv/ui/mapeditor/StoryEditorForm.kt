@@ -18,6 +18,7 @@ class StoryEditorForm(private val fieldWidth: Float) : Table(BaseScreen.skin) {
     fun text(caption: String, value: String, multiline: Boolean = false, save: (String) -> Unit) {
         add(caption.toLabel().apply { wrap = true }).width(fieldWidth).row()
         val input: TextField = if (multiline) TextArea(value, skin) else TextField(value, skin)
+        input.name = "story-field:$caption"
         val cell = add(input).width(fieldWidth)
         if (multiline) cell.height(110f)
         cell.row()

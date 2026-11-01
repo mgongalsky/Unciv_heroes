@@ -8,7 +8,7 @@ import com.unciv.ui.utils.TabbedPager
 import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.toTextButton
 
-/** Edit → Story: черновик сценария и набор клеток выбранной зоны. */
+/** Edit → Story: независимый черновик и переключаемый обзор всех его зон. */
 class MapEditorStoryTab(private val editor: MapEditorScreen, private val editTab: MapEditorEditTab) :
     Table(BaseScreen.skin), TabbedPager.IPageExtensions, IMapEditorEditSubTabs {
     init { name = "scenario-story-tab" }
@@ -38,7 +38,21 @@ class MapEditorStoryTab(private val editor: MapEditorScreen, private val editTab
                 editor.isDirty = true
             }
         }).growX().pad(4f).row()
-        val panel = ScenarioStoryEditorPanel(
+
+        // Конструктор формы вызывает highlight до присваивания panel; первый обзор обновляем ниже.
+        var panel: ScenarioStoryEditorPanel? = null
+        val zonesButton = "Show all story zones".toTextButton().apply {
+            name = "scenario-story-zones-toggle"
+            color = if (editor.storyZonesVisible) Color.SKY else Color.WHITE
+        }
+        zonesButton.onClick {
+            editor.storyZonesVisible = !editor.storyZonesVisible
+            zonesButton.color = if (editor.storyZonesVisible) Color.SKY else Color.WHITE
+            editor.mapHolder.refreshStoryZoneOverlays(panel?.zonePreviewSnapshot().orEmpty())
+        }
+        add(zonesButton).growX().pad(4f).row()
+
+        val createdPanel = ScenarioStoryEditorPanel(
             editor.tileMap, editor.ruleset, editor.getToolsWidth(),
             changed = { editor.isDirty = true },
             highlight = { positions ->
@@ -48,15 +62,21 @@ class MapEditorStoryTab(private val editor: MapEditorScreen, private val editTab
                     if (CityPosition(tile.position.x, tile.position.y) in selected)
                         editor.highlightTile(tile, Color.SKY)
                 }
+                // refresh формы вызывается после изменения зоны, переключения раздела и Discard.
+                panel?.let { editor.mapHolder.refreshStoryZoneOverlays(it.zonePreviewSnapshot()) }
             })
-        panel.previewScreen = editor
-        add(panel).growX().top()
+        panel = createdPanel
+        createdPanel.previewScreen = editor
+        editor.mapHolder.refreshStoryZoneOverlays(createdPanel.zonePreviewSnapshot())
+        add(createdPanel).growX().top()
         editor.tileClickHandler =
-                { tile -> panel.selectTile(CityPosition(tile.position.x, tile.position.y)) }
+            { tile -> createdPanel.selectTile(CityPosition(tile.position.x, tile.position.y)) }
     }
 
+    /** За пределами формы слой показывает применённый сценарий, а не отброшенный черновик. */
     override fun deactivated(index: Int, caption: String, pager: TabbedPager) {
         editTab.setCityEditing(false)
         editor.hideSelection()
+        editor.mapHolder.refreshStoryZoneOverlays()
     }
 }

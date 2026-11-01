@@ -1,8 +1,8 @@
 # Файлы задачи
 
-Пути относительно корня проекта. Удалений и переносов нет. Посторонние ресурсы, wiki и журналы ошибок не включаются в коммиты задачи.
+Пути относительно корня проекта. Файлы не удалялись и не переносились. Посторонние ресурсы, wiki, настройки и журналы ошибок не входят в коммиты.
 
-## Созданы в core/src/com/unciv/
+## Созданы в core/src/com/unciv/ в этапах 01–07
 
 - pure/domain/hero/ScenarioHero.kt
 - pure/application/scenario/PrepareScenarioHeroesUseCase.kt
@@ -31,10 +31,12 @@
 - ui/mapeditor/StoryDialogueEditor.kt
 - ui/mapeditor/StoryEditorForm.kt
 - ui/mapeditor/StoryEffectsEditor.kt
+- ui/mapeditor/ScenarioHeroPreview.kt
+- ui/mapeditor/StoryScenePreview.kt
 - ui/playground/StoryDialoguePreview.kt
 - ui/playground/ScenarioStoryEditorPreview.kt
 
-## Созданы в tests/src/com/unciv/testing/
+## Тесты этапов 01–07 в tests/src/com/unciv/testing/
 
 - pure/application/scenario/PrepareScenarioHeroesUseCaseTest.kt
 - story/ScenarioHeroInstantiationTest.kt
@@ -51,7 +53,7 @@
 - StoryVideoSessionTest.java
 - ScenarioStoryEditorRenderTest.kt
 
-## Изменены существующие файлы
+## Существующие файлы, изменённые в этапах 01–07
 
 - core/src/com/unciv/logic/GameStarter.kt
 - core/src/com/unciv/logic/GameInfo.kt
@@ -65,29 +67,44 @@
 - core/src/com/unciv/ui/worldscreen/WorldScreen.kt
 - core/src/com/unciv/ui/utils/GeneralPlatformSpecificHelpers.kt
 - core/src/com/unciv/ui/mapeditor/MapEditorEditTab.kt
+- core/src/com/unciv/ui/mapeditor/EditorMapHolder.kt
+- core/src/com/unciv/ui/mapeditor/MapEditorScreen.kt
+- core/src/com/unciv/ui/mapeditor/MapEditorSaveTab.kt
 - desktop/src/com/unciv/app/desktop/UiGoldenTestRunner.kt
 - tests/src/com/unciv/testing/city/ScenarioGameStarterTest.kt
 - tests/src/com/unciv/testing/UiGoldenTest.kt
 - tests/src/com/unciv/testing/UiGoldenUpdateTest.kt
 
-## Документация
+## Созданы в этапе 08
 
-В docs/features/Storytelling/: Research/RESEARCH.md, CODE_GUIDE.md, Plan/PLAN.md, Plan/STEPS.md, Plan/files.md и документы этапов STEP_01_Heroes.md, STEP_02_StoryEngine.md, STEP_03_Integration.md, STEP_04_Presentation.md, STEP_05_Editor.md, STEP_06_Acceptance.md.
+- core/src/com/unciv/pure/application/story/EditStoryDialogue.kt — команды графа на независимых копиях.
+- core/src/com/unciv/ui/mapeditor/StoryZoneOverlay.kt — внешние рёбра и подписи зон.
+- core/src/com/unciv/ui/mapeditor/StoryDialogueGraphCanvas.kt — карточки и направленные связи.
+- core/src/com/unciv/ui/mapeditor/StoryDialogueGraphScreen.kt — полноэкранный редактор и локальный черновик.
+- core/src/com/unciv/ui/playground/StoryZoneOverlayPreview.kt — проверки контуров, переключателей и зеркал.
+- core/src/com/unciv/ui/playground/StoryDialogueGraphPreview.kt — клики карточек, переходы и resize.
+- tests/src/com/unciv/testing/pure/application/story/EditStoryDialogueTest.kt — чистые тесты команд.
+- tests/src/com/unciv/testing/StoryVideoSessionReasonsTest.kt — диагностика fallback без GL.
+- docs/features/Storytelling/Plan/STEP_08_VisualStoryAuthoring.md — реализация, проверки и ручной маршрут.
 
-## Визуальные результаты
+## Изменены в этапе 08
 
-Сценарии story-dialogue, hero-editor и story-editor зарегистрированы в GL-runner. Фактические PNG в tests/golden/results являются результатами запуска, а не утверждёнными эталонами. Визуальная приёмка и обновление baseline не выполнены.
+- core/src/com/unciv/ui/mapeditor/EditorMapHolder.kt — соседство и контуры всех зон.
+- core/src/com/unciv/ui/mapeditor/MapEditorScreen.kt — видимость слоя и recreate.
+- core/src/com/unciv/ui/mapeditor/MapEditorStoryTab.kt — переключатель и отображение черновика.
+- core/src/com/unciv/ui/mapeditor/MapEditorViewTab.kt — переключатель применённых зон.
+- core/src/com/unciv/ui/mapeditor/ScenarioStoryEditorPanel.kt — список диалогов, вход в граф, проверка кандидата.
+- core/src/com/unciv/ui/mapeditor/StoryDialogueEditor.kt — форма выбранного узла; старый метод полной формы удалён.
+- core/src/com/unciv/ui/mapeditor/StoryEditorForm.kt — имена текстовых полей.
+- core/src/com/unciv/ui/playground/ScenarioStoryEditorPreview.kt — новый UI-маршрут и регрессия.
+- core/src/com/unciv/ui/story/StoryVideoSession.kt — причины fallback.
+- core/src/com/unciv/ui/story/StoryCinematicScreen.kt — подготовка и видеозаглушка.
+- docs/features/Storytelling/Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Research/RESEARCH.md и CODE_GUIDE.md — актуальные контракты, результаты и ограничения; все пути в этой строке относятся к docs/features/Storytelling/.
 
-## Исправление пользовательского пути редактора
+## Документация и визуальные результаты
 
-Дополнительно созданы:
-- core/src/com/unciv/ui/mapeditor/ScenarioHeroPreview.kt — спрайт и подпись исходного героя.
-- core/src/com/unciv/ui/mapeditor/StoryScenePreview.kt — изолированный предпросмотр через общий движок и игровые окна.
-- docs/features/Storytelling/Plan/STEP_07_EditorUsability.md — результаты исправления и границы приёмки.
+Корень docs/features/Storytelling содержит Research/RESEARCH.md, CODE_GUIDE.md, Plan/PLAN.md, Plan/STEPS.md, Plan/files.md и STEP_01_Heroes.md, STEP_02_StoryEngine.md, STEP_03_Integration.md, STEP_04_Presentation.md, STEP_05_Editor.md, STEP_06_Acceptance.md, STEP_07_EditorUsability.md, STEP_08_VisualStoryAuthoring.md в Plan/.
 
-Дополнительно изменены:
-- core/src/com/unciv/ui/mapeditor/EditorMapHolder.kt — жизненный цикл превью героев.
-- core/src/com/unciv/ui/mapeditor/MapEditorScreen.kt — версия редакторских изменений.
-- core/src/com/unciv/ui/mapeditor/MapEditorSaveTab.kt — снимок для записи, защита повторного сохранения, Save and play.
+Сценарии story-dialogue, hero-editor и story-editor зарегистрированы в GL-runner. PNG в tests/golden/results — результаты запуска, не утверждённые эталоны. Baseline не обновлялся.
 
-Ранее перечисленные MapEditorHeroesTab, MapEditorStoryTab, ScenarioStoryEditorPanel и ScenarioStoryEditorPreview обновлены для отображения, навигации, предпросмотра и проверок настоящего ввода. Основной план, исследование, этапы 05–07 и путеводитель дополнены фактическими результатами.
+[План](PLAN.md) · [Этапы](STEPS.md) · [Путеводитель](../CODE_GUIDE.md)

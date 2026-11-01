@@ -52,6 +52,9 @@ class MapEditorScreen(
     map: TileMap? = null,
     private val persistGenerationDefaults: (MapParameters) -> Unit = { saveDefaultParameters(it) }
 ): BaseScreen(), RecreateOnResize {
+    /** Видимость всех сюжетных зон — настройка просмотра редактора, а не сохраняемое правило сценария. */
+    var storyZonesVisible = true
+
     /** Сохранение настроек отделено от генерации; адаптер по умолчанию сохраняет прежнее поведение. */
     fun rememberGenerationParameters(parameters: MapParameters) = persistGenerationDefaults(parameters)
     /** Диагностическая заливка активна только во время работы в Generate. */
@@ -276,10 +279,12 @@ class MapEditorScreen(
         params.mapSize = MapSizeNew((maxLongitude - minLongitude + 1), (maxLatitude - minLatitude + 1) / 2)
     }
 
-    /** Восстанавливает редактируемую карту, инструмент и выбранный диагностический слой. */
+    /** Восстанавливает карту, инструмент и видимость редакторских слоёв. */
     override fun recreate(): BaseScreen = MapEditorScreen(tileMap, persistGenerationDefaults).also {
         it.isDirty = isDirty
         it.terrainLayer = terrainLayer
+        it.storyZonesVisible = storyZonesVisible
+        it.mapHolder.refreshStoryZoneOverlays()
         it.selectedScenarioCity = selectedScenarioCity
         it.selectedEditSubTab =
                 if (tabs.activePage == 2) tabs.edit.currentSubTab() else selectedEditSubTab

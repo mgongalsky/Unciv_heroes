@@ -1,24 +1,27 @@
 package com.unciv.ui.story
 
-/** Управляет ресурсом ролика без доступа к партии: завершение сюжета подтверждает экран.
- * Повторные update/dispose и ошибка освобождения не вызывают повторного dispose плеера.
- */
+/** Управляет ресурсом ролика; завершение сюжета подтверждает экран, освобождение выполняется однократно. */
 class StoryVideoSession(private val createPlayer: () -> StoryVideoPlayer?) {
     enum class State { Ready, Playing, Completed, Fallback, Closed }
+    /** Причина замены ролика отделена от состояния, чтобы UI мог объяснить результат подготовки. */
+    enum class FallbackReason { Unavailable, StartupFailed, PlaybackFailed, ControlFailed }
 
     var state = State.Ready
         private set
     var player: StoryVideoPlayer? = null
         private set
+    var fallbackReason: FallbackReason? = null
+        private set
 
-    /** Создание отложено до первого кадра уже открытого экрана. */
+    /** Экран вызывает создание после отображения кадра подготовки. */
     fun start() {
         if (state != State.Ready) return
         try {
             player = createPlayer()
-            state = if (player == null) State.Fallback else State.Playing
+            if (player == null) fail(FallbackReason.Unavailable)
+            else state = State.Playing
         } catch (_: Exception) {
-            fail()
+            fail(FallbackReason.StartupFailed)
         }
     }
 
@@ -31,10 +34,10 @@ class StoryVideoSession(private val createPlayer: () -> StoryVideoPlayer?) {
                     state = State.Completed
                     release()
                 }
-                StoryVideoStatus.Failed -> fail()
+                StoryVideoStatus.Failed -> fail(FallbackReason.PlaybackFailed)
             }
         } catch (_: Exception) {
-            fail()
+            fail(FallbackReason.PlaybackFailed)
         }
     }
 
@@ -48,7 +51,7 @@ class StoryVideoSession(private val createPlayer: () -> StoryVideoPlayer?) {
         release()
     }
 
-    /** Уход с экрана сохраняет сюжетное событие для следующего открытия. */
+    /** Закрытие не подтверждает сюжетное событие и не повторяет освобождение ресурса. */
     fun dispose() {
         if (state == State.Closed) return
         state = State.Closed
@@ -57,14 +60,12 @@ class StoryVideoSession(private val createPlayer: () -> StoryVideoPlayer?) {
 
     private fun control(action: (StoryVideoPlayer) -> Unit) {
         if (state != State.Playing) return
-        try {
-            action(player!!)
-        } catch (_: Exception) {
-            fail()
-        }
+        try { action(player!!) }
+        catch (_: Exception) { fail(FallbackReason.ControlFailed) }
     }
 
-    private fun fail() {
+    private fun fail(reason: FallbackReason) {
+        fallbackReason = reason
         state = State.Fallback
         release()
     }
@@ -72,10 +73,9 @@ class StoryVideoSession(private val createPlayer: () -> StoryVideoPlayer?) {
     private fun release() {
         val owned = player ?: return
         player = null
-        try {
-            owned.dispose()
-        } catch (_: Exception) {
-            // Ошибка очистки не должна блокировать fallback или возврат к партии.
+        try { owned.dispose() }
+        catch (_: Exception) {
+            // Ошибка очистки не скрывает исходную причину и не блокирует возврат к партии.
         }
     }
 }

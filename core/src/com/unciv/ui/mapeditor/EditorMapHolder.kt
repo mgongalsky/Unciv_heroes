@@ -255,7 +255,7 @@ class EditorMapHolder(
         return tileMap.getOrNull(wrapped) ?: tileMap.getOrNull(rounded)
     }
 
-    /** Обновляет изображения всех сценарных героев, включая зеркала карты и удалённые размещения. */
+    /** Обновляет изображения сценарных героев и зон, включая зеркала карты и удалённые размещения. */
     fun refreshScenarioHeroPreviews() {
         if (editorScreen == null) return
         val heroes = tileMap.scenarioHeroes.associateBy { it.position }
@@ -266,6 +266,58 @@ class EditorMapHolder(
             val hero = heroes[com.unciv.pure.domain.city.CityPosition(position.x, position.y)]
                 ?: continue
             tileGroup.addActor(ScenarioHeroPreview(tileGroup, hero))
+        }
+        refreshStoryZoneOverlays()
+    }
+
+    /** Обновляет внешние контуры всех зон, включая пересечения и зеркальные копии замкнутой карты. */
+    fun refreshStoryZoneOverlays(zones: List<com.unciv.pure.domain.story.StoryZone> = tileMap.story?.zones.orEmpty()) {
+        val editor = editorScreen ?: return
+        for (group in allTileGroups) {
+            group.children.toList().filterIsInstance<StoryZoneOverlay>().forEach { it.remove() }
+        }
+        if (!editor.storyZonesVisible) return
+        val colors = listOf(
+            com.badlogic.gdx.graphics.Color.SKY, com.badlogic.gdx.graphics.Color.GOLD,
+            com.badlogic.gdx.graphics.Color.CORAL, com.badlogic.gdx.graphics.Color.LIME,
+            com.badlogic.gdx.graphics.Color.VIOLET, com.badlogic.gdx.graphics.Color.CYAN
+        )
+        // Рёбра идут по часовой стрелке от верхней вершины; координаты соответствуют HexMath.hex2WorldCoords.
+        val offsets = listOf(-1 to 1, -1 to 0, 0 to -1, 1 to -1, 1 to 0, 0 to 1)
+        val ordered = zones.sortedBy { it.id }
+        val memberships = ordered.map { it.positions.toHashSet() }
+        for ((index, zone) in ordered.withIndex()) {
+            val positions = memberships[index]
+            val labelPosition = positions.minWithOrNull(compareBy({ it.x }, { it.y }))
+            val color = colors[(zone.id.hashCode() and Int.MAX_VALUE) % colors.size]
+            for (position in positions) {
+                val vector = Vector2(position.x, position.y)
+                if (!tileMap.contains(vector)) continue
+                val tile = tileMap[vector]
+                val edges = offsets.indices.filterTo(linkedSetOf()) { edge ->
+                    val offset = offsets[edge]
+                    val neighbor = tileMap.getIfTileExistsOrNull(
+                        position.x.toInt() + offset.first, position.y.toInt() + offset.second
+                    )
+                    neighbor == null || com.unciv.pure.domain.city.CityPosition(
+                        neighbor.position.x, neighbor.position.y
+                    ) !in positions
+                }
+                val overlapIndex = memberships.take(index).count { position in it }
+                val title = if (position == labelPosition) zone.name.ifBlank { zone.id } else null
+                for (group in tileGroups[tile].orEmpty()) {
+                    group.addActor(
+                        StoryZoneOverlay(
+                            group,
+                            zone.id,
+                            edges,
+                            title,
+                            color,
+                            overlapIndex
+                        )
+                    )
+                }
+            }
         }
     }
 }
