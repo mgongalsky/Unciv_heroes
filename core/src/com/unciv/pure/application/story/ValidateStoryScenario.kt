@@ -74,9 +74,7 @@ object ValidateStoryScenario {
                     effects(choice.effects, true)
                 }
                 if (node.choices.isNotEmpty()) {
-                    require(node.choices.any {
-                        it.nextNodeId.isEmpty() && it.condition.requiredFlags.isEmpty() && it.condition.forbiddenFlags.isEmpty()
-                    }) { "Dialogue ${dialogue.id}/${node.id}: an unconditional exit choice is required" }
+                    // Ответы могут продолжать разговор: немедленный выход из каждого узла не обязателен.
                     val aiChoice = node.choices.firstOrNull { it.id == dialogue.aiChoices[node.id] }
                     require(aiChoice != null && aiChoice.condition.requiredFlags.isEmpty() && aiChoice.condition.forbiddenFlags.isEmpty()) {
                         "Dialogue ${dialogue.id}/${node.id}: an unconditional AI choice is required"

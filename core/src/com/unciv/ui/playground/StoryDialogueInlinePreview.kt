@@ -255,7 +255,7 @@ internal fun checkExistingStoryAnswerInput(host: BaseScreen) {
     }
 }
 
-/** Клик по служебному Continue создаёт редактируемый ответ с прежним переходом; история и исходник сохраняются. */
+/** Преобразование Continue в ответ сохраняет переход, историю и позволяет применить весь сценарий без немедленного выхода. */
 internal fun checkContinueStoryAnswerInput(host: BaseScreen, clickButton: (Actor, String) -> Unit) {
     fun actors(root: Actor): List<Actor> = listOf(root) +
             if (root is Group) root.children.toList().flatMap { actors(it) } else emptyList()
@@ -269,9 +269,21 @@ internal fun checkContinueStoryAnswerInput(host: BaseScreen, clickButton: (Actor
         )
     )
     val saved = source.deepCopy()
+    val map = TileMap(3, ruleset, false)
     var result: StoryDialogue? = null
-    val screen =
-            StoryDialogueGraphScreen(source, TileMap(3, ruleset, false), ruleset) { result = it }
+    val screen = StoryDialogueGraphScreen(source, map, ruleset) { edited ->
+        // Проверяем публикацию через общий валидатор, а не только возврат черновика из формы.
+        val candidate = com.unciv.pure.domain.story.StoryScenario(dialogues = arrayListOf(edited))
+        check(
+            com.unciv.logic.map.ScenarioStoryEditorCommands.apply(
+                map,
+                ruleset,
+                emptyList(),
+                candidate
+            )
+        )
+        result = edited
+    }
     host.game.pushScreen(screen)
     fun find(name: String) = actors(screen.stage.root).single { it.name == name }
     fun clickContinue() {
@@ -330,6 +342,76 @@ internal fun checkContinueStoryAnswerInput(host: BaseScreen, clickButton: (Actor
         check(branch.choices.single().nextNodeId == "end")
         check(applied.aiChoices["branch"] == "answer1")
         check(applied.nodes.single { it.id == "start" } == saved.nodes.single { it.id == "start" })
+        val published = checkNotNull(map.story).dialogues.single()
+        check(published == applied && published !== applied)
+        check(published.nodes.single { it.id == "branch" } !== branch)
+        check(source == saved)
+    } finally {
+        while (host.game.screen !== host && host.game.screenStack.size > 1) host.game.popScreen()
+    }
+}
+
+/** Кнопка карточки добавляет ответы в нажатый узел, сохраняет первый переход и открывает встроенный ввод. */
+internal fun checkCardAnswerButton(host: BaseScreen, clickButton: (Actor, String) -> Unit) {
+    fun actors(root: Actor): List<Actor> = listOf(root) +
+            if (root is Group) root.children.toList().flatMap { actors(it) } else emptyList()
+
+    val ruleset = RulesetCache.getComplexRuleset(GameParameters())
+    val source = StoryDialogue(
+        id = "card-add", startNodeId = "start", nodes = arrayListOf(
+            StoryDialogueNode(id = "start", text = "Start", nextNodeId = "branch"),
+            StoryDialogueNode(id = "branch", text = "Question", nextNodeId = "end"),
+            StoryDialogueNode(id = "end", text = "End")
+        )
+    )
+    val saved = source.deepCopy()
+    var result: StoryDialogue? = null
+    val screen =
+            StoryDialogueGraphScreen(source, TileMap(3, ruleset, false), ruleset) { result = it }
+    host.game.pushScreen(screen)
+    fun find(name: String) = actors(screen.stage.root).single { it.name == name }
+    try {
+        screen.render(0f)
+        check((find("story-field:Node ID") as TextField).text == "start")
+        for (number in 1..2) {
+            val pane = actors(screen.stage.root).filterIsInstance<ZoomableScrollPane>().single()
+            pane.zoom(if (number == 1) 0.65f else 1.3f)
+            val card = find("story-graph-node:branch") as Group
+            val add = find("story-graph-add-answer:branch")
+            check(add.parent === card)
+            check(add.y >= 0f && add.y + add.height <= card.height)
+            val labels = card.children.filterIsInstance<Label>()
+                .filter { it.name?.startsWith("story-graph-edge:") == true }
+            check(labels.all { it.y >= add.y + add.height }) { "Add answer overlaps an answer" }
+            val position = card.localToActorCoordinates(pane.actor!!.parent, Vector2())
+            pane.scrollTo(position.x, position.y, card.width, card.height)
+            pane.updateVisualScroll()
+            screen.stage.draw()
+            val point = add.localToStageCoordinates(Vector2(add.width / 2f, add.height / 2f))
+            val hit = screen.stage.hit(point.x, point.y, true)
+            check(hit != null && generateSequence(hit) { it.parent }.any { it === add })
+            val pixel = screen.stage.stageToScreenCoordinates(point)
+            screen.stage.touchDown(pixel.x.toInt(), pixel.y.toInt(), 0, Input.Buttons.LEFT)
+            screen.render(1f / 60f)
+            screen.stage.touchUp(pixel.x.toInt(), pixel.y.toInt(), 0, Input.Buttons.LEFT)
+            screen.render(1f / 60f)
+            val input = find("story-inline:branch:answer$number") as TextField
+            check(input.parent === find("story-graph-node:branch"))
+            check(screen.stage.keyboardFocus === input)
+            input.selectAll()
+            "Answer $number".forEach { screen.stage.keyTyped(it) }
+            check(input.text == "Answer $number")
+            // Следующее нажатие выполняется прямо из активного поля предыдущего ответа.
+        }
+        screen.stage.keyDown(Input.Keys.ESCAPE)
+        check(source == saved && result == null)
+        clickButton(screen.stage.root, "Apply dialogue")
+        val applied = checkNotNull(result)
+        val branch = applied.nodes.single { it.id == "branch" }
+        check(branch.choices.map { it.text } == listOf("Answer 1", "Answer 2"))
+        check(branch.choices.map { it.nextNodeId } == listOf("end", ""))
+        check(applied.aiChoices["branch"] == "answer1")
+        check(applied.nodes.single { it.id == "start" }.choices.isEmpty())
         check(source == saved)
     } finally {
         while (host.game.screen !== host && host.game.screenStack.size > 1) host.game.popScreen()

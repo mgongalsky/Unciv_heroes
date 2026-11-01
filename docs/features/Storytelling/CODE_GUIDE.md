@@ -96,3 +96,19 @@ StoryEditorForm.compact задаёт локальный размер 16, а кн
 Canvas.installTextEditing различает текст ответа и служебное Continue. Клик Continue вызывает Screen.addAnswer(nodeId), существующую EditStoryDialogue.addAnswer и openInline. Первый ответ наследует переход и назначение AI; TextArea открывается внутри нажатой карточки. Apply публикует черновик, Cancel отменяет его, Undo/Redo сохраняют историю.
 
 ScenarioStoryEditorRenderTest включает проверки существующих ответов и Continue, геометрии Pause world, фокуса, масштабирования и сохранения перехода. UI-регрессия и BUILD прошли. Визуальный эталон не сравнивался; ручной сценарий — в [этапе 12](Plan/STEP_12_GraphTextAndInput.md).
+
+## Кнопки карточек и подготовка видео — этап 13
+
+Canvas.installAddAnswerButton выделяет нижнюю строку каждой карточке. Кнопка вызывает тот же callback Screen.addAnswer, что и Continue, и открывает встроенный ввод.
+
+GdxStoryVideoPlayer запускает StoryVideoFilePreparation в фоновом потоке. Сжатые файлы до 32 МиБ хранятся в памяти одной сессии, большие читаются потоково. FutureTask отменяется при dispose. Создание декодера, load, ожидание isBuffered (до двух секунд), play и GL-ресурсы остаются в потоке отрисовки. isPrepared позволяет экрану удерживать сообщение подготовки; Skip доступен во время загрузки.
+
+Экран запрашивает следующий кадр после первого кадра подготовки и при активной сессии. Адаптер также поддерживает запрос кадров при самостоятельном использовании. Настройка continuousRendering не меняется. Ошибки переходят в существующий fallback; асинхронная ошибка подготовки сейчас классифицируется сессией как PlaybackFailed.
+
+Проверки: ScenarioStoryEditorRenderTest, StoryVideoPlaybackTest, StoryVideoSessionTest, StoryVideoSessionReasonsTest, StoryVideoFilePreparationTest. Все 15 тестов и BUILD прошли. Ограничения и ручная приёмка — в [этапе 13](Plan/STEP_13_CardAnswersAndVideoPreparation.md).
+
+## Продолжение диалога без немедленного выхода — этап 14
+
+ValidateStoryScenario допускает узлы, в которых все ответы ведут к следующим репликам. Наличие завершающего ответа в каждой карточке не требуется. Проверки ссылок, условий, эффектов и назначенного пути AI сохранены. Это актуальный контракт, заменяющий прежнее требование безусловного выхода.
+
+Проверки: ValidateStoryScenarioTest (6 тестов), ScenarioStoryEditorRenderTest (1 тест с публикацией сценария через ScenarioStoryEditorCommands.apply), BUILD — успешно. Форматы данных не менялись. [Подробности](Plan/STEP_14_DialogueWithoutImmediateExit.md).

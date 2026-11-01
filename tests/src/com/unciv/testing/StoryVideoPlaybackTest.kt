@@ -11,9 +11,9 @@ import com.unciv.ui.story.StoryVideoSession
 import org.junit.Assert.*
 import org.junit.Test
 
-/** Проверяет настоящий декодер и его GL-текстуру на поставляемом ролике, без визуального эталона. */
+/** Проверяет настоящий декодер без постоянной отрисовки, подготовку и освобождение при пропуске. */
 class StoryVideoPlaybackTest {
-    /** Ролик выдаёт кадры, заканчивается, затем повторно открывается и освобождается при пропуске. */
+    /** Кадры продвигаются без ввода; отменённая подготовка не создаёт декодер, повторный запуск допускает пропуск. */
     @Test fun decodesCompletesAndSkipsIntro() {
         var failure: Throwable? = null
         var finished = false
@@ -22,66 +22,92 @@ class StoryVideoPlaybackTest {
             setWindowedMode(640, 360)
             setInitialVisible(false)
             setForegroundFPS(60)
+            setIdleFPS(60)
         }
         Lwjgl3Application(object : ApplicationAdapter() {
             private var batch: SpriteBatch? = null
             private var decoder: VideoPlayerDesktop? = null
             private var session: StoryVideoSession? = null
+            private var watchdog: java.util.Timer? = null
             private var startedAt = 0L
             private var frames = 0
             private var lastTimestamp = -1
-            private var progressed = false
+            private var phase = 0
+
+            private fun startSession(): StoryVideoSession = StoryVideoSession {
+                GdxStoryVideoPlayer.create("cinematics/Audience_01.webm") {
+                    VideoPlayerDesktop().also { decoder = it }
+                }.also { it.actor.setBounds(0f, 0f, 640f, 360f) }
+            }.also { it.start() }
 
             override fun create() {
                 try {
                     batch = SpriteBatch()
-                    startedAt = System.nanoTime()
-                    session = StoryVideoSession {
+                    Gdx.graphics.isContinuousRendering = false
+                    // Срабатывает только при зависании; не подталкивает обычный цикл кадрами.
+                    watchdog = java.util.Timer("Video test timeout", true).apply {
+                        schedule(object : java.util.TimerTask() {
+                            override fun run() {
+                                Gdx.app.postRunnable { if (!finished) failRun(AssertionError("Video stalled without input")) }
+                            }
+                        }, 30000L)
+                    }
+                    var cancelledFactoryCalls = 0
+                    val cancelled = StoryVideoSession {
                         GdxStoryVideoPlayer.create("cinematics/Audience_01.webm") {
-                            VideoPlayerDesktop().also { decoder = it }
-                        }.also { it.actor.setBounds(0f, 0f, 640f, 360f) }
-                    }.also { it.start() }
+                            cancelledFactoryCalls++
+                            VideoPlayerDesktop()
+                        }
+                    }
+                    cancelled.start()
+                    assertFalse(cancelled.player!!.isPrepared)
+                    cancelled.skip()
+                    cancelled.update(0f)
+                    cancelled.dispose()
+                    assertEquals(0, cancelledFactoryCalls)
+                    startedAt = System.nanoTime()
+                    session = startSession()
                     assertEquals(StoryVideoSession.State.Playing, session!!.state)
+                    assertFalse(session!!.player!!.isPrepared)
                 } catch (problem: Throwable) { failRun(problem) }
             }
 
             override fun render() {
                 if (failure != null || finished) return
                 try {
-                    check(System.nanoTime() - startedAt < 30_000_000_000L) { "Video did not complete within 30 seconds" }
+                    assertFalse("Player changed the user's rendering setting", Gdx.graphics.isContinuousRendering)
                     val active = session!!
                     active.update(Gdx.graphics.deltaTime)
                     assertNotEquals(StoryVideoSession.State.Fallback, active.state)
                     if (active.state == StoryVideoSession.State.Completed) {
-                        assertTrue("No decoded video frames", frames > 10)
-                        assertTrue("Video timestamp did not advance", progressed)
+                        assertEquals(0, phase)
+                        assertTrue("Too few distinct video timestamps: $frames", frames > 30)
+                        assertTrue("Intro playback took too long", System.nanoTime() - startedAt < 20_000_000_000L)
                         active.dispose()
-                        val skipped = StoryVideoSession {
-                            GdxStoryVideoPlayer.create("cinematics/Audience_01.webm") { VideoPlayerDesktop() }
-                        }
-                        session = skipped
-                        skipped.start()
-                        assertEquals(StoryVideoSession.State.Playing, skipped.state)
-                        skipped.skip()
-                        assertEquals(StoryVideoSession.State.Completed, skipped.state)
-                        assertNull(skipped.player)
-                        skipped.dispose()
-                        skipped.dispose()
-                        finished = true
-                        Gdx.app.exit()
+                        phase = 1
+                        decoder = null
+                        session = startSession()
                         return
                     }
-                    val nativePlayer = decoder!!
-                    if (nativePlayer.texture != null) {
-                        assertEquals(1280, nativePlayer.videoWidth)
-                        assertEquals(704, nativePlayer.videoHeight)
-                        val timestamp = nativePlayer.currentTimestamp
-                        if (lastTimestamp >= 0 && timestamp > lastTimestamp) progressed = true
-                        lastTimestamp = timestamp
-                        frames++
-                        batch!!.begin()
-                        try { active.player!!.actor.draw(batch!!, 1f) }
-                        finally { batch!!.end() }
+                    if (active.player?.isPrepared != true) return
+                    val nativePlayer = checkNotNull(decoder)
+                    if (nativePlayer.texture == null) return
+                    assertEquals(1280, nativePlayer.videoWidth)
+                    assertEquals(704, nativePlayer.videoHeight)
+                    val timestamp = nativePlayer.currentTimestamp
+                    if (timestamp != lastTimestamp) frames++
+                    lastTimestamp = timestamp
+                    batch!!.begin()
+                    try { active.player!!.actor.draw(batch!!, 1f) }
+                    finally { batch!!.end() }
+                    if (phase == 1) {
+                        active.skip()
+                        assertEquals(StoryVideoSession.State.Completed, active.state)
+                        assertNull(active.player)
+                        active.dispose()
+                        active.dispose()
+                        finished = true
+                        Gdx.app.exit()
                     }
                 } catch (problem: Throwable) { failRun(problem) }
             }
@@ -92,6 +118,7 @@ class StoryVideoPlaybackTest {
             }
 
             override fun dispose() {
+                watchdog?.cancel()
                 try { session?.dispose() }
                 catch (problem: Throwable) { if (failure == null) failure = problem }
                 finally { batch?.dispose() }

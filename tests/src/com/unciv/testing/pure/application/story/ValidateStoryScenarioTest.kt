@@ -51,9 +51,9 @@ class ValidateStoryScenarioTest {
         rejects(story().apply { zones.single().positions.add(CityPosition(99f, 0f)) })
     }
 
-    /** Безусловный выход защищает от блокировки разговора при изменении сюжетных флагов. */
+    /** Назначенный ответ AI должен оставаться доступным независимо от флагов; это не требование выхода игрока. */
     @Test
-    fun requiresAvailableExit() {
+    fun rejectsConditionalAiChoice() {
         rejects(story().apply {
             dialogues.single().nodes.single().choices.last().condition.requiredFlags.add("secret")
         })
@@ -71,5 +71,36 @@ class ValidateStoryScenarioTest {
         rejects(story().apply { triggers.single().effects = arrayListOf(StoryEffect(StoryEffectKind.GrantGold, amount = -1)) })
         rejects(story().apply { cinematics.add(StoryCinematic("intro")) })
         rejects(story().apply { cinematics.add(StoryCinematic("intro", "../outside.mp4", "Начало")) })
+    }
+
+    /** Превращение Continue в ответ разрешает цепочку реплик без немедленного выхода и не меняет данные при проверке. */
+    @Test
+    fun permitsAnswerChainWithoutImmediateExit() {
+        val linear = StoryDialogue(
+            id = "intro", startNodeId = "start", nodes = arrayListOf(
+                StoryDialogueNode(id = "start", text = "Начало", nextNodeId = "next"),
+                StoryDialogueNode(id = "next", text = "Продолжение", nextNodeId = "end"),
+                StoryDialogueNode(id = "end", text = "Конец")
+            )
+        )
+        val first = com.unciv.pure.application.story.EditStoryDialogue.addAnswer(
+            linear,
+            "start",
+            "accepted",
+            "Принято"
+        )
+        val dialogue = com.unciv.pure.application.story.EditStoryDialogue.addAnswer(
+            first,
+            "next",
+            "continue",
+            "Дальше"
+        )
+        val scenario = StoryScenario(dialogues = arrayListOf(dialogue))
+        val before = scenario.deepCopy()
+        validate(scenario)
+        assertEquals(before, scenario)
+        assertEquals("next", dialogue.nodes[0].choices.single().nextNodeId)
+        assertEquals("end", dialogue.nodes[1].choices.single().nextNodeId)
+        assertTrue(linear.nodes.all { it.choices.isEmpty() })
     }
 }

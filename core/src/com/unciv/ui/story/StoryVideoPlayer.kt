@@ -13,6 +13,9 @@ interface StoryVideoPlayer {
     fun pause()
     fun resume()
     fun dispose()
+
+    /** До готовности экран сохраняет индикатор подготовки; синхронные реализации готовы сразу. */
+    val isPrepared: Boolean get() = true
 }
 
 /** Состояние декодера; неподдерживаемая платформа не создаёт проигрыватель. */

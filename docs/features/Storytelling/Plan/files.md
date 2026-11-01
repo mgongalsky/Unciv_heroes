@@ -185,3 +185,30 @@ Android-адаптер и существующие видеосессия/экр
 - docs/features/Storytelling/Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Research/RESEARCH.md и CODE_GUIDE.md — результаты; сокращённые пути относятся к docs/features/Storytelling.
 
 Создан docs/features/Storytelling/Plan/STEP_12_GraphTextAndInput.md. Удалений и переносов нет.
+
+## Этап 13 — ответы в карточке и подготовка видео
+
+Созданы:
+
+- core/src/com/unciv/ui/story/StoryVideoFilePreparation.kt — ограниченный кэш сжатого файла.
+- tests/src/com/unciv/testing/StoryVideoFilePreparationTest.java — границы кэша и очистка потоков.
+- docs/features/Storytelling/Plan/STEP_13_CardAnswersAndVideoPreparation.md — контракт и результаты.
+
+Изменены:
+
+- core/src/com/unciv/ui/mapeditor/StoryDialogueGraphCanvas.kt — нижняя строка с кнопкой ответа.
+- core/src/com/unciv/ui/playground/StoryDialogueInlinePreview.kt и ScenarioStoryEditorPreview.kt в том же каталоге — реальные клики и подключение проверки.
+- core/src/com/unciv/ui/story/GdxStoryVideoPlayer.kt — фоновое чтение, подготовка декодера, отмена и запрос кадров.
+- core/src/com/unciv/ui/story/StoryVideoPlayer.kt — признак готовности.
+- core/src/com/unciv/ui/story/StoryCinematicScreen.kt — подготовка, пропуск и кадры без постоянной отрисовки.
+- tests/src/com/unciv/testing/StoryVideoPlaybackTest.kt — настоящий декодер без ввода и отмена подготовки.
+- tests/src/com/unciv/testing/StoryVideoSessionTest.java — совместимость Java-фейка с контрактом готовности.
+- docs/features/Storytelling/Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Research/RESEARCH.md и CODE_GUIDE.md — результаты; сокращённые пути относятся к docs/features/Storytelling.
+
+Удалений и переносов нет.
+
+## Этап 14 — фактический состав
+
+Изменены core/src/com/unciv/pure/application/story/ValidateStoryScenario.kt (удаление требования выхода), tests/src/com/unciv/testing/pure/application/story/ValidateStoryScenarioTest.kt (регрессия цепочки), core/src/com/unciv/ui/playground/StoryDialogueInlinePreview.kt (публикация полного сценария).
+
+Создан docs/features/Storytelling/Plan/STEP_14_DialogueWithoutImmediateExit.md. Обновлены документы в docs/features/Storytelling: Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Research/RESEARCH.md, CODE_GUIDE.md. Удалений и переносов нет.

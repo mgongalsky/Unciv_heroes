@@ -18,6 +18,8 @@ import com.unciv.ui.utils.extensions.toLabel
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+import com.unciv.ui.utils.extensions.setFontSize
+import com.unciv.models.translations.tr
 
 /** Полотно отвечает за геометрию и жесты; публикацию сюжета и историю выполняет экран. */
 class StoryDialogueGraphCanvas(
@@ -292,7 +294,7 @@ class StoryDialogueGraphCanvas(
     private var inlineInput: com.badlogic.gdx.scenes.scene2d.ui.TextArea? = null
     private var inlineLabelName: String? = null
 
-    /** Текст редактируется на месте; служебное Continue превращается в первый ответ через команду экрана. */
+    /** Текст редактируется на месте; Continue и кнопка под ответами используют одну команду экрана. */
     fun installTextEditing(open: (String, String?) -> Unit, createAnswer: (String) -> Unit) {
         openText = open
         for (node in dialogue.nodes) {
@@ -308,7 +310,10 @@ class StoryDialogueGraphCanvas(
             } else node.choices.forEachIndexed { index, choice ->
                 answers.getOrNull(index)?.let { editableLabel(it, node.id, choice.id) }
             }
+            installAddAnswerButton(node.id, createAnswer)
         }
+        updateExtent()
+        redrawWires()
     }
 
     /** Забирает клик у карточки: выбор родителя не должен закрывать открытый редактор. */
@@ -436,5 +441,47 @@ class StoryDialogueGraphCanvas(
                 ?.let { replace(it, choice.text.ifBlank { choice.id }, choice.id, true) }
         }
         inlineInput?.toFront()
+    }
+
+    /** Выделяет нижнюю строку кнопке; порты и текст сдвигаются вместе, связи пересчитывает вызывающий код. */
+    private fun installAddAnswerButton(nodeId: String, createAnswer: (String) -> Unit) {
+        val card = cards.getValue(nodeId)
+        val buttonName = "story-graph-add-answer:$nodeId"
+        if (card.findActor<Actor>(buttonName) != null) return
+        val footerHeight = 44f
+        val background = card.children.first()
+        for (child in card.children) {
+            if (child !== background) child.moveBy(0f, footerHeight)
+        }
+        card.height += footerHeight
+        background.height = card.height
+        val addButton = com.badlogic.gdx.scenes.scene2d.ui.TextButton(
+            "+ " + "Add answer".tr(), com.unciv.ui.utils.BaseScreen.skin
+        ).apply {
+            name = buttonName
+            label.setFontSize(16)
+            setBounds(22f, 6f, cardWidth - 44f, 32f)
+        }
+        addButton.addListener(object : InputListener() {
+            override fun touchDown(
+                event: InputEvent,
+                x: Float,
+                y: Float,
+                pointer: Int,
+                button: Int
+            ): Boolean {
+                if (button != Input.Buttons.LEFT || gestureActive) return false
+                event.stop()
+                return true
+            }
+
+            override fun touchUp(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int) {
+                event.stop()
+                if (!event.isTouchFocusCancel && button == Input.Buttons.LEFT &&
+                        x in 0f..addButton.width && y in 0f..addButton.height
+                ) createAnswer(nodeId)
+            }
+        })
+        card.addActor(addButton)
     }
 }

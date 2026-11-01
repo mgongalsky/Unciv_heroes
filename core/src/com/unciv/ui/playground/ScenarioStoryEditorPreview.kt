@@ -114,6 +114,7 @@ private fun showStoryEditorPanel(screen: BaseScreen, panel: Table) {
             checkStoryDialogueInline(screen, ::clickStoryEditorButton)
             checkExistingStoryAnswerInput(screen)
             checkContinueStoryAnswerInput(screen, ::clickStoryEditorButton)
+            checkCardAnswerButton(screen, ::clickStoryEditorButton)
         }
     )
 }

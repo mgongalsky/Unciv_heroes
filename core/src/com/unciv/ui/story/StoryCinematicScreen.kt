@@ -61,32 +61,43 @@ class StoryCinematicScreen(
 
     override fun render(delta: Float) {
         if (disposed) return
-        // Сначала действительно рисуем подготовку; искусственной задержки или процентов загрузки нет.
+        // Первый кадр показывает подготовку, второй запускает её даже без непрерывной отрисовки.
         if (!preparationDrawn) {
             preparationDrawn = true
             super.render(delta)
+            Gdx.graphics.requestRendering()
             return
         }
         if (session.state == StoryVideoSession.State.Ready) {
             session.start()
-            session.player?.let { player ->
-                placeholder.remove()
-                videoActor = player.actor
-                stage.addActor(player.actor)
-                fitVideo()
-                if (skippable) {
-                    val controls = Table().apply { setFillParent(true); top().right() }
-                    val skip = "Skip".toTextButton()
-                    skip.onActivation { session.skip() }
-                    controls.add(skip).pad(20f).minWidth(140f).minHeight(48f)
-                    stage.addActor(controls)
-                }
+            if (skippable && session.state == StoryVideoSession.State.Playing) {
+                val controls = Table().apply { setFillParent(true); top().right() }
+                val skip = "Skip".toTextButton().apply { name = "story-video-skip" }
+                skip.onActivation { session.skip() }
+                controls.add(skip).pad(20f).minWidth(140f).minHeight(48f)
+                stage.addActor(controls)
             }
         }
         session.update(delta)
         when (session.state) {
-            StoryVideoSession.State.Completed -> { complete(); return }
+            StoryVideoSession.State.Completed -> {
+                complete(); return
+            }
+
             StoryVideoSession.State.Fallback -> if (!fallbackShown) showFallback()
+            StoryVideoSession.State.Playing -> {
+                val player = session.player
+                if (videoActor == null && player != null && player.isPrepared) {
+                    placeholder.remove()
+                    videoActor = player.actor
+                    stage.addActor(player.actor)
+                    // Панель пропуска, созданная во время подготовки, остаётся поверх видео.
+                    player.actor.toBack()
+                    fitVideo()
+                }
+                Gdx.graphics.requestRendering()
+            }
+
             else -> Unit
         }
         super.render(delta)

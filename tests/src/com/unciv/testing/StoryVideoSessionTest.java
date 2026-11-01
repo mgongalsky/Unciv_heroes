@@ -15,6 +15,7 @@ public class StoryVideoSessionTest {
         boolean decodeFails, disposeFails, pauseFails;
         StoryVideoStatus status = StoryVideoStatus.Playing;
         @Override public Actor getActor() { throw new AssertionError("Session must not access UI"); }
+        @Override public boolean isPrepared() { return true; }
         @Override public StoryVideoStatus update(float delta) {
             updates++;
             if (decodeFails) throw new IllegalStateException("decode failure");
