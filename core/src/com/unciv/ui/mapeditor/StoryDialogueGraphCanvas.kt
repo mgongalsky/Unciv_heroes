@@ -292,8 +292,8 @@ class StoryDialogueGraphCanvas(
     private var inlineInput: com.badlogic.gdx.scenes.scene2d.ui.TextArea? = null
     private var inlineLabelName: String? = null
 
-    /** Подключает редактирование только текста; заголовки и порты сохраняют собственные жесты. */
-    fun installTextEditing(open: (String, String?) -> Unit) {
+    /** Текст редактируется на месте; служебное Continue превращается в первый ответ через команду экрана. */
+    fun installTextEditing(open: (String, String?) -> Unit, createAnswer: (String) -> Unit) {
         openText = open
         for (node in dialogue.nodes) {
             val card = cards.getValue(node.id)
@@ -301,14 +301,23 @@ class StoryDialogueGraphCanvas(
                 ?.let { editableLabel(it, node.id, null) }
             val answers = card.children.filterIsInstance<Label>()
                 .filter { it.name?.startsWith("story-graph-edge:") == true }
-            node.choices.forEachIndexed { index, choice ->
+            if (node.choices.isEmpty()) {
+                answers.singleOrNull()?.let { label ->
+                    editableLabel(label, node.id, null) { createAnswer(node.id) }
+                }
+            } else node.choices.forEachIndexed { index, choice ->
                 answers.getOrNull(index)?.let { editableLabel(it, node.id, choice.id) }
             }
         }
     }
 
-    /** Останавливает всплытие клика, иначе выбор карточки пересоздаст только что открытое поле. */
-    private fun editableLabel(label: Label, nodeId: String, choiceId: String?) {
+    /** Забирает клик у карточки: выбор родителя не должен закрывать открытый редактор. */
+    private fun editableLabel(
+        label: Label,
+        nodeId: String,
+        choiceId: String?,
+        open: () -> Unit = { openText?.invoke(nodeId, choiceId) }
+    ) {
         label.touchable = Touchable.enabled
         label.addListener(object : InputListener() {
             override fun touchDown(
@@ -318,15 +327,14 @@ class StoryDialogueGraphCanvas(
                 pointer: Int,
                 button: Int
             ): Boolean {
-                if (button != Input.Buttons.LEFT) return false
+                if (button != Input.Buttons.LEFT || gestureActive) return false
                 event.stop()
                 return true
             }
 
             override fun touchUp(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int) {
                 event.stop()
-                if (!event.isTouchFocusCancel && x in 0f..label.width && y in 0f..label.height)
-                    openText?.invoke(nodeId, choiceId)
+                if (!event.isTouchFocusCancel && x in 0f..label.width && y in 0f..label.height) open()
             }
         })
     }

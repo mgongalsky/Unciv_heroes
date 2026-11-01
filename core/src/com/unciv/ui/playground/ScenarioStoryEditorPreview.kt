@@ -112,6 +112,8 @@ private fun showStoryEditorPanel(screen: BaseScreen, panel: Table) {
             checkStoryGraphInteraction(screen, ::clickStoryEditorButton)
             checkStoryGraphGestures(screen, ::clickStoryEditorButton)
             checkStoryDialogueInline(screen, ::clickStoryEditorButton)
+            checkExistingStoryAnswerInput(screen)
+            checkContinueStoryAnswerInput(screen, ::clickStoryEditorButton)
         }
     )
 }

@@ -88,3 +88,11 @@ StoryDialogueInlinePreview подключён к ScenarioStoryEditorRenderTest: 
 Адаптер владеет декодером, снимает актёр со сцены перед очисткой и сохраняет пропорции при draw. Callback завершения не изменяет игровой прогресс. Зависимость gdx-video 1.3.3 подключена с исключением com.badlogicgames.gdx, сохраняя движок 1.11.0. Исходный MP4 сохранён; WebM со звуком подготовлен заранее, внешние программы игроку не нужны.
 
 Проверки запускаются нативно из IDE: StoryVideoPlaybackTest, StoryVideoSessionTest, StoryVideoSessionReasonsTest, story.StoryRuntimeTest и city.ScenarioGameStarterTest в пакете com.unciv.testing. Все 30 тестов и BUILD прошли. Android/iOS пока показывают заглушку. Подробности и ручная приёмка — в [этапе 11](Plan/STEP_11_IntroVideo.md).
+
+## Компактная форма и Continue — этап 12
+
+StoryEditorForm.compact задаёт локальный размер 16, а кнопка добавления — 18. Подпись CheckBox не переносится. Общий skin не изменяется.
+
+Canvas.installTextEditing различает текст ответа и служебное Continue. Клик Continue вызывает Screen.addAnswer(nodeId), существующую EditStoryDialogue.addAnswer и openInline. Первый ответ наследует переход и назначение AI; TextArea открывается внутри нажатой карточки. Apply публикует черновик, Cancel отменяет его, Undo/Redo сохраняют историю.
+
+ScenarioStoryEditorRenderTest включает проверки существующих ответов и Continue, геометрии Pause world, фокуса, масштабирования и сохранения перехода. UI-регрессия и BUILD прошли. Визуальный эталон не сравнивался; ручной сценарий — в [этапе 12](Plan/STEP_12_GraphTextAndInput.md).

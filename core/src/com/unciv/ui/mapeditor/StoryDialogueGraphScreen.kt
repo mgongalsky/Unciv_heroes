@@ -20,6 +20,7 @@ import com.unciv.ui.utils.ZoomableScrollPane
 import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toTextButton
+import com.unciv.ui.utils.extensions.setFontSize
 
 /** Координирует независимый черновик, историю и жесты; карта изменяется только владельцем после Apply. */
 class StoryDialogueGraphScreen(
@@ -237,8 +238,8 @@ class StoryDialogueGraphScreen(
                     selection.setText("Output: ${output.nodeId} / ${output.choiceId ?: "Continue"} • Disconnect output → End dialogue")
                 }
             ))
-        canvas?.installTextEditing(::openInline)
-        // Кнопка добавления остаётся над прокручиваемой формой.
+        canvas?.installTextEditing(::openInline) { target -> attempt { addAnswer(target) } }
+        // Кнопка остаётся вне прокрутки; размер задан в единицах интерфейса, а не долях исходного шрифта.
         if (sidebarScroll.parent === root) {
             @Suppress("UNCHECKED_CAST")
             val cell =
@@ -246,7 +247,7 @@ class StoryDialogueGraphScreen(
             val host = Table()
             host.add("Add answer to selected".toTextButton().apply {
                 name = "story-graph-add-answer"
-                label.setFontScale(0.8f)
+                label.setFontSize(18)
             }.onClick { attempt { addAnswer() } }).growX().height(34f).pad(2f).row()
             host.add(sidebarScroll).grow()
             cell.setActor(host).width(280f)
@@ -268,14 +269,20 @@ class StoryDialogueGraphScreen(
                 observeChanges(::liveText)
             }
             sidebar.add(nodeForm).growX().row()
-            sidebar.add("Update node".toTextButton().apply { label.setFontScale(0.75f) }
+            sidebar.add("Update node".toTextButton().apply { label.setFontSize(16) }
                 .onClick { attempt { capture(); rebuild(false) } }).height(30f).row()
         }
+        selection.setFontSize(16)
+        error.setFontSize(16)
         selection.setText(selectedOutput?.let { "Output: ${it.nodeId} / ${it.choiceId ?: "Continue"} • Disconnect output → End dialogue" }
             ?: "Click text: edit • Drag title: move • Text: ${(editorState.textScale * 100).toInt()}%")
-        root.invalidateHierarchy(); root.validate(); graph.refreshContentSize()
+        root.invalidateHierarchy()
+        root.validate()
+        graph.refreshContentSize()
         if (center) centerSelected() else {
-            graph.scrollX = previousX; graph.scrollY = previousY; graph.updateVisualScroll()
+            graph.scrollX = previousX
+            graph.scrollY = previousY
+            graph.updateVisualScroll()
         }
     }
 
@@ -394,16 +401,19 @@ class StoryDialogueGraphScreen(
         }
     }
 
-    /** Обе кнопки вызывают одну чистую команду и открывают текст нового ответа в карточке. */
-    private fun addAnswer() {
+    /** Кнопки и Continue используют одну команду; первый ответ наследует переход выбранной карточки. */
+    private fun addAnswer(nodeId: String = selectedId) {
+        val previousId = selectedId
         capture()
-        val node = draft.nodes.first { it.id == selectedId }
+        val actualId = if (nodeId == previousId) selectedId else nodeId
+        val node = draft.nodes.first { it.id == actualId }
         var number = 1
         while (node.choices.any { it.id == "answer$number" }) number++
         val answerId = "answer$number"
-        editorState.publish(EditStoryDialogue.addAnswer(draft, selectedId, answerId), selectedId)
+        editorState.publish(EditStoryDialogue.addAnswer(draft, actualId, answerId), actualId)
+        selectedOutput = null
         rebuild(false)
         centerSelected()
-        openInline(selectedId, answerId)
+        openInline(actualId, answerId)
     }
 }

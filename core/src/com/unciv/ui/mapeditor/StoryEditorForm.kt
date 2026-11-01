@@ -9,6 +9,7 @@ import com.unciv.models.translations.tr
 import com.unciv.pure.domain.city.CityPosition
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.toLabel
+import com.unciv.ui.utils.extensions.setFontSize
 
 /** Поля независимого черновика; capture читает ввод, но никогда не записывает карту. */
 class StoryEditorForm(private val fieldWidth: Float) : Table(BaseScreen.skin) {
@@ -74,22 +75,35 @@ class StoryEditorForm(private val fieldWidth: Float) : Table(BaseScreen.skin) {
         })
     }
 
-    /** Уплотняет только этот экземпляр формы, не изменяя общий skin и другие редакторы. */
+    /** Уплотняет экземпляр формы; явный размер не зависит от исходного масштаба шрифта skin. */
     fun compact(): StoryEditorForm {
         fun visit(table: Table) {
             for (cell in table.cells) {
                 cell.pad(1f)
                 when (val actor = cell.actor) {
                     is StoryEditorForm -> visit(actor)
+                    is CheckBox -> {
+                        actor.label.setFontSize(16)
+                        // Без переноса подпись сохраняет естественную ширину во внутренней таблице CheckBox.
+                        actor.label.setWrap(false)
+                        actor.left()
+                        actor.imageCell.padRight(4f)
+                        cell.width(fieldWidth).minHeight(30f)
+                    }
+
                     is com.badlogic.gdx.scenes.scene2d.ui.TextButton -> {
-                        actor.label.setFontScale(0.75f)
+                        actor.label.setFontSize(16)
                         cell.height(30f)
                     }
 
-                    is com.badlogic.gdx.scenes.scene2d.ui.Label -> actor.setFontScale(0.75f)
+                    is com.badlogic.gdx.scenes.scene2d.ui.Label -> {
+                        actor.setFontSize(16)
+                        actor.setWrap(true)
+                        cell.width(fieldWidth)
+                    }
+
                     is TextArea -> cell.height(68f)
                     is TextField -> cell.height(30f)
-                    is CheckBox -> actor.label.setFontScale(0.75f)
                 }
             }
             table.invalidateHierarchy()

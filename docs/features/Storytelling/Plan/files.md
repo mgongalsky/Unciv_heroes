@@ -172,3 +172,16 @@ StoryEffectsEditor не изменялся: компактный режим об
 - docs/features/Storytelling/Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Research/RESEARCH.md и CODE_GUIDE.md — актуальные результаты; сокращённые пути относятся к docs/features/Storytelling.
 
 Android-адаптер и существующие видеосессия/экран не изменены. Удалений и переносов нет.
+
+## Этап 12 — размер текста и ввод в карточке
+
+Изменены:
+
+- core/src/com/unciv/ui/mapeditor/StoryEditorForm.kt — компактный шрифт и горизонтальная подпись CheckBox.
+- core/src/com/unciv/ui/mapeditor/StoryDialogueGraphScreen.kt — размеры кнопок и создание ответа в нажатой карточке.
+- core/src/com/unciv/ui/mapeditor/StoryDialogueGraphCanvas.kt — обработчик клика Continue.
+- core/src/com/unciv/ui/playground/StoryDialogueInlinePreview.kt — размеры, существующие ответы и Continue, фокус, история и переходы.
+- core/src/com/unciv/ui/playground/ScenarioStoryEditorPreview.kt — подключение UI-проверок.
+- docs/features/Storytelling/Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Research/RESEARCH.md и CODE_GUIDE.md — результаты; сокращённые пути относятся к docs/features/Storytelling.
+
+Создан docs/features/Storytelling/Plan/STEP_12_GraphTextAndInput.md. Удалений и переносов нет.
