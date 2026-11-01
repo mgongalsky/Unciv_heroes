@@ -15,11 +15,15 @@ class MapEditorHeroesTab(private val editor: MapEditorScreen, private val editTa
 
     override fun activated(index: Int, caption: String, pager: TabbedPager) {
         clear()
+        top()
         editTab.setCityEditing(true)
         editor.hideSelection()
-        val panel = ScenarioHeroEditorPanel(editor.tileMap, editor.ruleset, editor.getToolsWidth()) {
-            editor.isDirty = true
-        }
+        editor.mapHolder.refreshScenarioHeroPreviews()
+        val panel =
+                ScenarioHeroEditorPanel(editor.tileMap, editor.ruleset, editor.getToolsWidth()) {
+                    editor.isDirty = true
+                    editor.mapHolder.refreshScenarioHeroPreviews()
+                }
         add(panel).growX().top()
         selectedPosition?.let { panel.select(it) }
         editor.tileClickHandler = { tile ->

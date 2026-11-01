@@ -58,12 +58,36 @@ class ScenarioStoryEditorPanel(
         clear()
         top()
         defaults().pad(4f).growX()
-        for (page in listOf("Zones", "Triggers", "Dialogues", "Cinematics"))
-            add(page.toTextButton().onClick { mutate { section = page } }).row()
+        val navigation = Table(skin).apply { defaults().pad(2f).growX() }
+        for ((index, page) in listOf("Zones", "Triggers", "Dialogues", "Cinematics").withIndex()) {
+            val button = page.toTextButton().apply {
+                name = "scenario-story-section:$page"
+                color = if (section == page) Color.SKY else Color.WHITE
+            }.onClick {
+                mutate { section = page }
+                // Новый раздел начинается сверху, даже если предыдущий содержал длинный диалог.
+                generateSequence(parent) { it.parent }
+                    .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.ScrollPane>()
+                    .firstOrNull()?.let { scroll ->
+                        scroll.validate()
+                        scroll.scrollY = 0f
+                        scroll.updateVisualScroll()
+                    }
+            }
+            navigation.add(button).width((widthForFields - 8f) / 2f)
+            if (index % 2 == 1) navigation.row()
+        }
+        add(navigation).width(widthForFields).row()
         add("Apply story".toTextButton().apply { name = "scenario-story-apply" }.onClick {
             attempt {
                 form?.capture()
-                if (ScenarioStoryEditorCommands.apply(map, ruleset, map.scenarioHeroes, draft)) changed()
+                if (ScenarioStoryEditorCommands.apply(
+                            map,
+                            ruleset,
+                            map.scenarioHeroes,
+                            draft
+                        )
+                ) changed()
             }
         }).row()
         add("Discard changes".toTextButton().onClick {
@@ -73,6 +97,28 @@ class ScenarioStoryEditorPanel(
             refresh()
         }).row()
         add(error).width(widthForFields).row()
+        val count = when (section) {
+            "Zones" -> draft.zones.size
+            "Triggers" -> draft.triggers.size
+            "Dialogues" -> draft.dialogues.size
+            else -> draft.cinematics.size
+        }
+        add("${section.tr()} ($count)".toLabel(Color.SKY).apply {
+            name = "scenario-story-section-title"
+            wrap = true
+        }).width(widthForFields).row()
+        if (count == 0) {
+            val explanation = when (section) {
+                "Zones" -> "No zones yet. Add a zone, then select its tiles on the map."
+                "Triggers" -> "No triggers yet. Add a trigger to connect a game event to story effects."
+                "Dialogues" -> "No dialogues yet. Add a dialogue to write lines and choices."
+                else -> "No cinematics yet. Add a cinematic with a video path and fallback text."
+            }
+            add(explanation.toLabel().apply {
+                name = "scenario-story-empty-section"
+                wrap = true
+            }).width(widthForFields).row()
+        }
         val fields = StoryEditorForm(widthForFields)
         form = fields
         when (section) {
@@ -141,27 +187,92 @@ class ScenarioStoryEditorPanel(
 
     private fun dialogues(fields: StoryEditorForm) {
         for (dialogue in draft.dialogues) {
-            fields.include(StoryDialogueEditor.create(dialogue, map, ruleset, widthForFields, ::mutate))
-            fields.add("Delete dialogue".toTextButton().onClick { mutate { draft.dialogues.remove(dialogue) } }).row()
+            fields.add("Preview dialogue: ${dialogue.id}".toTextButton().apply {
+                name = "scenario-preview-dialogue:${dialogue.id}"
+            }.onClick {
+                attempt {
+                    form?.capture()
+                    preview(StoryEffect(StoryEffectKind.Dialogue, dialogue.id))
+                }
+            }).row()
+            fields.include(
+                StoryDialogueEditor.create(
+                    dialogue,
+                    map,
+                    ruleset,
+                    widthForFields,
+                    ::mutate
+                )
+            )
+            fields.add(
+                "Delete dialogue".toTextButton()
+                    .onClick { mutate { draft.dialogues.remove(dialogue) } }).row()
         }
         fields.add("Add dialogue".toTextButton().onClick {
             mutate {
-                draft.dialogues.add(StoryDialogue(id = UUID.randomUUID().toString(), startNodeId = "start",
-                    nodes = arrayListOf(StoryDialogueNode(id = "start", text = "New dialogue line"))))
+                draft.dialogues.add(
+                    StoryDialogue(
+                        id = UUID.randomUUID().toString(), startNodeId = "start",
+                        nodes = arrayListOf(
+                            StoryDialogueNode(
+                                id = "start",
+                                text = "New dialogue line"
+                            )
+                        )
+                    )
+                )
             }
         }).row()
     }
 
     private fun cinematics(fields: StoryEditorForm) {
         for (cinematic in draft.cinematics) {
+            fields.add("Preview cinematic: ${cinematic.id}".toTextButton().apply {
+                name = "scenario-preview-cinematic:${cinematic.id}"
+            }.onClick {
+                attempt {
+                    form?.capture()
+                    preview(StoryEffect(StoryEffectKind.Cinematic, cinematic.id))
+                }
+            }).row()
             fields.text("Cinematic ID", cinematic.id) { cinematic.id = it.trim() }
             fields.text("Video asset path", cinematic.assetPath) { cinematic.assetPath = it.trim() }
-            fields.text("Fallback text", cinematic.fallbackText, multiline = true) { cinematic.fallbackText = it }
+            fields.text(
+                "Fallback text",
+                cinematic.fallbackText,
+                multiline = true
+            ) { cinematic.fallbackText = it }
             fields.flag("Allow skipping", cinematic.skippable) { cinematic.skippable = it }
-            fields.add("Delete cinematic".toTextButton().onClick { mutate { draft.cinematics.remove(cinematic) } }).row()
+            fields.add(
+                "Delete cinematic".toTextButton()
+                    .onClick { mutate { draft.cinematics.remove(cinematic) } }).row()
         }
         fields.add("Add cinematic".toTextButton().onClick {
-            mutate { draft.cinematics.add(StoryCinematic(id = UUID.randomUUID().toString())) }
+            mutate {
+                draft.cinematics.add(
+                    StoryCinematic(
+                        id = UUID.randomUUID().toString(),
+                        fallbackText = "New cinematic scene"
+                    )
+                )
+            }
         }).row()
+    }
+
+    /** Экран-владелец задаётся адаптером редактора; отдельные проверки формы могут работать без него. */
+    var previewScreen: BaseScreen? = null
+
+    /** Проверяет снимок черновика перед просмотром, не выполняя Apply. */
+    private fun preview(effect: StoryEffect) = attempt {
+        form?.capture()
+        val screen = requireNotNull(previewScreen) { "Preview requires an editor screen" }
+        com.unciv.pure.application.story.ValidateStoryScenario.execute(
+            draft,
+            map.scenarioHeroes.map { it.id }.toSet(),
+            map.scenarioPlayerSlots.map { it.id }.toSet(),
+            map.scenarioCities.map { it.id }.toSet(),
+            map.values.map { CityPosition(it.position.x, it.position.y) }.toSet()
+        )
+        StoryScenePreview(screen, draft, effect).open()
     }
 }

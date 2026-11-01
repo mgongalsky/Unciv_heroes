@@ -101,11 +101,10 @@ class EditorMapHolder(
         refreshScenarioCityPreviews()
     }
 
-    /** Рисует подписи и признаки городов по описаниям карты; игрового мира с CityInfo в редакторе нет. */
+    /** Обновляет сценарные изображения без создания игровых городов или юнитов. */
     fun refreshScenarioCityPreviews() {
         if (editorScreen == null) return
         for (tileGroup in allTileGroups) {
-            // Пересоздаём подпись, чтобы изменения имени, владельца и удаления не оставляли старые акторы.
             tileGroup.findActor<com.badlogic.gdx.scenes.scene2d.Actor>("scenario-city-preview")
                 ?.remove()
             val city = tileMap.scenarioCities.firstOrNull {
@@ -118,13 +117,13 @@ class EditorMapHolder(
             }
             if (city == null) continue
             val owner =
-                if (city.owner == com.unciv.pure.domain.city.ScenarioCityOwner.Neutral) "Neutral".tr()
-                else tileMap.scenarioPlayerSlots.firstOrNull { it.id == city.ownerSlotId }?.name.orEmpty()
+                    if (city.owner == com.unciv.pure.domain.city.ScenarioCityOwner.Neutral) "Neutral".tr()
+                    else tileMap.scenarioPlayerSlots.firstOrNull { it.id == city.ownerSlotId }?.name.orEmpty()
             val label = com.badlogic.gdx.scenes.scene2d.ui.Label(
                 "${city.name}\n$owner", BaseScreen.skin
             ).apply {
                 name = "scenario-city-preview"
-                touchable = Touchable.disabled // Подпись не перехватывает выбор клетки.
+                touchable = Touchable.disabled
                 color = if (city.owner == com.unciv.pure.domain.city.ScenarioCityOwner.Neutral)
                     com.badlogic.gdx.graphics.Color.LIGHT_GRAY else com.badlogic.gdx.graphics.Color.GOLD
                 setFontScale(0.7f)
@@ -133,6 +132,7 @@ class EditorMapHolder(
             }
             tileGroup.addActor(label)
         }
+        refreshScenarioHeroPreviews()
     }
 
     fun setTransients() {
@@ -253,5 +253,19 @@ class EditorMapHolder(
         val wrapped = HexMath.getUnwrappedNearestTo(rounded, Vector2.Zero, tileMap.maxLongitude)
         //todo this works, but means getUnwrappedNearestTo fails - on the x-y == maxLongitude vertical
         return tileMap.getOrNull(wrapped) ?: tileMap.getOrNull(rounded)
+    }
+
+    /** Обновляет изображения всех сценарных героев, включая зеркала карты и удалённые размещения. */
+    fun refreshScenarioHeroPreviews() {
+        if (editorScreen == null) return
+        val heroes = tileMap.scenarioHeroes.associateBy { it.position }
+        for (tileGroup in allTileGroups) {
+            tileGroup.findActor<com.badlogic.gdx.scenes.scene2d.Actor>("scenario-hero-preview")
+                ?.remove()
+            val position = tileGroup.tileInfo.position
+            val hero = heroes[com.unciv.pure.domain.city.CityPosition(position.x, position.y)]
+                ?: continue
+            tileGroup.addActor(ScenarioHeroPreview(tileGroup, hero))
+        }
     }
 }

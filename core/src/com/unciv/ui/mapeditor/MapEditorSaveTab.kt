@@ -73,11 +73,33 @@ class MapEditorSaveTab(
         add(buttonTable).row()
     }
 
-    private fun saveHandler() {
-        if (mapNameTextField.text.isBlank()) return
-        editorScreen.tileMap.mapParameters.name = mapNameTextField.text
-        editorScreen.tileMap.mapParameters.type = MapType.custom
-        thread(name = "MapSaver", block = this::saverThread)
+    /** Снимает копию и версию на UI-потоке; файловая запись не читает изменяемую форму редактора. */
+    private fun saveHandler(playAfterSave: Boolean = false) {
+        val mapName = mapNameTextField.text
+        if (mapName.isBlank() || saving) return
+        try {
+            editorScreen.tileMap.mapParameters.name = mapName
+            editorScreen.tileMap.mapParameters.type = MapType.custom
+            val sourceMap = editorScreen.tileMap
+            val snapshot = editorScreen.getMapCloneForSave()
+            val revision = editorScreen.editRevision
+            saving = true
+            thread(name = "MapSaver") {
+                saverThread(
+                    mapName,
+                    snapshot,
+                    sourceMap,
+                    revision,
+                    playAfterSave
+                )
+            }
+        } catch (failure: Exception) {
+            saving = false
+            Popup(editorScreen).apply {
+                addGoodSizedLabel(failure.message ?: "Could not prepare map for saving").row()
+                addCloseButton()
+            }.open()
+        }
     }
 
     private fun deleteHandler() {
@@ -94,6 +116,14 @@ class MapEditorSaveTab(
 
     override fun activated(index: Int, caption: String, pager: TabbedPager) {
         pager.setScrollDisabled(true)
+        if (findActor<com.badlogic.gdx.scenes.scene2d.Actor>("scenario-save-and-play") == null) {
+            val fileScroll = children.toList().filterIsInstance<AutoScrollPane>().single()
+            val cell = getCell(fileScroll)
+            cell.height((cell.prefHeight - 60f).coerceAtLeast(80f))
+            add("Save and play".toTextButton().apply {
+                name = "scenario-save-and-play"
+            }.onClick { saveHandler(playAfterSave = true) }).minHeight(48f).growX().pad(6f).row()
+        }
         mapFiles.update()
         selectFile(null)
     }
@@ -114,23 +144,61 @@ class MapEditorSaveTab(
         deleteButton.color = if (file != null) Color.SCARLET else Color.BROWN
     }
 
-    private fun saverThread() {
+    /** Настройки запуска открываются только после успешной записи проверенного снимка. */
+    private fun saverThread(
+        mapName: String,
+        snapshot: TileMap,
+        sourceMap: TileMap,
+        revision: Long,
+        playAfterSave: Boolean
+    ) {
         try {
-            val mapToSave = editorScreen.getMapCloneForSave()
-            mapToSave.assignContinents(TileMap.AssignContinentsMode.Reassign)
-            MapSaver.saveMap(mapNameTextField.text, mapToSave)
+            MapSaver.saveMap(mapName, snapshot)
             Gdx.app.postRunnable {
-                ToastPopup("Map saved successfully!", editorScreen)
+                saving = false
+                // Новая карта или более свежие правки не относятся к завершившейся записи.
+                if (editorScreen.tileMap === sourceMap && editorScreen.editRevision == revision)
+                    editorScreen.isDirty = false
+                if (editorScreen.game.screen !== editorScreen) return@postRunnable
+                if (playAfterSave) {
+                    val parameters = com.unciv.models.metadata.GameParameters().apply {
+                        baseRuleset = snapshot.mapParameters.baseRuleset
+                        mods = LinkedHashSet(snapshot.mapParameters.mods)
+                        if (snapshot.scenarioPlayerSlots.isNotEmpty()) {
+                            numberOfCityStates = 0
+                            players =
+                                    ArrayList(snapshot.scenarioPlayerSlots.mapIndexed { index, slot ->
+                                        com.unciv.models.metadata.Player().apply {
+                                            scenarioSlotId = slot.id
+                                            playerType =
+                                                    if (index == 0) com.unciv.logic.civilization.PlayerType.Human
+                                                    else com.unciv.logic.civilization.PlayerType.AI
+                                        }
+                                    })
+                        }
+                    }
+                    val setup = com.unciv.models.metadata.GameSetupInfo(
+                        parameters,
+                        snapshot.mapParameters.clone()
+                    ).apply {
+                        mapFile = Gdx.files.local("${MapSaver.mapsFolder}/$mapName")
+                    }
+                    editorScreen.game.pushScreen(com.unciv.ui.newgamescreen.NewGameScreen(setup))
+                } else ToastPopup("Map saved successfully!", editorScreen)
             }
-            editorScreen.isDirty = false
-        } catch (ex: Exception) {
-            ex.printStackTrace()
+        } catch (failure: Exception) {
+            failure.printStackTrace()
             Gdx.app.postRunnable {
-                val cantLoadGamePopup = Popup(editorScreen)
-                cantLoadGamePopup.addGoodSizedLabel("It looks like your map can't be saved!").row()
-                cantLoadGamePopup.addCloseButton()
-                cantLoadGamePopup.open(force = true)
+                saving = false
+                Popup(editorScreen).apply {
+                    addGoodSizedLabel("It looks like your map can't be saved!").row()
+                    addGoodSizedLabel(failure.message ?: failure.javaClass.simpleName).row()
+                    addCloseButton()
+                }.open(force = true)
             }
         }
     }
+
+    /** Не допускает конкурирующих записей и повторного открытия экрана запуска. */
+    private var saving = false
 }

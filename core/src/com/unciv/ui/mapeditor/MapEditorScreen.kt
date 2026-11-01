@@ -62,8 +62,13 @@ class MapEditorScreen(
 
     /** The map being edited, with mod list for that map */
     var tileMap: TileMap
-    /** Flag indicating the map should be saved */
+
+    /** Каждая публикация правки меняет версию, даже когда карта уже помечена несохранённой. */
     var isDirty = false
+        set(value) {
+            if (value) editRevision++
+            field = value
+        }
 
     /** Отдельный черновик генерации: открытая карта задаёт исходные настройки, но не разделяет их с формой. */
     val newMapParameters = map?.mapParameters?.clone() ?: getDefaultParameters()
@@ -280,4 +285,8 @@ class MapEditorScreen(
                 if (tabs.activePage == 2) tabs.edit.currentSubTab() else selectedEditSubTab
         it.tabs.selectPage(tabs.activePage)
     }
+
+    /** Версия правок для завершения асинхронного сохранения; не входит в данные карты. */
+    var editRevision: Long = 0
+        private set
 }

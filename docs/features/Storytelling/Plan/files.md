@@ -77,3 +77,17 @@
 ## Визуальные результаты
 
 Сценарии story-dialogue, hero-editor и story-editor зарегистрированы в GL-runner. Фактические PNG в tests/golden/results являются результатами запуска, а не утверждёнными эталонами. Визуальная приёмка и обновление baseline не выполнены.
+
+## Исправление пользовательского пути редактора
+
+Дополнительно созданы:
+- core/src/com/unciv/ui/mapeditor/ScenarioHeroPreview.kt — спрайт и подпись исходного героя.
+- core/src/com/unciv/ui/mapeditor/StoryScenePreview.kt — изолированный предпросмотр через общий движок и игровые окна.
+- docs/features/Storytelling/Plan/STEP_07_EditorUsability.md — результаты исправления и границы приёмки.
+
+Дополнительно изменены:
+- core/src/com/unciv/ui/mapeditor/EditorMapHolder.kt — жизненный цикл превью героев.
+- core/src/com/unciv/ui/mapeditor/MapEditorScreen.kt — версия редакторских изменений.
+- core/src/com/unciv/ui/mapeditor/MapEditorSaveTab.kt — снимок для записи, защита повторного сохранения, Save and play.
+
+Ранее перечисленные MapEditorHeroesTab, MapEditorStoryTab, ScenarioStoryEditorPanel и ScenarioStoryEditorPreview обновлены для отображения, навигации, предпросмотра и проверок настоящего ввода. Основной план, исследование, этапы 05–07 и путеводитель дополнены фактическими результатами.

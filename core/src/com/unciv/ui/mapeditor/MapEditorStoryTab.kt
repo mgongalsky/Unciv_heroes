@@ -17,6 +17,7 @@ class MapEditorStoryTab(private val editor: MapEditorScreen, private val editTab
     /** При новом входе читается карта; неприменённый черновик предыдущего входа отбрасывается. */
     override fun activated(index: Int, caption: String, pager: TabbedPager) {
         clear()
+        top()
         editTab.setCityEditing(true)
         editor.hideSelection()
         add("Create story example map".toTextButton().apply {
@@ -31,7 +32,6 @@ class MapEditorStoryTab(private val editor: MapEditorScreen, private val editTab
                 val example = com.unciv.logic.story.StoryDemoScenario.create(ruleset)
                 example.mapParameters.baseRuleset = parameters.baseRuleset
                 example.mapParameters.mods = LinkedHashSet(parameters.mods)
-                // Повторный выбор активной страницы не вызывает activated: сначала снимаем старые формы.
                 editor.tabs.selectPage(-1)
                 editor.selectedEditSubTab = "Story"
                 editor.loadMap(example, ruleset, selectPage = 2)
@@ -49,6 +49,7 @@ class MapEditorStoryTab(private val editor: MapEditorScreen, private val editTab
                         editor.highlightTile(tile, Color.SKY)
                 }
             })
+        panel.previewScreen = editor
         add(panel).growX().top()
         editor.tileClickHandler =
                 { tile -> panel.selectTile(CityPosition(tile.position.x, tile.position.y)) }
