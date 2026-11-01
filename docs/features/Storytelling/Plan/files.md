@@ -130,3 +130,25 @@
 - docs/features/Storytelling/Plan/files.md — фактический состав изменений.
 - docs/features/Storytelling/Research/RESEARCH.md — источники и выводы.
 - docs/features/Storytelling/CODE_GUIDE.md — текущие вызовы, управление и проверки.
+
+## Этап 10 — редактирование внутри карточек
+
+Созданы:
+
+- core/src/com/unciv/ui/playground/StoryDialogueInlinePreview.kt — реальные клики и клавиатурный ввод внутри графа.
+- docs/features/Storytelling/Plan/STEP_10_InlineDialogueEditing.md — контракты, результаты и ручная оценка.
+
+Изменены:
+
+- core/src/com/unciv/pure/application/story/EditStoryDialogue.kt — общая команда добавления ответа.
+- tests/src/com/unciv/testing/pure/application/story/EditStoryDialogueTest.kt — переходы, AI, копии и отказы добавления.
+- core/src/com/unciv/ui/mapeditor/StoryEditorForm.kt — уведомления ввода и локальный компактный режим.
+- core/src/com/unciv/ui/mapeditor/StoryDialogueEditor.kt — делегирование добавления и повторная фиксация AI после rename.
+- core/src/com/unciv/ui/mapeditor/StoryDialogueGraphCanvas.kt — встроенные поля и обновление подписей.
+- core/src/com/unciv/ui/mapeditor/StoryDialogueGraphScreen.kt — синхронизация, компактная панель и постоянная кнопка.
+- core/src/com/unciv/ui/mapeditor/StoryDialogueGraphState.kt — группировка ввода в истории.
+- tests/src/com/unciv/testing/StoryDialogueGraphStateTest.kt — группировка и границы Undo/Redo.
+- core/src/com/unciv/ui/playground/ScenarioStoryEditorPreview.kt — подключение сценария ввода.
+- docs/features/Storytelling/Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Research/RESEARCH.md и CODE_GUIDE.md — актуализация документов темы; сокращённые пути относятся к docs/features/Storytelling/.
+
+StoryEffectsEditor не изменялся: компактный режим обходит существующие вложенные формы. Удалений и переносов файлов нет.

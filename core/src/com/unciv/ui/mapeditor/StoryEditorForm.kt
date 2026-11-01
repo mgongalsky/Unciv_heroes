@@ -64,4 +64,38 @@ class StoryEditorForm(private val fieldWidth: Float) : Table(BaseScreen.skin) {
     }
 
     fun capture() { readers.forEach { it() } }
+
+    /** Наблюдает ввод во вложенных формах; нажатия командных кнопок обрабатываются отдельно. */
+    fun observeChanges(changed: (com.badlogic.gdx.scenes.scene2d.Actor) -> Unit) {
+        addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
+            override fun changed(event: ChangeEvent, actor: com.badlogic.gdx.scenes.scene2d.Actor) {
+                if (actor is TextField || actor is SelectBox<*> || actor is CheckBox) changed(actor)
+            }
+        })
+    }
+
+    /** Уплотняет только этот экземпляр формы, не изменяя общий skin и другие редакторы. */
+    fun compact(): StoryEditorForm {
+        fun visit(table: Table) {
+            for (cell in table.cells) {
+                cell.pad(1f)
+                when (val actor = cell.actor) {
+                    is StoryEditorForm -> visit(actor)
+                    is com.badlogic.gdx.scenes.scene2d.ui.TextButton -> {
+                        actor.label.setFontScale(0.75f)
+                        cell.height(30f)
+                    }
+
+                    is com.badlogic.gdx.scenes.scene2d.ui.Label -> actor.setFontScale(0.75f)
+                    is TextArea -> cell.height(68f)
+                    is TextField -> cell.height(30f)
+                    is CheckBox -> actor.label.setFontScale(0.75f)
+                }
+            }
+            table.invalidateHierarchy()
+        }
+        visit(this)
+        return this
+    }
+
 }

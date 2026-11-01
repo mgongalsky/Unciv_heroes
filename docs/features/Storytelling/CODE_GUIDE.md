@@ -46,7 +46,7 @@ Preview dialogue / Preview cinematic проверяют черновик и со
 
 В IDE запускать native TESTS с конкретным классом:
 
-- com.unciv.testing.pure.application.story.EditStoryDialogueTest — 7 тестов команд графа, включая изменение конкретного перехода.
+- com.unciv.testing.pure.application.story.EditStoryDialogueTest — 8 тестов команд графа, включая переходы и добавление ответа.
 - com.unciv.testing.pure.application.story.AdvanceStoryTest — 4 теста исполнения выборов.
 - com.unciv.testing.story.ScenarioStoryEditorCommandsTest — 7 тестов Apply, ссылок и сериализации.
 - com.unciv.testing.StoryVideoSessionTest — 6 тестов ресурса видео.
@@ -69,4 +69,14 @@ StoryDialogueGraphScreen фиксирует поля перед командой
 
 Text −/+ меняет размер текста независимо от масштаба. Auto layout сбрасывает ручные позиции. Disconnect output переводит выбранный выход в End dialogue. Delete удаляет выбранный узел либо отключает выход; защищённые узлы требуют перенаправления ссылок. Ctrl+Z, Ctrl+Shift+Z и Ctrl+Y управляют историей. Эти команды не обрабатываются графом при фокусе в TextField. Controls показывает подсказку.
 
-Дополнительный native TESTS: com.unciv.testing.StoryDialogueGraphStateTest — 3 теста истории и геометрии без GL. ScenarioStoryEditorRenderTest дополнительно вызывает StoryDialogueGraphGesturesPreview: длинный текст, размер шрифта, drag при масштабе, отдельный ответ, отмена drop/Escape, отключение с Undo, сохранение ввода и защита от Delete. Физический ввод сочетаний Ctrl проверяется в ручном маршруте [этапа 09](Plan/STEP_09_GraphInteraction.md).
+Дополнительный native TESTS: com.unciv.testing.StoryDialogueGraphStateTest — 4 теста истории, группировки ввода и геометрии без GL. ScenarioStoryEditorRenderTest дополнительно вызывает StoryDialogueGraphGesturesPreview: длинный текст, размер шрифта, drag при масштабе, отдельный ответ, отмена drop/Escape, отключение с Undo, сохранение ввода и защита от Delete. Физический ввод сочетаний Ctrl проверяется в ручном маршруте [этапа 09](Plan/STEP_09_GraphInteraction.md).
+
+## Ввод внутри карточек — этап 10
+
+Canvas.installTextEditing открывает TextArea по клику на текст реплики или ответа. Screen.openInline фиксирует прежние поля и координирует ввод. Canvas.refreshText обновляет подписи без замены активного поля. Escape или потеря фокуса закрывают встроенное поле, оставляя введённый текст в локальном черновике; Cancel экрана отбрасывает черновик.
+
+StoryEditorForm.observeChanges вызывает Screen.liveText для текста реплики, говорящего и ответов. Обратная синхронизация защищена от повторных уведомлений; ID и структурные поля остаются под проверкой capture. StoryEditorForm.compact действует только на выбранные экземпляры и вложенные формы, не изменяя skin.
+
+Обе кнопки добавления вызывают Screen.addAnswer → EditStoryDialogue.addAnswer и открывают новый ответ в карточке. Первый ответ наследует прежнее продолжение и назначается AI; следующие ведут в End dialogue. StoryDialogueGraphState группирует последовательный ввод одного поля в одно действие истории.
+
+StoryDialogueInlinePreview подключён к ScenarioStoryEditorRenderTest: проверяет реальные клики, Stage.keyTyped, фокус, курсор, синхронизацию, Undo/Redo, обе кнопки и Apply. Итоговые BUILD и 13 тестов этапа прошли. Ограничения и ручная оценка — в [этапе 10](Plan/STEP_10_InlineDialogueEditing.md).

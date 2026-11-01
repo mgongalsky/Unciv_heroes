@@ -6,7 +6,6 @@ import com.unciv.pure.domain.story.*
 import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.toLabel
 import com.unciv.ui.utils.extensions.toTextButton
-import java.util.UUID
 
 /** Редактор графа разговора через поля и списки; JSON не требуется. */
 object StoryDialogueEditor {
@@ -20,7 +19,7 @@ object StoryDialogueEditor {
         }
     }
 
-    /** Форма одной реплики; переименование ответа сохраняет выбранное назначение AI. */
+    /** Форма одной реплики; добавление ответа делегируется общей команде экрана. */
     fun createNode(
         dialogue: StoryDialogue,
         node: StoryDialogueNode,
@@ -29,7 +28,8 @@ object StoryDialogueEditor {
         width: Float,
         aiChoice: String,
         saveAiChoice: (String) -> Unit,
-        mutate: (() -> Unit) -> Unit
+        mutate: (() -> Unit) -> Unit,
+        addAnswer: () -> Unit
     ): StoryEditorForm {
         val form = StoryEditorForm(width)
         var capturedAiChoice = aiChoice
@@ -45,12 +45,12 @@ object StoryDialogueEditor {
         if (node.choices.isEmpty()) {
             form.choice("Next node", node.nextNodeId, targets) { node.nextNodeId = it }
         } else {
+            // Список хранит исходные ID; повторный capture после rename разрешает текущее имя по объекту ответа.
+            val originalChoices = node.choices.associateBy { it.id }
             form.choice(
-                "AI answer",
-                aiChoice,
-                listOf("" to "Select an AI answer") + node.choices.map { it.id to it.text.ifBlank { it.id } },
-                ::updateAi
-            )
+                "AI answer", aiChoice,
+                listOf("" to "Select an AI answer") + node.choices.map { it.id to it.text.ifBlank { it.id } }
+            ) { selected -> updateAi(originalChoices[selected]?.id ?: selected) }
         }
         for (choice in node.choices) {
             form.add("Answer".toLabel()).row()
@@ -70,14 +70,7 @@ object StoryDialogueEditor {
                 }
             }).row()
         }
-        form.add("Add answer".toTextButton().onClick {
-            mutate {
-                val answer = StoryChoice(id = UUID.randomUUID().toString(), text = "Continue")
-                node.choices.add(answer)
-                node.nextNodeId = ""
-                if (node.choices.size == 1) updateAi(answer.id)
-            }
-        }).row()
+        form.add("Add answer".toTextButton().onClick { addAnswer() }).row()
         return form
     }
 }

@@ -288,4 +288,145 @@ class StoryDialogueGraphCanvas(
             color = tint.cpy(); touchable = Touchable.disabled
         })
     }
+    private var openText: ((String, String?) -> Unit)? = null
+    private var inlineInput: com.badlogic.gdx.scenes.scene2d.ui.TextArea? = null
+    private var inlineLabelName: String? = null
+
+    /** Подключает редактирование только текста; заголовки и порты сохраняют собственные жесты. */
+    fun installTextEditing(open: (String, String?) -> Unit) {
+        openText = open
+        for (node in dialogue.nodes) {
+            val card = cards.getValue(node.id)
+            card.findActor<Label>("story-graph-text:${node.id}")
+                ?.let { editableLabel(it, node.id, null) }
+            val answers = card.children.filterIsInstance<Label>()
+                .filter { it.name?.startsWith("story-graph-edge:") == true }
+            node.choices.forEachIndexed { index, choice ->
+                answers.getOrNull(index)?.let { editableLabel(it, node.id, choice.id) }
+            }
+        }
+    }
+
+    /** Останавливает всплытие клика, иначе выбор карточки пересоздаст только что открытое поле. */
+    private fun editableLabel(label: Label, nodeId: String, choiceId: String?) {
+        label.touchable = Touchable.enabled
+        label.addListener(object : InputListener() {
+            override fun touchDown(
+                event: InputEvent,
+                x: Float,
+                y: Float,
+                pointer: Int,
+                button: Int
+            ): Boolean {
+                if (button != Input.Buttons.LEFT) return false
+                event.stop()
+                return true
+            }
+
+            override fun touchUp(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int) {
+                event.stop()
+                if (!event.isTouchFocusCancel && x in 0f..label.width && y in 0f..label.height)
+                    openText?.invoke(nodeId, choiceId)
+            }
+        })
+    }
+
+    /** Полный текст редактируется поверх подписи; поле и курсор не пересоздаются при вводе. */
+    fun beginInline(nodeId: String, choiceId: String?, changed: (String, Any) -> Unit) {
+        finishInline()
+        val node = state.dialogue.nodes.first { it.id == nodeId }
+        val card = cards.getValue(nodeId)
+        val label = if (choiceId == null) card.findActor<Label>("story-graph-text:$nodeId") else {
+            val index = node.choices.indexOfFirst { it.id == choiceId }
+            require(index >= 0) { "Unknown answer: $choiceId" }
+            card.children.filterIsInstance<Label>()
+                .filter { it.name?.startsWith("story-graph-edge:") == true }[index]
+        }
+        requireNotNull(label)
+        val value =
+                if (choiceId == null) node.text else node.choices.first { it.id == choiceId }.text
+        val input = com.badlogic.gdx.scenes.scene2d.ui.TextArea(
+            value,
+            com.unciv.ui.utils.BaseScreen.skin
+        )
+        input.name = "story-inline:$nodeId:${choiceId ?: "text"}"
+        input.setBounds(label.x, label.y, label.width, maxOf(38f, label.height))
+        inlineInput = input
+        inlineLabelName = label.name
+        label.isVisible = false
+        input.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
+            override fun changed(event: ChangeEvent, actor: Actor) {
+                changed(input.text, input)
+            }
+        })
+        input.addListener(object : InputListener() {
+            override fun touchDown(
+                event: InputEvent,
+                x: Float,
+                y: Float,
+                pointer: Int,
+                button: Int
+            ): Boolean {
+                event.stop()
+                return true
+            }
+
+            override fun touchUp(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int) {
+                event.stop()
+            }
+
+            override fun keyDown(event: InputEvent, keycode: Int): Boolean {
+                if (keycode != Input.Keys.ESCAPE && keycode != Input.Keys.BACK) return false
+                event.stop()
+                finishInline()
+                return true
+            }
+        })
+        input.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.FocusListener() {
+            override fun keyboardFocusChanged(event: FocusEvent, actor: Actor, focused: Boolean) {
+                if (!focused && inlineInput === input) finishInline()
+            }
+        })
+        card.addActor(input)
+        stage.keyboardFocus = input
+        input.cursorPosition = input.text.length
+    }
+
+    /** Завершение поля оставляет уже введённый текст в локальном черновике; Cancel экрана отменяет весь черновик. */
+    fun finishInline(): Boolean {
+        val input = inlineInput ?: return false
+        inlineInput = null
+        val labelName = inlineLabelName
+        inlineLabelName = null
+        input.parent?.findActor<Label>(labelName)?.isVisible = true
+        if (input.stage?.keyboardFocus === input) input.stage.keyboardFocus = null
+        input.remove()
+        return true
+    }
+
+    /** Обновляет подписи на месте, сохраняя расположение карточек и активное встроенное поле. */
+    fun refreshText(node: com.unciv.pure.domain.story.StoryDialogueNode) {
+        val card = cards[node.id] ?: return
+        fun replace(old: Label, text: String, choiceId: String?, editable: Boolean) {
+            val updated = fitted(text, old.color, old.width, old.height).apply {
+                name = old.name
+                setPosition(old.x, old.y)
+                isVisible = name != inlineLabelName
+            }
+            old.remove()
+            card.addActor(updated)
+            if (editable && openText != null) editableLabel(updated, node.id, choiceId)
+        }
+        card.findActor<Label>("story-graph-text:${node.id}")
+            ?.let { replace(it, node.text, null, true) }
+        card.children.filterIsInstance<Label>().firstOrNull { it.name == "story-graph-label" }
+            ?.let { replace(it, node.speaker, null, false) }
+        val labels = card.children.filterIsInstance<Label>()
+            .filter { it.name?.startsWith("story-graph-edge:") == true }
+        node.choices.forEachIndexed { index, choice ->
+            labels.getOrNull(index)
+                ?.let { replace(it, choice.text.ifBlank { choice.id }, choice.id, true) }
+        }
+        inlineInput?.toFront()
+    }
 }

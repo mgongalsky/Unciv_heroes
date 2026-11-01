@@ -33,8 +33,13 @@ class StoryDialogueGraphState(source: StoryDialogue) {
         selectedId = id
     }
 
-    /** Публикует проверенную команду и переносит позицию переименованного узла. */
-    fun publish(updated: StoryDialogue, selection: String, renamedFrom: String? = null) {
+    /** Публикует проверенный граф; последовательный ввод одного поля объединяется в одно действие. */
+    fun publish(
+        updated: StoryDialogue,
+        selection: String,
+        renamedFrom: String? = null,
+        editGroup: Any? = null
+    ) {
         require(updated.nodes.any { it.id == selection }) { "Unknown selected node: $selection" }
         val before = snapshot()
         val nextPositions = coordinates.toMutableMap()
@@ -46,7 +51,7 @@ class StoryDialogueGraphState(source: StoryDialogue) {
         selectedId = selection
         coordinates.clear()
         coordinates.putAll(nextPositions)
-        remember(before)
+        remember(before, editGroup)
     }
 
     /** Один законченный drag создаёт одну запись истории; промежуточные кадры остаются в Canvas. */
@@ -88,18 +93,28 @@ class StoryDialogueGraphState(source: StoryDialogue) {
 
     private fun snapshot() = Snapshot(dialogue.deepCopy(), coordinates.toMap(), selectedId, textScale)
 
-    private fun remember(before: Snapshot) {
-        if (before == snapshot()) return
-        past.add(before)
-        if (past.size > 100) past.removeAt(0)
+    private fun remember(before: Snapshot, editGroup: Any? = null) {
+        if (before == snapshot()) {
+            if (editGroup == null) lastEditGroup = null
+            return
+        }
+        if (editGroup == null || lastEditGroup !== editGroup || past.isEmpty()) {
+            past.add(before)
+            if (past.size > 100) past.removeAt(0)
+        }
+        lastEditGroup = editGroup
         future.clear()
     }
 
     private fun restore(snapshot: Snapshot) {
+        lastEditGroup = null
         dialogue = snapshot.dialogue.deepCopy()
         coordinates.clear()
         coordinates.putAll(snapshot.positions)
         selectedId = snapshot.selectedId
         textScale = snapshot.textScale
     }
+
+    /** Идентичность активного поля объединяет последовательный ввод; UI-объект не входит в снимок. */
+    private var lastEditGroup: Any? = null
 }

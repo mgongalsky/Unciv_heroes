@@ -66,4 +66,39 @@ class StoryDialogueGraphStateTest {
         state.undo()
         assertEquals(position, state.positions["a"])
     }
+
+    /** Ввод одного поля отменяется целиком; другое поле и ввод после Undo создают новые действия. */
+    @Test
+    fun consecutiveTypingIsGroupedWithoutLosingHistoryBoundaries() {
+        val source = source()
+        val state = StoryDialogueGraphState(source)
+        val textField = Any()
+        val speakerField = Any()
+        fun type(text: String, speaker: String, group: Any) {
+            val node = state.dialogue.nodes.first().deepCopy().apply {
+                this.text = text
+                this.speaker = speaker
+            }
+            state.publish(
+                EditStoryDialogue.replaceNode(state.dialogue, "a", node),
+                "a",
+                editGroup = group
+            )
+        }
+        type("H", "", textField)
+        type("Hello", "", textField)
+        type("Hello", "Hero", speakerField)
+        assertTrue(state.undo())
+        assertEquals("Hello", state.dialogue.nodes.first().text)
+        assertEquals("", state.dialogue.nodes.first().speaker)
+        assertTrue(state.undo())
+        assertEquals("A", state.dialogue.nodes.first().text)
+        assertTrue(state.redo())
+        assertEquals("Hello", state.dialogue.nodes.first().text)
+        type("Replacement", "", textField)
+        assertFalse(state.canRedo)
+        assertTrue(state.undo())
+        assertEquals("Hello", state.dialogue.nodes.first().text)
+        assertEquals("A", source.nodes.first().text)
+    }
 }

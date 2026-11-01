@@ -111,4 +111,29 @@ object EditStoryDialogue {
             else changed.choices.first { it.id == choiceId }.nextNodeId = targetNodeId
         }.also(::validate)
     }
+
+    /** Первый ответ наследует продолжение и становится выбором AI; существующие ответы не меняются. */
+    fun addAnswer(
+        source: StoryDialogue,
+        nodeId: String,
+        answerId: String,
+        text: String = "Continue"
+    ): StoryDialogue {
+        val node = source.nodes.firstOrNull { it.id == nodeId }
+        require(node != null) { "Unknown node: $nodeId" }
+        require(answerId.isNotBlank() && node.choices.none { it.id == answerId }) {
+            "Answer ID must be non-empty and unique within a node"
+        }
+        return source.deepCopy().apply {
+            val changed = nodes.first { it.id == nodeId }
+            val first = changed.choices.isEmpty()
+            changed.choices.add(
+                com.unciv.pure.domain.story.StoryChoice(
+                    id = answerId, text = text, nextNodeId = if (first) changed.nextNodeId else ""
+                )
+            )
+            changed.nextNodeId = ""
+            if (first) aiChoices[nodeId] = answerId
+        }.also(::validate)
+    }
 }

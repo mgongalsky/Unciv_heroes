@@ -147,4 +147,28 @@ class EditStoryDialogueTest {
         )
         assertEquals("asked", disconnected.nodes.first().choices.first().effects.first().reference)
     }
+
+    /** Добавление сохраняет продолжение первого ответа, прежние ветви и AI; отказы не меняют источник. */
+    @Test
+    fun addingAnswersPreservesContinuationAndExistingChoices() {
+        val source = dialogue()
+        val saved = source.deepCopy()
+        val first = EditStoryDialogue.addAnswer(source, "entry", "continue", "Вперёд")
+        val entry = first.nodes.first { it.id == "entry" }
+        assertEquals("", entry.nextNodeId)
+        assertEquals("question", entry.choices.single().nextNodeId)
+        assertEquals("Вперёд", entry.choices.single().text)
+        assertEquals("continue", first.aiChoices["entry"])
+        val second = EditStoryDialogue.addAnswer(first, "entry", "exit")
+        assertEquals("", second.nodes.first { it.id == "entry" }.choices.last().nextNodeId)
+        assertEquals("continue", second.aiChoices["entry"])
+        val branching = EditStoryDialogue.addAnswer(source, "question", "extra")
+        assertEquals(saved.nodes.first().choices, branching.nodes.first().choices.take(2))
+        assertEquals(saved.aiChoices, branching.aiChoices)
+        branching.nodes.first().choices.first().condition.requiredFlags.add("external")
+        rejects { EditStoryDialogue.addAnswer(source, "missing", "new") }
+        rejects { EditStoryDialogue.addAnswer(source, "question", "finish") }
+        rejects { EditStoryDialogue.addAnswer(source, "question", " ") }
+        assertEquals(saved, source)
+    }
 }

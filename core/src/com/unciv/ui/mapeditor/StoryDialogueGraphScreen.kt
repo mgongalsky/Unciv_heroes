@@ -28,6 +28,7 @@ class StoryDialogueGraphScreen(
     private val ruleset: Ruleset,
     private val applyDialogue: (StoryDialogue) -> Unit
 ) : BaseScreen() {
+    private var synchronizingText = false
     private val editorState = StoryDialogueGraphState(source)
     private val draft get() = editorState.dialogue
     private val selectedId get() = editorState.selectedId
@@ -140,14 +141,15 @@ class StoryDialogueGraphScreen(
         catch (invalid: IllegalArgumentException) { error.setText(invalid.message.orEmpty()) }
     }
 
-    /** Сначала собирает поля в независимой копии, затем публикует одну проверенную команду. */
-    private fun capture() {
+    /** Собирает проверенный кандидат; ввод одного поля объединяется в одно действие истории. */
+    private fun capture(editGroup: Any? = null) {
         metadataForm?.capture()
         nodeForm?.capture()
         val node = editedNode ?: return
         val oldId = selectedId
-        val updated = EditStoryDialogue.replaceNode(properties, oldId, node, aiChoice.ifBlank { null })
-        editorState.publish(updated, node.id, oldId)
+        val updated =
+                EditStoryDialogue.replaceNode(properties, oldId, node, aiChoice.ifBlank { null })
+        editorState.publish(updated, node.id, oldId, editGroup)
         properties = draft.deepCopy()
     }
 
@@ -203,48 +205,74 @@ class StoryDialogueGraphScreen(
     }
 
     private fun rebuild(center: Boolean) {
+        canvas?.finishInline()
         val previousX = graph.scrollX
         val previousY = graph.scrollY
         properties = draft.deepCopy()
         editedNode = draft.nodes.firstOrNull { it.id == selectedId }?.deepCopy()
         aiChoice = draft.aiChoices[selectedId].orEmpty()
-        graph.actor = StoryDialogueGraphCanvas(editorState, StoryDialogueGraphCanvas.Callbacks(
-            select = { target -> attempt {
-                val oldId = selectedId
-                capture()
-                if (target != oldId) editorState.select(target)
-                stage.keyboardFocus = null
-                selectedOutput = null
-                rebuild(false)
-            } },
-            move = { id, x, y -> attempt {
-                val oldId = selectedId
-                capture()
-                editorState.move(if (id == oldId) selectedId else id, x, y)
-                rebuild(false)
-            } },
-            connect = { output, target -> attempt { connect(output, target) } },
-            selectOutput = { output ->
-                selectedOutput = output
-                selection.setText("Output: ${output.nodeId} / ${output.choiceId ?: "Continue"} • Disconnect output → End dialogue")
-            }
-        ))
+        graph.actor = StoryDialogueGraphCanvas(
+            editorState, StoryDialogueGraphCanvas.Callbacks(
+                select = { target ->
+                    attempt {
+                        val oldId = selectedId
+                        capture()
+                        if (target != oldId) editorState.select(target)
+                        stage.keyboardFocus = null
+                        selectedOutput = null
+                        rebuild(false)
+                    }
+                },
+                move = { id, x, y ->
+                    attempt {
+                        val oldId = selectedId
+                        capture()
+                        editorState.move(if (id == oldId) selectedId else id, x, y)
+                        rebuild(false)
+                    }
+                },
+                connect = { output, target -> attempt { connect(output, target) } },
+                selectOutput = { output ->
+                    selectedOutput = output
+                    selection.setText("Output: ${output.nodeId} / ${output.choiceId ?: "Continue"} • Disconnect output → End dialogue")
+                }
+            ))
+        canvas?.installTextEditing(::openInline)
+        // Кнопка добавления остаётся над прокручиваемой формой.
+        if (sidebarScroll.parent === root) {
+            @Suppress("UNCHECKED_CAST")
+            val cell =
+                    root.getCell(sidebarScroll) as com.badlogic.gdx.scenes.scene2d.ui.Cell<com.badlogic.gdx.scenes.scene2d.Actor>
+            val host = Table()
+            host.add("Add answer to selected".toTextButton().apply {
+                name = "story-graph-add-answer"
+                label.setFontScale(0.8f)
+            }.onClick { attempt { addAnswer() } }).growX().height(34f).pad(2f).row()
+            host.add(sidebarScroll).grow()
+            cell.setActor(host).width(280f)
+        }
         sidebar.clear()
-        val fieldWidth = 268f
+        sidebar.defaults().pad(1f).growX()
+        val fieldWidth = 252f
         metadataForm = StoryEditorForm(fieldWidth).also { form ->
             form.text("Dialogue ID", draft.id) { properties.id = it.trim() }
             form.flag("Pause world", draft.pauseWorld) { properties.pauseWorld = it }
             form.position("Camera focus (x,y; optional)", draft.focus) { properties.focus = it }
-            sidebar.add(form).growX().row()
+            sidebar.add(form.compact()).growX().row()
         }
         editedNode?.let { editable ->
-            nodeForm = StoryDialogueEditor.createNode(draft, editable, map, ruleset, fieldWidth, aiChoice,
-                { aiChoice = it }, ::mutateNode)
+            nodeForm = StoryDialogueEditor.createNode(
+                draft, editable, map, ruleset, fieldWidth, aiChoice,
+                { aiChoice = it }, ::mutateNode, { attempt { addAnswer() } }).apply {
+                compact()
+                observeChanges(::liveText)
+            }
             sidebar.add(nodeForm).growX().row()
-            sidebar.add("Update node".toTextButton().onClick { attempt { capture(); rebuild(false) } }).minHeight(44f).row()
+            sidebar.add("Update node".toTextButton().apply { label.setFontScale(0.75f) }
+                .onClick { attempt { capture(); rebuild(false) } }).height(30f).row()
         }
         selection.setText(selectedOutput?.let { "Output: ${it.nodeId} / ${it.choiceId ?: "Continue"} • Disconnect output → End dialogue" }
-            ?: "Drag title: move • Drag output to input: connect • Text: ${(editorState.textScale * 100).toInt()}%")
+            ?: "Click text: edit • Drag title: move • Text: ${(editorState.textScale * 100).toInt()}%")
         root.invalidateHierarchy(); root.validate(); graph.refreshContentSize()
         if (center) centerSelected() else {
             graph.scrollX = previousX; graph.scrollY = previousY; graph.updateVisualScroll()
@@ -275,4 +303,107 @@ class StoryDialogueGraphScreen(
         value: Float
     ): com.badlogic.gdx.scenes.scene2d.ui.Cell<T> =
             padLeft(value).padRight(value)
+
+    /** Обновляет текст при вводе, не пересоздавая активное поле и не публикуя незавершённые ID. */
+    private fun liveText(actor: com.badlogic.gdx.scenes.scene2d.Actor) {
+        if (synchronizingText || actor !is TextField) return
+        val caption = actor.name
+        if (caption != "story-field:Text" && caption != "story-field:Speaker" && caption != "story-field:Answer text") return
+        attempt {
+            val node = draft.nodes.first { it.id == selectedId }.deepCopy()
+            when (caption) {
+                "story-field:Text" -> {
+                    node.text = actor.text; editedNode?.text = actor.text
+                }
+
+                "story-field:Speaker" -> {
+                    node.speaker = actor.text; editedNode?.speaker = actor.text
+                }
+
+                else -> {
+                    val index = textFields(nodeForm).filter { it.name == caption }.indexOf(actor)
+                    require(index in node.choices.indices) { "The selected answer no longer exists" }
+                    node.choices[index].text = actor.text
+                    editedNode?.choices?.getOrNull(index)?.text = actor.text
+                }
+            }
+            editorState.publish(
+                EditStoryDialogue.replaceNode(draft, selectedId, node),
+                selectedId,
+                editGroup = actor
+            )
+            // Метаданные и незавершённые ID остаются в существующих полях до capture.
+            properties.nodes.firstOrNull { it.id == selectedId }?.let { current ->
+                current.text = node.text
+                current.speaker = node.speaker
+                current.choices.zip(node.choices)
+                    .forEach { (old, updated) -> old.text = updated.text }
+            }
+            canvas?.refreshText(node)
+        }
+    }
+    private fun textFields(actor: com.badlogic.gdx.scenes.scene2d.Actor?): List<TextField> =
+            when (actor) {
+                is TextField -> listOf(actor)
+                is Group -> actor.children.flatMap { textFields(it) }
+                else -> emptyList()
+            }
+
+    /** Смена выбранного узла фиксируется до открытия поля; дальнейший ввод не перестраивает Canvas. */
+    private fun openInline(nodeId: String, choiceId: String?) = attempt {
+        val oldId = selectedId
+        val choiceIndex =
+                draft.nodes.first { it.id == nodeId }.choices.indexOfFirst { it.id == choiceId }
+        capture()
+        val actualId = if (nodeId == oldId) selectedId else nodeId
+        editorState.select(actualId)
+        selectedOutput = null
+        rebuild(false)
+        val actualChoice =
+                if (choiceId == null) null else draft.nodes.first { it.id == actualId }.choices[choiceIndex].id
+        canvas?.beginInline(actualId, actualChoice) { value, group ->
+            attempt {
+                val node = draft.nodes.first { it.id == selectedId }.deepCopy()
+                val index = node.choices.indexOfFirst { it.id == actualChoice }
+                if (actualChoice == null) {
+                    node.text = value
+                    editedNode?.text = value
+                } else {
+                    require(index >= 0) { "The selected answer no longer exists" }
+                    node.choices[index].text = value
+                    editedNode?.choices?.getOrNull(index)?.text = value
+                }
+                editorState.publish(
+                    EditStoryDialogue.replaceNode(draft, selectedId, node),
+                    selectedId,
+                    editGroup = group
+                )
+                properties = draft.deepCopy()
+                val fields = textFields(nodeForm)
+                val field =
+                        if (actualChoice == null) fields.firstOrNull { it.name == "story-field:Text" }
+                        else fields.filter { it.name == "story-field:Answer text" }.getOrNull(index)
+                synchronizingText = true
+                try {
+                    field?.text = value
+                } finally {
+                    synchronizingText = false
+                }
+                canvas?.refreshText(node)
+            }
+        }
+    }
+
+    /** Обе кнопки вызывают одну чистую команду и открывают текст нового ответа в карточке. */
+    private fun addAnswer() {
+        capture()
+        val node = draft.nodes.first { it.id == selectedId }
+        var number = 1
+        while (node.choices.any { it.id == "answer$number" }) number++
+        val answerId = "answer$number"
+        editorState.publish(EditStoryDialogue.addAnswer(draft, selectedId, answerId), selectedId)
+        rebuild(false)
+        centerSelected()
+        openInline(selectedId, answerId)
+    }
 }
