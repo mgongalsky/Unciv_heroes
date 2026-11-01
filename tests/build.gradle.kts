@@ -74,3 +74,9 @@ tasks.register<JavaExec>("runTerrainExperimentCli") {
 eclipse.project {
     name = "${BuildConfig.appName}-tests"
 }
+// Интеграционный тест обращается к настоящему desktop-декодеру напрямую.
+val storyVideoTestDependencies = dependencies {
+    testImplementation("com.badlogicgames.gdx-video:gdx-video-lwjgl3:1.3.3") {
+        exclude(group = "com.badlogicgames.gdx")
+    }
+}

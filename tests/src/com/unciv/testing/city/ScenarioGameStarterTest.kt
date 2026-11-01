@@ -469,4 +469,40 @@ class ScenarioGameStarterTest {
             assertEquals(setOf("Rome", "Greece"), game.storyProgress.startedParticipants)
         }
     }
+
+    /** Сгенерированный пример сохраняет ресурс интро и открывает первый диалог только после завершения ролика. */
+    @Test
+    fun generatedStoryDemoStartsWithBundledIntro() {
+        withMap(false) { file, fixture ->
+            val demo = com.unciv.logic.story.StoryDemoScenario.create(fixture.ruleset)
+            val cinematic = demo.story!!.cinematics.single { it.id == "opening-film" }
+            assertEquals("cinematics/Audience_01.webm", cinematic.assetPath)
+            // Тест запускается без Gdx; корень проекта передаётся настройкой тестового модуля.
+            val projectRoot = java.io.File(System.getProperty("golden.projectRoot"))
+            val videoFile = java.io.File(projectRoot, "android/assets/${cinematic.assetPath}")
+            assertTrue(
+                "Bundled intro is missing: $videoFile",
+                videoFile.isFile && videoFile.length() > 0L
+            )
+            file.writeText(MapSaver.mapToSavedString(demo))
+            val game = GameStarter.startNewGame(setup(file, true)) { }
+            val opening = game.storyProgress.deepCopy()
+            assertEquals(
+                com.unciv.pure.domain.story.StoryEffectKind.Cinematic,
+                opening.pending.first().effect.kind
+            )
+            assertEquals("opening-film", opening.pending.first().effect.reference)
+            com.unciv.logic.story.StoryRuntime.finishCinematic(
+                game, "Rome", opening.pending.first().sequence, opening.revision
+            )
+            assertEquals(
+                com.unciv.pure.domain.story.StoryEffectKind.Dialogue,
+                game.storyProgress.pending.first().effect.kind
+            )
+            assertEquals("intro", game.storyProgress.pending.first().effect.reference)
+            val after = game.storyProgress.deepCopy()
+            com.unciv.logic.story.StoryRuntime.startMission(game)
+            assertEquals(after, game.storyProgress)
+        }
+    }
 }

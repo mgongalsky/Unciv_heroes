@@ -152,3 +152,23 @@
 - docs/features/Storytelling/Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Research/RESEARCH.md и CODE_GUIDE.md — актуализация документов темы; сокращённые пути относятся к docs/features/Storytelling/.
 
 StoryEffectsEditor не изменялся: компактный режим обходит существующие вложенные формы. Удалений и переносов файлов нет.
+
+## Этап 11 — вступительное видео примера
+
+Созданы или добавлены:
+
+- android/assets/cinematics/Audience_01.mp4 — исходный ролик пользователя.
+- android/assets/cinematics/Audience_01.webm — подготовленная копия VP8/Vorbis со звуком.
+- core/src/com/unciv/ui/story/GdxStoryVideoPlayer.kt — адаптер декодера, отрисовка с сохранением пропорций и владение ресурсами.
+- tests/src/com/unciv/testing/StoryVideoPlaybackTest.kt — настоящий desktop-декодер, кадры, завершение и пропуск.
+- docs/features/Storytelling/Plan/STEP_11_IntroVideo.md — контракт, результаты и ограничения.
+
+Изменены:
+
+- core/build.gradle.kts, desktop/build.gradle.kts, tests/build.gradle.kts — gdx-video 1.3.3 без транзитивного обновления libGDX.
+- core/src/com/unciv/logic/story/StoryDemoScenario.kt — ресурс вступительной сцены.
+- desktop/src/com/unciv/app/desktop/PlatformSpecificHelpersDesktop.kt — производственная фабрика плеера.
+- tests/src/com/unciv/testing/city/ScenarioGameStarterTest.kt — ресурс нового примера и переход к первому диалогу.
+- docs/features/Storytelling/Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Research/RESEARCH.md и CODE_GUIDE.md — актуальные результаты; сокращённые пути относятся к docs/features/Storytelling.
+
+Android-адаптер и существующие видеосессия/экран не изменены. Удалений и переносов нет.

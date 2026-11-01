@@ -8,6 +8,10 @@ java {
 
 dependencies {
     implementation(project(":battle-protocol"))
+    // Версия движка задаётся проектом; видеобиблиотека не обновляет её транзитивно.
+    implementation("com.badlogicgames.gdx-video:gdx-video:1.3.3") {
+        exclude(group = "com.badlogicgames.gdx")
+    }
 }
 
 sourceSets {

@@ -80,3 +80,11 @@ StoryEditorForm.observeChanges вызывает Screen.liveText для текс�
 Обе кнопки добавления вызывают Screen.addAnswer → EditStoryDialogue.addAnswer и открывают новый ответ в карточке. Первый ответ наследует прежнее продолжение и назначается AI; следующие ведут в End dialogue. StoryDialogueGraphState группирует последовательный ввод одного поля в одно действие истории.
 
 StoryDialogueInlinePreview подключён к ScenarioStoryEditorRenderTest: проверяет реальные клики, Stage.keyTyped, фокус, курсор, синхронизацию, Undo/Redo, обе кнопки и Apply. Итоговые BUILD и 13 тестов этапа прошли. Ограничения и ручная оценка — в [этапе 10](Plan/STEP_10_InlineDialogueEditing.md).
+
+## Настоящее вступительное видео — этап 11
+
+Новый StoryDemoScenario указывает cinematics/Audience_01.webm. MissionStarted → StoryPresentation → StoryCinematicScreen → платформенная фабрика → GdxStoryVideoPlayer → VideoPlayerDesktop. После завершения или Skip существующий StoryRuntime подтверждает сцену и открывает intro. Существующие сохранённые карты не переписываются.
+
+Адаптер владеет декодером, снимает актёр со сцены перед очисткой и сохраняет пропорции при draw. Callback завершения не изменяет игровой прогресс. Зависимость gdx-video 1.3.3 подключена с исключением com.badlogicgames.gdx, сохраняя движок 1.11.0. Исходный MP4 сохранён; WebM со звуком подготовлен заранее, внешние программы игроку не нужны.
+
+Проверки запускаются нативно из IDE: StoryVideoPlaybackTest, StoryVideoSessionTest, StoryVideoSessionReasonsTest, story.StoryRuntimeTest и city.ScenarioGameStarterTest в пакете com.unciv.testing. Все 30 тестов и BUILD прошли. Android/iOS пока показывают заглушку. Подробности и ручная приёмка — в [этапе 11](Plan/STEP_11_IntroVideo.md).

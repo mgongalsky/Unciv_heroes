@@ -198,3 +198,9 @@ tasks.register<Zip>("zipLinuxFilesForJar") {
     from(file("linuxFilesForJar"))
     destinationDirectory.set(deployFolder)
 }
+// Сохраняем libGDX 1.11.0: релиз 1.3.3 использует совместимый OpenALMusic.setup.
+val storyVideoDependencies = dependencies {
+    implementation("com.badlogicgames.gdx-video:gdx-video-lwjgl3:1.3.3") {
+        exclude(group = "com.badlogicgames.gdx")
+    }
+}
