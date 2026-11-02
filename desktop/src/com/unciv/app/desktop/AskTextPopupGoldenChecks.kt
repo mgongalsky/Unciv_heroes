@@ -26,7 +26,9 @@ internal object AskTextPopupGoldenChecks {
                         screen,
                         label = "Enter a name for the selected army. This name will be displayed in the army overview.",
                         defaultText = "invalid",
-                        errorText = List(8) { "Please choose a different name for this army." }.joinToString(" "),
+                        errorText = List(8) { "Please choose a different name for this army." }.joinToString(
+                            " "
+                        ),
                         maxLength = 24,
                         validate = { it == "Valid army" },
                         actionOnOk = { results.add(it) }
@@ -43,7 +45,12 @@ internal object AskTextPopupGoldenChecks {
                         check(buttons.size == 2)
                         check(screen.stage.keyboardFocus === field)
                         check(field.text == "invalid" && field.maxLength == 24)
-                        for (char in popup.illegalChars) check(!field.textFieldFilter.acceptChar(field, char))
+                        for (char in popup.illegalChars) check(
+                            !field.textFieldFilter.acceptChar(
+                                field,
+                                char
+                            )
+                        )
                         check(field.textFieldFilter.acceptChar(field, 'A'))
                         fun layout() {
                             popup.validate()
@@ -55,6 +62,8 @@ internal object AskTextPopupGoldenChecks {
                             }
                         }
                         layout()
+                        verifyKeyboardInput(screen, field, popup.illegalChars)
+                        check(results.isEmpty())
                         val cellsBeforeError = popup.innerTable.cells.size
                         buttons[1].activate()
                         check(results.isEmpty() && popup.parent != null)
@@ -74,7 +83,11 @@ internal object AskTextPopupGoldenChecks {
                         val bounds = target.stageBoundingBox
                         val visible = scroll.stageBoundingBox
                         check(bounds.y >= visible.y - 1f && bounds.y + bounds.height <= visible.y + visible.height + 1f)
-                        if (accept) field.text = "Valid army"
+                        if (accept) {
+                            field.selectAll()
+                            for (char in "Valid army") screen.stage.keyTyped(char)
+                            check(field.text == "Valid army")
+                        }
                         target.activate()
                         check(popup.parent == null)
                         check(results == if (accept) listOf("Valid army") else emptyList<String>())
@@ -87,6 +100,45 @@ internal object AskTextPopupGoldenChecks {
             viewport.setWorldSize(oldWidth, oldHeight)
             screen.stage.keyboardFocus = oldFocus
         }
-        AskTextPopup(screen, label = "Name this army", defaultText = "Royal guard").open(force = true)
+        AskTextPopup(
+            screen,
+            label = "Name this army",
+            defaultText = "Royal guard"
+        ).open(force = true)
+    }
+    private fun verifyKeyboardInput(screen: BaseScreen, field: TextField, illegalChars: String) {
+        check(screen.stage.keyboardFocus === field)
+        val originalText = field.text
+        val originalMaxLength = field.maxLength
+        try {
+            field.text = "Old name"
+            field.selectAll()
+            screen.stage.keyTyped('R')
+            check(field.text == "R") { "Typing did not replace the selected text" }
+            for (char in "oyal") screen.stage.keyTyped(char)
+            check(field.text == "Royal")
+            for (char in illegalChars) screen.stage.keyTyped(char)
+            check(field.text == "Royal") { "Forbidden characters reached the field" }
+            field.maxLength = 6
+            screen.stage.keyTyped('!')
+            screen.stage.keyTyped('X')
+            check(field.text == "Royal!") { "Input exceeded maxLength" }
+            screen.stage.keyTyped('\b')
+            check(field.text == "Royal") { "Backspace did not remove the last character" }
+            field.setSelection(0, 1)
+            check(field.selection == "R")
+            field.isDisabled = true
+            screen.stage.keyTyped('X')
+            screen.stage.keyTyped('\b')
+            check(field.text == "Royal") { "Disabled field accepted keyboard input" }
+            field.isDisabled = false
+            screen.stage.keyTyped('L')
+            check(field.text == "Loyal") { "Input was not restored after enabling the field" }
+        } finally {
+            field.isDisabled = false
+            field.maxLength = originalMaxLength
+            field.text = originalText
+            field.clearSelection()
+        }
     }
 }

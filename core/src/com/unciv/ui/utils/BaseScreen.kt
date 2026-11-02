@@ -208,6 +208,7 @@ abstract class BaseScreen : Screen {
                 RoyalUi.installButtons(skin)
                 RoyalUi.installCheckBoxes(skin)
                 RoyalUi.installSliders(skin)
+                RoyalUi.installTextFields(skin)
                 RoyalUi.installTypography(skin)
             }
             clearColor = skinStrings.skinConfig.clearColor

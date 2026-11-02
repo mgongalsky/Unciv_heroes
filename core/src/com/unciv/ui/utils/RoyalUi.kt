@@ -162,4 +162,70 @@ object RoyalUi {
             style.disabledKnobAfter = null
         }
     }
+
+    /** Оформляет поля после installCheckBoxes; общий пиксель остаётся собственностью Skin. */
+    fun installTextFields(skin: Skin) {
+        val pixel = skin.get("royal-control-pixel", Texture::class.java)
+        val style =
+                skin.get(com.badlogic.gdx.scenes.scene2d.ui.TextField.TextFieldStyle::class.java)
+        val previous = style.background
+        fun background(focused: Boolean = false, disabled: Boolean = false) =
+                object : com.badlogic.gdx.scenes.scene2d.utils.BaseDrawable() {
+                    private val border = Color.valueOf(if (focused) "8a632e" else "baa06a")
+                    private val paper = Color.valueOf(if (disabled) "d3c7a7" else "eadfbd")
+
+                    init {
+                        leftWidth = maxOf(7f, previous?.leftWidth ?: 0f)
+                        rightWidth = maxOf(7f, previous?.rightWidth ?: 0f)
+                        topHeight = maxOf(7f, previous?.topHeight ?: 0f)
+                        bottomHeight = maxOf(7f, previous?.bottomHeight ?: 0f)
+                        minWidth = previous?.minWidth ?: 0f
+                        minHeight = previous?.minHeight ?: 0f
+                    }
+
+                    override fun draw(
+                        batch: com.badlogic.gdx.graphics.g2d.Batch,
+                        x: Float,
+                        y: Float,
+                        width: Float,
+                        height: Float
+                    ) {
+                        if (width <= 0f || height <= 0f) return
+                        val packed = batch.packedColor
+                        val r = batch.color.r
+                        val g = batch.color.g
+                        val b = batch.color.b
+                        val a = batch.color.a
+                        try {
+                            batch.setColor(r * border.r, g * border.g, b * border.b, a)
+                            batch.draw(pixel, x, y, width, height)
+                            val edge = minOf(if (focused) 2f else 1f, width / 2f, height / 2f)
+                            batch.setColor(r * paper.r, g * paper.g, b * paper.b, a)
+                            batch.draw(
+                                pixel,
+                                x + edge,
+                                y + edge,
+                                width - 2f * edge,
+                                height - 2f * edge
+                            )
+                        } finally {
+                            batch.packedColor = packed
+                        }
+                    }
+                }
+
+        fun solid(hex: String) = com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
+            com.badlogic.gdx.graphics.g2d.TextureRegion(pixel)
+        ).tint(Color.valueOf(hex))
+
+        style.background = background()
+        style.focusedBackground = background(focused = true)
+        style.disabledBackground = background(disabled = true)
+        style.fontColor = Color.valueOf("453925")
+        style.focusedFontColor = Color.valueOf("453925")
+        style.disabledFontColor = Color.valueOf("70634c")
+        style.messageFontColor = Color.valueOf("7f6d50")
+        style.cursor = solid("453925").apply { minWidth = maxOf(1f, style.cursor?.minWidth ?: 1f) }
+        style.selection = solid("d3bd8c")
+    }
 }
