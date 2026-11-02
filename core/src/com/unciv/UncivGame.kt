@@ -405,21 +405,23 @@ class UncivGame(parameters: UncivGameParameters) : Game() {
         if (curGameInfo != null) {
             val autoSaveJob = files.autoSaveJob
             if (autoSaveJob != null && autoSaveJob.isActive) {
-                // auto save is already in progress (e.g. started by onPause() event)
-                // let's allow it to finish and do not try to autosave second time
+                // Let an existing auto-save finish before shutting down.
                 Concurrency.runBlocking {
                     autoSaveJob.join()
                 }
             } else {
-                files.autoSave(curGameInfo)      // NO new thread
+                files.autoSave(curGameInfo) // NO new thread
             }
         }
         settings.save()
         Concurrency.stopThreadPools()
 
+        screenStack.toList().forEach { it.dispose() }
+        screenStack.clear()
+        com.unciv.ui.utils.ApplicationSkinResources.dispose()
+
         // On desktop this should only be this one and "DestroyJavaVM"
         logRunningThreads()
-
         System.exit(0)
     }
 

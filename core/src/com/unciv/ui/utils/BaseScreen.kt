@@ -144,7 +144,7 @@ abstract class BaseScreen : Screen {
         fun setSkin() {
             Fonts.resetFont()
             skinStrings = SkinStrings()
-            skin = Skin(atlas).apply {
+            skin = ApplicationSkinResources.create(atlas).apply {
                 add("Nativefont", Fonts.font, BitmapFont::class.java)
                 add(
                     "RoundedEdgeRectangle",

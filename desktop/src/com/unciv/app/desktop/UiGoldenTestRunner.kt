@@ -304,6 +304,7 @@ object UiGoldenTestRunner {
             Gdx.input.inputProcessor = null
             game.screenStack.toList().forEach { it.dispose() }
             game.screenStack.clear()
+            com.unciv.ui.utils.ApplicationSkinResources.dispose()
             com.unciv.ui.audio.SoundPlayer.clearCache()
             if (game.isInitialized) game.musicController.gracefulShutdown()
         }
