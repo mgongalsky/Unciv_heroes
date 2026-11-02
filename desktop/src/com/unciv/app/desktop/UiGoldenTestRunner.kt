@@ -43,6 +43,10 @@ object UiGoldenTestRunner {
         require(!(update && captureOnly)) { "Capture-only cannot update baselines" }
         val requestedScenarios = args.filter { it.startsWith("--scenario=") }
             .map { it.substringAfter('=') }.toSet()
+        val compactPortrait = args.contains("--compact-city-portrait")
+        require(!compactPortrait || (captureOnly && requestedScenarios == setOf("city-screen-compact"))) {
+            "Portrait mode requires capture-only and the compact city scenario"
+        }
         val armySetup = requestedScenarios == setOf("army-setup-laptop")
         require("army-setup-laptop" !in requestedScenarios || armySetup) {
             "Run army-setup-laptop separately at its laptop resolution"
@@ -68,7 +72,10 @@ object UiGoldenTestRunner {
             val config = Lwjgl3ApplicationConfiguration().apply {
                 setTitle("Heroic Civs UI golden tests")
                 setHdpiMode(HdpiMode.Logical)
-                setWindowedMode(if (armySetup) 1366 else WIDTH, if (armySetup) 768 else HEIGHT)
+                setWindowedMode(
+                    if (compactPortrait) 360 else if (armySetup) 1366 else WIDTH,
+                    if (compactPortrait) 480 else if (armySetup) 768 else HEIGHT
+                )
                 setInitialVisible(false)
                 setForegroundFPS(60)
                 setIdleFPS(60)
@@ -103,6 +110,14 @@ object UiGoldenTestRunner {
             )
         },
         Scenario("army-troop-info") { com.unciv.ui.playground.openArmyTroopInfoPreview(it) },
+        Scenario("hero-overview") {},
+        Scenario("city-screen") {},
+        Scenario("city-screen-compact") {},
+        Scenario("empire-overview-stats") {},
+        Scenario("confirm-popup-layout") { ConfirmPopupGoldenChecks.open(it) },
+        Scenario("ask-text-popup-layout") { AskTextPopupGoldenChecks.open(it) },
+        Scenario("ask-number-popup-layout") { AskNumberPopupGoldenChecks.open(it) },
+        Scenario("toast-popup-layout") { ToastPopupGoldenChecks.open(it) },
         Scenario("city-editor") { com.unciv.ui.playground.openScenarioCityEditorPreview(it) },
         Scenario("victory-editor") { com.unciv.ui.playground.openScenarioVictoryEditorPreview(it) },
         Scenario("story-dialogue") { com.unciv.ui.playground.openStoryDialoguePreview(it) },
@@ -122,6 +137,7 @@ object UiGoldenTestRunner {
             )
         },
         Scenario("battle-flanking") { com.unciv.ui.playground.openBattleFlankingPreview(it) },
+        Scenario("battle-result-layout") { BattleResultLayoutChecks.open(it) },
         Scenario("battle-result-attacker-victory") { screen ->
             BattleResultPopup(
                 screen, BattleReport(
@@ -232,18 +248,38 @@ object UiGoldenTestRunner {
             }
         }
 
-        /** Навигационные сценарии создают настоящие экраны, остальные используют контейнер предпросмотра. */
         private fun scenarioScreen(scenario: Scenario): BaseScreen = when (scenario.name) {
             "network-room" -> NetworkBattleGoldenScreens.room()
             "network-battle" -> NetworkBattleGoldenScreens.battle()
             "army-setup-laptop" -> ArmySetupGoldenChecks.screen()
+            "hero-overview" -> HeroOverviewGoldenChecks.screen()
+            "city-screen" -> CityScreenGoldenChecks.loadingScreen { screen ->
+                expectedScreen = screen
+                stableFrames = 0
+            }
+
+            "city-screen-compact" -> CityScreenGoldenChecks.compactLoadingScreen { screen ->
+                expectedScreen = screen
+                stableFrames = 0
+            }
+
+            "empire-overview-stats" -> CityScreenGoldenChecks.overviewLoadingScreen { screen ->
+                expectedScreen = screen
+                stableFrames = 0
+            }
+
             "terrain-playground" -> TerrainPlaygroundGoldenChecks.screen()
             "terrain-editor-layers" -> TerrainEditorLayersGoldenChecks.screen()
             "city-editor-tabs" -> com.unciv.ui.playground.createScenarioCityEditorTabsPreview()
             "scenario-player-slots" -> com.unciv.ui.playground.createScenarioPlayerPickerPreview()
             "victory-selection" -> com.unciv.ui.playground.createScenarioVictorySelectionPreview()
             else -> GoldenScenarioScreen(scenario.open)
-        }.also { expectedScreen = it }
+        }.also {
+            expectedScreen = if (scenario.name in setOf(
+                        "city-screen", "city-screen-compact", "empire-overview-stats"
+                    )
+            ) null else it
+        }
 
         override fun dispose() {
             if (!::game.isInitialized) return

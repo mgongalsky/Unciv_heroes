@@ -1,6 +1,7 @@
 package com.unciv.ui.utils
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.EventListener
 import com.badlogic.gdx.scenes.scene2d.Group
@@ -9,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.ui.Button
 import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.Image
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup
@@ -35,7 +37,7 @@ import com.unciv.ui.utils.extensions.pad
  *
  * Each page is an Actor, passed to the Widget via [addPage]. Pages can be [removed][removePage],
  * [replaced][replacePage] or dynamically added after the Widget is already shown.
-
+ *
  * Pages are automatically scrollable, switching pages preserves scroll positions individually.
  * The widget optionally supports "fixed content", an additional Actor that will be inserted above
  * the regular content of any page. It will scroll only horizontally, and its scroll position will
@@ -71,6 +73,7 @@ open class TabbedPager(
     private val dimH: DimensionMeasurement
 
     private val pages = ArrayList<PageState>(capacity)
+    private val royalHeader = UncivGame.Current.settings.skin == "Minimal"
 
     /**
      * Index of currently selected page, or -1 of none. Read-only, use [selectPage] to change.
@@ -78,9 +81,16 @@ open class TabbedPager(
     var activePage = -1
         private set
 
-    private val header = Table(BaseScreen.skin)
+    private val header = Table(BaseScreen.skin).apply {
+        if (royalHeader) {
+            background = RoyalRibbonDrawable(BaseScreen.skin) {
+                pages.getOrNull(activePage)?.button?.let { it.x to it.width }
+            }
+            pad(0f, 45f, 0f, 45f)
+        }
+    }
     private val headerScroll = LinkedScrollPane(horizontalOnly = true, header)
-    protected var headerHeight = 0f
+    protected var headerHeight = if (royalHeader) 76f else 0f
 
     private val fixedContentScroll = LinkedScrollPane(horizontalOnly = true)
     private val fixedContentScrollCell: Cell<ScrollPane>
@@ -127,6 +137,16 @@ open class TabbedPager(
 
         val button = IconTextButton(caption, icon, pager.headerFontSize, pager.headerFontColor).apply {
             name = caption // enable finding pages by untranslated caption without needing our own field
+            if (pager.royalHeader) {
+                // The header owns the continuous background; individual buttons remain transparent.
+                style = Button.ButtonStyle()
+                pad(14f, 16f, 14f, 16f)
+                label.style = Label.LabelStyle(label.style).apply {
+                    fontColor = Color.valueOf("453925")
+                    if (BaseScreen.skin.has("royal-display", BitmapFont::class.java))
+                        font = BaseScreen.skin.get("royal-display", BitmapFont::class.java)
+                }
+            }
             if (icon != null) {
                 if (iconSize != 0f)
                     iconCell!!.size(iconSize)
@@ -356,6 +376,7 @@ open class TabbedPager(
             val page = pages[activePage]
             (page.content as? IPageExtensions)?.deactivated(activePage, page.caption, this)
             page.button.color = Color.WHITE
+            if (royalHeader) page.button.label.style.fontColor = Color.valueOf("453925")
             fixedContentScroll.actor = null
             page.scrollX = contentScroll.scrollX
             page.scrollY = contentScroll.scrollY
@@ -366,7 +387,8 @@ open class TabbedPager(
 
         if (index != -1) {
             val page = pages[index]
-            page.button.color = highlightColor
+            page.button.color = if (royalHeader) Color.WHITE else highlightColor
+            if (royalHeader) page.button.label.style.fontColor = Color.valueOf("fff0cb")
 
             if (page.scrollAlign != 0) {
                 if (Align.isCenterHorizontal(page.scrollAlign))
@@ -395,12 +417,22 @@ open class TabbedPager(
             contentScroll.updateVisualScroll()
             contentScroll.enableSync = page.syncScroll
 
+            // Royal headers have end padding; use laid-out bounds for their scroll target.
+            if (royalHeader) {
+                headerScroll.validate()
+                header.validate()
+            }
+            val buttonX = if (royalHeader) page.button.x else page.buttonX
+            val buttonW = if (royalHeader) page.button.width else page.buttonW
             if (centerButton)
                 // centering is nice when selectPage is called programmatically
-                headerScroll.scrollX = page.buttonX + (page.buttonW - headerScroll.width) / 2
+                headerScroll.scrollX = buttonX + (buttonW - headerScroll.width) / 2
             else
-                // when coming from a tap/click, can we at least ensure no part of it is outside the visible area
-                headerScroll.run { scrollX = scrollX.coerceIn((page.buttonX + page.buttonW - scrollWidth)..page.buttonX) }
+                // A header wider than the viewport must not create an inverted clamp range.
+                headerScroll.run {
+                    val minimum = minOf(buttonX, buttonX + buttonW - scrollWidth)
+                    scrollX = scrollX.coerceIn(minimum..buttonX)
+                }
 
             (page.content as? IPageExtensions)?.activated(index, page.caption, this)
         }
@@ -429,8 +461,7 @@ open class TabbedPager(
     }
 
     /** Change the disabled property of a page by its caption.
-     * @return previous value or `false` if caption not found.
-     */
+     * @return previous value or `false` if caption not found. */
     fun setPageDisabled(caption: String, disabled: Boolean) = setPageDisabled(getPageIndex(caption), disabled)
 
     /** Access a page's header button e.g. for unusual formatting */
@@ -643,4 +674,19 @@ open class TabbedPager(
             addAndShowPage(page, -1)
         }
     }
+
+    /** Royal tabs keep the shared ribbon instead of adopting the global disabled button background. */
+    private var IconTextButton.isEnabled: Boolean
+        get() = if (royalHeader) !isDisabled && touchable == com.badlogic.gdx.scenes.scene2d.Touchable.enabled
+        else (this as Button).isEnabled
+        set(value) {
+            if (!royalHeader) {
+                (this as Button).isEnabled = value
+                return
+            }
+            isDisabled = !value
+            touchable = if (value) com.badlogic.gdx.scenes.scene2d.Touchable.enabled
+            else com.badlogic.gdx.scenes.scene2d.Touchable.disabled
+            label.color.a = if (value) 1f else 0.55f
+        }
 }

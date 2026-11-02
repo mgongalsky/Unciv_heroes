@@ -225,22 +225,23 @@ class FormattedLine (
     /** Used only as parameter to [FormattedLine.render] and [MarkupRenderer.render] */
     enum class IconDisplay { All, NoLink, None }
 
-    /**
-     * Renders the formatted line as a scene2d [Actor] (currently always a [Table])
-     * @param labelWidth Total width to render into, needed to support wrap on Labels.
-     * @param iconDisplay Flag to omit link or all images.
-     */
-    fun render(labelWidth: Float, iconDisplay: IconDisplay = IconDisplay.All): Actor {
+    /** Renders a line, optionally overriding only its default text color. */
+    fun render(
+        labelWidth: Float,
+        iconDisplay: IconDisplay = IconDisplay.All,
+        defaultTextColor: Color? = null
+    ): Actor {
         if (extraImage.isNotEmpty()) {
             val table = Table(BaseScreen.skin)
             try {
                 val image = when {
-                    ImageGetter.imageExists(extraImage) ->
-                        ImageGetter.getImage(extraImage)
+                    ImageGetter.imageExists(extraImage) -> ImageGetter.getImage(extraImage)
                     Gdx.files.internal("ExtraImages/$extraImage.png").exists() ->
                         ImageGetter.getExternalImage("$extraImage.png")
+
                     Gdx.files.internal("ExtraImages/$extraImage.jpg").exists() ->
                         ImageGetter.getExternalImage("$extraImage.jpg")
+
                     else -> return table
                 }
                 val width = if (imageSize.isNaN()) labelWidth else imageSize
@@ -251,14 +252,15 @@ class FormattedLine (
             }
             return table
         }
-
         val fontSize = when {
             header in 1 until headerSizes.size -> headerSizes[header]
             size == Int.MIN_VALUE -> Constants.defaultFontSize
             else -> size
         }
-        val labelColor = if(starred) defaultColor else displayColor
-
+        val labelColor = when {
+            starred || color.isEmpty() -> defaultTextColor ?: defaultColor
+            else -> displayColor
+        }
         val table = Table(BaseScreen.skin)
         var iconCount = 0
         val iconSize = max(minIconSize, fontSize * 1.5f)
@@ -281,11 +283,12 @@ class FormattedLine (
                 indent == 0 && iconCount == 0 -> 0f
                 indent == 0 -> iconPad
                 iconCount == 0 -> indent * indentPad - usedWidth
-                else -> (indent-1) * indentPad +
+                else -> (indent - 1) * indentPad +
                         indentOneAtNumIcons * (minIconSize + iconPad) + iconPad - usedWidth
             }
-            val label = if (fontSize == Constants.defaultFontSize && labelColor == defaultColor) textToDisplay.toLabel()
-            else textToDisplay.toLabel(labelColor,fontSize)
+            val label = if (fontSize == Constants.defaultFontSize && labelColor == defaultColor)
+                textToDisplay.toLabel()
+            else textToDisplay.toLabel(labelColor, fontSize)
             label.wrap = !centered && labelWidth > 0f
             label.setAlignment(align)
             if (labelWidth == 0f)

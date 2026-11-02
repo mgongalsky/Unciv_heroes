@@ -1,0 +1,23 @@
+{
+  "preset": {
+    "theme": "royal",
+    "headingFont": "berkshireswash",
+    "bodyFont": "ebgaramond",
+    "typeScale": 125,
+    "royalNav": "scribal-scroll",
+    "navHighlight": "corners",
+    "navHighlightRevision": 11,
+    "favorites": [],
+    "notes": {}
+  },
+  "display_names": {
+    "theme": "Royal Parchment",
+    "ribbon": "Scribal ribbon",
+    "active_tab": "Quiet corners",
+    "headings_buttons": "Berkshire Swash",
+    "body_numbers": "EB Garamond"
+  },
+  "source_commit": "eecfd1fda3066464eac8937897d488f14279efb5",
+  "source_site": "https://heroic-civs-design-atelier.joebraker.chatgpt.site",
+  "reference_language": "English"
+}

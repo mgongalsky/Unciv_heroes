@@ -2,24 +2,31 @@ package com.unciv.ui.army
 
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
+import com.unciv.UncivGame
 import com.unciv.pure.domain.troop.Troop
 import com.unciv.ui.battlescreen.BattleTroopInfoPanel
 import com.unciv.ui.popup.Popup
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
+import com.unciv.ui.utils.RoyalPanelDrawable
 
-/** Persistent version of the troop statistics panel, closed with OK or Escape. */
+/** Постоянное окно характеристик отряда, закрываемое через OK или Escape. */
 class UnitInfoPopup(
     screen: BaseScreen,
     troop: Troop,
     attacker: Boolean? = null
 ) : Popup(screen) {
     init {
+        val royal = UncivGame.Current.settings.skin == "Minimal"
         val panel = BattleTroopInfoPanel(troop, attacker).apply {
             background = null
             pad(0f)
         }
-        add(panel).pad(12f).padTop(36f).row()
+        if (royal) {
+            innerTable.background = RoyalPanelDrawable(BaseScreen.skin)
+            innerTable.pad(52f).padTop(58f)
+        }
+        add(panel).pad(if (royal) 4f else 12f).padTop(if (royal) 4f else 36f).row()
         addCloseButton(
             text = "OK",
             additionalKey = KeyCharAndCode.RETURN,

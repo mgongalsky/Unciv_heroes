@@ -47,16 +47,38 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
             return
         }
         isVisible = true
-        innerTable.clearChildren()
+        val royal = UncivGame.Current.settings.skin == "Minimal"
+        val contentWidth = ((cityScreen.stage.width / 4f).coerceAtLeast(260f)
+            .coerceAtMost(cityScreen.stage.width - 10f) - 108f).coerceAtLeast(1f)
+        val ink = if (royal) Color.valueOf("453925") else Color.WHITE
+        if (royal) {
+            background = null
+            innerTable.background = com.unciv.ui.utils.RoyalPanelDrawable(BaseScreen.skin)
+            innerTable.pad(52f).padTop(58f)
+        } else innerTable.pad(5f)
 
-        val stats = selectedTile.getTileStats(city, city.civInfo)
-        innerTable.pad(5f)
-
-        innerTable.add( MarkupRenderer.render(selectedTile.toMarkup(city.civInfo), iconDisplay = IconDisplay.None) {
+        val markup = MarkupRenderer.renderWithTextColor(
+            selectedTile.toMarkup(city.civInfo),
+            defaultTextColor = if (royal) ink else null,
+            labelWidth = if (royal) (contentWidth - 5f).coerceAtLeast(1f) else 0f,
+            iconDisplay = IconDisplay.None
+        ) {
             UncivGame.Current.pushScreen(CivilopediaScreen(city.getRuleset(), link = it))
-        } )
-        innerTable.row()
-        innerTable.add(getTileStatsTable(stats)).row()
+        }
+        val markupCell = innerTable.add(markup)
+        if (royal) markupCell.width(contentWidth)
+        markupCell.row()
+        innerTable.add(getTileStatsTable(selectedTile.getTileStats(city, city.civInfo))).row()
+
+        fun addText(text: String) {
+            val label = text.toLabel(fontColor = ink)
+            val cell = innerTable.add(label)
+            if (royal) {
+                label.setWrap(true)
+                cell.width(contentWidth)
+            }
+            cell.row()
+        }
 
         if (isTilePurchaseShown(selectedTile)) {
             val goldCostOfTile = city.expansion.getGoldCostOfTile(selectedTile)
@@ -67,15 +89,13 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
             }
             buyTileButton.keyShortcuts.add('T')
             buyTileButton.isEnabled = isTilePurchaseAllowed(goldCostOfTile)
-            buyTileButton.addTooltip('T')  // The key binding is done in CityScreen constructor
+            buyTileButton.addTooltip('T')
             innerTable.add(buyTileButton).padTop(5f).row()
         }
-
         if (selectedTile.owningCity != null)
-            innerTable.add("Owned by [${selectedTile.owningCity!!.name}]".toLabel()).row()
-
+            addText("Owned by [${selectedTile.owningCity!!.name}]")
         if (city.civInfo.cities.filterNot { it == city }.any { it.isWorked(selectedTile) })
-            innerTable.add("Worked by [${selectedTile.getWorkingCity()!!.name}]".toLabel()).row()
+            addText("Worked by [${selectedTile.getWorkingCity()!!.name}]")
 
         if (city.isWorked(selectedTile)) {
             if (selectedTile.isLocked()) {
@@ -99,10 +119,45 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
             }
         }
         if (selectedTile.isCityCenter() && selectedTile.getCity() != city && selectedTile.getCity()!!.civInfo == city.civInfo)
-            innerTable.add("Move to city".toTextButton().onClick { cityScreen.game.replaceCurrentScreen(CityScreen(selectedTile.getCity()!!)) })
+            innerTable.add("Move to city".toTextButton().onClick {
+                cityScreen.game.replaceCurrentScreen(CityScreen(selectedTile.getCity()!!))
+            })
 
-        innerTable.pack()
-        pack()
+        if (royal) {
+            for (cell in innerTable.cells) {
+                val button =
+                        cell.actor as? com.badlogic.gdx.scenes.scene2d.ui.TextButton ?: continue
+                button.label.setWrap(true)
+                cell.width(contentWidth).minHeight(58f).fillX()
+            }
+            val scroll = tileScroll
+            innerTable.pack()
+            val scrollStyle = scroll.style
+            val barWidth = maxOf(
+                scrollStyle.vScroll?.minWidth ?: 0f,
+                scrollStyle.vScrollKnob?.minWidth ?: 0f
+            )
+            val scrollBackground = scrollStyle.background
+            val horizontalInsets = (scrollBackground?.leftWidth ?: 0f) +
+                    (scrollBackground?.rightWidth ?: 0f)
+            val verticalInsets = (scrollBackground?.topHeight ?: 0f) +
+                    (scrollBackground?.bottomHeight ?: 0f)
+            clearChildren()
+            add(scroll).width(innerTable.prefWidth + barWidth + horizontalInsets)
+                .height(
+                    minOf(
+                        innerTable.prefHeight + verticalInsets,
+                        ((cityScreen.stage.height - 10f) / 2f).coerceAtLeast(1f)
+                    )
+                )
+            pack()
+            scroll.validate()
+            scroll.scrollY = 0f
+            scroll.updateVisualScroll()
+        } else {
+            innerTable.pack()
+            pack()
+        }
     }
 
     /** Ask whether user wants to buy [selectedTile] for gold.
@@ -150,12 +205,27 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
     }
 
     private fun getTileStatsTable(stats: Stats): Table {
+        val royal = UncivGame.Current.settings.skin == "Minimal"
         val statsTable = Table()
         statsTable.defaults().pad(2f)
         for ((key, value) in stats) {
             statsTable.add(ImageGetter.getStatIcon(key.name)).size(20f)
-            statsTable.add(value.roundToInt().toLabel()).padRight(5f)
+            statsTable.add(
+                value.roundToInt().toString().toLabel(
+                    fontColor = if (royal) Color.valueOf("453925") else Color.WHITE
+                )
+            ).padRight(5f)
+            if (royal) statsTable.row()
         }
         return statsTable
+    }
+
+    private val tileScroll by lazy {
+        com.unciv.ui.utils.AutoScrollPane(innerTable, BaseScreen.skin).apply {
+            name = "cityTileScroll"
+            setScrollingDisabled(true, false)
+            setOverscroll(false, false)
+            setFadeScrollBars(false)
+        }
     }
 }

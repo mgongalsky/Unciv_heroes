@@ -131,4 +131,28 @@ class ExpanderTab(
     fun setText(text: String) {
         headerLabel.setText(text)
     }
+
+    /** Applies local header colors and wraps its title within the supplied total width. */
+    fun setHeaderAppearance(
+        background: com.badlogic.gdx.scenes.scene2d.utils.Drawable,
+        textColor: Color,
+        width: Float
+    ) {
+        header.background = background
+        headerLabel.style =
+            com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle(headerLabel.style).apply {
+                fontColor = textColor.cpy()
+            }
+        headerIcon.color = textColor
+        headerLabel.setWrap(true)
+        val labelCell = header.getCell(headerLabel)
+        var reservedWidth = header.padLeft + header.padRight
+        for (cell in header.cells) {
+            reservedWidth += cell.padLeft + cell.padRight
+            if (cell.actor !== headerLabel) reservedWidth += cell.prefWidth
+        }
+        labelCell.width((width - reservedWidth).coerceAtLeast(1f)).growX()
+        getCell(header).width(width)
+        invalidateHierarchy()
+    }
 }

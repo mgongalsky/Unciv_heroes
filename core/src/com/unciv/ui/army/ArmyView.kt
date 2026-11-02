@@ -46,23 +46,24 @@ class ArmyView(
         updateView(initialized = false)
     }
 
-    /**
-     * Updates the view to match the current state of the [ArmyInfo].
-     */
+    /** Обновляет слоты армии; в городе Minimal переносит их по доступной ширине панели. */
     fun updateView(initialized: Boolean = true) {
-        clear() // Remove existing actors from the table
+        clear()
+        val royalCity = screen is CityScreen && screen.game.settings.skin == "Minimal"
+        val columns = if (royalCity) {
+            val availableWidth = (screen.stage.width / 3f).coerceAtLeast(300f)
+                .coerceAtMost(screen.stage.width - 10f)
+            (availableWidth / (slotSize + 10f)).toInt().coerceAtLeast(1)
+        } else Int.MAX_VALUE
 
-
-        // Iterate through slots and create/update views
+        // Перенос меняет только раскладку: массив сохраняет индексы игровых слотов.
         armyInfo?.getAllTroops()?.forEachIndexed { index, troop ->
-                val troopView = TroopArmyView(troop, this, slotSize = slotSize) // Pass ArmyView for interaction
-                troopViewsArray[index] = troopView // Save to array
-                add(troopView).size(slotSize).pad(5f)
+            val troopView = TroopArmyView(troop, this, slotSize = slotSize)
+            troopViewsArray[index] = troopView
+            add(troopView).size(slotSize).pad(5f)
+            if (royalCity && (index + 1) % columns == 0) row()
         }
-
-        pack() // Ensure layout is updated
-
-
+        pack()
         if (initialized && screen is CityScreen) {
             screen.city.cityStats.updateTileStats()
             screen.update(triggeredByArmyView = true)

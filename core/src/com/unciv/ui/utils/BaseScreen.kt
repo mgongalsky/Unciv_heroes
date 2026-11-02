@@ -114,11 +114,31 @@ abstract class BaseScreen : Screen {
         var enableSceneDebug = false
 
         /** Colour to use for empty sections of the screen.
-         *  Gets overwritten by SkinConfig.clearColor after starting Unciv */
+         * Gets overwritten by SkinConfig.clearColor after starting Unciv. */
         var clearColor = Color(0f, 0f, 0.2f, 1f)
 
-        // Here is atlas for fantasy background
-        val atlas = TextureAtlas(Gdx.files.internal("fantasy_window.atlas"))
+        private val applicationAtlases = java.util.IdentityHashMap<com.badlogic.gdx.Application, TextureAtlas>()
+
+        /** Legacy background atlas belongs to the application's GL context, not the JVM. */
+        val atlas: TextureAtlas
+            get() {
+                val application = Gdx.app
+                return applicationAtlases.getOrPut(application) {
+                    val loaded = TextureAtlas(Gdx.files.internal("fantasy_window.atlas"))
+                    application.addLifecycleListener(object : com.badlogic.gdx.LifecycleListener {
+                        override fun pause() {}
+                        override fun resume() {}
+                        override fun dispose() {
+                            if (applicationAtlases[application] === loaded) {
+                                applicationAtlases.remove(application)
+                                loaded.dispose()
+                            }
+                        }
+                    })
+                    loaded
+                }
+            }
+
         lateinit var skin: Skin
         lateinit var skinStrings: SkinStrings
         fun setSkin() {
@@ -126,15 +146,47 @@ abstract class BaseScreen : Screen {
             skinStrings = SkinStrings()
             skin = Skin(atlas).apply {
                 add("Nativefont", Fonts.font, BitmapFont::class.java)
-                add("RoundedEdgeRectangle", skinStrings.getUiBackground("", skinStrings.roundedEdgeRectangleShape), Drawable::class.java)
+                add(
+                    "RoundedEdgeRectangle",
+                    skinStrings.getUiBackground("", skinStrings.roundedEdgeRectangleShape),
+                    Drawable::class.java
+                )
                 add("Rectangle", ImageGetter.getDrawable(""), Drawable::class.java)
-                add("Circle", ImageGetter.getDrawable("OtherIcons/Circle").apply { setMinSize(20f, 20f) }, Drawable::class.java)
-                add("Scrollbar", ImageGetter.getDrawable("").apply { setMinSize(10f, 10f) }, Drawable::class.java)
-                add("RectangleWithOutline",skinStrings.getUiBackground("", skinStrings.rectangleWithOutlineShape), Drawable::class.java)
-                add("Select-box", skinStrings.getUiBackground("", skinStrings.selectBoxShape), Drawable::class.java)
-                add("Select-box-pressed", skinStrings.getUiBackground("", skinStrings.selectBoxPressedShape), Drawable::class.java)
-                add("Checkbox", skinStrings.getUiBackground("", skinStrings.checkboxShape), Drawable::class.java)
-                add("Checkbox-pressed", skinStrings.getUiBackground("", skinStrings.checkboxPressedShape), Drawable::class.java)
+                add(
+                    "Circle",
+                    ImageGetter.getDrawable("OtherIcons/Circle").apply { setMinSize(20f, 20f) },
+                    Drawable::class.java
+                )
+                add(
+                    "Scrollbar",
+                    ImageGetter.getDrawable("").apply { setMinSize(10f, 10f) },
+                    Drawable::class.java
+                )
+                add(
+                    "RectangleWithOutline",
+                    skinStrings.getUiBackground("", skinStrings.rectangleWithOutlineShape),
+                    Drawable::class.java
+                )
+                add(
+                    "Select-box",
+                    skinStrings.getUiBackground("", skinStrings.selectBoxShape),
+                    Drawable::class.java
+                )
+                add(
+                    "Select-box-pressed",
+                    skinStrings.getUiBackground("", skinStrings.selectBoxPressedShape),
+                    Drawable::class.java
+                )
+                add(
+                    "Checkbox",
+                    skinStrings.getUiBackground("", skinStrings.checkboxShape),
+                    Drawable::class.java
+                )
+                add(
+                    "Checkbox-pressed",
+                    skinStrings.getUiBackground("", skinStrings.checkboxPressedShape),
+                    Drawable::class.java
+                )
                 load(Gdx.files.internal("Skin.json"))
             }
             skin.get(TextButton.TextButtonStyle::class.java).font = Fonts.font
@@ -150,6 +202,11 @@ abstract class BaseScreen : Screen {
             skin.get(SelectBox.SelectBoxStyle::class.java).apply {
                 font = Fonts.font
                 listStyle.font = Fonts.font
+            }
+            // Пользовательские skins сохраняют своё оформление; Royal заменяет базовый Minimal.
+            if (UncivGame.Current.settings.skin == "Minimal") {
+                RoyalUi.installButtons(skin)
+                RoyalUi.installTypography(skin)
             }
             clearColor = skinStrings.skinConfig.clearColor
         }

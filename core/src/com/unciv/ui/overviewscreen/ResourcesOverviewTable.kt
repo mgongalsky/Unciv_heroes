@@ -28,6 +28,8 @@ class ResourcesOverviewTab(
     overviewScreen: EmpireOverviewScreen,
     persistedData: EmpireOverviewTabPersistableData? = null
 ) : EmpireOverviewTab(viewingPlayer, overviewScreen) {
+    private val royal = overviewScreen.game.settings.skin == "Minimal"
+
     class ResourcesTabPersistableData(
         var vertical: Boolean = false
     ) : EmpireOverviewTabPersistableData() {
@@ -42,13 +44,20 @@ class ResourcesOverviewTab(
     }
 
     private fun getTurnImage(vertical: Boolean) =
-        ImageGetter.getImage("OtherIcons/Turn right")
-            .apply {
-                color = BaseScreen.skinStrings.skinConfig.baseColor
-                if (vertical)
-                    rotateBy(90f)
-            }
-            .surroundWithCircle(iconSize, color = Color.LIGHT_GRAY)
+            ImageGetter.getImage("OtherIcons/Turn right")
+                .apply {
+                    color =
+                            if (royal) Color.valueOf("453925") else BaseScreen.skinStrings.skinConfig.baseColor
+                    if (vertical) rotateBy(90f)
+                }
+                .surroundWithCircle(
+                    iconSize,
+                    color = if (royal) Color.valueOf("D7C89F") else Color.LIGHT_GRAY
+                )
+                .apply {
+                    name =
+                            if (vertical) "overviewResourcesToHorizontal" else "overviewResourcesToVertical"
+                }
     private val turnImageH = getTurnImage(false)
     private val turnImageV = getTurnImage(true)
 
@@ -128,8 +137,20 @@ class ResourcesOverviewTab(
     private fun update() {
         clear()
         fixedContent.clear()
+        if (royal) {
+            background = BaseScreen.skinStrings.getUiBackground(
+                "EmpireOverview/Resources/Panel", tintColor = Color.valueOf("EADFBD")
+            )
+            fixedContent.background = BaseScreen.skinStrings.getUiBackground(
+                "EmpireOverview/Resources/Header", tintColor = Color.valueOf("EADFBD")
+            )
+        }
         if (persistableData.vertical) updateVertical()
         else updateHorizontal()
+        if (royal) {
+            applyRoyalLabels(this)
+            applyRoyalLabels(fixedContent)
+        }
     }
 
     private fun updateHorizontal() {
@@ -241,5 +262,18 @@ class ResourcesOverviewTab(
             }
         }
         return newResourceSupplyList
+    }
+    private fun applyRoyalLabels(table: Table) {
+        // Вложенные таблицы содержат объединённые источники; значки и их подсказки не перекрашиваются.
+        for (actor in table.children) {
+            when (actor) {
+                is Label -> {
+                    val negative = actor.text.toString().toIntOrNull()?.let { it < 0 } == true
+                    actor.color = Color.valueOf(if (negative) "8C2923" else "453925")
+                }
+
+                is Table -> applyRoyalLabels(actor)
+            }
+        }
     }
 }

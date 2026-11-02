@@ -37,12 +37,17 @@ import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.packIfNeeded
 import com.unciv.ui.utils.extensions.toTextButton
 import com.unciv.ui.worldscreen.WorldScreen
+import com.unciv.ui.utils.extensions.toLabel
 
 class CityScreen(
     internal val city: CityInfo,
     initSelectedConstruction: IConstruction? = null,
     initSelectedTile: TileInfo? = null
 ): BaseScreen(), RecreateOnResize {
+    private var compactRoot: Table? = null
+    private val compactDetails = Table()
+    private var compactPager: com.unciv.ui.utils.TabbedPager? = null
+
     companion object {
         /** Distance from stage edges to floating widgets */
         const val posFromEdge = 5f
@@ -182,6 +187,12 @@ class CityScreen(
     internal fun update(triggeredByArmyView: Boolean = false) {
         // Recalculate Stats
         city.cityStats.update()
+        if (compactPager == null && game.settings.skin == "Minimal" && stage.width < 900f)
+            createCompactLayout()
+        if (compactPager != null) {
+            updateCompactLayout(triggeredByArmyView)
+            return
+        }
 
         constructionsTable.isVisible = true
         constructionsTable.update(selectedConstruction)
@@ -249,17 +260,26 @@ class CityScreen(
         }
     }
 
-    fun updateCityStatsTable(){
-        // Top right of screen: Stats / Specialists
+    fun updateCityStatsTable() {
+        compactPager?.let { pager ->
+            val availableHeight = (pager.height - 100f).coerceAtLeast(100f)
+            cityStatsTable.update(availableHeight)
+            cityStatsTable.constrainPanelHeight(availableHeight)
+            compactRoot?.invalidateHierarchy()
+            return
+        }
         var statsHeight = stage.height - posFromEdge * 2
         if (selectedTile != null)
             statsHeight -= tileTable.height + 10f
         if (selectedConstruction != null)
             statsHeight -= selectedConstructionTable.height + 10f
         cityStatsTable.update(statsHeight)
-        cityStatsTable.setPosition(stage.width - posFromEdge, stage.height - posFromEdge, Align.topRight)
-
-
+        cityStatsTable.constrainPanelHeight(statsHeight)
+        cityStatsTable.setPosition(
+            stage.width - posFromEdge,
+            stage.height - posFromEdge,
+            Align.topRight
+        )
     }
 
     fun canCityBeChanged(): Boolean {
@@ -363,7 +383,8 @@ class CityScreen(
         val centerX = if (!isPortrait()) stage.width / 2
             else constructionsTable.getUpperWidth().let { it + (stage.width - cityStatsTable.width - it) / 2 }
         razeCityButtonHolder.setPosition(centerX, stage.height - 20f, Align.top)
-        stage.addActor(razeCityButtonHolder)
+        if (compactPager == null) stage.addActor(razeCityButtonHolder)
+        else razeCityButtonHolder.invalidateHierarchy()
     }
 
     private fun addTiles() {
@@ -463,12 +484,14 @@ class CityScreen(
         selectedQueueEntryTargetTile = null
         pickTileData = null
         selectedTile = newTile
+        if (newTile != null) compactPager?.selectPage("Details")
     }
     fun clearSelection() = selectTile(null)
 
     fun startPickTileForCreatesOneImprovement(construction: Building, stat: Stat, isBuying: Boolean) {
         val improvement = construction.getImprovementToCreate(city.getRuleset()) ?: return
         pickTileData = PickTileForImprovementData(construction, improvement, isBuying, stat)
+        compactPager?.selectPage("Map")
         updateTileGroups()
         ToastPopup("Please select a tile for this building's [${improvement.name}]", this)
     }
@@ -502,5 +525,95 @@ class CityScreen(
     override fun dispose() {
         cityAmbiencePlayer.dispose()
         super.dispose()
+    }
+
+    /** На узкой сцене разделы используют существующие панели и игровые обработчики. */
+    private fun createCompactLayout() {
+        cityPickerTable.update()
+        val width = (stage.width - 10f).coerceAtLeast(1f)
+        val pickerScroll = com.unciv.ui.utils.AutoScrollPane(cityPickerTable).apply {
+            setScrollingDisabled(true, false)
+            setOverscroll(false, false)
+        }
+        val pager = com.unciv.ui.utils.TabbedPager(
+            minimumWidth = width, maximumWidth = width,
+            maximumHeight = stage.height,
+            backgroundColor = Color.valueOf("EADFBD")
+        )
+        compactPager = pager
+        pager.name = "cityCompactPager"
+        fun page(map: Boolean = false) =
+                object : Table(), com.unciv.ui.utils.TabbedPager.IPageExtensions {
+                    override fun activated(
+                        index: Int,
+                        caption: String,
+                        pager: com.unciv.ui.utils.TabbedPager
+                    ) {
+                        pager.setScrollDisabled(map)
+                    }
+                }.apply { top() }
+
+        val mapPage = page(map = true).apply {
+            name = "cityCompactMap"
+            add(mapScrollPane).minSize(0f).grow()
+        }
+        pager.addPage("Map", mapPage)
+        pager.addPage("Construction", page().apply {
+            add(constructionsTable.asCompactContent()).top().row()
+        })
+        pager.addPage("Stats", page().apply {
+            add(cityStatsTable).top().row()
+            add(razeCityButtonHolder).padTop(5f).row()
+        })
+        pager.addPage("Army", page().apply {
+            add("Garrison".toLabel(fontColor = Color.valueOf("453925"))).pad(5f).row()
+            add(garrisonView).row()
+            if (visitingArmyView.isHero()) {
+                add("Visiting hero".toLabel(fontColor = Color.valueOf("453925"))).pad(5f).row()
+                add(visitingArmyView).row()
+            }
+        })
+        tileTable.remove()
+        selectedConstructionTable.remove()
+        pager.addPage("Details", page().apply { add(compactDetails).top() })
+        exitCityButton.label.setWrap(true)
+        val root = Table().apply {
+            name = "cityCompactRoot"
+            setFillParent(true)
+            pad(5f)
+            add(pickerScroll).width(width).height(minOf(100f, cityPickerTable.prefHeight)).row()
+            add(pager).width(width).minHeight(0f).growY().row()
+            add(exitCityButton).width(width).minHeight(48f).padTop(5f).row()
+        }
+        compactRoot = root
+        stage.addActor(root)
+        pager.selectPage(if (selectedConstruction != null) "Construction" else "Map")
+        root.validate()
+    }
+    private fun updateCompactLayout(triggeredByArmyView: Boolean) {
+        val pager = checkNotNull(compactPager)
+        if (!triggeredByArmyView) {
+            garrisonView.updateView(initialized = false)
+            visitingArmyView.updateView(initialized = false)
+        }
+        constructionsTable.isVisible = true
+        constructionsTable.update(selectedConstruction)
+        tileTable.update(selectedTile)
+        selectedConstructionTable.update(selectedConstruction)
+        compactDetails.clearChildren()
+        when {
+            selectedTile != null -> compactDetails.add(tileTable).row()
+            selectedConstruction != null -> compactDetails.add(selectedConstructionTable).row()
+            else -> compactDetails.add("Pick a construction".toLabel(fontColor = Color.valueOf("453925")))
+                .row()
+        }
+        cityPickerTable.update()
+        val statsHeight = (pager.height - 100f).coerceAtLeast(100f)
+        cityStatsTable.update(statsHeight)
+        cityStatsTable.constrainPanelHeight(statsHeight)
+        updateAnnexAndRazeCityButton()
+        updateTileGroups()
+        compactRoot?.invalidateHierarchy()
+        compactRoot?.validate()
     }
 }

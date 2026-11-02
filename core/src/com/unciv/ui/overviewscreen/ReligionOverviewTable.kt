@@ -42,16 +42,33 @@ class ReligionOverviewTab(
     private val beliefsTable = Table()
 
     override fun getFixedContent() = Table().apply {
-            defaults().pad(5f)
-            align(Align.top)
-
-            civStatsTable.defaults().left().pad(5f)
-            civStatsTable.addCivSpecificStats()
-            add(civStatsTable).row()
-            add(religionButtons).row()
-            add(religionButtonLabel)
-            addSeparator()
+        defaults().pad(5f)
+        align(Align.top)
+        val royal = overviewScreen.game.settings.skin == "Minimal"
+        civStatsTable.clear()
+        civStatsTable.defaults().left().pad(5f)
+        civStatsTable.addCivSpecificStats()
+        if (royal) {
+            civStatsTable.background = BaseScreen.skinStrings.getUiBackground(
+                "OverviewScreen/ReligionOverviewTab/CivStats", tintColor = Color.valueOf("EADFBD")
+            )
+            val availableWidth = minOf(560f, overviewScreen.stage.width - 40f)
+                .coerceAtLeast(100f)
+            val columnsWidth =
+                    (availableWidth - civStatsTable.padLeft - civStatsTable.padRight - 20f)
+                        .coerceAtLeast(96f)
+            for ((index, cell) in civStatsTable.cells.withIndex()) {
+                val label = cell.actor as? com.badlogic.gdx.scenes.scene2d.ui.Label ?: continue
+                label.color = Color.valueOf("453925")
+                label.setWrap(true)
+                cell.width(columnsWidth * if (index % 2 == 0) 0.6f else 0.4f)
+            }
         }
+        add(civStatsTable).row()
+        add(religionButtons).row()
+        add(religionButtonLabel)
+        addSeparator()
+    }
 
     init {
         defaults().pad(5f)
@@ -86,28 +103,31 @@ class ReligionOverviewTab(
 
     private fun loadReligionButtons() {
         religionButtons.clear()
-        val existingReligions: List<Religion> = gameInfo.civilizations.mapNotNull { it.religionManager.religion }
+        val royal = overviewScreen.game.settings.skin == "Minimal"
+        val availableWidth = (overviewScreen.stage.width - 40f).coerceAtLeast(1f)
+        var rowWidth = 0f
+        val existingReligions: List<Religion> =
+                gameInfo.civilizations.mapNotNull { it.religionManager.religion }
         for (religion in existingReligions) {
             val image = if (religion.isPantheon()) {
                 if (viewingPlayer.knows(religion.foundingCivName) || viewingPlayer.civName == religion.foundingCivName)
                     ImageGetter.getNationIndicator(religion.getFounder().nation, 60f)
-                else
-                    ImageGetter.getRandomNationIndicator(60f)
-            } else {
-                    ImageGetter.getCircledReligionIcon(religion.getIconName(), 60f)
-            }
+                else ImageGetter.getRandomNationIndicator(60f)
+            } else ImageGetter.getCircledReligionIcon(religion.getIconName(), 60f)
             val button = Button(image, BaseScreen.skin)
-
             button.onClick {
                 persistableData.selectedReligion = religion.name
                 loadReligionButtons()
                 loadReligion(religion)
             }
-
-            if (persistableData.selectedReligion == religion.name)
-                button.disable()
-
+            if (persistableData.selectedReligion == religion.name) button.disable()
+            val buttonWidth = button.prefWidth + 10f
+            if (royal && rowWidth > 0f && rowWidth + buttonWidth > availableWidth) {
+                religionButtons.row()
+                rowWidth = 0f
+            }
             religionButtons.add(button).pad(5f)
+            rowWidth += buttonWidth
         }
     }
 
@@ -172,15 +192,22 @@ class ReligionOverviewTab(
         }
     }
 
-    private fun createBeliefDescription(belief: Belief) =
-        MarkupRenderer.render(
-            belief.getCivilopediaTextLines(withHeader = true)
+    private fun createBeliefDescription(belief: Belief): Table {
+        val royal = overviewScreen.game.settings.skin == "Minimal"
+        return MarkupRenderer.renderWithTextColor(
+            belief.getCivilopediaTextLines(withHeader = true),
+            defaultTextColor = if (royal) Color.valueOf("453925") else null,
+            labelWidth = if (royal) minOf(
+                600f,
+                overviewScreen.stage.width - 100f
+            ).coerceAtLeast(48f) else 0f
         ) {
             UncivGame.Current.pushScreen(CivilopediaScreen(gameInfo.ruleSet, link = it))
         }.apply {
             background = BaseScreen.skinStrings.getUiBackground(
                 "OverviewScreen/ReligionOverviewTab/BeliefDescription",
-                tintColor = BaseScreen.skinStrings.skinConfig.baseColor
+                tintColor = if (royal) Color.valueOf("EADFBD") else BaseScreen.skinStrings.skinConfig.baseColor
             )
         }
+    }
 }

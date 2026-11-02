@@ -64,31 +64,67 @@ class NotificationsOverviewTable(
         }
     }
 
-    private fun notificationsArrayTable(index: String, notifications: ArrayList<Notification>): Table {
+    private fun notificationsArrayTable(
+        index: String,
+        notifications: ArrayList<Notification>
+    ): Table {
+        val royal = overviewScreen.game.settings.skin == "Minimal"
         val turnTable = Table(BaseScreen.skin)
-        val turnLabel = if (index != "Current")
-                            "Turn [$index]".toLabel()
-                        else
-                            "Current turn".toLabel()
-        turnTable.add(turnLabel).row()
+        val title = if (index != "Current") "Turn [$index]" else "Current turn"
+        val contentWidth = minOf(720f, overviewScreen.stage.width - 100f).coerceAtLeast(48f)
+        if (royal) {
+            turnTable.background = BaseScreen.skinStrings.getUiBackground(
+                "OverviewScreen/Notifications/Turn", tintColor = Color.valueOf("EADFBD")
+            )
+            turnTable.pad(10f)
+        }
+        val turnLabel =
+            title.toLabel(fontColor = if (royal) Color.valueOf("453925") else Color.WHITE)
+        val titleCell = turnTable.add(turnLabel)
+        if (royal) {
+            turnLabel.setWrap(true)
+            titleCell.width(contentWidth)
+        }
+        titleCell.row()
 
         for (notification in notifications) {
-            val notificationTable = Table(BaseScreen.skin)
-
-            val labelWidth = maxEntryWidth * notification.icons.size - 10f
-            val label = WrappableLabel(notification.text, labelWidth, Color.BLACK, 20)
-
-            notificationTable.add(label)
-            notificationTable.background = BaseScreen.skinStrings.getUiBackground("OverviewScreen/NotificationOverviewTable/Notification", BaseScreen.skinStrings.roundedEdgeRectangleShape)
-            notificationTable.touchable = Touchable.enabled
-            notificationTable.onClick {
+            val entry = Table(BaseScreen.skin)
+            entry.name = "overviewNotificationEntry"
+            if (royal) {
+                entry.background = BaseScreen.skinStrings.getUiBackground(
+                    "OverviewScreen/NotificationOverviewTable/Notification",
+                    BaseScreen.skinStrings.roundedEdgeRectangleShape,
+                    tintColor = Color.valueOf("EADFBD")
+                )
+                entry.pad(10f)
+                val label =
+                    WrappableLabel(notification.text, contentWidth, Color.valueOf("453925"), 20)
+                label.setWrap(true)
+                entry.add(label).width(contentWidth).left().row()
+                if (notification.icons.isNotEmpty()) {
+                    val icons = Table()
+                    notification.addNotificationIcons(worldScreen.gameInfo.ruleSet, iconSize, icons)
+                    val iconScroll = com.unciv.ui.utils.AutoScrollPane(icons).apply {
+                        setScrollingDisabled(false, true)
+                        setOverscroll(false, false)
+                    }
+                    entry.add(iconScroll).width(contentWidth).padTop(5f).row()
+                }
+            } else {
+                val labelWidth = maxEntryWidth * notification.icons.size - 10f
+                entry.add(WrappableLabel(notification.text, labelWidth, Color.BLACK, 20))
+                entry.background = BaseScreen.skinStrings.getUiBackground(
+                    "OverviewScreen/NotificationOverviewTable/Notification",
+                    BaseScreen.skinStrings.roundedEdgeRectangleShape
+                )
+                notification.addNotificationIcons(worldScreen.gameInfo.ruleSet, iconSize, entry)
+            }
+            entry.touchable = Touchable.enabled
+            entry.onClick {
                 UncivGame.Current.resetToWorldScreen()
                 notification.action?.execute(worldScreen)
             }
-
-            notification.addNotificationIcons(worldScreen.gameInfo.ruleSet, iconSize, notificationTable)
-
-            turnTable.add(notificationTable).padTop(5f)
+            turnTable.add(entry).padTop(5f)
             turnTable.padTop(20f).row()
         }
         turnTable.padTop(20f).row()

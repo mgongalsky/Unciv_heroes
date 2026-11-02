@@ -115,4 +115,42 @@ class NativeFontAndroid(
             }.distinct()
             .map { FontFamilyData(it, it) }
     }
+
+    /** Загружает оригинальный TTF из APK; отсутствующие символы рисует системный шрифт. */
+    override fun withBundledFont(assetPath: String): NativeFontImplementation {
+        val context = com.badlogic.gdx.Gdx.app as? android.content.Context ?: return this
+        val bundledPaint = Paint(createPaint()).apply {
+            typeface = Typeface.createFromAsset(context.assets, assetPath)
+        }
+        val fallback = this
+        return object : NativeFontImplementation {
+            override fun getFontSize() = size
+            override fun getAvailableFontFamilies() = fallback.getAvailableFontFamilies()
+
+            override fun getCharPixmap(char: Char): Pixmap {
+                val text = char.toString()
+                // На старых Android проверка покрытия недоступна — сохраняем надёжный системный путь.
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || !bundledPaint.hasGlyph(text))
+                    return fallback.getCharPixmap(char)
+                val metrics = bundledPaint.fontMetrics
+                val width = kotlin.math.ceil(bundledPaint.measureText(text).toDouble()).toInt()
+                    .coerceAtLeast(1)
+                val height = kotlin.math.ceil((metrics.descent - metrics.ascent).toDouble()).toInt()
+                    .coerceAtLeast(1)
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                try {
+                    Canvas(bitmap).drawText(text, 0f, -metrics.ascent, bundledPaint)
+                    val pixels = IntArray(width * height)
+                    bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+                    return Pixmap(width, height, Pixmap.Format.RGBA8888).apply {
+                        setBlending(Pixmap.Blending.None)
+                        for (y in 0 until height) for (x in 0 until width)
+                            drawPixel(x, y, Integer.rotateLeft(pixels[x + y * width], 8))
+                    }
+                } finally {
+                    bitmap.recycle()
+                }
+            }
+        }
+    }
 }

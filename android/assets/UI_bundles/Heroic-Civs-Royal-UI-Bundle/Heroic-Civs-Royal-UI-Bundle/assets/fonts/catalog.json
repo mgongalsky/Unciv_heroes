@@ -1,0 +1,41 @@
+[
+  {
+    "id": "berkshireswash",
+    "name": "Berkshire Swash",
+    "description": "Flourished storybook letters",
+    "role": "headings",
+    "license": "SIL OFL 1.1",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/berkshireswash/BerkshireSwash-Regular.ttf",
+    "sha256": "f0c80837dc6f32b89b10894a7e39295db4a00ab697cada682a3f5942c342fe00",
+    "path": "assets/fonts/berkshireswash/font.ttf",
+    "axes": [],
+    "original_unmodified": true,
+    "source_web_path": "fonts/berkshireswash/font.ttf",
+    "source_web_notice": "fonts/berkshireswash/OFL.txt",
+    "file": "assets/fonts/berkshireswash/font.ttf",
+    "notice": "assets/fonts/berkshireswash/OFL.txt"
+  },
+  {
+    "id": "ebgaramond",
+    "name": "EB Garamond",
+    "description": "Renaissance book type",
+    "role": "both",
+    "license": "SIL OFL 1.1",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/ebgaramond/EBGaramond%5Bwght%5D.ttf",
+    "sha256": "ef9512f92f6d579e5dc75af59a5a4b1b8b47d2eda89e00b954d44520e5369027",
+    "path": "assets/fonts/ebgaramond/font.ttf",
+    "axes": [
+      {
+        "tag": "wght",
+        "min": 400.0,
+        "default": 400.0,
+        "max": 800.0
+      }
+    ],
+    "original_unmodified": true,
+    "source_web_path": "fonts/ebgaramond/font.ttf",
+    "source_web_notice": "fonts/ebgaramond/OFL.txt",
+    "file": "assets/fonts/ebgaramond/font.ttf",
+    "notice": "assets/fonts/ebgaramond/OFL.txt"
+  }
+]

@@ -106,14 +106,25 @@ suspend fun <T> withGLContext(block: suspend CoroutineScope.() -> T): T = withCo
  * All dispatchers here bring the main game loop to a [com.unciv.CrashScreen] if an exception happens.
  */
 object Dispatcher {
+    private var glDispatcher: CoroutineDispatcher? = null
+    private var glApplication: com.badlogic.gdx.Application? = null
+
     /** Runs coroutines on a daemon thread pool. */
     val DAEMON: CoroutineDispatcher = createThreadpoolDispatcher("threadpool-daemon-", isDaemon = true)
 
     /** Runs coroutines on a non-daemon thread pool. */
     val NON_DAEMON: CoroutineDispatcher = createThreadpoolDispatcher("threadpool-nondaemon-", isDaemon = false)
 
-    /** Runs coroutines on the GDX GL thread. */
-    val GL: CoroutineDispatcher = CrashHandlingDispatcher(GLDispatcher())
+    /** GL-диспетчер принадлежит приложению; новый GL lifecycle получает новый диспетчер. */
+    val GL: CoroutineDispatcher
+        get() = synchronized(this) {
+            val application = checkNotNull(Gdx.app) { "GDX application is not initialized" }
+            if (glApplication !== application) {
+                glDispatcher = CrashHandlingDispatcher(GLDispatcher())
+                glApplication = application
+            }
+            checkNotNull(glDispatcher)
+        }
 }
 
 private fun addName(context: CoroutineContext, name: String?) = if (name != null) context + CoroutineName(name) else context
@@ -121,24 +132,29 @@ private fun addName(context: CoroutineContext, name: String?) = if (name != null
 private val EXECUTORS = mutableListOf<ExecutorService>()
 
 private class GLDispatcher : CoroutineDispatcher(), LifecycleListener {
+    private val application = checkNotNull(Gdx.app)
+
+    @Volatile
     var isDisposed = false
 
     init {
-        Gdx.app.addLifecycleListener(this)
+        application.addLifecycleListener(this)
     }
 
     override fun dispatch(context: CoroutineContext, block: Runnable) {
         if (isDisposed) {
             context.cancel(CancellationException("GDX GL thread is not handling runnables anymore"))
-            Dispatcher.DAEMON.dispatch(context, block) // dispatch contract states that block has to be invoked
+            Dispatcher.DAEMON.dispatch(context, block)
             return
         }
-        Gdx.app.postRunnable(block)
+        // Старые корутины не должны попадать в очередь нового приложения.
+        application.postRunnable(block)
     }
 
     override fun dispose() {
         isDisposed = true
     }
+
     override fun pause() {}
     override fun resume() {}
 }

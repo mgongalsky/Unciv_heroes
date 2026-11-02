@@ -35,27 +35,79 @@ class TradesOverviewTab(
 
     private fun createTradeTable(trade: Trade, otherCiv: CivilizationInfo): Table {
         val generalTable = Table()
-        generalTable.add(createOffersTable(viewingPlayer, trade.ourOffers, trade.theirOffers.size)).minWidth(overviewScreen.stage.width/4).fillY()
-        generalTable.add(createOffersTable(otherCiv, trade.theirOffers, trade.ourOffers.size)).minWidth(overviewScreen.stage.width/4).fillY()
+        val royal = overviewScreen.game.settings.skin == "Minimal"
+        if (!royal) {
+            generalTable.add(
+                createOffersTable(
+                    viewingPlayer,
+                    trade.ourOffers,
+                    trade.theirOffers.size
+                )
+            )
+                .minWidth(overviewScreen.stage.width / 4).fillY()
+            generalTable.add(createOffersTable(otherCiv, trade.theirOffers, trade.ourOffers.size))
+                .minWidth(overviewScreen.stage.width / 4).fillY()
+            return generalTable
+        }
+        val stacked = overviewScreen.stage.width < 700f
+        val availableWidth = (overviewScreen.stage.width - 60f).coerceAtLeast(1f)
+        val sideWidth = if (stacked) availableWidth else availableWidth / 2f
+        generalTable.add(createOffersTable(viewingPlayer, trade.ourOffers, trade.theirOffers.size))
+            .width(sideWidth).fillY()
+        if (stacked) generalTable.row()
+        generalTable.add(createOffersTable(otherCiv, trade.theirOffers, trade.ourOffers.size))
+            .width(sideWidth).fillY()
         return generalTable
     }
 
-    private fun createOffersTable(civ: CivilizationInfo, offersList: TradeOffersList, numberOfOtherSidesOffers: Int): Table {
+    private fun createOffersTable(
+        civ: CivilizationInfo,
+        offersList: TradeOffersList,
+        numberOfOtherSidesOffers: Int
+    ): Table {
         val table = Table()
+        val royal = overviewScreen.game.settings.skin == "Minimal"
         table.defaults().pad(10f)
         table.background = BaseScreen.skinStrings.getUiBackground(
             "OverviewScreen/TradesOverviewTab/OffersTable",
-            tintColor = civ.nation.getOuterColor()
+            tintColor = if (royal) com.badlogic.gdx.graphics.Color.valueOf("EADFBD") else civ.nation.getOuterColor()
         )
-        table.add(civ.civName.toLabel(civ.nation.getInnerColor())).row()
-        table.addSeparator()
+        val availableWidth = (overviewScreen.stage.width - 60f).coerceAtLeast(1f)
+        val sideWidth =
+                if (overviewScreen.stage.width < 700f) availableWidth else availableWidth / 2f
+        val textWidth = (sideWidth - table.padLeft - table.padRight - 20f).coerceAtLeast(1f)
+        val nameLabel = civ.civName.toLabel(civ.nation.getInnerColor())
+        if (royal) {
+            val heading = Table().apply {
+                background = BaseScreen.skinStrings.getUiBackground(
+                    "OverviewScreen/TradesOverviewTab/Nation",
+                    tintColor = civ.nation.getOuterColor()
+                )
+            }
+            nameLabel.setWrap(true)
+            nameLabel.setAlignment(com.badlogic.gdx.utils.Align.center)
+            heading.add(nameLabel)
+                .width((textWidth - heading.padLeft - heading.padRight).coerceAtLeast(1f))
+            table.add(heading).width(textWidth).row()
+        } else table.add(nameLabel).row()
+        table.addSeparator(color = if (royal) com.badlogic.gdx.graphics.Color.valueOf("A18B5A") else com.badlogic.gdx.graphics.Color.WHITE)
         for (offer in offersList) {
             var offerText = offer.getOfferText()
             if (!offerText.contains("\n")) offerText += "\n"
-            table.add(offerText.toLabel(civ.nation.getInnerColor())).row()
+            val label = offerText.toLabel(
+                if (royal) com.badlogic.gdx.graphics.Color.valueOf("453925") else civ.nation.getInnerColor()
+            )
+            val cell = table.add(label)
+            if (royal) {
+                label.setWrap(true)
+                cell.width(textWidth)
+            }
+            cell.row()
         }
-        for (i in 1..numberOfOtherSidesOffers - offersList.size)
-            table.add("\n".toLabel()).row() // we want both sides of the general table to have the same number of rows
+        // В двухколоночной раскладке сохраняем одинаковое число строк сторон сделки.
+        if (!royal || overviewScreen.stage.width >= 700f)
+            for (i in 1..numberOfOtherSidesOffers - offersList.size)
+                table.add("\n".toLabel()).row()
         return table
     }
 }

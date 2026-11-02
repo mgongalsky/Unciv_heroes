@@ -20,6 +20,9 @@ interface NativeFontImplementation {
     fun getFontSize(): Int
     fun getCharPixmap(char: Char): Pixmap
     fun getAvailableFontFamilies(): Sequence<FontFamilyData>
+
+    /** Загружает комплектную гарнитуру; неподдерживаемая платформа сохраняет текущий шрифт. */
+    fun withBundledFont(assetPath: String): NativeFontImplementation = this
 }
 
 // If save in `GameSettings` need use invariantFamily.

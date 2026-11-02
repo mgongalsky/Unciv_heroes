@@ -204,3 +204,7 @@ val storyVideoDependencies = dependencies {
         exclude(group = "com.badlogicgames.gdx")
     }
 }
+// Desktop golden scenarios call the coroutine-based game loading API directly.
+val uiGoldenCoroutineDependencies = dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1")
+}

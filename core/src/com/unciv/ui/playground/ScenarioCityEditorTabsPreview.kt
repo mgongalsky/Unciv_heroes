@@ -3,6 +3,7 @@ package com.unciv.ui.playground
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox
 import com.badlogic.gdx.scenes.scene2d.ui.TextField
 import com.unciv.logic.map.TileMap
@@ -11,6 +12,7 @@ import com.unciv.pure.domain.city.ScenarioCityOwner
 import com.unciv.ui.mapeditor.MapEditorScreen
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
+import com.unciv.ui.utils.extensions.activate
 import com.unciv.ui.utils.extensions.keyShortcuts
 import com.unciv.ui.utils.extensions.OnClickListener
 
@@ -24,6 +26,33 @@ fun createScenarioCityEditorTabsPreview(): BaseScreen {
     }
     check(editor.tabs.getPageIndex("Cities") == -1)
     editor.tabs.selectPage("Edit")
+    if (editor.game.settings.skin == "Minimal") {
+        val viewIndex = editor.tabs.getPageIndex("View")
+        check(viewIndex >= 0)
+        val viewButton = editor.tabs.getPageButton(viewIndex)
+        val transparentStyle = viewButton.style
+        val enabledWidth = viewButton.prefWidth
+        val selectedBefore = editor.tabs.activePage
+        check(transparentStyle.up == null)
+        check(!editor.tabs.setPageDisabled(viewIndex, true))
+        check(viewButton.style === transparentStyle)
+        check(viewButton.prefWidth == enabledWidth)
+        check(viewButton.isDisabled && viewButton.touchable == Touchable.disabled)
+        check(viewButton.label.color.a < 1f)
+        check(!editor.tabs.selectPage(viewIndex))
+        viewButton.activate()
+        check(editor.tabs.activePage == selectedBefore)
+        check(editor.tabs.setPageDisabled(viewIndex, false))
+        check(viewButton.style === transparentStyle && !viewButton.isDisabled)
+        check(viewButton.touchable == Touchable.enabled && viewButton.label.color.a == 1f)
+        check(editor.tabs.selectPage(viewIndex))
+        // Disabling the selected tab must also clear its selection.
+        editor.tabs.setPageDisabled(viewIndex, true)
+        check(editor.tabs.activePage == -1 && viewButton.isDisabled)
+        check(viewButton.label.color.a < 1f && viewButton.style === transparentStyle)
+        editor.tabs.setPageDisabled(viewIndex, false)
+        check(editor.tabs.selectPage("Edit"))
+    }
     check(editor.tabs.edit.selectPage("Players"))
     check(!editor.allowDragPainting && editor.tileClickHandler == null)
     val slotName = editor.stage.root.findActor<TextField>("scenario-player-slot-name")

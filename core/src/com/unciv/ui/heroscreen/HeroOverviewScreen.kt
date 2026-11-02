@@ -4,27 +4,21 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton
-import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 import com.badlogic.gdx.utils.Align
-import com.unciv.Constants
 import com.unciv.logic.army.ArmyManager
 import com.unciv.logic.map.MapUnit
 import com.unciv.pure.domain.supply.SupplyMechanic
 import com.unciv.ui.army.ArmyView
-import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.overviewscreen.EmpireOverviewTab
-import com.unciv.ui.rendering.TilableFrame
-import com.unciv.ui.rendering.Tiled2DDrawable
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.Fonts
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
+import com.unciv.ui.utils.RoyalPanelDrawable
 import com.unciv.ui.utils.TabbedPager
 import com.unciv.ui.utils.extensions.toLabel
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import kotlin.math.ceil
 
 class HeroOverviewScreen(
     private var viewingHero: MapUnit,
@@ -32,21 +26,17 @@ class HeroOverviewScreen(
     selection: String = ""
 ) : BaseScreen(), RecreateOnResize, KoinComponent {
     private val supplyMechanic: SupplyMechanic by inject()
-    // 50 normal button height + 2*10 topTable padding + 2 Separator + 2*5 centerTable padding
-    // Since a resize recreates this screen this should be fine as a val
     internal val centerAreaHeight = stage.height - 82f
-
-    // Добавляем ArmyManager и ArmyView
+    private val royal = game.settings.skin == "Minimal"
+    private val ink = if (royal) Color.valueOf("453925") else Color.WHITE
+    private val contentWidth = minOf(740f, stage.width - if (royal) 136f else 52f)
+        .coerceAtLeast(160f)
     private val heroArmyManager = ArmyManager(viewingHero.army)
     private val heroArmyView = ArmyView(viewingHero.army, heroArmyManager, this, slotSize = 128f)
-
-    // Таблица для отображения навыков героя
     private val heroStatsTable = Table().apply {
-        // Добавляем стиль и отступы
-        pad(10f).align(Align.topLeft)
+        name = "heroOverviewStats"
+        align(Align.topLeft)
     }
-
-
     private val tabbedPager: TabbedPager
 
     override fun dispose() {
@@ -55,228 +45,104 @@ class HeroOverviewScreen(
     }
 
     init {
-
-        // Настраиваем таблицу с навыками героя
-        setupHeroStatsTable()
-        // Настраиваем основной интерфейс
         setupHeroArmyView()
-
-        // Создаём общий контейнер для вкладки
         val heroOverviewContent = Table().apply {
-            add(heroStatsTable).growX().align(Align.top).padBottom(20f).row() // Таблица навыков
-            add(heroArmyView).grow().align(Align.center) // Армия героя
+            add(heroStatsTable).top().padBottom(20f).row()
+            add(heroArmyView).grow().align(Align.center)
         }
-
-
-        val page =
-            if (defaultPage != "") {
-                game.settings.lastOverviewPage = defaultPage
-                defaultPage
-            }
-            else game.settings.lastOverviewPage
-        val iconSize = Constants.defaultFontSize.toFloat()
-
+        if (defaultPage != "") game.settings.lastOverviewPage = defaultPage
         globalShortcuts.add(KeyCharAndCode.BACK) { game.popScreen() }
-
         tabbedPager = TabbedPager(
             stage.width, stage.width,
             centerAreaHeight, centerAreaHeight,
-            separatorColor = Color.WHITE)
-
-        tabbedPager.addClosePage { game.popScreen() }
-
-     //   val pageObject = Table(BaseScreen.skin)
-        //pageObject.background = BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
-        //pageObject.background = BaseScreen.skin.get("tiled_fantasy_background", Tiled2DDrawable::class.java)
-
-
-        /*
-        fun createTroopSlot(style: String): Table {
-            return Table().apply {
-                background = BaseScreen.skin.get(style, TilableFrame::class.java)
-                //add(Label(labelText, BaseScreen.skin, "fantasyLabel"))
-            }
-        }
-
-        val pageObject = createTroopSlot("fantasy_frame")
-
-
-        val font = BaseScreen.skin.get("smallOldLondon", BitmapFont::class.java)
-        font.data.scaleX = 0.3f // scale font width by 50%
-        font.data.scaleY = 0.3f // scale font height by 50%
-        //val font = BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)
-        //val font =
-
-     //   val labelStyle = Label.LabelStyle().apply {
-     //       this.font = BaseScreen.skin.get("oldLondon", BitmapFont::class.java)
-     //   }
-
-        //pageObject.add
-        pageObject.pad(10f,0f,60f,0f).align(Align.bottom)
-        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).padLeft(50f).align(
-            Align.bottom)//.padLeft(8f)
-        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).align(
-            Align.bottom)//.padLeft(8f)
-        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).align(
-            Align.bottom)//.padLeft(8f)
-        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).align(
-            Align.bottom)//.padLeft(8f)
-        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).align(
-            Align.bottom)//.padLeft(8f)
-        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(10f).align(
-            Align.bottom)//.padLeft(8f)
-        pageObject.add(createTroopSlot("troop_slot")).width(100f).height(150f).padRight(50f).align(
-            Align.bottom)//.padLeft(8f)
-        //pageObject.add(Label("Attack Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
-        //pageObject.add(Label("Defense Skill", BaseScreen.skin, "fantasyLabel")).size(140f)//.padLeft(8f)
-        //pageObject.add("Strength").size(140f)//.padLeft(8f)
-        //pageObject.add("Health").size(140f)//.padLeft(8f)
-
-
-         */
-  //      pageObject.row()
-  //      pageObject.add(Label(viewingHero.displayName(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
-   //     pageObject.add(Label(viewingHero.heroAttackSkill.toString(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
-
-
-
-    //    pageObject.add(Label(viewingHero.heroDefenseSkill.toString(), BaseScreen.skin, "fantasyLabel")).size(140f)//.padRight(8f)
-    //    pageObject.add(viewingHero.baseUnit.strength.toString()).size(140f)//.padRight(8f)
-    //    pageObject.add(viewingHero.health.toString()).size(140f)//.padRight(8f)
-        //stage.addActor(pageObject)
-        val index = tabbedPager.addPage(
-            caption = "Heroes",
-            content = heroOverviewContent
+            separatorColor = if (royal) Color.CLEAR else Color.WHITE
         )
+        tabbedPager.addClosePage { game.popScreen() }
+        val index = tabbedPager.addPage(caption = "Heroes", content = heroOverviewContent)
         tabbedPager.selectPage(index)
-
-
         tabbedPager.setFillParent(true)
         stage.addActor(tabbedPager)
+    }
 
-
-   }
+    private fun heroLabel(text: String, heading: Boolean = false): Label =
+        text.toLabel(fontColor = ink, fontSize = if (heading) 24 else 18).apply {
+            if (heading && royal && skin.has("royal-display", BitmapFont::class.java)) {
+                style = Label.LabelStyle(style).apply {
+                    font = skin.get("royal-display", BitmapFont::class.java)
+                }
+            }
+            setWrap(true)
+            setAlignment(if (heading) Align.center else Align.left)
+        }
 
     private fun setupHeroStatsTable() {
-        //val font = BaseScreen.skin.get("default", BitmapFont::class.java)
+        if (royal) {
+            heroStatsTable.background = RoyalPanelDrawable(skin)
+            heroStatsTable.pad(52f).padTop(58f)
+        } else heroStatsTable.pad(10f)
 
-        // Заголовок
-        heroStatsTable.add(Label("Hero Skills", BaseScreen.skin))
-            .colspan(2).align(Align.center).padBottom(10f)
-        heroStatsTable.row()
+        fun heading(text: String) {
+            heroStatsTable.add(heroLabel(text, heading = true))
+                .colspan(2).width(contentWidth).padTop(10f).padBottom(10f).row()
+        }
+        fun stat(text: String, value: String) {
+            heroStatsTable.add(heroLabel(text)).width(contentWidth * 0.7f - 10f)
+                .left().pad(5f)
+            heroStatsTable.add(heroLabel(value).apply { setAlignment(Align.right) })
+                .width(contentWidth * 0.3f - 10f).right().pad(5f).row()
+        }
+        fun paragraph(text: String) {
+            heroStatsTable.add(heroLabel(text)).colspan(2)
+                .width(contentWidth - 10f).left().pad(5f).row()
+        }
 
-        // Навыки героя
-        heroStatsTable.add(Label("Attack Skill:", BaseScreen.skin)).align(Align.left).pad(5f)
-        heroStatsTable.add(Label(viewingHero.heroAttackSkill.toString(), BaseScreen.skin)).align(Align.right).pad(5f)
-        heroStatsTable.row()
-
-        heroStatsTable.add(Label("Defense Skill:", BaseScreen.skin)).align(Align.left).pad(5f)
-        heroStatsTable.add(Label(viewingHero.heroDefenseSkill.toString(), BaseScreen.skin)).align(Align.right).pad(5f)
-        heroStatsTable.row()
-
-        heroStatsTable.add(Label("Morale:", BaseScreen.skin)).align(Align.left).pad(5f)
-        heroStatsTable.add(Label(viewingHero.morale.toString(), BaseScreen.skin)).align(Align.right).pad(5f)
-        heroStatsTable.row()
-
-        heroStatsTable.add(Label("Luck:", BaseScreen.skin)).align(Align.left).pad(5f)
-        heroStatsTable.add(Label(viewingHero.luck.toString(), BaseScreen.skin)).align(Align.right).pad(5f)
-        heroStatsTable.row()
-
+        heading("Hero Skills")
+        stat("Attack Skill:", viewingHero.heroAttackSkill.toString())
+        stat("Defense Skill:", viewingHero.heroDefenseSkill.toString())
+        stat("Morale:", viewingHero.morale.toString())
+        stat("Luck:", viewingHero.luck.toString())
         if (supplyMechanic.isEnabled) {
-            // Заголовок
-            heroStatsTable.add(Label("Food supply", BaseScreen.skin))
-                .colspan(2).align(Align.center).padBottom(10f)
-            heroStatsTable.row()
-
-            // Show food consumption parameters
+            heading("Food supply")
             val currentFood = viewingHero.hero.currentFood
             val maxFood = viewingHero.basicFoodCapacity
-            // Always show food consumption as if outside city - more useful for planning
+            // Plan consumption outside a city, as in the original overview.
             val foodMaintenance = viewingHero.army.calculateFoodMaintenance(false)
-
-            val supplyString =
-                    "Now ${currentFood.toInt()}${Fonts.food} of max ${maxFood.toInt()}${Fonts.food}. Per turn when outside city: %.1f${Fonts.food}.".format(
-                        foodMaintenance
-                    )
-
-            heroStatsTable.add(Label(supplyString, BaseScreen.skin)).align(Align.left).pad(5f)
-            heroStatsTable.row()
-
-            // Calculate and display food duration
-            val foodDuration = if (foodMaintenance > 0) {
-                (currentFood / foodMaintenance).toInt()
-            } else {
-                Int.MAX_VALUE // Infinite if no consumption
-            }
-
-            val durationString = if (foodDuration == Int.MAX_VALUE) {
-                "Food will last indefinitely."
-            } else {
-                "Food will last for $foodDuration${Fonts.turn}."
-            }
-
-            heroStatsTable.add(Label(durationString, BaseScreen.skin)).align(Align.left).pad(5f)
-            heroStatsTable.row()
-
+            paragraph(
+                "Now ${currentFood.toInt()}${Fonts.food} of max ${maxFood.toInt()}${Fonts.food}. Per turn when outside city: %.1f${Fonts.food}."
+                    .format(foodMaintenance)
+            )
+            val foodDuration = if (foodMaintenance > 0) (currentFood / foodMaintenance).toInt()
+                else Int.MAX_VALUE
+            paragraph(if (foodDuration == Int.MAX_VALUE) "Food will last indefinitely."
+                else "Food will last for $foodDuration${Fonts.turn}.")
         }
-
-        // Settlement information
-        heroStatsTable.add(Label("City Settlement", BaseScreen.skin))
-            .colspan(2).align(Align.center).padBottom(10f).padTop(10f)
-        heroStatsTable.row()
-
-        // Calculate city population from army
-        val cityPopulation = viewingHero.calculateArmyPopulation() + 1  // Add 1 to match actual founded city size
-
-        // Create a table for the settlement size display using font icon for population
-        val settlementTable = Table().apply {
-            add(Label("Can settle city with $cityPopulation${Fonts.population}", BaseScreen.skin))
-        }
-
-        heroStatsTable.add(settlementTable)
-            .colspan(2).align(Align.center).pad(5f)
-        heroStatsTable.row()
-
-
-        // The table will be positioned by the parent container in heroOverviewContent
+        heading("City Settlement")
+        val cityPopulation = viewingHero.calculateArmyPopulation() + 1
+        paragraph("Can settle city with $cityPopulation${Fonts.population}")
     }
 
     private fun updateHeroStatsTable() {
-        // Очищаем таблицу и создаём её заново
         heroStatsTable.clear()
         setupHeroStatsTable()
     }
 
-
-    /**
-     * Настраиваем отображение армии героя
-     */
     private fun setupHeroArmyView() {
-        // Позиционируем ArmyView в центре экрана или в нужном месте
-        heroArmyView.bottom().pad(10f) // Отступы и выравнивание
-        stage.addActor(heroArmyView) // Добавляем в сцену
-
-        // Обновляем данные вида
+        heroArmyView.bottom().pad(10f)
         updateHeroArmyView()
     }
 
-    /**
-     * Обновляет вид ArmyView, если данные изменились
-     */
     private fun updateHeroArmyView() {
         updateHeroStatsTable()
-        heroArmyView.updateView() // Обновляем вид
-        heroArmyView.isVisible = true // Отображаем
+        heroArmyView.updateView()
+        heroArmyView.isVisible = true
     }
-
 
     override fun resume() {
         game.replaceCurrentScreen(recreate())
     }
 
-    override fun recreate(): BaseScreen {
-        return HeroOverviewScreen(viewingHero, game.settings.lastOverviewPage)
-    }
+    override fun recreate(): BaseScreen =
+        HeroOverviewScreen(viewingHero, game.settings.lastOverviewPage)
 
     fun resizePage(tab: EmpireOverviewTab) {
     }

@@ -45,50 +45,49 @@ class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
 
     fun update() {
         clear()
-
-        if (cityScreen.visitingHero == null) return
-
-        val hero = cityScreen.visitingHero
-
-        // Display basic hero food information
-        val heroFoodConsumption = "City has ${city.population.foodStored}${Fonts.food}, hero consumes ${ceil(hero.army.calculateFoodMaintenance(isInCity = false)).toInt()}${Fonts.food}."
-        foodToVisitingHeroLabel = add(heroFoodConsumption.toLabel()).actor as Label
-        row()
-
-        val heroCurrentFood = "Hero has ${hero.hero.currentFood.toInt()}${Fonts.food}, hero max ${hero.basicFoodCapacity.toInt()}${Fonts.food}."
-        foodOfVisitingHeroLabel = add(heroCurrentFood.toLabel()).actor as Label
-        row()
-
-        // Calculate and display food duration for hero
-        val heroFoodMaintenance = hero.army.calculateFoodMaintenance(isInCity = false)
-        val heroCurrentFoodValue = hero.hero.currentFood
-        val foodDuration = if (heroFoodMaintenance > 0) {
-            (heroCurrentFoodValue / heroFoodMaintenance).toInt()
-        } else {
-            Int.MAX_VALUE // Infinite if no consumption
+        val hero = cityScreen.visitingHero ?: return
+        val royal = cityScreen.game.settings.skin == "Minimal"
+        val contentWidth = ((cityScreen.stage.width / 3f).coerceAtLeast(300f)
+            .coerceAtMost(cityScreen.stage.width - 24f) - 36f).coerceAtLeast(1f)
+        if (royal) {
+            background = BaseScreen.skinStrings.getUiBackground(
+                "CityScreen/CityStatsTable/InnerTable", tintColor = Color.valueOf("EADFBD")
+            )
+            pad(8f)
         }
-
-        val durationString = if (foodDuration == Int.MAX_VALUE) {
-            "Hero food will last indefinitely."
-        } else {
-            "Hero food will last for $foodDuration${Fonts.turn}."
+        fun addInfo(text: String): Label {
+            val label = supplyLabel(text)
+            val cell = add(label)
+            if (royal) {
+                label.setWrap(true)
+                cell.width(contentWidth)
+            }
+            cell.row()
+            return label
         }
-
-        foodDurationLabel = add(durationString.toLabel()).actor as Label
-        row()
-
-        val moraleText = "Hero has morale ${hero.morale}."
-        add(moraleText.toLabel()).row()
-
-        // Calculate food capacities and current amounts
+        foodToVisitingHeroLabel = addInfo(
+            "City has ${city.population.foodStored}${Fonts.food}, hero consumes ${
+                ceil(
+                    hero.army.calculateFoodMaintenance(
+                        isInCity = false
+                    )
+                ).toInt()
+            }${Fonts.food}."
+        )
+        foodOfVisitingHeroLabel = addInfo(
+            "Hero has ${hero.hero.currentFood.toInt()}${Fonts.food}, hero max ${hero.basicFoodCapacity.toInt()}${Fonts.food}."
+        )
+        val maintenance = hero.army.calculateFoodMaintenance(isInCity = false)
+        val duration =
+                if (maintenance > 0) (hero.hero.currentFood / maintenance).toInt() else Int.MAX_VALUE
+        foodDurationLabel = addInfo(
+            if (duration == Int.MAX_VALUE) "Hero food will last indefinitely."
+            else "Hero food will last for $duration${Fonts.turn}."
+        )
+        addInfo("Hero has morale ${hero.morale}.")
         calculateFoodValues()
-
-        // Create food exchange slider interface
         createFoodExchangeInterface()
-
-        // Create Auto-Supply Hero toggle
         createAutoSupplyToggle()
-
         pack()
     }
 
@@ -135,48 +134,72 @@ class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
     }
 
     private fun createFoodExchangeInterface() {
-        leftCountLabel = Label("City: " + currFoodCity.toInt().toString(), BaseScreen.skin)
-        rightCountLabel = Label(currFoodHero.toInt().toString() + " :Hero", BaseScreen.skin)
-
+        val royal = cityScreen.game.settings.skin == "Minimal"
+        leftCountLabel = if (royal) supplyLabel("City: ${currFoodCity.toInt()}")
+        else Label("City: ${currFoodCity.toInt()}", BaseScreen.skin)
+        rightCountLabel = if (royal) supplyLabel("${currFoodHero.toInt()} :Hero")
+        else Label("${currFoodHero.toInt()} :Hero", BaseScreen.skin)
         foodSlider = Slider(0f, foodRange, 1f, false, BaseScreen.skin)
-        foodSlider.value = minHero // Initial position
-
+        foodSlider.value = minHero
         foodSlider.addListener { _ ->
             updateFoodDistribution()
             false
         }
-
-        // Manual "Max" Supply Hero button
         val manualSupplyButton = "Max".toTextButton()
-        manualSupplyButton.onClick {
-            supplyHeroMaximum()
-        }
-
+        manualSupplyButton.onClick { supplyHeroMaximum() }
         val foodExchangeTable = Table()
         foodExchangeTable.defaults().pad(5f)
-        foodExchangeTable.add(leftCountLabel).padRight(10f)
-        foodExchangeTable.add(foodSlider).growX().pad(5f)
-        foodExchangeTable.add(rightCountLabel).padLeft(10f)
-        foodExchangeTable.add(manualSupplyButton).padLeft(10f)
+        if (royal) {
+            val width = ((cityScreen.stage.width / 3f).coerceAtLeast(300f)
+                .coerceAtMost(cityScreen.stage.width - 24f) - 36f).coerceAtLeast(1f)
+            leftCountLabel.setWrap(true)
+            rightCountLabel.setWrap(true)
+            val countWidth = ((width - 20f) / 2f).coerceAtLeast(1f)
+            foodExchangeTable.add(leftCountLabel).width(countWidth).fillX()
+            foodExchangeTable.add(rightCountLabel).width(countWidth).fillX().row()
+            foodExchangeTable.add(foodSlider).colspan(2).width((width - 10f).coerceAtLeast(1f))
+                .fillX().row()
+            manualSupplyButton.label.setWrap(true)
+            foodExchangeTable.add(manualSupplyButton).colspan(2)
+                .width((width - 10f).coerceAtLeast(1f)).minHeight(48f).fillX()
+        } else {
+            foodExchangeTable.add(leftCountLabel).padRight(10f)
+            foodExchangeTable.add(foodSlider).growX().pad(5f)
+            foodExchangeTable.add(rightCountLabel).padLeft(10f)
+            foodExchangeTable.add(manualSupplyButton).padLeft(10f)
+        }
         add(foodExchangeTable).growX().colspan(2).row()
     }
 
     private fun createAutoSupplyToggle() {
-        val autoSupplyToggleText = if (city.autoFeedHero) "Auto-Supply: ON" else "Auto-Supply: OFF"
-        val autoSupplyToggleColor = if (city.autoFeedHero) Color.GREEN else Color.GRAY
-        val autoSupplyToggle = autoSupplyToggleText.toTextButton()
-        autoSupplyToggle.color = autoSupplyToggleColor
+        val royal = cityScreen.game.settings.skin == "Minimal"
+        val autoSupplyToggle = "".toTextButton()
+        fun refresh() {
+            autoSupplyToggle.setText(if (city.autoFeedHero) "Auto-Supply: ON" else "Auto-Supply: OFF")
+            if (royal) {
+                autoSupplyToggle.style = BaseScreen.skin.get(
+                    if (city.autoFeedHero) "positive" else "default",
+                    TextButton.TextButtonStyle::class.java
+                )
+                autoSupplyToggle.color = Color.WHITE
+            } else {
+                autoSupplyToggle.color = if (city.autoFeedHero) Color.GREEN else Color.GRAY
+            }
+        }
+        refresh()
         autoSupplyToggle.onClick {
             city.autoFeedHero = !city.autoFeedHero
-            val newText = if (city.autoFeedHero) "Auto-Supply: ON" else "Auto-Supply: OFF"
-            val newColor = if (city.autoFeedHero) Color.GREEN else Color.GRAY
-            autoSupplyToggle.setText(newText)
-            autoSupplyToggle.color = newColor
+            refresh()
         }
-
         val autoSupplyTable = Table()
         autoSupplyTable.defaults().pad(5f)
-        autoSupplyTable.add(autoSupplyToggle)
+        val cell = autoSupplyTable.add(autoSupplyToggle)
+        if (royal) {
+            val width = ((cityScreen.stage.width / 3f).coerceAtLeast(300f)
+                .coerceAtMost(cityScreen.stage.width - 24f) - 46f).coerceAtLeast(1f)
+            autoSupplyToggle.label.setWrap(true)
+            cell.width(width).minHeight(48f).fillX()
+        }
         add(autoSupplyTable).growX().colspan(2).row()
     }
 
@@ -253,7 +276,7 @@ class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
     }
 
     fun asExpander(onChange: (() -> Unit)?): ExpanderTab {
-        return ExpanderTab(
+        val expander = ExpanderTab(
             title = "{Hero Supply}",
             fontSize = Constants.defaultFontSize,
             persistenceID = "CityStatsTable.HeroSupply",
@@ -263,5 +286,19 @@ class HeroSupplyTable(val cityScreen: CityScreen) : Table(BaseScreen.skin) {
             it.add(this)
             update()
         }
+        if (cityScreen.game.settings.skin == "Minimal") {
+            expander.setHeaderAppearance(
+                BaseScreen.skinStrings.getUiBackground(
+                    "General/ExpanderTab",
+                    tintColor = Color.valueOf("D7C89F")
+                ),
+                Color.valueOf("453925"),
+                prefWidth + 20f
+            )
+        }
+        return expander
     }
+    private fun supplyLabel(text: String): Label = text.toLabel(
+        fontColor = if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("453925") else Color.WHITE
+    )
 }

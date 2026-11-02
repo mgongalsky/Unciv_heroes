@@ -36,25 +36,45 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
     private var onlyWithStat: Stat? = null
     private var isDetailed: Boolean = false
 
-    private val colorTotal: Color = Color.BLUE.brighten(0.5f)
-    private val colorSelector: Color = Color.GREEN.darken(0.5f)
+    private val colorTotal: Color = if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("D7C89F") else Color.BLUE.brighten(0.5f)
+    private val colorSelector: Color = if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("C6C394") else Color.GREEN.darken(0.5f)
 
     init {
-
+        val royal = cityScreen.game.settings.skin == "Minimal"
+        if (royal) {
+            innerTable.background = com.unciv.ui.utils.RoyalPanelDrawable(BaseScreen.skin)
+            innerTable.pad(52f).padTop(58f)
+        }
         val scrollPane = AutoScrollPane(totalTable)
+        scrollPane.name = "detailedStatsScroll"
         scrollPane.setOverscroll(false, false)
         val scrollPaneCell = add(scrollPane)
-        scrollPaneCell.maxHeight(cityScreen.stage.height *3 / 4)
-
         row()
-        addCloseButton("Cancel", KeyCharAndCode('n'), BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)).apply {
-            actor.label.setFontScale(0.5f, 0.5f)
-            actor.label.setAlignment(Align.center)
-            actor.pad(10f)
+        val closeCell = addCloseButton(
+            "Cancel", KeyCharAndCode('n'),
+            if (royal) null else BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)
+        )
+        closeCell.actor.name = "detailedStatsClose"
+        closeCell.actor.label.setAlignment(Align.center)
+        closeCell.actor.pad(10f)
+        if (royal) {
+            closeCell.actor.label.setWrap(true)
+            val contentWidth = (stageToShowOn.width - 24f - innerTable.padLeft -
+                innerTable.padRight - scrollPaneCell.padLeft - scrollPaneCell.padRight).coerceAtLeast(1f)
+            closeCell.width(minOf(240f, contentWidth)).minHeight(48f)
+            closeCell.actor.width = minOf(240f, contentWidth)
+            closeCell.actor.validate()
+            val closeHeight = maxOf(48f, closeCell.actor.prefHeight)
+            val contentHeight = (stageToShowOn.height - 24f - innerTable.padTop -
+                innerTable.padBottom - scrollPaneCell.padTop - scrollPaneCell.padBottom -
+                closeCell.padTop - closeCell.padBottom - closeHeight).coerceAtLeast(1f)
+            scrollPaneCell.width(contentWidth).height(contentHeight)
+        } else {
+            scrollPaneCell.maxHeight(cityScreen.stage.height * 3 / 4)
+            closeCell.actor.label.setFontScale(0.5f, 0.5f)
         }
         update()
     }
-
     private fun update() {
 
         totalTable.clear()
@@ -75,7 +95,7 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
             update() }).minWidth(150f).grow()
 
         for (stat in stats) {
-            val label = stat.name.toLabel()
+            val label = stat.name.toStatsLabel()
             label.onClick {
                 onlyWithStat = if (onlyWithStat == null) stat else null
                 update()
@@ -85,25 +105,25 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
         }
         totalTable.row()
 
-        totalTable.addSeparator().padBottom(2f)
-        totalTable.add("Base values".toLabel().apply { setAlignment(Align.center) })
+        totalTable.addSeparator(color = if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("A18B5A") else Color.WHITE).padBottom(2f)
+        totalTable.add("Base values".toStatsLabel().apply { setAlignment(Align.center) })
             .colspan(totalTable.columns).padLeft(0f).padRight(0f).growX().row()
-        totalTable.addSeparator().padTop(2f)
+        totalTable.addSeparator(color = if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("A18B5A") else Color.WHITE).padTop(2f)
         traverseTree(totalTable, stats, cityStats.baseStatTree, mergeHappiness = true, percentage = false)
 
-        totalTable.addSeparator().padBottom(2f)
-        totalTable.add("Bonuses".toLabel().apply { setAlignment(Align.center) })
+        totalTable.addSeparator(color = if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("A18B5A") else Color.WHITE).padBottom(2f)
+        totalTable.add("Bonuses".toStatsLabel().apply { setAlignment(Align.center) })
             .colspan(totalTable.columns).padLeft(0f).padRight(0f).growX().row()
-        totalTable.addSeparator().padTop(2f)
+        totalTable.addSeparator(color = if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("A18B5A") else Color.WHITE).padTop(2f)
         traverseTree(totalTable, stats, cityStats.statPercentBonusTree, percentage = true)
 
-        totalTable.addSeparator().padBottom(2f)
-        totalTable.add("Final".toLabel().apply { setAlignment(Align.center) })
+        totalTable.addSeparator(color = if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("A18B5A") else Color.WHITE).padBottom(2f)
+        totalTable.add("Final".toStatsLabel().apply { setAlignment(Align.center) })
             .colspan(totalTable.columns).padLeft(0f).padRight(0f).growX().row()
-        totalTable.addSeparator().padTop(2f)
+        totalTable.addSeparator(color = if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("A18B5A") else Color.WHITE).padTop(2f)
 
         val final = LinkedHashMap<Stat, Float>()
-        val map = cityStats.finalStatList.toSortedMap()
+        val map = cityStats.finalStatList.mapValues { it.value.clone() }.toSortedMap()
 
         for ((key, value) in cityScreen.city.cityStats.happinessList) {
             if (!map.containsKey(key)) {
@@ -122,7 +142,7 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
             if (onlyWithStat != null && finalStats[onlyWithStat!!] == 0f)
                 continue
 
-            val label = source.toLabel().apply {
+            val label = source.toStatsLabel().apply {
                 setAlignment(Align.left)
                 onClick {
                     sourceHighlighted = if (sourceHighlighted == source) null else source
@@ -140,7 +160,7 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
             for (stat in stats) {
                 val value = finalStats[stat]
                 val cell = when (value) {
-                    0f -> "-".toLabel()
+                    0f -> "-".toStatsLabel()
                     else -> value.toOneDecimalLabel()
                 }
 
@@ -156,7 +176,7 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
             totalTable.row()
         }
 
-        totalTable.add(wrapInTable("Total".toLabel(), colorTotal)).grow()
+        totalTable.add(wrapInTable("Total".toStatsLabel(), colorTotal)).grow()
         for (stat in stats) {
             totalTable.add(wrapInTable(final[stat]?.toOneDecimalLabel(), colorTotal)).grow()
         }
@@ -164,10 +184,10 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
     }
 
     private fun getToggleButton(showDetails: Boolean): IconCircleGroup {
-        val label = (if (showDetails) "-" else "+").toLabel()
+        val label = (if (showDetails) "-" else "+").toStatsLabel()
         label.setAlignment(Align.center)
         return label
-            .surroundWithCircle(25f, color = BaseScreen.skinStrings.skinConfig.baseColor)
+            .surroundWithCircle(25f, color = if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("D7C89F") else BaseScreen.skinStrings.skinConfig.baseColor)
             .surroundWithCircle(27f, false)
     }
 
@@ -181,7 +201,7 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
     ) {
 
         val total = LinkedHashMap<Stat, Float>()
-        val map = statTreeNode.children.toSortedMap()
+        val map = (if (mergeHappiness) statTreeNode.children.mapValues { it.value.clone() } else statTreeNode.children).toSortedMap()
 
         if (mergeHappiness) {
             for ((key, value) in cityScreen.city.cityStats.happinessList) {
@@ -208,7 +228,7 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
                 continue
             }
 
-            val label = text.toLabel().apply {
+            val label = text.toStatsLabel().apply {
                 setAlignment(Align.left)
                 onClick {
                     sourceHighlighted = if (sourceHighlighted == text) null else text
@@ -226,7 +246,7 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
             for (stat in stats) {
                 val value = child.totalStats[stat]
                 val cell = when {
-                    value == 0f -> "-".toLabel()
+                    value == 0f -> "-".toStatsLabel()
                     percentage ->  value.toPercentLabel()
                     else -> value.toOneDecimalLabel()
                 }
@@ -248,7 +268,7 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
         }
 
         if (indentation == 0) {
-            table.add(wrapInTable("Total".toLabel(), colorTotal)).grow()
+            table.add(wrapInTable("Total".toStatsLabel(), colorTotal)).grow()
             for (stat in stats) {
                 if (percentage)
                     table.add(wrapInTable(total[stat]?.toPercentLabel(), colorTotal)).grow()
@@ -263,12 +283,16 @@ class DetailedStatsPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Pop
     private fun wrapInTable(label: Label?, color: Color? = null, align: Int = Align.center) : Table {
         val tbl = Table()
         label?.setAlignment(align)
+        if (cityScreen.game.settings.skin == "Minimal") label?.color = Color.valueOf("453925")
         if (color != null)
             tbl.background = BaseScreen.skinStrings.getUiBackground("General/Border", tintColor = color)
         tbl.add(label).growX()
         return tbl
     }
 
+    private fun String.toStatsLabel(): Label = toLabel(
+        fontColor = if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("453925") else Color.WHITE
+    )
     companion object {
         private fun Float.toPercentLabel() =
                 "${if (this>0f) "+" else ""}${DecimalFormat("0.#").format(this)}%".toLabel()

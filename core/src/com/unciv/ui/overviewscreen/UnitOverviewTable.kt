@@ -53,12 +53,46 @@ class UnitOverviewTab(
         persistableData.scrollY = pager.getPageScrollY(index)
     }
 
-    private val supplyTableWidth = (overviewScreen.stage.width * 0.25f).coerceAtLeast(240f)
+    private val supplyTableWidth = (overviewScreen.stage.width * 0.25f).coerceAtLeast(240f).let {
+        if (overviewScreen.game.settings.skin == "Minimal")
+            it.coerceAtMost((overviewScreen.stage.width - 40f).coerceAtLeast(100f))
+        else it
+    }
     private val unitListTable = Table() // could be `this` instead, extra nesting helps readability a little
     private val unitHeaderTable = Table()
     private val fixedContent = Table()
 
-    override fun getFixedContent() = fixedContent
+    override fun getFixedContent(): Table {
+        if (overviewScreen.game.settings.skin == "Minimal") {
+            val paper = BaseScreen.skinStrings.getUiBackground(
+                "OverviewScreen/UnitOverviewTab/Panel", tintColor = Color.valueOf("EADFBD")
+            )
+            unitListTable.background = paper
+            unitHeaderTable.background = paper
+            val ink = Color.valueOf("453925")
+            val cityColor = Color.valueOf("285C32")
+            val legacyCityColor = Color.FOREST.brighten(0.5f)
+            for (label in unitHeaderTable.children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>())
+                label.color = ink
+            for (cell in unitListTable.cells) {
+                val label = cell.actor as? com.badlogic.gdx.scenes.scene2d.ui.Label ?: continue
+                val inCity = cell.column == 6 &&
+                        (label.style.fontColor == legacyCityColor || label.color == legacyCityColor || label.color == cityColor)
+                // toLabel задаёт цвет в стиле; локальная копия предотвращает двойное тонирование и изменение общего стиля.
+                label.style =
+                        com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle(label.style).apply {
+                            fontColor = Color.WHITE
+                        }
+                label.color = if (inCity) cityColor else ink
+                if (cell.column == 2 || cell.column == 6) {
+                    label.setWrap(true)
+                    cell.width(180f)
+                }
+            }
+            equalizeColumns(unitListTable, unitHeaderTable)
+        }
+        return fixedContent
+    }
 
     init {
         fixedContent.add(getUnitSupplyTable()).align(Align.top).padBottom(10f).row()
@@ -87,6 +121,7 @@ class UnitOverviewTab(
     private fun showWorldScreenAt(tile: TileInfo) = showWorldScreenAt(tile.position, null)
 
     private fun getUnitSupplyTable(): ExpanderTab {
+        val royal = overviewScreen.game.settings.skin == "Minimal"
         val stats = viewingPlayer.stats()
         val deficit = stats.getUnitSupplyDeficit()
         val icon = if (deficit <= 0) null else Group().apply {
@@ -106,31 +141,62 @@ class UnitOverviewTab(
             startsOutOpened = deficit > 0,
             defaultPad = 0f,
             expanderWidth = supplyTableWidth,
-            onChange = {
-                overviewScreen.resizePage(this)
-            }
-        ) {
-            it.defaults().pad(5f).fill(false)
-            it.background = BaseScreen.skinStrings.getUiBackground(
+            onChange = { overviewScreen.resizePage(this) }
+        ) { content ->
+            content.defaults().pad(5f).fill(false)
+            content.background = BaseScreen.skinStrings.getUiBackground(
                 "OverviewScreen/UnitOverviewTab/UnitSupplyTable",
-                tintColor = BaseScreen.skinStrings.skinConfig.baseColor.darken(0.6f)
+                tintColor = if (royal) Color.valueOf("EADFBD") else BaseScreen.skinStrings.skinConfig.baseColor.darken(
+                    0.6f
+                )
             )
-            it.addLabeledValue("Base Supply", stats.getBaseUnitSupply())
-            it.addLabeledValue("Cities", stats.getUnitSupplyFromCities())
-            it.addLabeledValue("Population", stats.getUnitSupplyFromPop())
-            it.addSeparator()
-            it.addLabeledValue("Total Supply", stats.getUnitSupply())
-            it.addLabeledValue("In Use", viewingPlayer.getCivUnitsSize())
-            it.addSeparator()
-            it.addLabeledValue("Supply Deficit", deficit)
-            it.addLabeledValue("Production Penalty", "${stats.getUnitSupplyProductionPenalty().toInt()}%")
-            if (deficit > 0) {
-                val penaltyLabel = "Increase your supply or reduce the amount of units to remove the production penalty"
-                    .toLabel(Color.FIREBRICK)
-                penaltyLabel.wrap = true
-                it.add(penaltyLabel).colspan(2).left()
-                    .width(supplyTableWidth).row()
+            content.addLabeledValue("Base Supply", stats.getBaseUnitSupply())
+            content.addLabeledValue("Cities", stats.getUnitSupplyFromCities())
+            content.addLabeledValue("Population", stats.getUnitSupplyFromPop())
+            content.addSeparator()
+            content.addLabeledValue("Total Supply", stats.getUnitSupply())
+            content.addLabeledValue("In Use", viewingPlayer.getCivUnitsSize())
+            content.addSeparator()
+            content.addLabeledValue("Supply Deficit", deficit)
+            content.addLabeledValue(
+                "Production Penalty",
+                "${stats.getUnitSupplyProductionPenalty().toInt()}%"
+            )
+            if (royal) {
+                for (cell in content.cells) {
+                    val label = cell.actor as? com.badlogic.gdx.scenes.scene2d.ui.Label ?: continue
+                    label.color = Color.valueOf("453925")
+                    if (cell.column == 0) {
+                        label.setWrap(true)
+                        cell.width(
+                            (supplyTableWidth - content.padLeft - content.padRight - 90f).coerceAtLeast(
+                                48f
+                            )
+                        )
+                    }
+                }
             }
+            if (deficit > 0) {
+                val penaltyLabel =
+                        "Increase your supply or reduce the amount of units to remove the production penalty"
+                            .toLabel(Color.FIREBRICK)
+                penaltyLabel.wrap = true
+                content.add(penaltyLabel).colspan(2).left()
+                    .width(
+                        if (royal) (supplyTableWidth - content.padLeft - content.padRight - 10f).coerceAtLeast(
+                            48f
+                        ) else supplyTableWidth
+                    )
+                    .row()
+            }
+        }.also { expander ->
+            if (royal) expander.setHeaderAppearance(
+                BaseScreen.skinStrings.getUiBackground(
+                    "OverviewScreen/UnitOverviewTab/UnitSupplyHeader",
+                    tintColor = Color.valueOf("D7C89F")
+                ),
+                Color.valueOf("453925"), supplyTableWidth
+            )
         }
     }
 

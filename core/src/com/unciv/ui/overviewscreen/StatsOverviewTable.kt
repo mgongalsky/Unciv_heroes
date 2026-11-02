@@ -18,6 +18,7 @@ class StatsOverviewTab(
     viewingPlayer: CivilizationInfo,
     overviewScreen: EmpireOverviewScreen
 ) : EmpireOverviewTab(viewingPlayer, overviewScreen) {
+    private val royal = overviewScreen.game.settings.skin == "Minimal"
     private val happinessTable = Table()
     private val goldAndSliderTable = Table()
     private val goldTable = Table()
@@ -92,18 +93,41 @@ class StatsOverviewTab(
 
     private fun Table.addHeading(label: String) {
         clear()
-        add(label.toLabel(fontSize = Constants.headingFontSize)).colspan(2).row()
-        addSeparator()
+        styleStatPanel()
+        val heading = label.toLabel(
+            fontSize = Constants.headingFontSize,
+            fontColor = if (royal) Color.valueOf("453925") else Color.WHITE
+        )
+        val cell = add(heading).colspan(2)
+        if (royal) {
+            heading.setWrap(true)
+            heading.setAlignment(com.badlogic.gdx.utils.Align.center)
+            cell.width(minOf(260f, overviewScreen.stage.width - 100f).coerceAtLeast(1f))
+        }
+        cell.row()
+        addSeparator(color = if (royal) Color.valueOf("A18B5A") else Color.WHITE)
     }
+
     private fun Table.addLabeledValue(label: String, value: Float) {
         val roundedValue = value.roundToInt()
         if (roundedValue == 0) return
-        add(label.toLabel()).left()
-        add(roundedValue.toLabel()).right().row()
+        val caption = label.toLabel(fontColor = if (royal) Color.valueOf("453925") else Color.WHITE)
+        val cell = add(caption).left()
+        if (royal) {
+            caption.setWrap(true)
+            cell.width(minOf(180f, overviewScreen.stage.width - 180f).coerceAtLeast(1f))
+        }
+        val number = roundedValue.toLabel()
+        if (royal) number.color = Color.valueOf(if (roundedValue < 0) "8C2923" else "453925")
+        add(number).right().row()
     }
+
     private fun Table.addTotal(value: Float) {
-        add("Total".toLabel()).left()
-        add(value.roundToInt().toLabel()).right()
+        add("Total".toLabel(fontColor = if (royal) Color.valueOf("453925") else Color.WHITE)).left()
+        val roundedValue = value.roundToInt()
+        val number = roundedValue.toLabel()
+        if (royal) number.color = Color.valueOf(if (roundedValue < 0) "8C2923" else "453925")
+        add(number).right()
         pack()
     }
 
@@ -126,16 +150,29 @@ class StatsOverviewTab(
     }
 
     private fun Table.addGoldSlider() {
-        addSeparator()
+        addSeparator(color = if (royal) Color.valueOf("A18B5A") else Color.WHITE)
         val sliderTable = Table()
-        sliderTable.add("Convert gold to science".toLabel()).row()
+        sliderTable.styleStatPanel()
+        val caption = "Convert gold to science".toLabel(
+            fontColor = if (royal) Color.valueOf("453925") else Color.WHITE
+        )
+        val captionCell = sliderTable.add(caption)
+        if (royal) {
+            caption.setWrap(true)
+            caption.setAlignment(com.badlogic.gdx.utils.Align.center)
+            captionCell.width(minOf(260f, overviewScreen.stage.width - 100f).coerceAtLeast(1f))
+        }
+        captionCell.row()
 
-        val slider = UncivSlider(0f, 1f, 0.1f,
+        val slider = UncivSlider(
+            0f, 1f, 0.1f,
             initial = viewingPlayer.tech.goldPercentConvertedToScience,
             getTipText = UncivSlider::formatPercent
         ) {
             viewingPlayer.tech.goldPercentConvertedToScience = it
-            for (city in viewingPlayer.cities) { city.cityStats.update() }
+            for (city in viewingPlayer.cities) {
+                city.cityStats.update()
+            }
             update()
         }
         slider.isDisabled = !UncivGame.Current.worldScreen!!.canChangeState
@@ -146,46 +183,86 @@ class StatsOverviewTab(
 
     private fun updateGreatPeopleTable() = greatPeopleTable.apply {
         clear()
+        styleStatPanel()
+        val ink = if (royal) Color.valueOf("453925") else Color.WHITE
         val greatPeopleHeader = Table()
         val greatPeopleIcon = ImageGetter.getStatIcon("Specialist")
         greatPeopleIcon.color = Color.ROYAL
-        greatPeopleHeader.add(greatPeopleIcon).padRight(1f).size(Constants.headingFontSize.toFloat())
-        greatPeopleHeader.add("Great person points".toLabel(fontSize = Constants.headingFontSize))
+        greatPeopleHeader.add(greatPeopleIcon).padRight(1f)
+            .size(Constants.headingFontSize.toFloat())
+        val heading =
+                "Great person points".toLabel(fontSize = Constants.headingFontSize, fontColor = ink)
+        val headingCell = greatPeopleHeader.add(heading)
+        if (royal) {
+            heading.setWrap(true)
+            headingCell.width(minOf(260f, overviewScreen.stage.width - 140f).coerceAtLeast(1f))
+        }
         add(greatPeopleHeader).colspan(3).row()
-        addSeparator()
+        addSeparator(color = if (royal) Color.valueOf("A18B5A") else Color.WHITE)
+
+        fun addText(
+            text: String,
+            width: Float
+        ): com.badlogic.gdx.scenes.scene2d.ui.Cell<com.badlogic.gdx.scenes.scene2d.ui.Label> {
+            val label = text.toLabel(fontColor = ink)
+            val cell = add(label)
+            if (royal) {
+                label.setWrap(true)
+                cell.width(width)
+            }
+            return cell
+        }
+
         add()
-        add("Current points".toLabel())
-        add("Points per turn".toLabel()).row()
+        addText("Current points", 100f)
+        addText("Points per turn", 100f).row()
 
         val greatPersonPoints = viewingPlayer.greatPeople.greatPersonPointsCounter
         val greatPersonPointsPerTurn = viewingPlayer.getGreatPersonPointsForNextTurn()
         val pointsToGreatPerson = viewingPlayer.greatPeople.pointsForNextGreatPerson
-        for ((greatPerson, points) in greatPersonPoints) {
-            add(greatPerson.toLabel()).left()
-            add("$points/$pointsToGreatPerson".toLabel())
-            add(greatPersonPointsPerTurn[greatPerson]!!.toLabel()).right().row()
+        for (greatPerson in greatPersonPoints.keys) {
+            val points = greatPersonPoints[greatPerson]
+            addText(greatPerson, 140f).left()
+            addText("$points/$pointsToGreatPerson", 100f)
+            addText(greatPersonPointsPerTurn[greatPerson]!!.toString(), 100f).right().row()
         }
 
         val pointsForGreatGeneral = viewingPlayer.greatPeople.greatGeneralPoints
         val pointsForNextGreatGeneral = viewingPlayer.greatPeople.pointsForNextGreatGeneral
-        add("Great General".toLabel()).left()
-        add("$pointsForGreatGeneral/$pointsForNextGreatGeneral".toLabel())
+        addText("Great General", 140f).left()
+        addText("$pointsForGreatGeneral/$pointsForNextGreatGeneral", 100f)
         pack()
     }
 
     private fun updateScoreTable() = scoreTable.apply {
         clear()
+        styleStatPanel()
         val scoreHeader = Table()
         val scoreIcon = ImageGetter.getImage("CityStateIcons/Cultured")
         scoreIcon.color = Color.FIREBRICK
         scoreHeader.add(scoreIcon).padRight(1f).size(Constants.headingFontSize.toFloat())
-        scoreHeader.add("Score".toLabel(fontSize = Constants.headingFontSize))
+        val heading = "Score".toLabel(
+            fontSize = Constants.headingFontSize,
+            fontColor = if (royal) Color.valueOf("453925") else Color.WHITE
+        )
+        val headingCell = scoreHeader.add(heading)
+        if (royal) {
+            heading.setWrap(true)
+            headingCell.width(minOf(220f, overviewScreen.stage.width - 140f).coerceAtLeast(1f))
+        }
         add(scoreHeader).colspan(2).row()
-        addSeparator()
+        addSeparator(color = if (royal) Color.valueOf("A18B5A") else Color.WHITE)
 
         val scoreBreakdown = viewingPlayer.calculateScoreBreakdown()
         for ((label, value) in scoreBreakdown)
             addLabeledValue(label, value.toFloat())
         addTotal(scoreBreakdown.values.sum().toFloat())
+    }
+    private fun Table.styleStatPanel() {
+        if (!royal) return
+        background = com.unciv.ui.utils.BaseScreen.skinStrings.getUiBackground(
+            "EmpireOverview/Stats/Panel", tintColor = Color.valueOf("EADFBD")
+        )
+        pad(8f)
     }
 }

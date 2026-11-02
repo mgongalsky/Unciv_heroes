@@ -16,76 +16,78 @@ class CitizenManagementTable(val cityScreen: CityScreen) : Table(BaseScreen.skin
 
     fun update() {
         clear()
+        val royal = cityScreen.game.settings.skin == "Minimal"
+        val colorSelected = if (royal) Color.valueOf("C6C394")
+        else BaseScreen.skin.get("selection", Color::class.java)
+        val colorButton = if (royal) Color.valueOf("EADFBD")
+        else BaseScreen.skin.get("color", Color::class.java)
+        val textColor = if (royal) Color.valueOf("453925") else Color.WHITE
+        val contentWidth = ((cityScreen.stage.width / 3f).coerceAtLeast(300f)
+            .coerceAtMost(cityScreen.stage.width - 24f) - 20f).coerceAtLeast(1f)
 
-        val colorSelected = BaseScreen.skin.get("selection", Color::class.java)
-        val colorButton = BaseScreen.skin.get("color", Color::class.java)
-        // effectively a button, but didn't want to rewrite TextButton style
-        // and much more compact and can control backgrounds easily based on settings
-        val resetLabel = "Reset Citizens".toLabel()
-        val resetCell = Table()
-        resetCell.add(resetLabel).pad(5f)
-        if (cityScreen.canCityBeChanged()) {
-            resetCell.touchable = Touchable.enabled
-            resetCell.onClick {
-                city.reassignPopulation(true)
-                cityScreen.update()
+        fun control(
+            text: String,
+            path: String,
+            selected: Boolean,
+            fullRow: Boolean,
+            action: () -> Unit
+        ): Table {
+            val label = text.toLabel(fontColor = textColor)
+            val button = Table()
+            val labelCell = button.add(label).pad(5f)
+            if (royal) {
+                label.setWrap(true)
+                label.setAlignment(com.badlogic.gdx.utils.Align.center)
+                val width = if (fullRow) contentWidth - 6f else (contentWidth - 12f) / 2f
+                labelCell.width((width - 10f).coerceAtLeast(1f)).minHeight(38f)
             }
+            if (cityScreen.canCityBeChanged()) {
+                button.touchable = Touchable.enabled
+                button.onClick { action() }
+            }
+            button.background = BaseScreen.skinStrings.getUiBackground(
+                path, tintColor = if (selected) colorSelected else colorButton
+            )
+            return button
         }
-        resetCell.background = BaseScreen.skinStrings.getUiBackground(
-            "CityScreen/CitizenManagementTable/ResetCell",
-            tintColor = colorButton
-        )
-        add(resetCell).colspan(2).growX().pad(3f)
-        row()
 
-        val avoidLabel = "Avoid Growth".toLabel()
-        val avoidCell = Table()
-        avoidCell.add(avoidLabel).pad(5f)
-        if (cityScreen.canCityBeChanged()) {
-            avoidCell.touchable = Touchable.enabled
-            avoidCell.onClick {
+        add(control("Reset Citizens", "CityScreen/CitizenManagementTable/ResetCell", false, true) {
+            city.reassignPopulation(true)
+            cityScreen.update()
+        }).colspan(2).growX().pad(3f).row()
+        add(
+            control(
+                "Avoid Growth",
+                "CityScreen/CitizenManagementTable/AvoidCell",
+                city.avoidGrowth,
+                true
+            ) {
                 city.avoidGrowth = !city.avoidGrowth
                 city.reassignPopulation()
                 cityScreen.update()
-            }
-        }
-        avoidCell.background = BaseScreen.skinStrings.getUiBackground(
-            "CityScreen/CitizenManagementTable/AvoidCell",
-            tintColor = if (city.avoidGrowth) colorSelected else colorButton
-        )
-        add(avoidCell).colspan(2).growX().pad(3f)
-        row()
+            }).colspan(2).growX().pad(3f).row()
 
         var newRow = false
         for (focus in CityFocus.values()) {
             if (!focus.tableEnabled) continue
             if (focus == CityFocus.FaithFocus && !city.civInfo.gameInfo.isReligionEnabled()) continue
-            val label = focus.label.toLabel()
-            val cell = Table()
-            cell.add(label).pad(5f)
-            if (cityScreen.canCityBeChanged()) {
-                cell.touchable = Touchable.enabled
-                cell.onClick {
+            add(
+                control(
+                    focus.label, "CityScreen/CitizenManagementTable/FocusCell",
+                    city.cityAIFocus == focus, false
+                ) {
                     city.cityAIFocus = focus
                     city.reassignPopulation()
                     cityScreen.update()
-                }
-            }
-            cell.background = BaseScreen.skinStrings.getUiBackground(
-                "CityScreen/CitizenManagementTable/FocusCell",
-                tintColor = if (city.cityAIFocus == focus) colorSelected else colorButton
-            )
-            add(cell).growX().pad(3f)
-            if (newRow)  // every 2 make new row
-                row()
+                }).growX().pad(3f)
+            if (newRow) row()
             newRow = !newRow
         }
-
         pack()
     }
 
     fun asExpander(onChange: (() -> Unit)?): ExpanderTab {
-        return ExpanderTab(
+        val expander = ExpanderTab(
             title = "{Citizen Management}",
             fontSize = Constants.defaultFontSize,
             persistenceID = "CityStatsTable.CitizenManagement",
@@ -95,6 +97,20 @@ class CitizenManagementTable(val cityScreen: CityScreen) : Table(BaseScreen.skin
             it.add(this)
             update()
         }
+        if (cityScreen.game.settings.skin == "Minimal") {
+            expander.innerTable.background = BaseScreen.skinStrings.getUiBackground(
+                "CityScreen/CityStatsTable/InnerTable", tintColor = Color.valueOf("EADFBD")
+            )
+            expander.setHeaderAppearance(
+                BaseScreen.skinStrings.getUiBackground(
+                    "General/ExpanderTab",
+                    tintColor = Color.valueOf("D7C89F")
+                ),
+                Color.valueOf("453925"),
+                prefWidth + 20f
+            )
+        }
+        return expander
     }
 
 }

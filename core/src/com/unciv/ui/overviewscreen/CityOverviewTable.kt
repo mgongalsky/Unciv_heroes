@@ -31,6 +31,8 @@ class CityOverviewTab(
     overviewScreen: EmpireOverviewScreen,
     persistedData: EmpireOverviewTabPersistableData? = null
 ) : EmpireOverviewTab(viewingPlayer, overviewScreen) {
+    private val royal = overviewScreen.game.settings.skin == "Minimal"
+
     class CityTabPersistableData(
         var sortedBy: String = CITY,
         var descending: Boolean = false
@@ -77,16 +79,24 @@ class CityOverviewTab(
     private val columnsNames = arrayListOf("Population", "Food", "Gold", "Science", "Production", "Culture", "Happiness")
             .apply { if (gameInfo.isReligionEnabled()) add("Faith") }
 
-    private val cityInfoTableHeader = Table(skin)
-    private val cityInfoTableDetails = Table(skin)
-    private val cityInfoTableTotal = Table(skin)
+    private val cityInfoTableHeader = Table(skin).apply { name = "overviewCitiesHeader" }
+    private val cityInfoTableDetails = Table(skin).apply { name = "overviewCitiesDetails" }
+    private val cityInfoTableTotal = Table(skin).apply { name = "overviewCitiesTotal" }
 
     private val collator = UncivGame.Current.settings.getCollatorFromLocale()
 
     override fun getFixedContent() = Table().apply {
-        add("Cities".toLabel(fontSize = Constants.headingFontSize)).padTop(10f).row()
+        if (royal) background = com.unciv.ui.utils.BaseScreen.skinStrings.getUiBackground(
+            "EmpireOverview/Cities/Header", tintColor = Color.valueOf("EADFBD")
+        )
+        add(
+            "Cities".toLabel(
+                fontSize = Constants.headingFontSize,
+                fontColor = if (royal) Color.valueOf("453925") else Color.WHITE
+            )
+        ).padTop(10f).row()
         add(cityInfoTableHeader).padBottom(paddingVert).row()
-        addSeparator(Color.GRAY)
+        addSeparator(if (royal) Color.valueOf("A18B5A") else Color.GRAY)
     }
 
     init {
@@ -132,6 +142,7 @@ class CityOverviewTab(
     private fun update() {
         updateHeader()
         updateCities()
+        applyRoyalAppearance()
         equalizeColumns(cityInfoTableDetails, cityInfoTableHeader, cityInfoTableTotal)
         layout()
     }
@@ -246,5 +257,25 @@ class CityOverviewTab(
         }
         cityInfoTableTotal.add(viewingPlayer.cities.count { it.isWeLoveTheKingDayActive() }.toCenteredLabel())
         cityInfoTableTotal.pack()
+    }
+    private fun applyRoyalAppearance() {
+        if (!royal) return
+        val paper = com.unciv.ui.utils.BaseScreen.skinStrings.getUiBackground(
+            "EmpireOverview/Cities/Panel", tintColor = Color.valueOf("EADFBD")
+        )
+        background = paper
+        cityInfoTableHeader.background = paper
+        cityInfoTableDetails.background = paper
+        cityInfoTableTotal.background = paper
+        // Только прямые подписи таблиц: стиль текста кнопок города остаётся собственным.
+        for (table in listOf(cityInfoTableDetails, cityInfoTableTotal)) {
+            for (label in table.children.filterIsInstance<Label>()) {
+                val negative = label.text.toString().toIntOrNull()?.let { it < 0 } == true
+                label.color = Color.valueOf(if (negative) "8C2923" else "453925")
+            }
+        }
+        for (group in cityInfoTableHeader.children.filterIsInstance<Group>())
+            for (label in group.children.filterIsInstance<Label>())
+                label.color = Color.valueOf("453925")
     }
 }

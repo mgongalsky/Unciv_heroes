@@ -1,0 +1,130 @@
+{
+  "coordinate_note": "CSS pixels in reference before conversion to game units. Overall user text-scale is 1.25; numeric geometry stays unscaled unless the source says otherwise.",
+  "frame_selection": {
+    "grand": {
+      "min_width": 600,
+      "min_height": 240
+    },
+    "compact": {
+      "min_width": 200,
+      "min_height": 140
+    },
+    "minimal": "otherwise"
+  },
+  "frames": {
+    "grand": {
+      "image": "assets/ui/frames/grand/border.png",
+      "source_slices_percent": {
+        "top": 29,
+        "right": 29,
+        "bottom": 29,
+        "left": 29
+      },
+      "anchors": {
+        "top": 0.2294,
+        "right": 0.20742,
+        "bottom": 0.26923,
+        "left": 0.21016
+      },
+      "render_widths": {
+        "world": 62,
+        "specimen": 32,
+        "decision": 65
+      }
+    },
+    "compact": {
+      "image": "assets/ui/frames/compact/border.png",
+      "source_slices_pixels": {
+        "top": 108,
+        "right": 108,
+        "bottom": 108,
+        "left": 108
+      },
+      "anchors": {
+        "top": 0.43519,
+        "right": 0.23611,
+        "bottom": 0.25463,
+        "left": 0.23148
+      },
+      "render_widths": {
+        "world": 35,
+        "specimen": 26,
+        "decision": 32
+      },
+      "crest_width_height_ratio": 1.1296296296
+    },
+    "minimal": {
+      "image": "assets/ui/frames/minimal/border.png",
+      "source_slices_percent": {
+        "top": 22,
+        "right": 22,
+        "bottom": 22,
+        "left": 22
+      },
+      "anchors": {
+        "top": 0.35965,
+        "right": 0.23864,
+        "bottom": 0.37719,
+        "left": 0.22727
+      },
+      "render_widths": {
+        "world": 12,
+        "specimen": 9,
+        "mini_tabs": 8,
+        "tooltip": 8
+      }
+    }
+  },
+  "rail_alignment": "Visible edge is at source_slice * anchor. Painted frame extends outwards from panel by render_width * anchor per side. Preserve corner regions; stretch only plain rails.",
+  "button": {
+    "image": "assets/ui/buttons/button.png",
+    "three_slice_source_percent": {
+      "left": 16,
+      "right": 16
+    },
+    "rendered_end_width": 25,
+    "min_height": 43,
+    "hover": "brightness 1.17; translateY -1px",
+    "pressed": "brightness .86; translateY 2px",
+    "disabled": "opacity .42; saturation .25",
+    "secondary": "saturation .45; brightness .8"
+  },
+  "navigation": {
+    "skin": "assets/ui/navigation/ribbon.png",
+    "common_rails": "assets/ui/navigation/shared-rails.png",
+    "three_slice_source_percent": {
+      "left": 8,
+      "right": 8
+    },
+    "rendered_end_width": 45,
+    "height": 76,
+    "columns": 6,
+    "idle_filter": "saturate(.65)",
+    "active_filter": "grayscale(1) followed by active-royal SVG color matrix; retain the same entire skin at the same dimensions",
+    "mask": "active bounds: 45+(width-90)*index/6 to 45+(width-90)*(index+1)/6; feather 2px either side; common rails overlay above",
+    "corner": "17px at upper-left and rotated 180deg at lower-right; ornament inset top14/right1/bottom10/left1; no button plates or leather insert",
+    "text": "Berkshire Swash; active pale cream with subtle shadow; live text, not baked into texture"
+  },
+  "colours": {
+    "paper": "#e7d8b6",
+    "paper_secondary": "#d6c09a",
+    "ink": "#433827",
+    "ink_soft": "#7f6d50",
+    "accent": "#8a632e",
+    "line": "#b69a61",
+    "button_ink": "#fff0cb",
+    "active_mid_colour_approx": "#384822"
+  },
+  "actual_css_variables": {
+    "--accent": "#8a632e",
+    "--body": "'EB Garamond', Georgia, serif",
+    "--button-ink": "#fff0cb",
+    "--display": "'Berkshire Swash', Georgia, serif",
+    "--ink": "#453925",
+    "--ink-soft": "#7f6d50",
+    "--line": "#baa06a",
+    "--paper": "#eadfbd",
+    "--paper2": "#d3bd8c",
+    "--type-scale": "1.25"
+  }
+}

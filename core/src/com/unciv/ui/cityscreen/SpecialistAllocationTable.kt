@@ -23,52 +23,85 @@ class SpecialistAllocationTable(val cityScreen: CityScreen) : Table(BaseScreen.s
 
     fun update() {
         clear()
-        // Auto/Manual Specialists Toggle
-        // Color of "color" coming from Skin.json that's loaded into BaseScreen
-        // 5 columns: unassignButton, AllocationTable, assignButton, SeparatorVertical, SpecialistsStatsTabe
+        val royal = cityScreen.game.settings.skin == "Minimal"
+        val columns = if (royal) 3 else 5
+        val contentWidth = ((cityScreen.stage.width / 3f).coerceAtLeast(300f)
+            .coerceAtMost(cityScreen.stage.width - 24f) - 36f).coerceAtLeast(1f)
+        if (royal) {
+            background = BaseScreen.skinStrings.getUiBackground(
+                "CityScreen/CityStatsTable/InnerTable", tintColor = Color.valueOf("EADFBD")
+            )
+            pad(8f)
+        }
         if (cityScreen.canCityBeChanged()) {
-            if (cityInfo.manualSpecialists) {
-                val manualSpecialists = "Manual Specialists".toLabel()
-                    .addBorder(5f, BaseScreen.skin.get("color", Color::class.java))
-                manualSpecialists.onClick {
-                    cityInfo.manualSpecialists = false
-                    cityInfo.reassignPopulation(); cityScreen.update()
+            val label =
+                (if (cityInfo.manualSpecialists) "Manual Specialists" else "Auto Specialists")
+                    .toLabel(fontColor = if (royal) Color.valueOf("453925") else Color.WHITE)
+            val toggle = if (royal) {
+                label.setWrap(true)
+                label.setAlignment(Align.center)
+                Table().apply {
+                    background = BaseScreen.skinStrings.getUiBackground(
+                        "CityScreen/CitizenManagementTable/FocusCell",
+                        tintColor = Color.valueOf(if (cityInfo.manualSpecialists) "C6C394" else "D7C89F")
+                    )
+                    add(label).width((contentWidth - 10f).coerceAtLeast(1f)).pad(5f).minHeight(38f)
                 }
-                add(manualSpecialists).colspan(5).row()
+            } else label.addBorder(5f, BaseScreen.skin.get("color", Color::class.java))
+            if (cityInfo.manualSpecialists) {
+                toggle.onClick {
+                    cityInfo.manualSpecialists = false
+                    cityInfo.reassignPopulation()
+                    cityScreen.update()
+                }
             } else {
-                val autoSpecialists = "Auto Specialists".toLabel()
-                    .addBorder(5f, BaseScreen.skin.get("color", Color::class.java))
-                autoSpecialists.onClick { cityInfo.manualSpecialists = true; update() }
-                add(autoSpecialists).colspan(5).row()
+                toggle.onClick { cityInfo.manualSpecialists = true; update() }
             }
+            add(toggle).colspan(columns).row()
         }
         for ((specialistName, maxSpecialists) in cityInfo.population.getMaxSpecialists()) {
-            if (!cityInfo.getRuleset().specialists.containsKey(specialistName)) // specialist doesn't exist in this ruleset, probably a mod
-                continue
-            val newSpecialists = cityInfo.population.getNewSpecialists()
-            val assignedSpecialists = newSpecialists[specialistName]!!
-
-            if (cityScreen.canChangeState) add(getUnassignButton(assignedSpecialists, specialistName))
-            add(getAllocationTable(assignedSpecialists, maxSpecialists, specialistName)).pad(10f)
-            if (cityScreen.canChangeState) add(getAssignButton(assignedSpecialists, maxSpecialists, specialistName))
-            addSeparatorVertical().pad(10f)
-            add(getSpecialistStatsTable(specialistName)).row()
+            if (!cityInfo.getRuleset().specialists.containsKey(specialistName)) continue
+            val assigned = cityInfo.population.getNewSpecialists()[specialistName]!!
+            if (cityScreen.canChangeState) add(getUnassignButton(assigned, specialistName))
+            else if (royal) add()
+            add(getAllocationTable(assigned, maxSpecialists, specialistName)).pad(10f)
+            if (cityScreen.canChangeState) add(
+                getAssignButton(
+                    assigned,
+                    maxSpecialists,
+                    specialistName
+                )
+            )
+            else if (royal) add()
+            if (royal) {
+                row()
+                add(getSpecialistStatsTable(specialistName)).colspan(columns).padBottom(10f).row()
+            } else {
+                addSeparatorVertical().pad(10f)
+                add(getSpecialistStatsTable(specialistName)).row()
+            }
         }
         pack()
     }
 
 
-    fun getAllocationTable(assignedSpecialists: Int, maxSpecialists: Int, specialistName: String): Table {
-
-        val specialistIconTable = Table()
-        val specialistObject = cityInfo.getRuleset().specialists[specialistName]!!
-        for (i in 1..maxSpecialists) {
-            val color = if (i <= assignedSpecialists) specialistObject.colorObject
-            else Color.GRAY // unassigned
-            val icon = ImageGetter.getSpecialistIcon(color)
-            specialistIconTable.add(icon).size(30f)
+    fun getAllocationTable(
+        assignedSpecialists: Int,
+        maxSpecialists: Int,
+        specialistName: String
+    ): Table {
+        val table = Table()
+        val specialist = cityInfo.getRuleset().specialists[specialistName]!!
+        val royal = cityScreen.game.settings.skin == "Minimal"
+        val availableWidth = (cityScreen.stage.width / 3f).coerceAtLeast(300f)
+            .coerceAtMost(cityScreen.stage.width - 24f) - 116f
+        val columns = (availableWidth / 30f).toInt().coerceAtLeast(1)
+        for (index in 1..maxSpecialists) {
+            val color = if (index <= assignedSpecialists) specialist.colorObject else Color.GRAY
+            table.add(ImageGetter.getSpecialistIcon(color)).size(30f)
+            if (royal && index % columns == 0) table.row()
         }
-        return specialistIconTable
+        return table
     }
 
     private fun getAssignButton(assignedSpecialists: Int, maxSpecialists: Int, specialistName: String): Actor {
@@ -106,27 +139,27 @@ class SpecialistAllocationTable(val cityScreen: CityScreen) : Table(BaseScreen.s
 
 
     private fun getSpecialistStatsTable(specialistName: String): Table {
-        val specialistStatTable = Table().apply { defaults().padBottom(5f).padTop(5f) }
-        val specialistStats = cityInfo.cityStats.getStatsOfSpecialist(specialistName)
-        for ((key, value) in specialistStats) {
+        val royal = cityScreen.game.settings.skin == "Minimal"
+        val ink = if (royal) Color.valueOf("453925") else Color.WHITE
+        val table = Table().apply { defaults().padBottom(5f).padTop(5f) }
+        for ((key, value) in cityInfo.cityStats.getStatsOfSpecialist(specialistName)) {
             if (value == 0f) continue
-            specialistStatTable.add(value.toInt().toLabel())
-            specialistStatTable.add(ImageGetter.getStatIcon(key.name)).size(20f).padRight(10f)
+            table.add(value.toInt().toString().toLabel(fontColor = ink))
+            table.add(ImageGetter.getStatIcon(key.name)).size(20f).padRight(10f)
+            if (royal) table.row()
         }
-
         val specialist = cityInfo.getRuleset().specialists[specialistName]!!
-
-        for (s in specialist.greatPersonPoints) {
-            specialistStatTable.add(s.value.toLabel())
-            specialistStatTable.add(ImageGetter.getUnitIcon(s.key, Color.GOLD).toGroup(20f)).padRight(10f)
+        for (entry in specialist.greatPersonPoints) {
+            table.add(entry.value.toString().toLabel(fontColor = ink))
+            table.add(ImageGetter.getUnitIcon(entry.key, Color.GOLD).toGroup(20f)).padRight(10f)
+            if (royal) table.row()
         }
-
-        return specialistStatTable
+        return table
     }
 
 
     fun asExpander(onChange: (() -> Unit)?): ExpanderTab {
-        return ExpanderTab(
+        val expander = ExpanderTab(
             title = "{Specialists}:",
             fontSize = Constants.defaultFontSize,
             persistenceID = "CityStatsTable.Specialists",
@@ -136,6 +169,17 @@ class SpecialistAllocationTable(val cityScreen: CityScreen) : Table(BaseScreen.s
             it.add(this)
             update()
         }
+        if (cityScreen.game.settings.skin == "Minimal") {
+            expander.setHeaderAppearance(
+                BaseScreen.skinStrings.getUiBackground(
+                    "General/ExpanderTab",
+                    tintColor = Color.valueOf("D7C89F")
+                ),
+                Color.valueOf("453925"),
+                prefWidth + 20f
+            )
+        }
+        return expander
     }
 
 }

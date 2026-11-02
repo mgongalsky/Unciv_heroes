@@ -215,16 +215,16 @@ fun openBattleTroopInfoPreview(screen: BaseScreen) {
     )
 
     fun snapshot(troop: com.unciv.pure.domain.troop.Troop) =
-            com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
-                troop.currentAmount, troop.damage, troop.currentHealth, troop.maxHealth,
-                troop.formation.current, troop.formationDamageReductionPercent,
-                supportBonusPercent = 25, outgoingFlanking = flank
-            )
+        com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase.TroopSnapshot(
+            troop.currentAmount, troop.damage, troop.currentHealth, troop.maxHealth,
+            troop.formation.current, troop.formationDamageReductionPercent,
+            supportBonusPercent = 25, outgoingFlanking = flank
+        )
 
     val normalReserve =
-            com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase.execute(
-                snapshot(attacker), snapshot(target), false, false
-            ).availableRetaliationDamage
+        com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase.execute(
+            snapshot(attacker), snapshot(target), false, false
+        ).availableRetaliationDamage
     val remainingReserve = normalReserve / 3
     val exchange = com.unciv.pure.application.battle.CalculateFormationMeleeExchangeUseCase.execute(
         snapshot(attacker), snapshot(target), false, false, remainingReserve
@@ -236,29 +236,54 @@ fun openBattleTroopInfoPreview(screen: BaseScreen) {
             exchange.damageToDefender
         ),
         retaliation = com.unciv.pure.application.battle.BattleAttackPreview.Hit(
-            exchange.retaliationPreparation,
-            exchange.retaliationFlanking,
-            attacker.formation.current,
-            attacker.formationDamageReductionPercent,
-            exchange.attackerRemainingFormation,
-            exchange.damageToAttacker
+            exchange.retaliationPreparation, exchange.retaliationFlanking,
+            attacker.formation.current, attacker.formationDamageReductionPercent,
+            exchange.attackerRemainingFormation, exchange.damageToAttacker
         ),
         retaliationBudget = exchange.availableRetaliationDamage,
         remainingRetaliationBudget = exchange.remainingRetaliationDamage,
         usesStoredRetaliation = true
     )
-    val anchor = Group().apply {
-        setSize(120f, 120f)
-        setPosition(screen.stage.width / 2f - 60f, screen.stage.height / 2f - 60f)
-    }
+    val anchor = Group().apply { setSize(120f, 120f) }
     screen.stage.addActor(anchor)
-    com.unciv.ui.battlescreen.BattleTroopInfoPanel(target, attacker = false).apply {
-        setAttackPreview(forecast, remainingReserve, false, normalReserve)
-        showNextTo(screen.stage, anchor)
-        check(width <= screen.stage.width && height <= screen.stage.height) {
-            "Attack forecast does not fit the stage"
+    val panel = com.unciv.ui.battlescreen.BattleTroopInfoPanel(target, attacker = false)
+    panel.setAttackPreview(forecast, remainingReserve, false, normalReserve)
+    val viewport = screen.stage.viewport
+    val originalWidth = viewport.worldWidth
+    val originalHeight = viewport.worldHeight
+    try {
+        for ((sceneWidth, sceneHeight) in listOf(360f to 480f, 1024f to 768f)) {
+            viewport.setWorldSize(sceneWidth, sceneHeight)
+            for (x in listOf(0f, sceneWidth - anchor.width)) {
+                for (y in listOf(0f, sceneHeight - anchor.height)) {
+                    anchor.setPosition(x, y)
+                    panel.showNextTo(screen.stage, anchor)
+                    val lower = panel.localToStageCoordinates(com.badlogic.gdx.math.Vector2(0f, 0f))
+                    val upper = panel.localToStageCoordinates(
+                        com.badlogic.gdx.math.Vector2(
+                            panel.width,
+                            panel.height
+                        )
+                    )
+                    check(
+                        lower.x >= 11.9f && lower.y >= 11.9f &&
+                                upper.x <= sceneWidth - 11.9f && upper.y <= sceneHeight - 11.9f
+                    ) {
+                        "Attack forecast leaves stage bounds at ${sceneWidth}x$sceneHeight"
+                    }
+                    check(panel.scaleX == panel.scaleY && panel.scaleX > 0f && panel.scaleX <= 1f)
+                    check(panel.touchable == com.badlogic.gdx.scenes.scene2d.Touchable.disabled)
+                }
+            }
         }
+        viewport.setWorldSize(maxOf(1024f, panel.width + 24f), maxOf(768f, panel.height + 24f))
+        panel.showNextTo(screen.stage, anchor)
+        check(panel.scaleX == 1f && panel.scaleY == 1f) { "Tooltip scale must recover on a larger stage" }
+    } finally {
+        viewport.setWorldSize(originalWidth, originalHeight)
     }
+    anchor.setPosition(screen.stage.width / 2f - 60f, screen.stage.height / 2f - 60f)
+    panel.showNextTo(screen.stage, anchor)
 }
 
 private fun createPeasantOutlinePreview(): Group {

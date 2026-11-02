@@ -6,17 +6,23 @@ import com.unciv.pure.application.battle.BattleAttackPreview
 import com.unciv.pure.domain.battle.RangedShotRules
 import com.unciv.ui.utils.extensions.toLabel
 
-/** Compact presentation of values produced by combat rules. */
-internal fun buildBattleAttackPreviewTable(preview: BattleAttackPreview): Table = Table().apply {
+/** Compact presentation of values produced by combat rules; the caller specifies its background. */
+internal fun buildBattleAttackPreviewTable(
+    preview: BattleAttackPreview,
+    parchment: Boolean = false
+): Table = Table().apply {
+    val textColor = if (parchment) Color.valueOf("453925") else Color.WHITE
+    val secondaryColor = if (parchment) Color.valueOf("655438") else Color.LIGHT_GRAY
+    val headingColor = if (parchment) Color.valueOf("8a632e") else Color.valueOf("F5D77AFF")
     fun Table.line(label: String, value: String) {
-        add(label.toLabel(fontColor = Color.LIGHT_GRAY, fontSize = 14)).left().padRight(10f)
-        add(value.toLabel(fontSize = 14)).right().row()
+        add(label.toLabel(fontColor = secondaryColor, fontSize = 14)).left().padRight(10f)
+        add(value.toLabel(fontColor = textColor, fontSize = 14)).right().row()
     }
 
     fun hitTable(title: String, hit: BattleAttackPreview.Hit, retaliation: Boolean) =
         Table().apply {
             defaults().pad(2f)
-            add(title.toLabel(fontColor = Color.valueOf("F5D77AFF"), fontSize = 17))
+            add(title.toLabel(fontColor = headingColor, fontSize = 17))
                 .colspan(2).left().padBottom(5f).row()
             hit.preparation?.let { preparation ->
                 if (preparation.supportBonusPercent != 0)
@@ -56,7 +62,7 @@ internal fun buildBattleAttackPreviewTable(preview: BattleAttackPreview): Table 
             line(if (retaliation) "Our losses" else "Enemy losses", hit.result.perished.toString())
         }
     defaults().pad(3f)
-    add("Forecast: no new luck".toLabel(fontColor = Color.LIGHT_GRAY, fontSize = 12))
+    add("Forecast: no new luck".toLabel(fontColor = secondaryColor, fontSize = 12))
         .colspan(2).left().padBottom(4f).row()
     add(hitTable(if (preview.isRanged) "Our shot" else "Our attack", preview.attack, false)).top()
         .left()
@@ -64,7 +70,7 @@ internal fun buildBattleAttackPreviewTable(preview: BattleAttackPreview): Table 
     if (retaliation != null && (preview.retaliationBudget ?: 0) > 0) {
         add(hitTable("Enemy retaliation", retaliation, true)).top().left().padLeft(18f)
     } else {
-        add("No retaliation".toLabel(fontColor = Color.LIGHT_GRAY, fontSize = 14))
+        add("No retaliation".toLabel(fontColor = secondaryColor, fontSize = 14))
             .top().left().padLeft(18f)
     }
 }

@@ -17,43 +17,54 @@ class CityScreenCityPickerTable(private val cityScreen: CityScreen) : Table() {
     fun update() {
         val city = cityScreen.city
         val civInfo = city.civInfo
-        background = BaseScreen.skinStrings.getUiBackground("CityScreen/CityPickerTable", BaseScreen.skinStrings.roundedEdgeRectangleShape, civInfo.nation.getOuterColor())
+        val royal = cityScreen.game.settings.skin == "Minimal"
+        val hasNeighbours = civInfo.cities.size > 1
+        val ink = if (royal) Color.valueOf("453925") else civInfo.nation.getInnerColor()
         clear()
+        pad(if (royal) 8f else 0f)
+        background = BaseScreen.skinStrings.getUiBackground(
+            "CityScreen/CityPickerTable",
+            BaseScreen.skinStrings.roundedEdgeRectangleShape,
+            if (royal) Color.valueOf("EADFBD") else civInfo.nation.getOuterColor()
+        )
 
-        if (civInfo.cities.size > 1) {
-            val prevCityButton = Table() // so we get a wider clickable area than just the image itself
+        fun addArrow(direction: Int) {
+            if (!hasNeighbours) {
+                add()
+                return
+            }
+            val button = Table()
             val image = ImageGetter.getImage("OtherIcons/BackArrow")
-            image.color = civInfo.nation.getInnerColor()
-            prevCityButton.add(image).size(25f).pad(10f)
-            prevCityButton.touchable = Touchable.enabled
-            prevCityButton.onClick { cityScreen.page(-1) }
-            add(prevCityButton).pad(10f)
-        } else add()
+            image.color = ink
+            if (direction > 0) {
+                image.setSize(25f, 25f)
+                image.setOrigin(Align.center)
+                image.rotation = 180f
+            }
+            button.add(image).size(25f).pad(10f)
+            button.touchable = Touchable.enabled
+            button.onClick { cityScreen.page(direction) }
+            add(button).pad(if (royal) 5f else 10f)
+        }
+        addArrow(-1)
 
         val cityNameTable = Table()
+        val statusTable = if (royal) Table() else cityNameTable
+        if (city.isBeingRazed)
+            statusTable.add(ImageGetter.getImage("OtherIcons/Fire")).size(20f).padRight(5f)
+        if (city.isCapital())
+            statusTable.add(ImageGetter.getImage("OtherIcons/Star").apply {
+                color = if (royal) Color.valueOf("8A692B") else Color.LIGHT_GRAY
+            }).size(20f).padRight(5f)
+        if (city.isPuppet)
+            statusTable.add(ImageGetter.getImage("OtherIcons/Puppet").apply {
+                color = if (royal) ink else Color.LIGHT_GRAY
+            }).size(20f).padRight(5f)
+        if (city.isInResistance())
+            statusTable.add(ImageGetter.getImage("StatIcons/Resistance")).size(20f).padRight(5f)
 
-        if (city.isBeingRazed) {
-            val fireImage = ImageGetter.getImage("OtherIcons/Fire")
-            cityNameTable.add(fireImage).size(20f).padRight(5f)
-        }
-
-        if (city.isCapital()) {
-            val starImage = ImageGetter.getImage("OtherIcons/Star").apply { color = Color.LIGHT_GRAY }
-            cityNameTable.add(starImage).size(20f).padRight(5f)
-        }
-
-        if (city.isPuppet) {
-            val starImage = ImageGetter.getImage("OtherIcons/Puppet").apply { color = Color.LIGHT_GRAY }
-            cityNameTable.add(starImage).size(20f).padRight(5f)
-        }
-
-        if (city.isInResistance()) {
-            val resistanceImage = ImageGetter.getImage("StatIcons/Resistance")
-            cityNameTable.add(resistanceImage).size(20f).padRight(5f)
-        }
-
-        val currentCityLabel = city.name.toLabel(fontSize = 30, fontColor = civInfo.nation.getInnerColor())
-        if (cityScreen.canChangeState) currentCityLabel.onClick {
+        val label = city.name.toLabel(fontSize = 30, fontColor = ink)
+        if (cityScreen.canChangeState) label.onClick {
             AskTextPopup(
                 cityScreen,
                 label = "Please enter a new name for your city",
@@ -65,24 +76,21 @@ class CityScreenCityPickerTable(private val cityScreen: CityScreen) : Table() {
                 }
             ).open()
         }
-
-        cityNameTable.add(currentCityLabel)
-
-        add(cityNameTable).width(stage.width / 4)
-
-        if (civInfo.cities.size > 1) {
-            val nextCityButton = Table() // so we gt a wider clickable area than just the image itself
-            val image = ImageGetter.getImage("OtherIcons/BackArrow")
-            image.setSize(25f, 25f)
-            image.setOrigin(Align.center)
-            image.rotation = 180f
-            image.color = civInfo.nation.getInnerColor()
-            nextCityButton.add(image).size(25f).pad(10f)
-            nextCityButton.touchable = Touchable.enabled
-            nextCityButton.onClick { cityScreen.page(1) }
-            add(nextCityButton).pad(10f)
-        } else add()
-
+        if (royal) {
+            // Ширина учитывает обе области нажатия стрелок и внешние отступы.
+            val panelWidth = (cityScreen.stage.width / 3f).coerceAtLeast(300f)
+                .coerceAtMost(cityScreen.stage.width - 24f)
+            val nameWidth = (panelWidth - 16f - if (hasNeighbours) 110f else 0f).coerceAtLeast(1f)
+            label.setWrap(true)
+            label.setAlignment(Align.center)
+            cityNameTable.add(label).width(nameWidth).fillX().row()
+            if (statusTable.hasChildren()) cityNameTable.add(statusTable).padTop(4f).row()
+            add(cityNameTable).width(nameWidth)
+        } else {
+            cityNameTable.add(label)
+            add(cityNameTable).width(cityScreen.stage.width / 4f)
+        }
+        addArrow(1)
         pack()
     }
 

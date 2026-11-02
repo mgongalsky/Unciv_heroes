@@ -17,7 +17,6 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.logic.army.TroopInfo
 import com.unciv.pure.domain.troop.Troop
-import com.unciv.ui.utils.TextureUtils
 
 /**
  * Represents the visual representation of a single troop in an army.
@@ -33,10 +32,6 @@ class TroopArmyView(
     private val troopGroup = Group() // A group to contain all troop-related visuals
     private lateinit var troopImages: ArrayList<Image> // Images representing the troop's layers
     private var selected: Boolean = false // Indicates whether the troop is selected
-
-    // Preload textures for selection states to avoid creating them repeatedly
-    private val defaultTexture = TextureUtils.createMonochromaticTexture(slotSize.toInt(), slotSize.toInt(), Color.BROWN)
-    private val selectedTexture = TextureUtils.createMonochromaticTexture(slotSize.toInt(), slotSize.toInt(), Color.GOLD)
 
 
     companion object {
@@ -105,67 +100,44 @@ class TroopArmyView(
         }
     }
 
-    /**
-     * Updates the view to reflect the current selection state by changing the texture within the drawable.
-     */
+    /** Меняет только цвет фона слота, не изменяя общую текстуру и изображение отряда. */
     private fun updateViewForSelection() {
-        val newTexture = if (selected) selectedTexture else defaultTexture
-
-        // Get the background image by its name
-        val backgroundImage = troopGroup.findActor<Image>("backgroundImage")
-
-        if (backgroundImage != null) {
-            logVerbose("Updating background texture ")
-
-            // Ensure the drawable is of type TextureRegionDrawable
-            val drawable = backgroundImage.drawable
-            if (drawable is TextureRegionDrawable) {
-                drawable.region.texture = newTexture
-                logVerbose("Texture updated successfully")
-            } else {
-                logVerbose("Drawable is not of type TextureRegionDrawable")
-            }
-
-            // Notify the parent that the visuals need a refresh
-            backgroundImage.invalidateHierarchy()
-        } else {
-            logVerbose("Background image not found")
-        }
+        val backgroundImage = troopGroup.findActor<Image>("backgroundImage") ?: return
+        val royal = armyView.getScreen().game.settings.skin == "Minimal"
+        backgroundImage.color = if (royal)
+            Color.valueOf(if (selected) "C6C394" else "EADFBD")
+        else if (selected) Color.GOLD else Color.BROWN
     }
 
-    /**
-     * Draws the troop's visual components, including the interactive background.
-     */
+    /** Собирает слот из общих ресурсов; повторная отрисовка не создаёт текстуры фона. */
     fun draw() {
-        // Create a background image and assign it a name for easy reference
-        val backgroundImage = Image(defaultTexture).apply {
+        troopGroup.findActor<Image>("backgroundImage")?.remove()
+        val backgroundImage = ImageGetter.getWhiteDot().apply {
             name = "backgroundImage"
+            setSize(slotSize, slotSize)
             touchable = if (isInteractive) Touchable.enabled else Touchable.disabled
             align = Align.center
         }
         troopGroup.addActor(backgroundImage)
-
+        backgroundImage.toBack()
+        updateViewForSelection()
         drawAvatar()
 
-        if(!avatarOnly) {
-            if (troopInfo != null) {
-                // Create and add a label showing the troop's current amount
-                val amountText = Label(troopInfo.amount.toString(), BaseScreen.skin).apply {
-                    setAlignment(Align.right) // Align text to the right
-                    scaleBy(0.5f*slotSize/64f)
-                    moveBy(backgroundImage.width * 0.95f, 0.5f)
-                    setPosition(x, y, Align.bottomRight)
-
-                    name = "amountLabel"
-                    touchable = Touchable.disabled // Label should not be interactive
+        if (!avatarOnly && troopInfo != null) {
+            val amountText = Label(troopInfo.amount.toString(), BaseScreen.skin).apply {
+                if (armyView.getScreen().game.settings.skin == "Minimal") {
+                    style = Label.LabelStyle(style).apply { fontColor = Color.valueOf("453925") }
                 }
-
-                troopGroup.findActor<Label>("amountLabel")
-                    ?.remove() // Remove old label if it exists
-                troopGroup.addActor(amountText)
+                setAlignment(Align.right)
+                scaleBy(0.5f * slotSize / 64f)
+                moveBy(backgroundImage.width * 0.95f, 0.5f)
+                setPosition(x, y, Align.bottomRight)
+                name = "amountLabel"
+                touchable = Touchable.disabled
             }
+            troopGroup.findActor<Label>("amountLabel")?.remove()
+            troopGroup.addActor(amountText)
         }
-        // Add the troop group to this view
         addActor(troopGroup)
     }
 
