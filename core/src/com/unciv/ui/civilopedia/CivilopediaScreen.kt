@@ -106,10 +106,15 @@ class CivilopediaScreen(
         entryIndex.clear()
         flavourTable.clear()
 
-        for (button in categoryToButtons.values) button.button.color = Color.WHITE
+        val royal = game.settings.skin == "Minimal"
+        for (button in categoryToButtons.values) {
+            button.button.color = Color.WHITE
+            if (royal) button.button.isChecked = false
+        }
         val buttonInfo = categoryToButtons[category]
             ?: return        // defense against being passed a bad selector
-        buttonInfo.button.color = Color.BLUE
+        if (royal) buttonInfo.button.isChecked = true
+        else buttonInfo.button.color = Color.BLUE
         buttonTableScroll.scrollX = buttonInfo.x + (buttonInfo.width - buttonTableScroll.width) / 2
 
         if (category !in categoryToEntries) return        // defense, allowing buggy panes to remain empty while others work
@@ -128,7 +133,7 @@ class CivilopediaScreen(
             val entryButton = Table().apply {
                 background = skinStrings.getUiBackground(
                     "CivilopediaScreen/EntryButton",
-                    tintColor = colorFromRGB(50, 75, 125)
+                    tintColor = if (royal) Color.valueOf("EADFBD") else colorFromRGB(50, 75, 125)
                 )
                 touchable = Touchable.enabled
             }
@@ -137,7 +142,7 @@ class CivilopediaScreen(
                     entryButton.add(entry.image).padLeft(20f).padRight(10f)
                 else
                     entryButton.add(entry.image).padLeft(10f)
-            entryButton.left().add(entry.name.toLabel(Color.WHITE, 25)).pad(10f)
+            entryButton.left().add(entry.name.toLabel(if (royal) Color.valueOf("453925") else Color.WHITE, 25)).pad(10f)
             entryButton.onClick { selectEntry(entry) }
             entryButton.name = entry.name               // make button findable
             val cell = entrySelectTable.add(entryButton).height(75f).expandX().fillX()
@@ -191,7 +196,16 @@ class CivilopediaScreen(
             flavourTable.isVisible = false
         }
         entrySelectTable.children.forEach {
-            it.color = if (it.name == entry.name) Color.BLUE else Color.WHITE
+            if (royal && it is Table) {
+                // Выделение принадлежит фону, сохраняя исходные цвета значков записи.
+                it.color = Color.WHITE
+                it.background = skinStrings.getUiBackground(
+                    "CivilopediaScreen/EntryButton",
+                    tintColor = Color.valueOf(if (it.name == entry.name) "B8C997" else "EADFBD")
+                )
+            } else {
+                it.color = if (it.name == entry.name) Color.BLUE else Color.WHITE
+            }
         }
     }
 
