@@ -8,43 +8,59 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.toLabel
 
-/**
- * This is meant to be used for any kind of civ introduction - [DiplomacyScreen],
- * [AlertPopup][com.unciv.ui.worldscreen.AlertPopup] [types][com.unciv.logic.civilization.AlertType] WarDeclaration, FirstContact etc.
- *
- * @param civInfo The civilization to display
- * @param hello Optional additional message
- */
-class LeaderIntroTable (
+/** Представление лидера; parchmentWidth включает светлую адаптивную компоновку явно. */
+class LeaderIntroTable(
     civInfo: CivilizationInfo,
-    hello: String = ""
-): Table(BaseScreen.skin) {
-    /**
-     * Build either a Table(icon, leaderName <br> hello) or
-     * a Table(Portrait, Table(leaderName, icon <br> hello))
-     *
-     * City states in vanilla have leaderName=="" - but don't test CS, test leaderName to allow modding CS to have portraits
-     */
+    hello: String = "",
+    parchmentWidth: Float = 0f
+) : Table(BaseScreen.skin) {
     init {
         defaults().align(Align.center)
         val nation = civInfo.nation
         val leaderPortraitFile = "LeaderIcons/" + nation.leaderName
-        val leaderLabel = civInfo.getLeaderDisplayName().toLabel(fontSize = Constants.headingFontSize)
+        val hasPortrait =
+            nation.leaderName.isNotEmpty() && ImageGetter.imageExists(leaderPortraitFile)
+        val royal = parchmentWidth > 0f
+        val ink = if (royal) com.badlogic.gdx.graphics.Color.valueOf("453925")
+        else com.badlogic.gdx.graphics.Color.WHITE
+        val leaderLabel = civInfo.getLeaderDisplayName().toLabel(
+            fontColor = ink, fontSize = Constants.headingFontSize
+        )
         val nationIndicator = ImageGetter.getNationIndicator(nation, 24f)
-        if (nation.leaderName.isNotEmpty() && ImageGetter.imageExists(leaderPortraitFile)) {
+        if (royal) {
+            leaderLabel.wrap = true
+            leaderLabel.setAlignment(Align.center)
+            val nameTable = Table()
+            val textWidth = if (hasPortrait && parchmentWidth >= 400f)
+                parchmentWidth - 110f else parchmentWidth
+            nameTable.add(nationIndicator).padBottom(8f).row()
+            nameTable.add(leaderLabel).width(textWidth).row()
+            if (hello.isNotEmpty()) {
+                nameTable.add(hello.toLabel(fontColor = ink).apply {
+                    wrap = true
+                    setAlignment(Align.center)
+                }).width(textWidth).padTop(8f).row()
+            }
+            if (hasPortrait) {
+                val portrait = ImageGetter.getImage(leaderPortraitFile).apply {
+                    setScaling(com.badlogic.gdx.utils.Scaling.fit)
+                }
+                val portraitCell = add(portrait).size(minOf(100f, parchmentWidth))
+                if (parchmentWidth < 400f) portraitCell.padBottom(10f).row()
+                else portraitCell.padRight(10f)
+            }
+            add(nameTable).width(textWidth)
+        } else if (hasPortrait) {
             val nameTable = Table()
             nameTable.add(leaderLabel)
             nameTable.add(nationIndicator).pad(0f, 10f, 5f, 0f).row()
-            if (hello.isNotEmpty())
-                nameTable.add(hello.toLabel()).colspan(2)
-            add(ImageGetter.getImage(leaderPortraitFile)).size(100f)
-                .padRight(10f)
+            if (hello.isNotEmpty()) nameTable.add(hello.toLabel()).colspan(2)
+            add(ImageGetter.getImage(leaderPortraitFile)).size(100f).padRight(10f)
             add(nameTable)
         } else {
             add(nationIndicator).pad(0f, 0f, 5f, 10f)
             add(leaderLabel).row()
-            if (hello.isNotEmpty())
-                add(hello.toLabel()).colspan(2)
+            if (hello.isNotEmpty()) add(hello.toLabel()).colspan(2)
         }
     }
 }
