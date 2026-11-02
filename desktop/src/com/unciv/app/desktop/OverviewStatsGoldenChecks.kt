@@ -732,6 +732,23 @@ internal object OverviewStatsGoldenChecks {
                 .filterIsInstance<com.unciv.ui.pickerscreens.TechButton>().toList()
             check(cards.size == technologies.size)
             fun card(name: String) = cards.single { it.text.text.toString() == name.tr() }
+            fun verifyEraHeadings() {
+                if (screen.game.settings.skin != "Minimal") return
+                val labels = descendants(tree.topTable)
+                    .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>().toList()
+                for (era in technologies.map { it.era() }.toSet()) {
+                    val heading = labels.single { it.text.toString() == era.tr() }
+                    heading.validate()
+                    val effective = heading.color.cpy()
+                    heading.style.fontColor?.let { effective.mul(it) }
+                    check(effective == com.badlogic.gdx.graphics.Color.valueOf("453925")) {
+                        "Подпись эпохи $era потеряла тёмный цвет"
+                    }
+                    check(heading.width > 0f && heading.height + 1f >= heading.prefHeight) {
+                        "Подпись эпохи $era обрезана по высоте"
+                    }
+                }
+            }
             if (screen.game.settings.skin == "Minimal") {
                 val colors = cards.map { it.bg.color.toString() }.toSet()
                 for (hex in listOf("D8BD72", "9BC6D1", "B8C997", "A6BDB2", "C9C1AC")) {
@@ -743,6 +760,7 @@ internal object OverviewStatsGoldenChecks {
                     "Общее тонирование карточки изменяет цвета значков"
                 }
             }
+            verifyEraHeadings()
             fun click(actor: Actor) {
                 tree.pickerPane.validate()
                 var ancestor = actor.parent
@@ -787,16 +805,14 @@ internal object OverviewStatsGoldenChecks {
                     "Выбор не обновил текущее состояние карточки"
                 }
             }
+            verifyEraHeadings()
             check(manager.techsToResearch === sampleQueue && sampleQueue == sampleBefore)
             click(tree.closeButton)
-            val returned = checkNotNull(screen.game.screen as? EmpireOverviewScreen) {
-                "Отмена не вернула обзор"
-            }
+            val returned =
+                    checkNotNull(screen.game.screen as? EmpireOverviewScreen) { "Отмена не вернула обзор" }
             val pager = returned.stage.actors.filterIsInstance<TabbedPager>().single()
             pager.validate()
-            check(pager.activePage == pager.getPageIndex("Stats")) {
-                "Возврат из дерева не сохранил вкладку Stats"
-            }
+            check(pager.activePage == pager.getPageIndex("Stats")) { "Возврат из дерева не сохранил вкладку Stats" }
             check(manager.techsToResearch === sampleQueue && sampleQueue == sampleBefore)
             check(manager.techsResearched == researched && manager.techsInProgress == progress)
             check(manager.freeTechs == freeTechs && manager.overflowScience == overflow)

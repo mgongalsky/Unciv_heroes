@@ -113,7 +113,7 @@ class TechPickerScreen(
     }
 
     private fun createTechTable() {
-
+        val royal = game.settings.skin == "Minimal"
         for (label in eraLabels) label.remove()
         eraLabels.clear()
 
@@ -121,60 +121,60 @@ class TechPickerScreen(
         if (allTechs.isEmpty()) return
         val columns = allTechs.maxOf { it.column!!.columnNumber } + 1
         val rows = allTechs.maxOf { it.row } + 1
-        val techMatrix = Array<Array<Technology?>>(columns) { arrayOfNulls(rows) } // Divided into columns, then rows
-
-        for (technology in allTechs) {
+        val techMatrix = Array<Array<Technology?>>(columns) { arrayOfNulls(rows) }
+        for (technology in allTechs)
             techMatrix[technology.column!!.columnNumber][technology.row - 1] = technology
-        }
 
         val erasNamesToColumns = LinkedHashMap<String, ArrayList<Int>>()
         for (tech in allTechs) {
             val era = tech.era()
             if (!erasNamesToColumns.containsKey(era)) erasNamesToColumns[era] = ArrayList()
             val columnNumber = tech.column!!.columnNumber
-            if (!erasNamesToColumns[era]!!.contains(columnNumber)) erasNamesToColumns[era]!!.add(columnNumber)
+            if (!erasNamesToColumns[era]!!.contains(columnNumber))
+                erasNamesToColumns[era]!!.add(columnNumber)
         }
         for ((era, eraColumns) in erasNamesToColumns) {
-            val columnSpan = eraColumns.size
-            val color = when {
+            val pastEra = civInfo.gameInfo.ruleSet.eras[era]!!.eraNumber < civTech.era.eraNumber
+            val color = if (royal) when {
+                civTech.era.name == era -> Color.valueOf("B8C997")
+                pastEra -> Color.valueOf("D8BD72")
+                else -> Color.valueOf("EADFBD")
+            } else when {
                 civTech.era.name == era -> queuedTechColor
-                civInfo.gameInfo.ruleSet.eras[era]!!.eraNumber < civTech.era.eraNumber -> colorFromRGB(255, 175, 0)
+                pastEra -> colorFromRGB(255, 175, 0)
                 else -> Color.BLACK
             }
-
-            val table1 = Table().pad(1f)
-            val table2 = Table()
-
-            table1.background = skinStrings.getUiBackground("General/Border", tintColor = Color.WHITE)
-            table2.background = skinStrings.getUiBackground("General/Border", tintColor = color)
-
+            val border = Table().pad(1f)
+            val heading = Table()
+            border.background = skinStrings.getUiBackground(
+                "General/Border",
+                tintColor = if (royal) Color.valueOf("8D7546") else Color.WHITE
+            )
+            heading.background = skinStrings.getUiBackground("General/Border", tintColor = color)
             val label = era.toLabel().apply {
                 setAlignment(Align.center)
-                if (civInfo.gameInfo.ruleSet.eras[era]!!.eraNumber < civTech.era.eraNumber)
-                    this.color = colorFromRGB(120, 46, 16) }
-
+                if (royal) this.color = Color.valueOf("453925")
+                else if (pastEra) this.color = colorFromRGB(120, 46, 16)
+            }
             eraLabels.add(label)
-
-            table2.add(label).growX()
-            table1.add(table2).growX()
-
-            techTable.add(table1).fill().colspan(columnSpan)
+            heading.add(label).growX()
+            border.add(heading).growX()
+            techTable.add(border).fill().colspan(eraColumns.size)
         }
 
         for (rowIndex in 0 until rows) {
-
             techTable.row()
-
             for (columnIndex in techMatrix.indices) {
                 val tech = techMatrix[columnIndex][rowIndex]
-
                 val table = Table().pad(2f).padRight(60f).padLeft(20f)
-                if (rowIndex == 0)
-                    table.padTop(7f)
-
+                if (rowIndex == 0) table.padTop(7f)
                 if (erasNamesToColumns[civTech.era.name]!!.contains(columnIndex))
-                    table.background = skinStrings.getUiBackground("TechPickerScreen/Background", tintColor = queuedTechColor.darken(0.5f))
-
+                    table.background = skinStrings.getUiBackground(
+                        "TechPickerScreen/Background",
+                        tintColor = if (royal) Color.valueOf("D5D7B5") else queuedTechColor.darken(
+                            0.5f
+                        )
+                    )
                 if (tech == null) {
                     techTable.add(table).fill()
                 } else {
