@@ -324,4 +324,27 @@ object RoyalUi {
                         background = background(this.background)
                     }
     }
+
+    /** Replaces existing scrollbar knobs while preserving their layout and hit dimensions. */
+    fun installScrollBars(skin: Skin) {
+        val pixel = skin.get("royal-control-pixel", Texture::class.java)
+        val style =
+                skin.get(com.badlogic.gdx.scenes.scene2d.ui.ScrollPane.ScrollPaneStyle::class.java)
+
+        fun knob(previous: com.badlogic.gdx.scenes.scene2d.utils.Drawable?): com.badlogic.gdx.scenes.scene2d.utils.Drawable? {
+            if (previous == null) return null
+            return com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
+                com.badlogic.gdx.graphics.g2d.TextureRegion(pixel)
+            ).tint(Color.valueOf("8a632e")).apply {
+                minWidth = previous.minWidth
+                minHeight = previous.minHeight
+                leftWidth = previous.leftWidth
+                rightWidth = previous.rightWidth
+                topHeight = previous.topHeight
+                bottomHeight = previous.bottomHeight
+            }
+        }
+        style.hScrollKnob = knob(style.hScrollKnob)
+        style.vScrollKnob = knob(style.vScrollKnob)
+    }
 }

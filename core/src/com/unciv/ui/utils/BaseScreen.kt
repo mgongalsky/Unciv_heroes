@@ -209,6 +209,7 @@ abstract class BaseScreen : Screen {
                 RoyalUi.installCheckBoxes(skin)
                 RoyalUi.installSliders(skin)
                 RoyalUi.installTextFields(skin)
+                RoyalUi.installScrollBars(skin)
                 RoyalUi.installSelectBoxes(skin)
                 RoyalUi.installTypography(skin)
             }
