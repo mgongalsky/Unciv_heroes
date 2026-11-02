@@ -32,6 +32,13 @@ class FriendPickerList(
         friendDisplays[friend.name] = friendDisplay
         addActor(friendDisplay)
     }
+
+    /** Opt-in wrapping for constrained picker popups. */
+    fun constrainItemWidth(width: Float) {
+        val constrained = width.coerceAtLeast(1f)
+        for (display in friendDisplays.values) display.constrainWidth(constrained)
+        invalidateHierarchy()
+    }
 }
 
 private class FriendDisplay(
@@ -47,5 +54,14 @@ private class FriendDisplay(
 
         add(friendButton)
         onClick { onSelected(friendName) }
+    }
+
+    fun constrainWidth(width: Float) {
+        friendButton.label.wrap = true
+        friendButton.labelCell.width(
+            (width - friendButton.padLeft - friendButton.padRight - 20f).coerceAtLeast(1f)
+        ).pad(10f)
+        getCell(friendButton).width(width).minHeight(48f).fillX()
+        invalidateHierarchy()
     }
 }

@@ -21,12 +21,12 @@ private class ScenarioPlayerPickerScreen : PickerScreen(), IPreviousScreen {
     }
 }
 
-/** Проверяет реальные селекторы слотов: автоподбор, обмен назначениями, ручное отсутствие слота и наблюдателя. */
 fun createScenarioPlayerPickerPreview(): BaseScreen {
     val screen = ScenarioPlayerPickerScreen()
     val players = screen.gameSetupInfo.gameParameters.players
     val picker = PlayerPickerTable(screen, screen.gameSetupInfo.gameParameters)
-    picker.scenarioSlots = listOf(ScenarioPlayerSlot("first", "Player 1"), ScenarioPlayerSlot("second", "Player 2"))
+    picker.scenarioSlots =
+        listOf(ScenarioPlayerSlot("first", "Player 1"), ScenarioPlayerSlot("second", "Player 2"))
     picker.update()
     check(players.map { it.scenarioSlotId } == listOf("first", "second"))
     /** Меняет выбранный элемент виджета, запуская настоящий onChange таблицы участников. */
@@ -34,7 +34,10 @@ fun createScenarioPlayerPickerPreview(): BaseScreen {
         picker.findActor<SelectBox<Any>>("scenario-slot-$player").selectedIndex = choice
     }
     select(0, 2)
-    check(players.map { it.scenarioSlotId } == listOf("second", "first")) { "Manual selection must swap occupied slots" }
+    check(players.map { it.scenarioSlotId } == listOf(
+        "second",
+        "first"
+    )) { "Manual selection must swap occupied slots" }
     picker.update()
     check(players.map { it.scenarioSlotId } == listOf("second", "first"))
     select(0, 0)
@@ -47,6 +50,7 @@ fun createScenarioPlayerPickerPreview(): BaseScreen {
     players.first().chosenCiv = "Rome"
     picker.update()
     check(players.map { it.scenarioSlotId } == listOf("second", "first"))
+    verifyFriendSelection(screen, picker, players.first())
     screen.topTable.add(picker).grow()
     return screen
 }

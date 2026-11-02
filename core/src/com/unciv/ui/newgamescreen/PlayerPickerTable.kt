@@ -28,6 +28,7 @@ import com.unciv.ui.utils.*
 import com.unciv.ui.utils.extensions.*
 import java.util.*
 import com.unciv.ui.utils.AutoScrollPane as ScrollPane
+import com.unciv.ui.popup.applyRoyalTextLayout
 
 /**
  * This [Table] is used to pick or edit players information for new game creation.
@@ -374,6 +375,27 @@ class FriendSelectionPopup(
                 playerPicker.update()
             }
         }
+
+        if (UncivGame.Current.settings.skin == "Minimal") {
+            applyRoyalTextLayout()
+            val scroll =
+                children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.ScrollPane>().single()
+            val style = scroll.style
+            val chrome = innerTable.padLeft + innerTable.padRight + 10f +
+                    maxOf(style.vScroll?.minWidth ?: 0f, style.vScrollKnob?.minWidth ?: 0f) +
+                    (style.background?.leftWidth ?: 0f) + (style.background?.rightWidth ?: 0f)
+            val contentWidth = minOf(700f, screen.stage.width - 24f - chrome).coerceAtLeast(1f)
+            val contentHeight = minOf(
+                screen.stage.height * 0.8f,
+                screen.stage.height - 24f - innerTable.padTop - innerTable.padBottom - 10f
+            ).coerceAtLeast(240f)
+            pickerCell.width(contentWidth).height(contentHeight)
+            pickerPane.enableAdaptiveActions()
+            pickerPane.descriptionLabel.color = Color.valueOf("453925")
+            pickerPane.scrollPane.setScrollingDisabled(true, false)
+            friendList.constrainItemWidth((contentWidth - 20f).coerceAtLeast(1f))
+            pickerPane.topTable.getCell(friendList).width(contentWidth).growX()
+        }
     }
 
     private fun friendSelected(friendName: String) {
@@ -385,7 +407,6 @@ class FriendSelectionPopup(
         pickerPane.setRightSideButtonEnabled(true)
         pickerPane.rightSideButton.setText("Select [$friendName]".tr())
     }
-
 }
 
 private class NationPickerPopup(
