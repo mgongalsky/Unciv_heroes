@@ -71,6 +71,12 @@
 - core/src/com/unciv/ui/playground/BattleTroopPreview.kt — размещение прогноза у краёв и восстановление масштаба.
 - core/src/com/unciv/ui/playground/ScenarioCityEditorTabsPreview.kt — отключение и повторное включение вкладок.
 
+## Главное меню
+
+- core/src/com/unciv/MainMenuScreen.kt — общий Royal-стиль кнопок, перенос подписей и выбор числа колонок по логической ширине.
+- desktop/src/com/unciv/app/desktop/MainMenuGoldenChecks.kt — ожидание фоновой карты, проверка границ, длинной подписи и доступности последнего пункта после кадра прокрутки.
+- UiGoldenTestRunner и UiGoldenTest регистрируют main-menu и mainMenuRender; визуальный эталон не утверждается.
+
 ## Дальнейшие кандидаты
 
 SkinStrings.kt, общий Popup.kt и остальные экраны требуют отдельного аудита. В городе остаются согласованная раскладка всех панелей, выбор города и другие элементы. CityScreenGoldenChecks дополнительно наполняет разделы подготовленных событий и великих людей существующими определениями ruleset; применение игровых эффектов остаётся вне этой проверки раскладки.

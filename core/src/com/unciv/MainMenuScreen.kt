@@ -1,4 +1,4 @@
-﻿package com.unciv
+package com.unciv
 
 import com.badlogic.gdx.Input
 import com.badlogic.gdx.graphics.Color
@@ -57,15 +57,10 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
     private val backgroundTable = Table().apply {
         background = skinStrings.getUiBackground("MainMenuScreen/Background", tintColor = Color.WHITE)
     }
-    private val singleColumn = isCrampedPortrait()
+    private val singleColumn = isCrampedPortrait() ||
+            (game.settings.skin == "Minimal" && stage.width < 1000f)
     private var easterEggRuleset: Ruleset? = null  // Cache it so the next 'egg' can be found in Civilopedia
 
-    /** Create one **Main Menu Button** including onClick/key binding
-     *  @param text      The text to display on the button
-     *  @param icon      The path of the icon to display on the button
-     *  @param key       Optional key binding (limited to Char subset of [KeyCharAndCode], which is OK for the main menu)
-     *  @param function  Action to invoke when the button is activated
-     */
     private fun getMenuButton(
         text: String,
         icon: String,
@@ -73,24 +68,38 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         keyVisualOnly: Boolean = false,
         function: () -> Unit
     ): Table {
-        val table = Table().pad(15f, 30f, 15f, 30f)
-        table.background = skinStrings.getUiBackground(
-            "MainMenuScreen/MenuButton",
-            skinStrings.roundedEdgeRectangleShape,
-            skinStrings.skinConfig.baseColor
-        )
-        table.add(ImageGetter.getImage(icon)).size(50f).padRight(30f)
-        table.add(text.toLabel().setFontSize(30)).minWidth(200f)
-
+        val royal = game.settings.skin == "Minimal"
+        val table: Table = if (royal)
+            com.badlogic.gdx.scenes.scene2d.ui.Button(skin)
+        else Table()
+        if (royal) {
+            table.pad(15f, 20f, 15f, 20f)
+            // Резервируем отступы колонок и место для полосы прокрутки.
+            val buttonWidth = minOf(
+                420f,
+                if (singleColumn) stage.width - 80f else (stage.width - 120f) / 2f
+            ).coerceAtLeast(120f)
+            table.add(ImageGetter.getImage(icon)).size(50f).padRight(20f)
+            val label = text.toLabel(fontColor = Color.valueOf("FFF0CB"), fontSize = 30)
+            label.setWrap(true)
+            label.setAlignment(Align.left)
+            table.add(label).width((buttonWidth - 110f).coerceAtLeast(1f)).fillX()
+        } else {
+            table.pad(15f, 30f, 15f, 30f)
+            table.background = skinStrings.getUiBackground(
+                "MainMenuScreen/MenuButton",
+                skinStrings.roundedEdgeRectangleShape,
+                skinStrings.skinConfig.baseColor
+            )
+            table.add(ImageGetter.getImage(icon)).size(50f).padRight(30f)
+            table.add(text.toLabel().setFontSize(30)).minWidth(200f)
+        }
         table.touchable = Touchable.enabled
         table.onActivation(function)
-
         if (key != null) {
-            if (!keyVisualOnly)
-                table.keyShortcuts.add(key)
+            if (!keyVisualOnly) table.keyShortcuts.add(key)
             table.addTooltip(key, 32f)
         }
-
         table.pack()
         return table
     }

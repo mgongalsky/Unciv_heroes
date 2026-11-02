@@ -304,4 +304,10 @@ class UiGoldenTest {
     fun empireOverviewStatsRender() {
         UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=empire-overview-stats"))
     }
+
+    /** Проверяет границы и прокрутку главного меню; захват не утверждает визуальный эталон. */
+    @Test
+    fun mainMenuRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=main-menu"))
+    }
 }

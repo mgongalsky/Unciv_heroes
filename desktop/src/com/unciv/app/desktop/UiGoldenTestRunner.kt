@@ -94,7 +94,7 @@ object UiGoldenTestRunner {
     }
 
     private fun scenarios() = listOf(
-        Scenario("terrain-playground") {},
+        Scenario("main-menu") {},
         Scenario("terrain-parameters") { TerrainParametersGoldenChecks.open(it) },
         Scenario("terrain-editor-layers") {},
         Scenario("network-room") {},
@@ -200,6 +200,11 @@ object UiGoldenTestRunner {
                 stableFrames = 0
                 return
             }
+            val mainMenu = expectedScreen as? com.unciv.MainMenuScreen
+            if (mainMenu != null && !MainMenuGoldenChecks.ready(mainMenu)) {
+                stableFrames = 0
+                return
+            }
             val terrainScreen = expectedScreen as? com.unciv.ui.mapeditor.TerrainPlaygroundScreen
             if (terrainScreen != null && !TerrainPlaygroundGoldenChecks.ready(terrainScreen)) {
                 stableFrames = 0
@@ -249,7 +254,7 @@ object UiGoldenTestRunner {
         }
 
         private fun scenarioScreen(scenario: Scenario): BaseScreen = when (scenario.name) {
-            "network-room" -> NetworkBattleGoldenScreens.room()
+            "main-menu" -> com.unciv.MainMenuScreen()
             "network-battle" -> NetworkBattleGoldenScreens.battle()
             "army-setup-laptop" -> ArmySetupGoldenChecks.screen()
             "hero-overview" -> HeroOverviewGoldenChecks.screen()
