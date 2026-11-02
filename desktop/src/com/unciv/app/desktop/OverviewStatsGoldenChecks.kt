@@ -980,4 +980,88 @@ internal object OverviewStatsGoldenChecks {
             tree.pickerPane.validate()
         }
     }
+
+    /** Проверяет перенос записей, область статьи и прокрутку при изменении логических размеров. */
+    fun verifyCivilopediaLayout(civ: CivilizationInfo) {
+        val entry = civ.gameInfo.ruleSet.technologies.values.first()
+        val view = com.unciv.ui.civilopedia.CivilopediaScreen(
+            civ.gameInfo.ruleSet,
+            com.unciv.ui.civilopedia.CivilopediaCategories.Technology, entry.name
+        )
+        try {
+            for ((width, height) in listOf(360f to 480f, 1000f to 600f)) {
+                view.stage.viewport.setWorldSize(width, height)
+                for (actor in view.stage.actors.toList())
+                    (actor as? com.badlogic.gdx.scenes.scene2d.utils.Layout)?.invalidateHierarchy()
+                view.selectEntry(entry.name, noScrollAnimation = true)
+                view.stage.draw()
+                val row = descendants(view.stage.root).filterIsInstance<Table>()
+                    .single { it.name == entry.name }
+                val label =
+                        row.children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>()
+                            .single()
+                val original = label.text.toString()
+                try {
+                    label.setText("The ancient knowledge of the distant royal provinces beyond the northern mountains")
+                    row.invalidateHierarchy()
+                    view.stage.draw()
+                    var ancestor = row.parent
+                    while (ancestor != null && ancestor !is com.badlogic.gdx.scenes.scene2d.ui.ScrollPane)
+                        ancestor = ancestor.parent
+                    val scroll =
+                            checkNotNull(ancestor as? com.badlogic.gdx.scenes.scene2d.ui.ScrollPane)
+                    val details =
+                            "stage=${width}x$height row=${row.width}x${row.height} scroll=${scroll.width}x${scroll.height} maxX=${scroll.maxX}"
+                    check(scroll.width > 0f && scroll.height > 0f) { details }
+                    check(scroll.maxX <= 1f) { "Список цивилопедии переполнен по горизонтали: $details" }
+                    check(label.wrap && label.height + 1f >= label.prefHeight) {
+                        "Длинная подпись записи не помещается: $details"
+                    }
+                    check(label.glyphLayout.runs.size > 1) { "Длинная подпись записи не перенесена" }
+                    check(
+                        label.x >= 0f && label.y >= 0f &&
+                                label.x + label.width <= row.width + 1f &&
+                                label.y + label.height <= row.height + 1f
+                    ) { "Подпись выходит за границы строки: $details" }
+
+                    val split = scroll.parent as com.badlogic.gdx.scenes.scene2d.ui.SplitPane
+                    val article =
+                            split.children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.ScrollPane>()
+                                .single { it !== scroll }
+                    check(article.width > 0f && article.height > 0f && article.maxX <= 1f) {
+                        "Область статьи недоступна или переполнена: stage=${width}x$height article=${article.width}x${article.height} maxX=${article.maxX}"
+                    }
+                    for (pane in listOf(scroll, article)) {
+                        val origin = pane.localToStageCoordinates(com.badlogic.gdx.math.Vector2())
+                        check(
+                            origin.x >= -1f && origin.y >= -1f &&
+                                    origin.x + pane.width <= width + 1f && origin.y + pane.height <= height + 1f
+                        ) {
+                            "Панель цивилопедии выходит за сцену ${width}x$height"
+                        }
+                    }
+
+                    val list = scroll.actor as Table
+                    val lastRow = list.children.filterIsInstance<Table>().last()
+                    view.selectEntry(checkNotNull(lastRow.name), noScrollAnimation = true)
+                    view.stage.draw()
+                    val point = lastRow.localToStageCoordinates(
+                        com.badlogic.gdx.math.Vector2(lastRow.width / 2f, lastRow.height / 2f)
+                    )
+                    val hit = checkNotNull(view.stage.hit(point.x, point.y, true)) {
+                        "Последняя запись не попала в видимую область"
+                    }
+                    check(hit === lastRow || hit.isDescendantOf(lastRow)) {
+                        "Последняя запись перекрыта после прокрутки на сцене ${width}x$height"
+                    }
+                    check(article.maxX <= 1f) { "Статья последней записи переполнена по горизонтали" }
+                } finally {
+                    label.setText(original)
+                    row.invalidateHierarchy()
+                }
+            }
+        } finally {
+            view.dispose()
+        }
+    }
 }

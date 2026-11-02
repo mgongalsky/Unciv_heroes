@@ -142,10 +142,25 @@ class CivilopediaScreen(
                     entryButton.add(entry.image).padLeft(20f).padRight(10f)
                 else
                     entryButton.add(entry.image).padLeft(10f)
-            entryButton.left().add(entry.name.toLabel(if (royal) Color.valueOf("453925") else Color.WHITE, 25)).pad(10f)
+            val entryLabel = entry.name.toLabel(if (royal) Color.valueOf("453925") else Color.WHITE, 25)
+            entryLabel.wrap = royal
+            val labelCell = entryButton.left().add(entryLabel).pad(10f)
+            if (royal) labelCell.minWidth(0f).growX()
             entryButton.onClick { selectEntry(entry) }
             entryButton.name = entry.name               // make button findable
-            val cell = entrySelectTable.add(entryButton).height(75f).expandX().fillX()
+            val cell = entrySelectTable.add(entryButton).expandX().fillX()
+            if (royal) {
+                cell.minHeight(75f).width(object : com.badlogic.gdx.scenes.scene2d.ui.Value() {
+                    override fun get(context: Actor?): Float {
+                        val style = entrySelectScroll.style
+                        val barWidth = maxOf(style.vScroll?.minWidth ?: 0f, style.vScrollKnob?.minWidth ?: 0f)
+                        val background = style.background
+                        return (entrySelectScroll.width - barWidth -
+                            (background?.leftWidth ?: 0f) - (background?.rightWidth ?: 0f) - 12f)
+                            .coerceAtLeast(1f)
+                    }
+                })
+            } else cell.height(75f)
             entrySelectTable.row()
             if (currentY < 0f) currentY = cell.padTop
             entryIndex[entry.name] = entry.withCoordinates(currentY, cell.prefHeight)
@@ -164,8 +179,17 @@ class CivilopediaScreen(
      */
     fun selectEntry(name: String, noScrollAnimation: Boolean = false) {
         val entry = entryIndex[name] ?: return
-        // fails: entrySelectScroll.scrollTo(0f, entry.y, 0f, entry.h, false, true)
-        entrySelectScroll.scrollY = (entry.y + (entry.height - entrySelectScroll.height) / 2)
+        if (game.settings.skin == "Minimal") {
+            for (actor in stage.actors)
+                (actor as? com.badlogic.gdx.scenes.scene2d.utils.Layout)?.validate()
+            entrySelectScroll.validate()
+            entrySelectTable.validate()
+            entrySelectTable.children.firstOrNull { it.name == name }?.let { row ->
+                entrySelectScroll.scrollTo(row.x, row.y, row.width, row.height, false, true)
+            }
+        } else {
+            entrySelectScroll.scrollY = (entry.y + (entry.height - entrySelectScroll.height) / 2)
+        }
         if (noScrollAnimation)
             entrySelectScroll.updateVisualScroll()     // snap without animation on fresh pedia open
         selectEntry(entry)
@@ -187,7 +211,7 @@ class CivilopediaScreen(
                 flavourTable.add(MarkupRenderer.renderWithTextColor(
                     assembled.civilopediaText,
                     defaultTextColor = Color.valueOf("453925"),
-                    labelWidth = (stage.width * 0.5f - 20f).coerceAtLeast(48f)
+                    labelWidth = (stage.width * (if (stage.width < 600f) 1f else 0.5f) - 60f).coerceAtLeast(48f)
                 ) { selectLink(it) })
             } else {
                 flavourTable.add(assembled.renderCivilopediaText(stage.width * 0.5f) { selectLink(it) })
@@ -305,7 +329,21 @@ class CivilopediaScreen(
         entrySelectScroll.setOverscroll(false, false)
         val descriptionTable = Table()
         descriptionTable.add(flavourTable).row()
-        val entrySplitPane = SplitPane(entrySelectScroll, ScrollPane(descriptionTable), false, skin)
+        val entrySplitPane = object : SplitPane(entrySelectScroll, ScrollPane(descriptionTable), false, skin) {
+            private var compactLayout: Boolean? = null
+
+            override fun layout() {
+                if (game.settings.skin == "Minimal") {
+                    val compact = width < 600f
+                    if (compactLayout != compact) {
+                        compactLayout = compact
+                        setVertical(compact)
+                        splitAmount = if (compact) 0.4f else 0.3f
+                    }
+                }
+                super.layout()
+            }
+        }
         entrySplitPane.splitAmount = 0.3f
         entryTable.addActor(entrySplitPane)
         entrySplitPane.setFillParent(true)
