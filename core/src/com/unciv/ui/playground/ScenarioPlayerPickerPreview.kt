@@ -21,12 +21,15 @@ private class ScenarioPlayerPickerScreen : PickerScreen(), IPreviousScreen {
     }
 }
 
+/** Проверяет слоты сценария, выбор друга и выбор нации через реальные элементы интерфейса. */
 fun createScenarioPlayerPickerPreview(): BaseScreen {
     val screen = ScenarioPlayerPickerScreen()
     val players = screen.gameSetupInfo.gameParameters.players
     val picker = PlayerPickerTable(screen, screen.gameSetupInfo.gameParameters)
-    picker.scenarioSlots =
-        listOf(ScenarioPlayerSlot("first", "Player 1"), ScenarioPlayerSlot("second", "Player 2"))
+    picker.scenarioSlots = listOf(
+        ScenarioPlayerSlot("first", "Player 1"),
+        ScenarioPlayerSlot("second", "Player 2")
+    )
     picker.update()
     check(players.map { it.scenarioSlotId } == listOf("first", "second"))
     /** Меняет выбранный элемент виджета, запуская настоящий onChange таблицы участников. */
@@ -51,6 +54,7 @@ fun createScenarioPlayerPickerPreview(): BaseScreen {
     picker.update()
     check(players.map { it.scenarioSlotId } == listOf("second", "first"))
     verifyFriendSelection(screen, picker, players.first())
+    verifyNationSelection(screen, picker, players.first())
     screen.topTable.add(picker).grow()
     return screen
 }

@@ -414,7 +414,6 @@ private class NationPickerPopup(
     private val player: Player
 ) : Popup(playerPicker.previousScreen as BaseScreen) {
     companion object {
-        // These are used for the Close/OK buttons in the lower left/right corners:
         const val buttonsCircleSize = 70f
         const val buttonsIconSize = 50f
         const val buttonsOffsetFromEdge = 5f
@@ -423,10 +422,26 @@ private class NationPickerPopup(
 
     private val previousScreen = playerPicker.previousScreen
     private val ruleset = previousScreen.ruleset
-    // This Popup's body has two halves of same size, either side by side or arranged vertically
-    // depending on screen proportions - determine height for one of those
-    private val partHeight = stageToShowOn.height * (if (stageToShowOn.isNarrowerThan4to3()) 0.45f else 0.8f)
-    private val civBlocksWidth = playerPicker.civBlocksWidth
+    private val royal = UncivGame.Current.settings.skin == "Minimal"
+    private val royalContentWidth = run {
+        val scroll =
+                children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.ScrollPane>().single()
+        val style = scroll.style
+        val chrome = 104f + 10f +
+                maxOf(style.vScroll?.minWidth ?: 0f, style.vScrollKnob?.minWidth ?: 0f) +
+                (style.background?.leftWidth ?: 0f) + (style.background?.rightWidth ?: 0f)
+        minOf(700f, stageToShowOn.width - 24f - chrome).coerceAtLeast(1f)
+    }
+    private val stacked =
+            if (royal) royalContentWidth < 600f else stageToShowOn.isNarrowerThan4to3()
+    private val paneWidth = if (royal) {
+        if (stacked) royalContentWidth else (royalContentWidth - 10f) / 2f
+    } else playerPicker.civBlocksWidth + 10f
+    private val partHeight = if (royal) {
+        ((stageToShowOn.height - 24f - 110f - 90f) / if (stacked) 2f else 1f).coerceAtLeast(120f)
+    } else stageToShowOn.height * (if (stacked) 0.45f else 0.8f)
+    private val civBlocksWidth =
+            if (royal) (paneWidth - 10f).coerceAtLeast(1f) else playerPicker.civBlocksWidth
     private val nationListTable = Table()
     private val nationListScroll = ScrollPane(nationListTable)
     private val nationDetailsTable = Table()
@@ -434,12 +449,13 @@ private class NationPickerPopup(
     private var selectedNation: Nation? = null
 
     init {
+        nationListScroll.name = "nation-list-scroll"
+        nationDetailsScroll.name = "nation-details-scroll"
         nationListScroll.setOverscroll(false, false)
-        add(nationListScroll).size( civBlocksWidth + 10f, partHeight )
-            // +10, because the nation table has a 5f pad, for a total of +10f
-        if (stageToShowOn.isNarrowerThan4to3()) row()
+        add(nationListScroll).size(paneWidth, partHeight)
+        if (stacked) row()
         nationDetailsScroll.setOverscroll(false, false)
-        add(nationDetailsScroll).size(civBlocksWidth + 10f, partHeight) // Same here, see above
+        add(nationDetailsScroll).size(paneWidth, partHeight)
 
         val randomNation = Nation().apply {
             name = Constants.random
@@ -451,48 +467,55 @@ private class NationPickerPopup(
         if (!playerPicker.noRandom) nations += randomNation
         val spectator = previousScreen.ruleset.nations[Constants.spectator]
         if (spectator != null) nations += spectator
-
         nations += playerPicker.getAvailablePlayerCivs(player.chosenCiv)
             .sortedWith(compareBy(UncivGame.Current.settings.getCollatorFromLocale()) { it.name.tr() })
 
         var nationListScrollY = 0f
         var currentY = 0f
         for (nation in nations) {
-            // only humans can spectate, sorry robots
-            if (player.playerType == PlayerType.AI && nation.isSpectator())
-                continue
-            if (player.chosenCiv == nation.name)
-                nationListScrollY = currentY
-            val nationTable = NationTable(nation, civBlocksWidth, 0f) // no need for min height
+            if (player.playerType == PlayerType.AI && nation.isSpectator()) continue
+            if (player.chosenCiv == nation.name) nationListScrollY = currentY
+            val nationTable = NationTable(nation, civBlocksWidth, 0f)
+            nationTable.name = "nation-option-${nation.name}"
             val cell = nationListTable.add(nationTable)
             currentY += cell.padBottom + cell.prefHeight + cell.padTop
             cell.row()
-            nationTable.onClick {
-                setNationDetails(nation)
-            }
-            if (player.chosenCiv == nation.name)
-                setNationDetails(nation)
-        }
-
-        nationListScroll.layout()
-        pack()
-        if (nationListScrollY > 0f) {
-            // center the selected nation vertically, getRowHeight safe because nationListScrollY > 0f ensures at least 1 row
-            nationListScrollY -= (nationListScroll.height - nationListTable.getRowHeight(0)) / 2
-            nationListScroll.scrollY = nationListScrollY.coerceIn(0f, nationListScroll.maxY)
+            nationTable.onClick { setNationDetails(nation) }
+            if (player.chosenCiv == nation.name) setNationDetails(nation)
         }
 
         val closeButton = "OtherIcons/Close".toImageButton(Color.FIREBRICK)
+        closeButton.name = "nation-picker-close"
         closeButton.onActivation { close() }
         closeButton.keyShortcuts.add(KeyCharAndCode.BACK)
-        closeButton.setPosition(buttonsOffsetFromEdge, buttonsOffsetFromEdge, Align.bottomLeft)
-        innerTable.addActor(closeButton)
-
         val okButton = "OtherIcons/Checkmark".toImageButton(Color.LIME)
+        okButton.name = "nation-picker-confirm"
         okButton.onClick { returnSelected() }
-        okButton.setPosition(innerTable.width - buttonsOffsetFromEdge, buttonsOffsetFromEdge, Align.bottomRight)
-        innerTable.addActor(okButton)
 
+        if (royal) {
+            row()
+            val actions = Table()
+            actions.add(closeButton).size(buttonsCircleSize).pad(5f)
+            actions.add(okButton).size(buttonsCircleSize).pad(5f)
+            add(actions).colspan(if (stacked) 1 else 2).width(royalContentWidth).row()
+            applyRoyalTextLayout()
+        }
+        nationListScroll.layout()
+        pack()
+        if (nationListScrollY > 0f) {
+            nationListScrollY -= (nationListScroll.height - nationListTable.getRowHeight(0)) / 2
+            nationListScroll.scrollY = nationListScrollY.coerceIn(0f, nationListScroll.maxY)
+        }
+        if (!royal) {
+            closeButton.setPosition(buttonsOffsetFromEdge, buttonsOffsetFromEdge, Align.bottomLeft)
+            innerTable.addActor(closeButton)
+            okButton.setPosition(
+                innerTable.width - buttonsOffsetFromEdge,
+                buttonsOffsetFromEdge,
+                Align.bottomRight
+            )
+            innerTable.addActor(okButton)
+        }
         nationDetailsTable.touchable = Touchable.enabled
         nationDetailsTable.onClick { returnSelected() }
     }
@@ -504,22 +527,22 @@ private class NationPickerPopup(
         style.imageOver = image.tint(overColor)
         val button = ImageButton(style)
         button.setSize(buttonsIconSize, buttonsIconSize)
-
         return button.surroundWithCircle(buttonsCircleSize, false, buttonsBackColor)
     }
 
     private fun setNationDetails(nation: Nation) {
-        nationDetailsTable.clearChildren()  // .clear() also clears listeners!
-
+        nationDetailsTable.clearChildren()
         nationDetailsTable.add(NationTable(nation, civBlocksWidth, partHeight, ruleset))
         selectedNation = nation
     }
 
     private fun returnSelected() {
         if (selectedNation == null) return
-
-        UncivGame.Current.musicController.chooseTrack(selectedNation!!.name, MusicMood.themeOrPeace, MusicTrackChooserFlags.setSelectNation)
-
+        UncivGame.Current.musicController.chooseTrack(
+            selectedNation!!.name,
+            MusicMood.themeOrPeace,
+            MusicTrackChooserFlags.setSelectNation
+        )
         player.chosenCiv = selectedNation!!.name
         close()
         playerPicker.update()
