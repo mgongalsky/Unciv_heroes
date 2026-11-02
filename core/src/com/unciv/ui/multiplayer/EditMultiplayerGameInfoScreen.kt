@@ -7,6 +7,7 @@ import com.unciv.models.translations.tr
 import com.unciv.ui.pickerscreens.PickerScreen
 import com.unciv.ui.popup.ConfirmPopup
 import com.unciv.ui.popup.Popup
+import com.unciv.ui.popup.applyRoyalTextLayout
 import com.unciv.ui.popup.ToastPopup
 import com.unciv.ui.saves.LoadGameScreen
 import com.unciv.ui.utils.UncivTextField
@@ -74,8 +75,9 @@ class EditMultiplayerGameInfoScreen(val multiplayerGame: OnlineMultiplayerGame) 
             val newName = textField.text.trim()
             game.onlineMultiplayer.changeGameName(multiplayerGame, newName){
                 val popup = Popup(this)
-                popup.addGoodSizedLabel("Could not save game!")
+                popup.addGoodSizedLabel("Could not save game!").apply { if (game.settings.skin == "Minimal") row() }
                 popup.addCloseButton()
+                popup.applyRoyalTextLayout()
                 popup.open()
             }
             val newScreen = game.popScreen()
@@ -100,6 +102,7 @@ class EditMultiplayerGameInfoScreen(val multiplayerGame: OnlineMultiplayerGame) 
         //Create a popup
         val popup = Popup(this)
         popup.addGoodSizedLabel("Working...").row()
+        popup.applyRoyalTextLayout()
         popup.open()
 
         Concurrency.runOnNonDaemonThreadPool("Resign") {
@@ -113,12 +116,14 @@ class EditMultiplayerGameInfoScreen(val multiplayerGame: OnlineMultiplayerGame) 
                 } else {
                     launchOnGLThread {
                         popup.reuseWith("You can only resign if it's your turn", true)
+                        popup.applyRoyalTextLayout()
                     }
                 }
             } catch (ex: Exception) {
                 val (message) = LoadGameScreen.getLoadExceptionMessage(ex)
                 launchOnGLThread {
                     popup.reuseWith(message, true)
+                    popup.applyRoyalTextLayout()
                 }
             }
         }

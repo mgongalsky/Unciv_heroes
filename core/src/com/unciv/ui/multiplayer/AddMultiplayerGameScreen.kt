@@ -6,6 +6,7 @@ import com.unciv.logic.IdChecker
 import com.unciv.models.translations.tr
 import com.unciv.ui.pickerscreens.PickerScreen
 import com.unciv.ui.popup.Popup
+import com.unciv.ui.popup.applyRoyalTextLayout
 import com.unciv.ui.popup.ToastPopup
 import com.unciv.ui.saves.LoadGameScreen
 import com.unciv.ui.utils.UncivTextField
@@ -54,6 +55,7 @@ class AddMultiplayerGameScreen : PickerScreen() {
 
             val popup = Popup(this)
             popup.addGoodSizedLabel("Working...")
+            popup.applyRoyalTextLayout()
             popup.open()
 
             Concurrency.run("AddMultiplayerGame") {
@@ -67,6 +69,7 @@ class AddMultiplayerGameScreen : PickerScreen() {
                     val (message) = LoadGameScreen.getLoadExceptionMessage(ex)
                     launchOnGLThread {
                         popup.reuseWith(message, true)
+                        popup.applyRoyalTextLayout()
                     }
                 }
             }
