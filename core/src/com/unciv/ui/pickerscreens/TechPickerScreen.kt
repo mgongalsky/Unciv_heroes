@@ -68,47 +68,57 @@ class TechPickerScreen(
 
         descriptionLabel.onClick {
             if (selectedTech != null)
-                game.pushScreen(CivilopediaScreen(civInfo.gameInfo.ruleSet, CivilopediaCategories.Technology, selectedTech!!.name))
+                game.pushScreen(
+                    CivilopediaScreen(
+                        civInfo.gameInfo.ruleSet,
+                        CivilopediaCategories.Technology,
+                        selectedTech!!.name
+                    )
+                )
         }
-
         tempTechsToResearch = ArrayList(civTech.techsToResearch)
-
         createTechTable()
         setButtonsInfo()
         topTable.add(techTable)
-        techTable.background = skinStrings.getUiBackground("TechPickerScreen/Background", tintColor = skinStrings.skinConfig.clearColor)
-        pickerPane.bottomTable.background = skinStrings.getUiBackground("TechPickerScreen/BottomTable", tintColor = skinStrings.skinConfig.clearColor)
+        val royal = game.settings.skin == "Minimal"
+        val panelColor = if (royal) Color.valueOf("EADFBD") else skinStrings.skinConfig.clearColor
+        techTable.background =
+                skinStrings.getUiBackground("TechPickerScreen/Background", tintColor = panelColor)
+        pickerPane.bottomTable.background =
+                skinStrings.getUiBackground("TechPickerScreen/BottomTable", tintColor = panelColor)
+        if (royal) {
+            topTable.background = skinStrings.getUiBackground(
+                "TechPickerScreen/Background",
+                tintColor = panelColor
+            )
+            // Стиль копируется, чтобы цвет описания не менял остальные Label приложения.
+            descriptionLabel.style = Label.LabelStyle(descriptionLabel.style).apply {
+                fontColor = Color.valueOf("453925")
+            }
+            descriptionLabel.color = Color.WHITE
+        }
 
         rightSideButton.setText("Pick a tech".tr())
         rightSideButton.onClick(UncivSound.Paper) {
             if (freeTechPick) {
                 val freeTech = selectedTech!!.name
-                // More evil people fast-clicking to cheat - #4977
+                // Повторное быстрое нажатие не должно выдавать уже недоступную технологию.
                 if (!researchableTechs.contains(freeTech)) return@onClick
                 civTech.getFreeTechnology(selectedTech!!.name)
-            }
-            else civTech.techsToResearch = tempTechsToResearch
-
+            } else civTech.techsToResearch = tempTechsToResearch
             game.settings.addCompletedTutorialTask("Pick technology")
-
             game.popScreen()
         }
 
-        // per default show current/recent technology,
-        // and possibly select it to show description,
-        // which is very helpful when just discovered and clicking the notification
         val tech = centerOnTech ?: civInfo.tech.currentTechnology()
         if (tech != null) {
-            // select only if there it doesn't mess up tempTechsToResearch
             if (civInfo.tech.isResearched(tech.name) || civInfo.tech.techsToResearch.size <= 1)
                 selectTechnology(tech, true)
             else centerOnTechnology(tech)
         } else {
-            // center on any possible technology which is ready for the research right now
             val firstAvailable = researchableTechs.firstOrNull()
             val firstAvailableTech = civInfo.gameInfo.ruleSet.technologies[firstAvailable]
-            if (firstAvailableTech != null)
-                centerOnTechnology(firstAvailableTech)
+            if (firstAvailableTech != null) centerOnTechnology(firstAvailableTech)
         }
     }
 
@@ -247,9 +257,12 @@ class TechPickerScreen(
     }
 
     private fun addConnectingLines() {
-        techTable.pack() // required for the table to have the button positions set, so topTable.stageToLocalCoordinates will be correct
+        val royal = game.settings.skin == "Minimal"
+        val normalLineColor = if (royal) Color.valueOf("796747") else Color.WHITE
+        val availableLineColor = if (royal) Color.valueOf("47633A") else researchableTechColor
+        val queuedLineColor = if (royal) Color.valueOf("356575") else currentTechColor
+        techTable.pack()
         scrollPane.updateVisualScroll()
-
         for (line in lines) line.remove()
         lines.clear()
 
@@ -257,8 +270,15 @@ class TechPickerScreen(
             val coords = Vector2(0f, 0f)
             eraLabel.localToStageCoordinates(coords)
             techTable.stageToLocalCoordinates(coords)
-            val line = ImageGetter.getLine(coords.x-1f, coords.y, coords.x-1f, coords.y - 1000f, 1f)
-            line.color = Color.GRAY.apply { a = 0.6f }
+            val line = ImageGetter.getLine(
+                coords.x - 1f,
+                coords.y,
+                coords.x - 1f,
+                coords.y - 1000f,
+                1f
+            )
+            line.color =
+                    (if (royal) Color.valueOf("8D7546") else Color.GRAY.cpy()).apply { a = 0.6f }
             line.toBack()
             techTable.addActor(line)
             lines.add(line)
@@ -266,44 +286,44 @@ class TechPickerScreen(
 
         for (tech in civInfo.gameInfo.ruleSet.technologies.values) {
             if (!techNameToButton.containsKey(tech.name)) {
-                ToastPopup("Tech ${tech.name} appears to be missing - perhaps two techs have the same row & column", this)
+                ToastPopup(
+                    "Tech ${tech.name} appears to be missing - perhaps two techs have the same row & column",
+                    this
+                )
                 continue
             }
             val techButton = techNameToButton[tech.name]!!
             for (prerequisite in tech.prerequisites) {
                 if (!techNameToButton.containsKey(prerequisite)) {
-                    ToastPopup("Tech $prerequisite. prerequisite of ${tech.name}, appears to be missing - perhaps two techs have the same row & column", this)
+                    ToastPopup(
+                        "Tech $prerequisite. prerequisite of ${tech.name}, appears to be missing - perhaps two techs have the same row & column",
+                        this
+                    )
                     continue
                 }
                 val prerequisiteButton = techNameToButton[prerequisite]!!
                 val techButtonCoords = Vector2(0f, techButton.height / 2)
                 techButton.localToStageCoordinates(techButtonCoords)
                 techTable.stageToLocalCoordinates(techButtonCoords)
-
-                val prerequisiteCoords = Vector2(prerequisiteButton.width, prerequisiteButton.height / 2)
+                val prerequisiteCoords =
+                        Vector2(prerequisiteButton.width, prerequisiteButton.height / 2)
                 prerequisiteButton.localToStageCoordinates(prerequisiteCoords)
                 techTable.stageToLocalCoordinates(prerequisiteCoords)
-
                 val lineColor = when {
-                    civTech.isResearched(tech.name) && !tech.isContinuallyResearchable() -> Color.WHITE
-                    civTech.isResearched(prerequisite) -> researchableTechColor
-                    tempTechsToResearch.contains(tech.name) -> currentTechColor
-                    else -> Color.WHITE
+                    civTech.isResearched(tech.name) && !tech.isContinuallyResearchable() -> normalLineColor
+                    civTech.isResearched(prerequisite) -> availableLineColor
+                    tempTechsToResearch.contains(tech.name) -> queuedLineColor
+                    else -> normalLineColor
                 }
-
                 val lineSize = when {
                     tempTechsToResearch.contains(tech.name) && !civTech.isResearched(prerequisite) -> 4f
                     else -> 2f
                 }
-
                 if (techButtonCoords.y != prerequisiteCoords.y) {
-
                     val r = 6f
-
                     val deltaX = techButtonCoords.x - prerequisiteCoords.x
                     val deltaY = techButtonCoords.y - prerequisiteCoords.y
                     val halfLength = deltaX / 2f
-
                     val line = ImageGetter.getWhiteDot().apply {
                         width = halfLength - r
                         height = lineSize
@@ -318,51 +338,41 @@ class TechPickerScreen(
                     }
                     val line2 = ImageGetter.getWhiteDot().apply {
                         width = lineSize
-                        height = abs(deltaY) - 2*r
+                        height = abs(deltaY) - 2 * r
                         x = techButtonCoords.x - halfLength - width / 2
                         y = techButtonCoords.y + (if (deltaY > 0f) -height - r else r + width / 2)
                     }
-
-                    var line3: Image?
-                    var line4: Image?
-
+                    val line3: Image
+                    val line4: Image
                     if (deltaY < 0) {
-                        line3 = ImageGetter.getLine(line2.x, line2.y + line2.height,
-                            line.x + line.width, line.y+lineSize/2, lineSize)
-                        line4 = ImageGetter.getLine(line2.x, line2.y, line1.x, line1.y+lineSize/2, lineSize)
+                        line3 = ImageGetter.getLine(
+                            line2.x, line2.y + line2.height,
+                            line.x + line.width, line.y + lineSize / 2, lineSize
+                        )
+                        line4 = ImageGetter.getLine(
+                            line2.x,
+                            line2.y,
+                            line1.x,
+                            line1.y + lineSize / 2,
+                            lineSize
+                        )
                     } else {
-                        line3 = ImageGetter.getLine(line2.x+lineSize/2, line2.y,
-                            line.x + line.width, line.y, lineSize)
-                        line4 = ImageGetter.getLine(line2.x, line2.y + line2.height-lineSize/2,
-                            line1.x, line1.y+lineSize/2, lineSize)
+                        line3 = ImageGetter.getLine(
+                            line2.x + lineSize / 2, line2.y,
+                            line.x + line.width, line.y, lineSize
+                        )
+                        line4 = ImageGetter.getLine(
+                            line2.x, line2.y + line2.height - lineSize / 2,
+                            line1.x, line1.y + lineSize / 2, lineSize
+                        )
                     }
-
-                    line.color = lineColor
-                    line1.color = lineColor
-                    line2.color = lineColor
-                    line3.color = lineColor
-                    line4.color = lineColor
-
-                    techTable.addActor(line)
-                    techTable.addActor(line1)
-                    techTable.addActor(line2)
-                    techTable.addActor(line3)
-                    techTable.addActor(line4)
-
-                    line.toFront()
-                    line1.toFront()
-                    line2.toFront()
-                    line3.toFront()
-                    line4.toFront()
-
-                    lines.add(line)
-                    lines.add(line1)
-                    lines.add(line2)
-                    lines.add(line3)
-                    lines.add(line4)
-
+                    for (segment in listOf(line, line1, line2, line3, line4)) {
+                        segment.color = lineColor
+                        techTable.addActor(segment)
+                        segment.toFront()
+                        lines.add(segment)
+                    }
                 } else {
-
                     val line = ImageGetter.getWhiteDot().apply {
                         width = techButtonCoords.x - prerequisiteCoords.x
                         height = lineSize
@@ -370,23 +380,14 @@ class TechPickerScreen(
                         y = prerequisiteCoords.y - height / 2
                     }
                     line.color = lineColor
-
                     techTable.addActor(line)
-
-                    if (tempTechsToResearch.contains(tech.name))
-                        line.zIndex = 200000
-                    else
-                        line.zIndex = 500
-
+                    line.zIndex = if (tempTechsToResearch.contains(tech.name)) 200000 else 500
                     lines.add(line)
-
                 }
             }
         }
-
         for (line in lines) {
-            if (line.color == currentTechColor)
-                line.toFront()
+            if (line.color == queuedLineColor) line.toFront()
         }
     }
 
