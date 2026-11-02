@@ -310,4 +310,28 @@ class UiGoldenTest {
     fun mainMenuRender() {
         UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=main-menu"))
     }
+
+    /** Проверяет главное меню в портретном окне без обновления эталонов. */
+    @Test
+    fun mainMenuPortraitRender() {
+        UiGoldenTestRunner.main(
+            arrayOf(
+                "--capture-only",
+                "--scenario=main-menu",
+                "--main-menu-portrait"
+            )
+        )
+    }
+
+    /** Проверяет главное меню в широком окне без обновления эталонов. */
+    @Test
+    fun mainMenuWideRender() {
+        UiGoldenTestRunner.main(
+            arrayOf(
+                "--capture-only",
+                "--scenario=main-menu",
+                "--main-menu-wide"
+            )
+        )
+    }
 }

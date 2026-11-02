@@ -47,6 +47,12 @@ object UiGoldenTestRunner {
         require(!compactPortrait || (captureOnly && requestedScenarios == setOf("city-screen-compact"))) {
             "Portrait mode requires capture-only and the compact city scenario"
         }
+        val menuPortrait = args.contains("--main-menu-portrait")
+        val menuWide = args.contains("--main-menu-wide")
+        require(!(menuPortrait && menuWide)) { "Choose one main menu window size" }
+        require(!(menuPortrait || menuWide) || (captureOnly && requestedScenarios == setOf("main-menu"))) {
+            "Main menu window sizes require capture-only and the main-menu scenario"
+        }
         val armySetup = requestedScenarios == setOf("army-setup-laptop")
         require("army-setup-laptop" !in requestedScenarios || armySetup) {
             "Run army-setup-laptop separately at its laptop resolution"
@@ -72,10 +78,13 @@ object UiGoldenTestRunner {
             val config = Lwjgl3ApplicationConfiguration().apply {
                 setTitle("Heroic Civs UI golden tests")
                 setHdpiMode(HdpiMode.Logical)
-                setWindowedMode(
-                    if (compactPortrait) 360 else if (armySetup) 1366 else WIDTH,
-                    if (compactPortrait) 480 else if (armySetup) 768 else HEIGHT
-                )
+                val windowSize = when {
+                    compactPortrait || menuPortrait -> 360 to 480
+                    menuWide -> 1920 to 1080
+                    armySetup -> 1366 to 768
+                    else -> WIDTH to HEIGHT
+                }
+                setWindowedMode(windowSize.first, windowSize.second)
                 setInitialVisible(false)
                 setForegroundFPS(60)
                 setIdleFPS(60)

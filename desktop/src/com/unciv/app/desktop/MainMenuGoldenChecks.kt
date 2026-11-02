@@ -43,12 +43,29 @@ internal object MainMenuGoldenChecks {
             phases[screen] = 2
             return true
         }
-        for (button in buttons) {
+        val windowWidth = com.badlogic.gdx.Gdx.graphics.width
+        val windowHeight = com.badlogic.gdx.Gdx.graphics.height
+        val columns = buttons.map { it.parent }.distinct().size
+        if (windowWidth == 1920 && windowHeight == 1080) {
+            check(screen.stage.width >= 1000f && columns == 2) {
+                "Широкий запуск не проверяет две колонки: stage=${screen.stage.width}x${screen.stage.height}, columns=$columns"
+            }
+        } else if (windowWidth == 360 && windowHeight == 480) {
+            check(screen.stage.width < screen.stage.height && columns == 1) {
+                "Портретный запуск не проверяет одну колонку: stage=${screen.stage.width}x${screen.stage.height}, columns=$columns"
+            }
+        }
+        val bounds = buttons.map { button ->
             val position = button.localToStageCoordinates(Vector2())
             check(position.x >= -1f && position.x + button.width <= screen.stage.width + 1f) {
                 "Кнопка главного меню выходит за горизонтальные границы сцены"
             }
+            com.badlogic.gdx.math.Rectangle(position.x, position.y, button.width, button.height)
         }
+        for (i in bounds.indices) for (j in i + 1 until bounds.size) {
+            check(!bounds[i].overlaps(bounds[j])) { "Кнопки главного меню пересекаются: $i и $j" }
+        }
+        println("MAIN MENU layout: window=${windowWidth}x$windowHeight stage=${screen.stage.width}x${screen.stage.height} columns=$columns")
         val label = buttons.first().children.filterIsInstance<Label>().single()
         val original = label.text.toString()
         try {
