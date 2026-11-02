@@ -51,30 +51,38 @@ class OnlineMultiplayer {
     val games: Set<OnlineMultiplayerGame> get() = savedGames.values.toSet()
 
     init {
-        flow<Unit> {
+        val owner = UncivGame.Current
+        val application = com.badlogic.gdx.Gdx.app
+        val polling = flow<Unit> {
             while (true) {
                 delay(500)
-
-                val currentGame = getCurrentGame()
-                val multiplayerSettings = UncivGame.Current.settings.multiplayer
+                // Старое приложение не должно опрашивать состояние нового экземпляра игры.
+                if (UncivGame.Current !== owner) return@flow
+                val currentGame = owner.gameInfo?.let { getGameByGameId(it.gameId) }
+                val multiplayerSettings = owner.settings.multiplayer
                 val preview = currentGame?.preview
-                if (currentGame != null && (usesCustomServer() || preview == null || !preview.isUsersTurn())) {
-                    throttle(lastCurGameRefresh, multiplayerSettings.currentGameRefreshDelay, {}) { currentGame.requestUpdate() }
+                val customServer = multiplayerSettings.server != Constants.dropboxMultiplayerServer
+                if (currentGame != null && (customServer || preview == null ||
+                                preview.getCivilization(preview.currentPlayer).playerId != multiplayerSettings.userId)
+                ) {
+                    throttle(lastCurGameRefresh, multiplayerSettings.currentGameRefreshDelay, {}) {
+                        currentGame.requestUpdate()
+                    }
                 }
 
                 val doNotUpdate = if (currentGame == null) listOf() else listOf(currentGame)
-                throttle(lastAllGamesRefresh, multiplayerSettings.allGameRefreshDelay, {}) { requestUpdate(doNotUpdate = doNotUpdate) }
+                throttle(lastAllGamesRefresh, multiplayerSettings.allGameRefreshDelay, {}) {
+                    requestUpdate(doNotUpdate = doNotUpdate)
+                }
             }
         }.launchIn(CoroutineScope(Dispatcher.DAEMON))
-    }
-
-    private fun getCurrentGame(): OnlineMultiplayerGame? {
-        val gameInfo = UncivGame.Current.gameInfo
-        if (gameInfo != null) {
-            return getGameByGameId(gameInfo.gameId)
-        } else {
-            return null
-        }
+        application.addLifecycleListener(object : com.badlogic.gdx.LifecycleListener {
+            override fun pause() {}
+            override fun resume() {}
+            override fun dispose() {
+                polling.cancel()
+            }
+        })
     }
 
     /**
