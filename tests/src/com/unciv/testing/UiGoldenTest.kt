@@ -358,4 +358,10 @@ class UiGoldenTest {
     fun royalSelectBoxRender() {
         UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=royal-selectbox"))
     }
+
+    /** Проверяет прокрутку сюжетного окна и отклонение/принятие ответа без обновления эталона. */
+    @Test
+    fun storyDialogueLayoutRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=story-dialogue-layout"))
+    }
 }

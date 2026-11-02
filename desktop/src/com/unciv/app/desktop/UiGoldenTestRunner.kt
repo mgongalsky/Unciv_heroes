@@ -133,6 +133,7 @@ object UiGoldenTestRunner {
         Scenario("city-editor") { com.unciv.ui.playground.openScenarioCityEditorPreview(it) },
         Scenario("victory-editor") { com.unciv.ui.playground.openScenarioVictoryEditorPreview(it) },
         Scenario("story-dialogue") { com.unciv.ui.playground.openStoryDialoguePreview(it) },
+        Scenario("story-dialogue-layout") { StoryDialogueGoldenChecks.open(it) },
         Scenario("hero-editor") { com.unciv.ui.playground.openScenarioHeroEditorPreview(it) },
         Scenario("story-editor") { com.unciv.ui.playground.openScenarioStoryEditorPreview(it) },
         Scenario("victory-selection") {},

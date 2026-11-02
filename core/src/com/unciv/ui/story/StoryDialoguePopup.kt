@@ -21,22 +21,51 @@ class StoryDialoguePopup(
     private var submitted = false
 
     init {
-        val contentWidth = minOf(700f, stageToShowOn.width - 100f).coerceAtLeast(120f)
-        val header = Table()
-        val portrait: Actor = if (node.portrait.isNotBlank() && ImageGetter.imageExists(node.portrait)) {
-            ImageGetter.getImage(node.portrait).apply { setScaling(Scaling.fit) }
+        val royal = screen.game.settings.skin == "Minimal"
+        val contentWidth: Float
+        if (royal) {
+            innerTable.background = com.unciv.ui.utils.RoyalPanelDrawable(BaseScreen.skin)
+            innerTable.pad(52f).padTop(58f)
+            val scroll =
+                children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.ScrollPane>().single()
+            val scrollStyle = scroll.style
+            val chrome = innerTable.padLeft + innerTable.padRight + 10f +
+                    maxOf(
+                        scrollStyle.vScroll?.minWidth ?: 0f,
+                        scrollStyle.vScrollKnob?.minWidth ?: 0f
+                    ) +
+                    (scrollStyle.background?.leftWidth ?: 0f) + (scrollStyle.background?.rightWidth
+                ?: 0f)
+            contentWidth = minOf(700f, stageToShowOn.width - 24f - chrome).coerceAtLeast(1f)
+            getCell(scroll).width(contentWidth + chrome)
+                .maxHeight((stageToShowOn.height - 24f).coerceAtLeast(1f))
         } else {
-            ImageGetter.getRandomNationIndicator(64f)
+            contentWidth = minOf(700f, stageToShowOn.width - 100f).coerceAtLeast(120f)
         }
+        val ink = if (royal) com.badlogic.gdx.graphics.Color.valueOf("453925")
+        else com.badlogic.gdx.graphics.Color.WHITE
+        val header = Table()
+        val portrait: Actor =
+            if (node.portrait.isNotBlank() && ImageGetter.imageExists(node.portrait)) {
+                ImageGetter.getImage(node.portrait).apply { setScaling(Scaling.fit) }
+            } else {
+                ImageGetter.getRandomNationIndicator(64f)
+            }
         portrait.name = "story-portrait"
-        header.add(portrait).size(64f).padRight(16f)
-        header.add(node.speaker.toLabel().apply {
+        val speaker = node.speaker.toLabel(fontColor = ink).apply {
             name = "story-speaker"
             wrap = true
             setAlignment(Align.left)
-        }).width((contentWidth - 80f).coerceAtLeast(40f)).left()
+        }
+        if (royal && contentWidth < 240f) {
+            header.add(portrait).size(minOf(64f, contentWidth)).left().padBottom(10f).row()
+            header.add(speaker).width(contentWidth).left()
+        } else {
+            header.add(portrait).size(64f).padRight(16f)
+            header.add(speaker).width((contentWidth - 80f).coerceAtLeast(40f)).left()
+        }
         add(header).width(contentWidth).left().row()
-        add(node.text.toLabel().apply {
+        add(node.text.toLabel(fontColor = ink).apply {
             name = "story-text"
             wrap = true
             setAlignment(Align.left)
@@ -51,10 +80,17 @@ class StoryDialoguePopup(
     /** Кнопки переносят длинные ответы; окно допускает прокрутку на небольшом экране. */
     private fun addResponse(text: String, choiceId: String?, contentWidth: Float) {
         val cell = addButton(text) { submit(choiceId) }
-        cell.actor.name = "story-choice:${choiceId ?: "continue"}"
-        cell.actor.label.wrap = true
-        cell.actor.label.setAlignment(Align.left)
-        cell.actor.labelCell.width((contentWidth - 40f).coerceAtLeast(40f)).pad(10f)
+        val button = cell.actor
+        button.name = "story-choice:${choiceId ?: "continue"}"
+        button.label.wrap = true
+        button.label.setAlignment(Align.left)
+        if (com.unciv.UncivGame.Current.settings.skin == "Minimal") {
+            val labelWidth =
+                    (contentWidth - button.padLeft - button.padRight - 20f).coerceAtLeast(1f)
+            button.labelCell.width(labelWidth).pad(10f)
+        } else {
+            button.labelCell.width((contentWidth - 40f).coerceAtLeast(40f)).pad(10f)
+        }
         cell.width(contentWidth).minHeight(48f).fillX().row()
     }
 
