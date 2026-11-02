@@ -180,12 +180,12 @@ object UiGoldenTestRunner {
 
         override fun create() {
             Gdx.graphics.isContinuousRendering = true
+            ToastTimerGoldenChecks.reset()
             val settings = UncivFiles.getSettingsForPlatformLaunchers()
             game = UncivGame(
                 UncivGameParameters(
                     fontImplementation = NativeFontDesktop(
-                        Fonts.ORIGINAL_FONT_SIZE.toInt(),
-                        settings.fontFamily
+                        Fonts.ORIGINAL_FONT_SIZE.toInt(), settings.fontFamily
                     ),
                     initialScreenFactory = { scenarioScreen(scenarios.first()) }
                 )
@@ -193,7 +193,6 @@ object UiGoldenTestRunner {
             game.create()
         }
 
-        /** Ждёт экрана и проверок поведения, затем захватывает стабильный кадр. */
         override fun render() {
             Gdx.graphics.isContinuousRendering = true
             if (System.currentTimeMillis() - startedAt > 30_000L) {
@@ -212,6 +211,10 @@ object UiGoldenTestRunner {
                 stableFrames = 0
                 return
             }
+            if (scenarios[scenarioIndex].name == "toast-popup-layout" && !ToastTimerGoldenChecks.ready()) {
+                stableFrames = 0
+                return
+            }
             val terrainScreen = expectedScreen as? com.unciv.ui.mapeditor.TerrainPlaygroundScreen
             if (terrainScreen != null && !TerrainPlaygroundGoldenChecks.ready(terrainScreen)) {
                 stableFrames = 0
@@ -227,15 +230,13 @@ object UiGoldenTestRunner {
             stableFrames++
             if (stableFrames < STABLE_FRAMES_BEFORE_CAPTURE) return
             val framebuffer = ScreenUtils.getFrameBufferPixmap(
-                0, 0,
-                Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight
+                0, 0, Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight
             )
             val actual = flipVertically(framebuffer)
             framebuffer.dispose()
             if (captureOnly) {
-                val platform =
-                        System.getProperty("os.name").lowercase().replace(Regex("[^a-z0-9]+"), "-")
-                            .trim('-')
+                val platform = System.getProperty("os.name").lowercase()
+                    .replace(Regex("[^a-z0-9]+"), "-").trim('-')
                 val name = scenarios[scenarioIndex].name
                 writePng(
                     File(projectRoot, "tests/golden/results/$platform/$name-actual.png"),
@@ -294,6 +295,7 @@ object UiGoldenTestRunner {
         }
 
         override fun dispose() {
+            ToastTimerGoldenChecks.reset()
             if (!::game.isInitialized) return
             // UncivGame.dispose() exits the JVM with code 0, hiding golden failures from JUnit.
             // Release the test application's resources without saving user settings or exiting.
