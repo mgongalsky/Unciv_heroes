@@ -9,6 +9,7 @@ import com.unciv.ui.overviewscreen.StatsOverviewTab
 import com.unciv.ui.utils.TabbedPager
 import com.unciv.ui.utils.UncivSlider
 import kotlin.math.abs
+import com.unciv.models.translations.tr
 
 /** Проверяет размещение статистики и обновление через обработчик ползунка, без утверждения эталона. */
 internal object OverviewStatsGoldenChecks {
@@ -641,6 +642,66 @@ internal object OverviewStatsGoldenChecks {
             manager.religion = originalReligion
             if (originalEntry == null) world.religions.remove(name)
             else world.religions[name] = originalEntry
+        }
+    }
+
+    /** Проверяет сведения о чудесах и выравнивание таблицы на временном снимке построек. */
+    fun verifyWonders(screen: EmpireOverviewScreen, civ: CivilizationInfo) {
+        val city = civ.cities.first()
+        val constructions = city.cityConstructions
+        val originalBuildings = constructions.builtBuildings
+        val originalName = city.name
+        val originalGold = civ.gold
+        val originalQueue = constructions.constructionQueue.toList()
+        val wonder = civ.gameInfo.ruleSet.buildings.values.first {
+            it.isWonder && it.name !in originalBuildings
+        }
+        val sampleBuildings = HashSet(originalBuildings).apply { add(wonder.name) }
+        val longName =
+                "The ancient royal city beyond the northern mountains and the distant river valleys"
+        try {
+            // collectInfo читает имена построек напрямую; завершение строительства и его эффекты не вызываются.
+            constructions.builtBuildings = sampleBuildings
+            city.name = longName
+            val tab = com.unciv.ui.overviewscreen.WonderOverviewTab(civ, screen)
+            tab.pack()
+            val header = tab.getFixedContent()
+            header.pack()
+            check(header.columns == tab.columns)
+            for (column in 0 until header.columns) {
+                check(abs(header.getColumnWidth(column) - tab.getColumnWidth(column)) <= 1f) {
+                    "Столбец Wonders $column не совпадает с заголовком"
+                }
+            }
+            val labels = descendants(tab)
+                .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>().toList()
+            val entries = tab.wonderInfo.collectInfo()
+            val owned = entries.single { it.name == wonder.name }
+            check(owned.status == com.unciv.logic.civilization.WonderInfo.WonderStatus.Owned)
+            check(labels.any { it.text.toString() == owned.getNameColumn().tr() })
+            val location = labels.single { it.text.toString() == longName }
+            location.validate()
+            if (screen.game.settings.skin == "Minimal") {
+                check(location.wrap && location.glyphLayout.runs.size > 1) {
+                    "Длинное местоположение чуда не перенесено"
+                }
+            }
+            val hidden = entries.filter {
+                it.status == com.unciv.logic.civilization.WonderInfo.WonderStatus.Hidden
+            }
+            check(hidden.isNotEmpty()) { "Заготовка не содержит скрытых чудес" }
+            for (entry in hidden) {
+                check(labels.none { it.text.toString() == entry.name.tr() }) {
+                    "Скрытое чудо появилось в обзоре: ${entry.name}"
+                }
+            }
+            check(constructions.builtBuildings === sampleBuildings)
+            check(sampleBuildings == originalBuildings + wonder.name)
+            check(city.name == longName && civ.gold == originalGold)
+            check(constructions.constructionQueue.toList() == originalQueue)
+        } finally {
+            constructions.builtBuildings = originalBuildings
+            city.name = originalName
         }
     }
 }

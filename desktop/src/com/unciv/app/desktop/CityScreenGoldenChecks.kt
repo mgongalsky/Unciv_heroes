@@ -1170,6 +1170,7 @@ internal object CityScreenGoldenChecks {
                             OverviewStatsGoldenChecks.verifyUnits(screen, civ)
                             OverviewStatsGoldenChecks.verifyPolitics(screen, civ)
                             OverviewStatsGoldenChecks.verifyReligion(screen, civ)
+                            OverviewStatsGoldenChecks.verifyWonders(screen, civ)
                             onReady(screen)
                         } finally {
                             civ.detailedCivResources = originalResources
