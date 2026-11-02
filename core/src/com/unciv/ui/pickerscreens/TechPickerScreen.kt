@@ -189,38 +189,60 @@ class TechPickerScreen(
     }
 
     private fun setButtonsInfo() {
+        val royal = game.settings.skin == "Minimal"
         for (techName in techNameToButton.keys) {
             val techButton = techNameToButton[techName]!!
-            techButton.setButtonColor(when {
-                civTech.isResearched(techName) && techName != Constants.futureTech -> researchedTechColor
-                // if we're here to pick a free tech, show the current tech like the rest of the researchables so it'll be obvious what we can pick
-                tempTechsToResearch.firstOrNull() == techName && !freeTechPick -> currentTechColor
-                researchableTechs.contains(techName) -> researchableTechColor
-                tempTechsToResearch.contains(techName) -> queuedTechColor
-                else -> Color.BLACK
-            })
+            val researched = civTech.isResearched(techName) && techName != Constants.futureTech
+            if (royal) {
+                // Цвет принадлежит фону карточки: значки и дочерние подписи не тонируются целиком.
+                val backgroundColor = when {
+                    researched -> Color.valueOf("D8BD72")
+                    tempTechsToResearch.firstOrNull() == techName && !freeTechPick -> Color.valueOf(
+                        "9BC6D1"
+                    )
 
-            if (civTech.isResearched(techName) && techName != Constants.futureTech) {
-                techButton.text.color = colorFromRGB(154, 98, 16)
-                techButton.color = researchedTechColor.cpy().darken(0.5f)
-            }
-
-            if (techName == selectedTech?.name && civTech.isResearched(techName)) {
-                techButton.setButtonColor(colorFromRGB(230, 220, 114))
+                    researchableTechs.contains(techName) -> Color.valueOf("B8C997")
+                    tempTechsToResearch.contains(techName) -> Color.valueOf("A6BDB2")
+                    else -> Color.valueOf("C9C1AC")
+                }
+                techButton.color = Color.WHITE
+                techButton.text.color = Color.valueOf("453925")
+                techButton.turns.color = Color.valueOf("453925")
+                techButton.setButtonColor(
+                    if (techName == selectedTech?.name && civTech.isResearched(techName))
+                        Color.valueOf("F0DCA0")
+                    else backgroundColor
+                )
+            } else {
+                techButton.setButtonColor(
+                    when {
+                        researched -> researchedTechColor
+                        tempTechsToResearch.firstOrNull() == techName && !freeTechPick -> currentTechColor
+                        researchableTechs.contains(techName) -> researchableTechColor
+                        tempTechsToResearch.contains(techName) -> queuedTechColor
+                        else -> Color.BLACK
+                    }
+                )
+                if (researched) {
+                    techButton.text.color = colorFromRGB(154, 98, 16)
+                    techButton.color = researchedTechColor.cpy().darken(0.5f)
+                }
+                if (techName == selectedTech?.name && civTech.isResearched(techName)) {
+                    techButton.setButtonColor(colorFromRGB(230, 220, 114))
+                }
             }
 
             techButton.orderIndicator?.remove()
             if (tempTechsToResearch.contains(techName) && tempTechsToResearch.size > 1) {
                 techButton.addOrderIndicator(tempTechsToResearch.indexOf(techName) + 1)
             }
-
-            if (!civTech.isResearched(techName) || techName == Constants.futureTech) {
+            if (!researched) {
                 techButton.turns.setText(turnsToTech[techName] + "${Fonts.turn}".tr())
+            } else if (royal) {
+                techButton.turns.setText("")
             }
-
             techButton.text.setText(techName.tr())
         }
-
         addConnectingLines()
     }
 

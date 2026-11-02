@@ -704,4 +704,106 @@ internal object OverviewStatsGoldenChecks {
             city.name = originalName
         }
     }
+
+    /** Проверяет состояния дерева и отмену выбора через Stage, допуская пересоздание обзора при возврате. */
+    fun verifyTechnologies(
+        screen: EmpireOverviewScreen,
+        civ: CivilizationInfo
+    ): EmpireOverviewScreen {
+        val manager = civ.tech
+        val originalQueue = manager.techsToResearch
+        val researched = manager.techsResearched.toSet()
+        val progress = manager.techsInProgress.toMap()
+        val freeTechs = manager.freeTechs
+        val overflow = manager.overflowScience
+        val technologies = civ.gameInfo.ruleSet.technologies.values
+        val path = technologies.asSequence().map { manager.getRequiredTechsToDestination(it) }
+            .first { it.size >= 2 && it.any { tech -> !manager.canBeResearched(tech.name) } }
+        val sampleQueue = ArrayList(path.map { it.name })
+        val sampleBefore = sampleQueue.toList()
+        var picker: com.unciv.ui.pickerscreens.TechPickerScreen? = null
+        try {
+            manager.techsToResearch = sampleQueue
+            val tree = com.unciv.ui.pickerscreens.TechPickerScreen(civ)
+            picker = tree
+            screen.game.pushScreen(tree)
+            tree.pickerPane.validate()
+            val cards = descendants(tree.topTable)
+                .filterIsInstance<com.unciv.ui.pickerscreens.TechButton>().toList()
+            check(cards.size == technologies.size)
+            fun card(name: String) = cards.single { it.text.text.toString() == name.tr() }
+            if (screen.game.settings.skin == "Minimal") {
+                val colors = cards.map { it.bg.color.toString() }.toSet()
+                for (hex in listOf("D8BD72", "9BC6D1", "B8C997", "A6BDB2", "C9C1AC")) {
+                    check(com.badlogic.gdx.graphics.Color.valueOf(hex).toString() in colors) {
+                        "В заготовке дерева отсутствует состояние $hex"
+                    }
+                }
+                check(cards.all { it.color == com.badlogic.gdx.graphics.Color.WHITE }) {
+                    "Общее тонирование карточки изменяет цвета значков"
+                }
+            }
+            fun click(actor: Actor) {
+                tree.pickerPane.validate()
+                var ancestor = actor.parent
+                while (ancestor != null && ancestor !is com.badlogic.gdx.scenes.scene2d.ui.ScrollPane)
+                    ancestor = ancestor.parent
+                (ancestor as? com.badlogic.gdx.scenes.scene2d.ui.ScrollPane)?.let { scroll ->
+                    scroll.validate()
+                    val local = actor.localToAscendantCoordinates(
+                        scroll.actor,
+                        com.badlogic.gdx.math.Vector2()
+                    )
+                    scroll.scrollTo(local.x, local.y, actor.width, actor.height)
+                    scroll.updateVisualScroll()
+                    scroll.layout()
+                }
+                val point = actor.localToStageCoordinates(
+                    com.badlogic.gdx.math.Vector2(actor.width / 2f, actor.height / 2f)
+                )
+                val hit = checkNotNull(tree.stage.hit(point.x, point.y, true))
+                check(hit === actor || hit.isDescendantOf(actor)) { "Контрол дерева технологий перекрыт" }
+                tree.stage.stageToScreenCoordinates(point)
+                tree.stage.touchDown(
+                    point.x.toInt(),
+                    point.y.toInt(),
+                    0,
+                    com.badlogic.gdx.Input.Buttons.LEFT
+                )
+                tree.stage.touchUp(
+                    point.x.toInt(),
+                    point.y.toInt(),
+                    0,
+                    com.badlogic.gdx.Input.Buttons.LEFT
+                )
+            }
+
+            val alternative = technologies.first {
+                manager.canBeResearched(it.name) && it.name != sampleBefore.first()
+            }
+            click(card(alternative.name))
+            if (screen.game.settings.skin == "Minimal") {
+                check(card(alternative.name).bg.color == com.badlogic.gdx.graphics.Color.valueOf("9BC6D1")) {
+                    "Выбор не обновил текущее состояние карточки"
+                }
+            }
+            check(manager.techsToResearch === sampleQueue && sampleQueue == sampleBefore)
+            click(tree.closeButton)
+            val returned = checkNotNull(screen.game.screen as? EmpireOverviewScreen) {
+                "Отмена не вернула обзор"
+            }
+            val pager = returned.stage.actors.filterIsInstance<TabbedPager>().single()
+            pager.validate()
+            check(pager.activePage == pager.getPageIndex("Stats")) {
+                "Возврат из дерева не сохранил вкладку Stats"
+            }
+            check(manager.techsToResearch === sampleQueue && sampleQueue == sampleBefore)
+            check(manager.techsResearched == researched && manager.techsInProgress == progress)
+            check(manager.freeTechs == freeTechs && manager.overflowScience == overflow)
+            return returned
+        } finally {
+            if (picker != null && screen.game.screen === picker) screen.game.popScreen()
+            manager.techsToResearch = originalQueue
+        }
+    }
 }
