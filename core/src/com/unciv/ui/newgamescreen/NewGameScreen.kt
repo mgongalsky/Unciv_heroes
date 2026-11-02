@@ -23,6 +23,7 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.pickerscreens.PickerScreen
 import com.unciv.ui.popup.ConfirmPopup
 import com.unciv.ui.popup.Popup
+import com.unciv.ui.popup.applyRoyalTextLayout
 import com.unciv.ui.popup.ToastPopup
 import com.unciv.ui.saves.LoadGameScreen
 import com.unciv.ui.utils.BaseScreen
@@ -100,6 +101,7 @@ class NewGameScreen(
                 Popup(this).apply {
                     addGoodSizedLabel(newGameOptionsTable.scenarioVictoryError).row()
                     addCloseButton()
+                    applyRoyalTextLayout()
                     open()
                 }
                 return@onClick
@@ -109,6 +111,7 @@ class NewGameScreen(
                     Popup(this).apply {
                         addGoodSizedLabel((if (OnlineMultiplayer.usesCustomServer()) "Couldn't connect to Multiplayer Server!" else "Couldn't connect to Dropbox!").tr()).row()
                         addCloseButton()
+                        applyRoyalTextLayout()
                         open()
                     }
                     return@onClick
@@ -117,14 +120,14 @@ class NewGameScreen(
                     try {
                         UUID.fromString(IdChecker.checkAndReturnPlayerUuid(player.playerId))
                     } catch (_: Exception) {
-                        Popup(this).apply { addGoodSizedLabel("Invalid player ID!".tr()).row(); addCloseButton(); open() }
+                        Popup(this).apply { addGoodSizedLabel("Invalid player ID!".tr()).row(); addCloseButton(); applyRoyalTextLayout(); open() }
                         return@onClick
                     }
                 }
                 if (!gameSetupInfo.gameParameters.anyoneCanSpectate && gameSetupInfo.gameParameters.players.none {
                             it.playerId == UncivGame.Current.settings.multiplayer.userId
                         }) {
-                    Popup(this).apply { addGoodSizedLabel("You are not allowed to spectate!".tr()).row(); addCloseButton(); open() }
+                    Popup(this).apply { addGoodSizedLabel("You are not allowed to spectate!".tr()).row(); addCloseButton(); applyRoyalTextLayout(); open() }
                     return@onClick
                 }
             }
@@ -132,11 +135,11 @@ class NewGameScreen(
                         it.playerType == PlayerType.Human && !(it.chosenCiv == Constants.spectator &&
                                 gameSetupInfo.gameParameters.isOnlineMultiplayer && it.playerId != UncivGame.Current.settings.multiplayer.userId)
                     }) {
-                Popup(this).apply { addGoodSizedLabel("No human players selected!".tr()).row(); addCloseButton(); open() }
+                Popup(this).apply { addGoodSizedLabel("No human players selected!".tr()).row(); addCloseButton(); applyRoyalTextLayout(); open() }
                 return@onClick
             }
             if (gameSetupInfo.gameParameters.victoryTypes.isEmpty()) {
-                Popup(this).apply { addGoodSizedLabel("No victory conditions were selected!".tr()).row(); addCloseButton(); open() }
+                Popup(this).apply { addGoodSizedLabel("No victory conditions were selected!".tr()).row(); addCloseButton(); applyRoyalTextLayout(); open() }
                 return@onClick
             }
             Gdx.input.inputProcessor = null
@@ -156,7 +159,7 @@ class NewGameScreen(
                         it.scenarioSlotId.isNotEmpty() && it.chosenCiv == Constants.spectator
                     }) { "A spectator cannot occupy a scenario player slot" }
                 } catch (invalid: IllegalArgumentException) {
-                    Popup(this).apply { addGoodSizedLabel(invalid.message.orEmpty()).row(); addCloseButton(); open() }
+                    Popup(this).apply { addGoodSizedLabel(invalid.message.orEmpty()).row(); addCloseButton(); applyRoyalTextLayout(); open() }
                     Gdx.input.inputProcessor = stage
                     return@onClick
                 }
@@ -166,6 +169,7 @@ class NewGameScreen(
                         addGoodSizedLabel("Map is incompatible with the chosen ruleset!".tr()).row()
                         for (incompatibility in incompatibilities) addGoodSizedLabel(incompatibility).row()
                         addCloseButton()
+                        applyRoyalTextLayout()
                         open()
                     }
                     Gdx.input.inputProcessor = stage
@@ -254,6 +258,7 @@ class NewGameScreen(
         val popup = Popup(this@NewGameScreen)
         launchOnGLThread {
             popup.addGoodSizedLabel("Working...").row()
+            popup.applyRoyalTextLayout()
             popup.open()
         }
 
@@ -268,6 +273,7 @@ class NewGameScreen(
                     row()
                     addGoodSizedLabel(exception.message ?: exception.javaClass.simpleName).row()
                     addCloseButton()
+                    applyRoyalTextLayout()
                 }
                 Gdx.input.inputProcessor = stage
                 rightSideButton.enable()
@@ -284,6 +290,7 @@ class NewGameScreen(
             } catch (ex: FileStorageRateLimitReached) {
                 launchOnGLThread {
                     popup.reuseWith("Server limit reached! Please wait for [${ex.limitRemainingSeconds}] seconds", true)
+                    popup.applyRoyalTextLayout()
                     rightSideButton.enable()
                     rightSideButton.setText("Start game!".tr())
                 }
@@ -293,6 +300,7 @@ class NewGameScreen(
                 Log.error("Error while creating game", ex)
                 launchOnGLThread {
                     popup.reuseWith("Could not upload game!", true)
+                    popup.applyRoyalTextLayout()
                     rightSideButton.enable()
                     rightSideButton.setText("Start game!".tr())
                 }
