@@ -228,4 +228,100 @@ object RoyalUi {
         style.cursor = solid("453925").apply { minWidth = maxOf(1f, style.cursor?.minWidth ?: 1f) }
         style.selection = solid("d3bd8c")
     }
+
+    /** Оформляет SelectBox и его выпадающую панель, сохраняя обработчики выбора. */
+    fun installSelectBoxes(skin: Skin) {
+        val pixel = skin.get("royal-control-pixel", Texture::class.java)
+        val style =
+                skin.get(com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle::class.java)
+
+        fun background(
+            previous: com.badlogic.gdx.scenes.scene2d.utils.Drawable?, arrow: Boolean = false,
+            emphasized: Boolean = false, disabled: Boolean = false
+        ) =
+                object : com.badlogic.gdx.scenes.scene2d.utils.BaseDrawable() {
+                    private val line = Color.valueOf(if (emphasized) "8a632e" else "baa06a")
+                    private val paper = Color.valueOf(if (disabled) "d3c7a7" else "eadfbd")
+
+                    init {
+                        leftWidth = maxOf(7f, previous?.leftWidth ?: 0f)
+                        rightWidth = maxOf(if (arrow) 25f else 7f, previous?.rightWidth ?: 0f)
+                        topHeight = maxOf(7f, previous?.topHeight ?: 0f)
+                        bottomHeight = maxOf(7f, previous?.bottomHeight ?: 0f)
+                        minWidth = maxOf(if (arrow) 32f else 0f, previous?.minWidth ?: 0f)
+                        minHeight = maxOf(if (arrow) 20f else 0f, previous?.minHeight ?: 0f)
+                    }
+
+                    override fun draw(
+                        batch: com.badlogic.gdx.graphics.g2d.Batch,
+                        x: Float,
+                        y: Float,
+                        width: Float,
+                        height: Float
+                    ) {
+                        if (width <= 0f || height <= 0f) return
+                        val packed = batch.packedColor
+                        val r = batch.color.r
+                        val g = batch.color.g
+                        val b = batch.color.b
+                        val a = batch.color.a
+                        try {
+                            batch.setColor(r * line.r, g * line.g, b * line.b, a)
+                            batch.draw(pixel, x, y, width, height)
+                            val edge = minOf(if (emphasized) 2f else 1f, width / 2f, height / 2f)
+                            batch.setColor(r * paper.r, g * paper.g, b * paper.b, a)
+                            batch.draw(
+                                pixel,
+                                x + edge,
+                                y + edge,
+                                width - edge * 2,
+                                height - edge * 2
+                            )
+                            if (arrow && width >= 25f && height >= 12f) {
+                                batch.setColor(r * line.r, g * line.g, b * line.b, a)
+                                for (row in 0..3) {
+                                    val arrowWidth = 2f + row * 2f
+                                    batch.draw(
+                                        pixel, x + width - 13f - arrowWidth / 2f,
+                                        y + height / 2f - 2f + row, arrowWidth, 1f
+                                    )
+                                }
+                            }
+                        } finally {
+                            batch.packedColor = packed
+                        }
+                    }
+                }
+
+        fun selection(previous: com.badlogic.gdx.scenes.scene2d.utils.Drawable) =
+                com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable(
+                    com.badlogic.gdx.graphics.g2d.TextureRegion(pixel)
+                ).tint(Color.valueOf("4c492e")).apply {
+                    leftWidth = maxOf(7f, previous.leftWidth)
+                    rightWidth = maxOf(7f, previous.rightWidth)
+                    topHeight = maxOf(4f, previous.topHeight)
+                    bottomHeight = maxOf(4f, previous.bottomHeight)
+                    minWidth = previous.minWidth
+                    minHeight = previous.minHeight
+                }
+
+        val previous = style.background
+        style.background = background(previous, arrow = true)
+        style.backgroundOver = background(previous, arrow = true, emphasized = true)
+        style.backgroundOpen = background(previous, arrow = true, emphasized = true)
+        style.backgroundDisabled = background(previous, arrow = true, disabled = true)
+        style.fontColor = Color.valueOf("453925")
+        style.disabledFontColor = Color.valueOf("70634c")
+        style.listStyle = com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle(style.listStyle).apply {
+            fontColorUnselected = Color.valueOf("453925")
+            fontColorSelected = Color.valueOf("fff0cb")
+            selection = selection(this.selection)
+            background = null
+        }
+        style.scrollStyle =
+                com.badlogic.gdx.scenes.scene2d.ui.ScrollPane.ScrollPaneStyle(style.scrollStyle)
+                    .apply {
+                        background = background(this.background)
+                    }
+    }
 }

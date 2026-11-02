@@ -109,6 +109,7 @@ object UiGoldenTestRunner {
         Scenario("native-font-lifecycle") { NativeFontGoldenChecks.open(it) },
         Scenario("royal-checkbox") { RoyalCheckBoxGoldenChecks.open(it) },
         Scenario("royal-slider") { RoyalSliderGoldenChecks.open(it) },
+        Scenario("royal-selectbox") { RoyalSelectBoxGoldenChecks.open(it) },
         Scenario("terrain-parameters") { TerrainParametersGoldenChecks.open(it) },
         Scenario("terrain-editor-layers") {},
         Scenario("network-room") {},

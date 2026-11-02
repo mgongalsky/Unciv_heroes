@@ -352,4 +352,10 @@ class UiGoldenTest {
     fun royalSliderRender() {
         UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=royal-slider"))
     }
+
+    /** Проверяет раскрытие, выбор через Stage и disabled у Royal-списков. */
+    @Test
+    fun royalSelectBoxRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=royal-selectbox"))
+    }
 }
