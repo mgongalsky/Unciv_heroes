@@ -334,4 +334,10 @@ class UiGoldenTest {
             )
         )
     }
+
+    /** Проверяет освобождение страниц нативного шрифта и повторный dispose в GL-контексте. */
+    @Test
+    fun nativeFontLifecycleRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=native-font-lifecycle"))
+    }
 }

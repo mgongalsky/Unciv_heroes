@@ -25,6 +25,7 @@ import java.io.File
 import com.unciv.ui.playground.openBattleThreatPreview
 import com.unciv.ui.playground.openBattleTurnQueuePreview
 import com.unciv.ui.playground.openBattleTroopInfoPreview
+import com.unciv.ui.playground.openBattleFlankingPreview
 
 object UiGoldenTestRunner {
     private const val WIDTH = 1280
@@ -105,6 +106,7 @@ object UiGoldenTestRunner {
     private fun scenarios() = listOf(
         Scenario("main-menu") {},
         Scenario("terrain-playground") {},
+        Scenario("native-font-lifecycle") { NativeFontGoldenChecks.open(it) },
         Scenario("terrain-parameters") { TerrainParametersGoldenChecks.open(it) },
         Scenario("terrain-editor-layers") {},
         Scenario("network-room") {},
@@ -143,7 +145,7 @@ object UiGoldenTestRunner {
                 it
             )
         },
-        Scenario("battle-flanking") { com.unciv.ui.playground.openBattleFlankingPreview(it) },
+        Scenario("battle-flanking") { openBattleFlankingPreview(it) },
         Scenario("battle-result-layout") { BattleResultLayoutChecks.open(it) },
         Scenario("battle-result-attacker-victory") { screen ->
             BattleResultPopup(

@@ -78,9 +78,8 @@ object RoyalUi {
             if (skin.has(name, com.badlogic.gdx.graphics.g2d.BitmapFont::class.java))
                 return skin.get(name, com.badlogic.gdx.graphics.g2d.BitmapFont::class.java)
             val data =
-                    NativeBitmapFontData(platform.withBundledFont(assetRoot + "fonts/$family/font.ttf"))
-            return com.badlogic.gdx.graphics.g2d.BitmapFont(data, data.regions, false).also {
-                it.setOwnsTexture(true)
+                NativeBitmapFontData(platform.withBundledFont(assetRoot + "fonts/$family/font.ttf"))
+            return NativeBitmapFont(data).also {
                 it.data.setScale(com.unciv.Constants.defaultFontSize / Fonts.ORIGINAL_FONT_SIZE)
                 skin.add(name, it, com.badlogic.gdx.graphics.g2d.BitmapFont::class.java)
             }
@@ -93,7 +92,7 @@ object RoyalUi {
         skin.get(com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle::class.java).font = body
         skin.get(com.badlogic.gdx.scenes.scene2d.ui.CheckBox.CheckBoxStyle::class.java).font = body
         skin.get(com.badlogic.gdx.scenes.scene2d.ui.TextField.TextFieldStyle::class.java).font =
-                body
+            body
         skin.get(com.badlogic.gdx.scenes.scene2d.ui.List.ListStyle::class.java).font = body
         skin.get(com.badlogic.gdx.scenes.scene2d.ui.SelectBox.SelectBoxStyle::class.java).apply {
             font = body
@@ -105,11 +104,11 @@ object RoyalUi {
         }
         if (skin.has("default", com.badlogic.gdx.scenes.scene2d.ui.Window.WindowStyle::class.java))
             skin.get(com.badlogic.gdx.scenes.scene2d.ui.Window.WindowStyle::class.java).titleFont =
-                    display
+                display
         if (skin.has(
-                    "fantasyLabel",
-                    com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle::class.java
-                )
+                "fantasyLabel",
+                com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle::class.java
+            )
         )
             skin.get(
                 "fantasyLabel",

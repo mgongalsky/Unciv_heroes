@@ -173,13 +173,10 @@ object Fonts {
 
     lateinit var font: BitmapFont
 
-    /** This resets all cached font data in object Fonts.
-     *  Do not call from normal code - reset the Skin instead: `BaseScreen.setSkin()`
-     */
+    /** Создаёт шрифт для нового Skin; прежний шрифт остаётся у своего владельца. */
     fun resetFont() {
         val fontData = NativeBitmapFontData(UncivGame.Current.fontImplementation!!)
-        font = BitmapFont(fontData, fontData.regions, false)
-        font.setOwnsTexture(true)
+        font = NativeBitmapFont(fontData)
         font.data.setScale(Constants.defaultFontSize / ORIGINAL_FONT_SIZE)
     }
 
