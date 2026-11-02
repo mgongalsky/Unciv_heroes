@@ -27,6 +27,7 @@ import com.unciv.ui.utils.extensions.setSize
 class GameList(
     onSelected: (String) -> Unit
 ) : VerticalGroup() {
+    private var itemWidth: Float? = null
 
     private val gameDisplays = mutableMapOf<String, GameDisplay>()
 
@@ -59,11 +60,25 @@ class GameList(
         }
     }
 
-    private fun addGame(name: String, preview: GameInfoPreview?, error: Exception?, onSelected: (String) -> Unit) {
+    private fun addGame(
+        name: String,
+        preview: GameInfoPreview?,
+        error: Exception?,
+        onSelected: (String) -> Unit
+    ) {
         val gameDisplay = GameDisplay(name, preview, error, onSelected)
+        itemWidth?.let { gameDisplay.constrainWidth(it) }
         gameDisplays[name] = gameDisplay
         addActor(gameDisplay)
         children.sort()
+    }
+
+    /** Opt-in wrapped rows for constrained popup layouts. */
+    fun constrainItemWidth(width: Float) {
+        val constrained = width.coerceAtLeast(1f)
+        itemWidth = constrained
+        for (display in gameDisplays.values) display.constrainWidth(constrained)
+        invalidateHierarchy()
     }
 }
 
@@ -142,4 +157,17 @@ private class GameDisplay(
     override fun compareTo(other: GameDisplay): Int = gameName.compareTo(other.gameName)
     override fun equals(other: Any?): Boolean = (other is GameDisplay) && (gameName == other.gameName)
     override fun hashCode(): Int = gameName.hashCode()
+
+    /** Keeps the button caption within the available width, including after renaming. */
+    fun constrainWidth(width: Float) {
+        clearChildren()
+        statusIndicators.wrap(true)
+        gameButton.label.wrap = true
+        gameButton.labelCell.width(
+            (width - gameButton.padLeft - gameButton.padRight - 20f).coerceAtLeast(1f)
+        ).pad(10f)
+        add(statusIndicators).width(width).fillX().row()
+        add(gameButton).width(width).minHeight(48f).fillX()
+        invalidateHierarchy()
+    }
 }
