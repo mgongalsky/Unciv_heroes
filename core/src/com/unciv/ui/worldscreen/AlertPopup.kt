@@ -345,7 +345,8 @@ class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popu
                     AlertType.DeclarationOfFriendship,
                     AlertType.BulliedProtectedMinor, AlertType.AttackedProtectedMinor,
                     AlertType.WarDeclaration, AlertType.BorderConflict,
-                    AlertType.WonderBuilt, AlertType.TechResearched
+                    AlertType.WonderBuilt, AlertType.TechResearched,
+                    AlertType.CityConquered, AlertType.CityTraded, AlertType.DiplomaticMarriage
                 )
         ) return 0f
         innerTable.background =

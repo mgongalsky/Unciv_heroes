@@ -358,4 +358,137 @@ internal object AlertPopupGoldenChecks {
                 (actor as? com.badlogic.gdx.scenes.scene2d.utils.Layout)?.invalidateHierarchy()
         }
     }
+
+    fun verifyCityDecisions(screen: WorldScreen) {
+        check(screen.game.settings.skin == "Minimal")
+        val civ = screen.viewingCiv
+        val city = civ.cities.first()
+        check(!city.canBeDestroyed(justCaptured = true)) { "City decision fixture must forbid razing" }
+        val stage = screen.stage as UncivStage
+        val viewport = stage.viewport
+        val visibleArea = Rectangle(stage.lastKnownVisibleArea)
+        val alerts = civ.popupAlerts.toList()
+        val shouldUpdate = screen.shouldUpdate
+        val originalName = city.name
+        val cities = civ.cities.toList()
+        val owner = city.civInfo
+        val puppet = city.isPuppet
+        val razing = city.isBeingRazed
+        val gold = civ.gold
+        val population = city.population.population
+        val buildings = city.cityConstructions.builtBuildings.toSet()
+        val queue = city.cityConstructions.constructionQueue.toList()
+        val notifications = civ.notifications.toList()
+        try {
+            city.name =
+                    "The ancient royal city beyond the northern mountains and the distant river valleys ".repeat(
+                        8
+                    )
+            for (width in listOf(360f, 1000f)) {
+                stage.viewport = FitViewport(width, 480f)
+                stage.viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
+                EventBus.send(UncivStage.VisibleAreaChanged(Rectangle(0f, 0f, width, 480f)))
+                for (type in listOf(
+                    AlertType.CityConquered,
+                    AlertType.CityTraded,
+                    AlertType.DiplomaticMarriage
+                )) {
+                    val alert = PopupAlert(type, city.id)
+                    val pending = PopupAlert(AlertType.GoldenAge, "")
+                    civ.popupAlerts.clear()
+                    civ.popupAlerts.addAll(listOf(alert, pending))
+                    val popup = AlertPopup(screen, alert)
+                    try {
+                        popup.open(force = true)
+                        popup.validate()
+                        val scroll = popup.children.filterIsInstance<ScrollPane>().single()
+                        scroll.validate()
+                        popup.innerTable.validate()
+                        stage.draw()
+                        val detail = "$type at ${width}x480"
+                        check(popup.innerTable.background is RoyalPanelDrawable) { detail }
+                        val origin = scroll.localToStageCoordinates(Vector2())
+                        check(
+                            origin.x >= -1f && origin.y >= -1f &&
+                                    origin.x + scroll.width <= width + 1f &&
+                                    origin.y + scroll.height <= 481f
+                        ) { detail }
+                        check(scroll.maxX <= 1f && scroll.maxY > 0f) { detail }
+                        val labels = popup.innerTable.children.filterIsInstance<Label>()
+                        val heading = labels.first()
+                        check(heading.text.toString().contains(city.name.trim())) { detail }
+                        check(heading.wrap && heading.glyphLayout.runs.size > 1) { detail }
+                        for (label in labels) {
+                            val effective = label.color.cpy()
+                            label.style.fontColor?.let { effective.mul(it) }
+                            check(effective == Color.valueOf("453925")) { detail }
+                            check(label.height + 1f >= label.prefHeight) { detail }
+                        }
+                        val buttons = popup.innerTable.children.filterIsInstance<TextButton>()
+                        check(buttons.size == if (type == AlertType.CityConquered) 3 else 2) { detail }
+                        for (button in buttons) {
+                            check(button.label.wrap && button.label.height + 1f >= button.label.prefHeight) { detail }
+                            val local = button.localToAscendantCoordinates(scroll.actor, Vector2())
+                            scroll.scrollTo(local.x, local.y, button.width, button.height)
+                            scroll.updateVisualScroll()
+                            stage.draw()
+                            val point = button.localToStageCoordinates(
+                                Vector2(
+                                    button.width / 2f,
+                                    button.height / 2f
+                                )
+                            )
+                            check(point.x in 0f..width && point.y in 0f..480f) { detail }
+                            if (!button.isDisabled && button.touchable == com.badlogic.gdx.scenes.scene2d.Touchable.enabled) {
+                                val hit = stage.hit(point.x, point.y, true)
+                                check(hit === button || hit?.isDescendantOf(button) == true) {
+                                    "City action inaccessible: $detail ${button.text}"
+                                }
+                            }
+                        }
+                        if (type == AlertType.CityConquered) {
+                            val raze = buttons.last()
+                            check(raze.touchable == com.badlogic.gdx.scenes.scene2d.Touchable.disabled) {
+                                "Raze accepts pointer input for protected city: $detail"
+                            }
+                            val point = raze.localToStageCoordinates(
+                                Vector2(
+                                    raze.width / 2f,
+                                    raze.height / 2f
+                                )
+                            )
+                            val hit = stage.hit(point.x, point.y, true)
+                            check(hit !== raze && hit?.isDescendantOf(raze) != true) {
+                                "Disabled Raze receives hit: $detail"
+                            }
+                            stage.stageToScreenCoordinates(point)
+                            stage.touchDown(point.x.toInt(), point.y.toInt(), 0, Input.Buttons.LEFT)
+                            stage.touchUp(point.x.toInt(), point.y.toInt(), 0, Input.Buttons.LEFT)
+                            check(popup.parent != null) { "Disabled Raze closed the popup" }
+                        }
+                        check(civ.popupAlerts.toList() == listOf(alert, pending))
+                        check(civ.cities.toList() == cities && city.civInfo === owner)
+                        check(city.isPuppet == puppet && city.isBeingRazed == razing)
+                        check(civ.gold == gold && city.population.population == population)
+                        check(city.cityConstructions.builtBuildings == buildings)
+                        check(city.cityConstructions.constructionQueue.toList() == queue)
+                        check(civ.notifications.toList() == notifications)
+                    } finally {
+                        popup.events.stopReceiving()
+                        popup.remove()
+                    }
+                }
+            }
+        } finally {
+            city.name = originalName
+            civ.popupAlerts.clear()
+            civ.popupAlerts.addAll(alerts)
+            screen.shouldUpdate = shouldUpdate
+            stage.viewport = viewport
+            viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
+            EventBus.send(UncivStage.VisibleAreaChanged(visibleArea))
+            for (actor in stage.actors)
+                (actor as? com.badlogic.gdx.scenes.scene2d.utils.Layout)?.invalidateHierarchy()
+        }
+    }
 }
