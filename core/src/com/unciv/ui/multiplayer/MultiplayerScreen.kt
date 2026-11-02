@@ -61,8 +61,14 @@ class MultiplayerScreen(previousScreen: BaseScreen) : PickerScreen() {
 
         game.onlineMultiplayer.requestUpdate()
 
-        pickerPane.bottomTable.background = skinStrings.getUiBackground("MultiplayerScreen/BottomTable", tintColor = skinStrings.skinConfig.clearColor)
-        pickerPane.topTable.background = skinStrings.getUiBackground("MultiplayerScreen/TopTable", tintColor = skinStrings.skinConfig.clearColor)
+        pickerPane.bottomTable.background = skinStrings.getUiBackground("MultiplayerScreen/BottomTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD") else skinStrings.skinConfig.clearColor)
+        pickerPane.topTable.background = skinStrings.getUiBackground("MultiplayerScreen/TopTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD") else skinStrings.skinConfig.clearColor)
+    }
+
+    override fun render(delta: Float) {
+        com.unciv.ui.utils.RoyalUi.applyPaperText(pickerPane.topTable)
+        com.unciv.ui.utils.RoyalUi.applyPaperText(pickerPane.bottomTable)
+        super.render(delta)
     }
 
     private fun setupRightSideButton() {

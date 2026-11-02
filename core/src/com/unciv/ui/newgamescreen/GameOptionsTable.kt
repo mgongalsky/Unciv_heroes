@@ -29,7 +29,12 @@ class GameOptionsTable(
 
     init {
         getGameOptionsTable()
-        background = BaseScreen.skinStrings.getUiBackground("NewGameScreen/GameOptionsTable", tintColor = BaseScreen.skinStrings.skinConfig.clearColor)
+        background = BaseScreen.skinStrings.getUiBackground("NewGameScreen/GameOptionsTable", tintColor = if (UncivGame.Current.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD") else BaseScreen.skinStrings.skinConfig.clearColor)
+    }
+
+    override fun draw(batch: com.badlogic.gdx.graphics.g2d.Batch, parentAlpha: Float) {
+        com.unciv.ui.utils.RoyalUi.applyPaperText(this)
+        super.draw(batch, parentAlpha)
     }
 
     fun update() {

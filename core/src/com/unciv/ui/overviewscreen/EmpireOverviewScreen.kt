@@ -9,6 +9,7 @@ import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.KeyCharAndCode
 import com.unciv.ui.utils.RecreateOnResize
 import com.unciv.ui.utils.TabbedPager
+import com.unciv.ui.utils.extensions.darken
 
 class EmpireOverviewScreen(
     private var viewingPlayer: CivilizationInfo,
@@ -51,7 +52,9 @@ class EmpireOverviewScreen(
         tabbedPager = TabbedPager(
             stage.width, stage.width,
             centerAreaHeight, centerAreaHeight,
-            separatorColor = Color.WHITE,
+            backgroundColor = if (game.settings.skin == "Minimal") Color.valueOf("EADFBD")
+                else skinStrings.skinConfig.baseColor.darken(0.5f),
+            separatorColor = if (game.settings.skin == "Minimal") Color.valueOf("A18B5A") else Color.WHITE,
             capacity = EmpireOverviewCategories.values().size)
 
         tabbedPager.addClosePage { game.popScreen() }

@@ -72,11 +72,11 @@ class NewGameScreen(
         if (isNarrowerThan4to3()) initPortrait() else initLandscape()
         pickerPane.bottomTable.background = skinStrings.getUiBackground(
             "NewGameScreen/BottomTable",
-            tintColor = skinStrings.skinConfig.clearColor
+            tintColor = if (game.settings.skin == "Minimal") Color.valueOf("EADFBD") else skinStrings.skinConfig.clearColor
         )
         pickerPane.topTable.background = skinStrings.getUiBackground(
             "NewGameScreen/TopTable",
-            tintColor = skinStrings.skinConfig.clearColor
+            tintColor = if (game.settings.skin == "Minimal") Color.valueOf("EADFBD") else skinStrings.skinConfig.clearColor
         )
         if (UncivGame.Current.settings.lastGameSetup != null) {
             rightSideGroup.addActorAt(0, VerticalGroup().padBottom(5f))
@@ -194,6 +194,12 @@ class NewGameScreen(
             setSkin()
             Concurrency.runOnNonDaemonThreadPool("NewGame") { startNewGame() }
         }
+    }
+
+    override fun render(delta: Float) {
+        com.unciv.ui.utils.RoyalUi.applyPaperText(pickerPane.topTable)
+        com.unciv.ui.utils.RoyalUi.applyPaperText(pickerPane.bottomTable)
+        super.render(delta)
     }
 
     private fun initLandscape() {

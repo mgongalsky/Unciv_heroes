@@ -81,7 +81,7 @@ class PlayerPickerTable(
         top()
         add(ScrollPane(playerListTable).apply { setOverscroll(false, false) }).width(civBlocksWidth)
         update()
-        background = BaseScreen.skinStrings.getUiBackground("NewGameScreen/PlayerPickerTable", tintColor = BaseScreen.skinStrings.skinConfig.clearColor)
+        background = BaseScreen.skinStrings.getUiBackground("NewGameScreen/PlayerPickerTable", tintColor = if (UncivGame.Current.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD") else BaseScreen.skinStrings.skinConfig.clearColor)
     }
 
     /**
@@ -89,6 +89,12 @@ class PlayerPickerTable(
      * Also sets desired civilization, that is preferable for human players.
      * @param desiredCiv desired civilization name
      */
+    override fun draw(batch: com.badlogic.gdx.graphics.g2d.Batch, parentAlpha: Float) {
+        com.unciv.ui.utils.RoyalUi.applyPaperText(this)
+        for (child in playerListTable.children) com.unciv.ui.utils.RoyalUi.applyPaperText(child)
+        super.draw(batch, parentAlpha)
+    }
+
     fun update(desiredCiv: String = "") {
         playerListTable.clear()
         val gameBasics = previousScreen.ruleset // the mod picking changes this ruleset
@@ -176,7 +182,7 @@ class PlayerPickerTable(
         playerTable.pad(5f)
         playerTable.background = BaseScreen.skinStrings.getUiBackground(
             "NewGameScreen/PlayerPickerTable/PlayerTable",
-            tintColor = BaseScreen.skinStrings.skinConfig.baseColor.darken(0.8f)
+            tintColor = if (UncivGame.Current.settings.skin == "Minimal") Color.valueOf("D7C89F") else BaseScreen.skinStrings.skinConfig.baseColor.darken(0.8f)
         )
 
         val nationTable = getNationTable(player)

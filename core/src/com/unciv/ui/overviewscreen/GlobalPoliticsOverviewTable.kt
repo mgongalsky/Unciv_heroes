@@ -71,24 +71,28 @@ class GlobalPoliticsOverviewTable (
     private fun updatePoliticsTable() {
         clear()
         getFixedContent().clear()
-
+        val royal = overviewScreen.game.settings.skin == "Minimal"
+        val ink = if (royal) Color.valueOf("453925") else Color.WHITE
+        val separator = if (royal) Color.valueOf("A18B5A") else Color.GRAY
+        if (royal) background = BaseScreen.skinStrings.getUiBackground(
+            "OverviewScreen/DiplomacyOverviewTab/Background", tintColor = Color.valueOf("EADFBD")
+        )
         val diagramButton = "Show diagram".toTextButton().onClick(::updateDiagram)
 
         add()
-        addSeparatorVertical(Color.GRAY)
-        add("Civilization Info".toLabel())
-        addSeparatorVertical(Color.GRAY)
-        add("Social policies".toLabel())
-        addSeparatorVertical(Color.GRAY)
-        add("Wonders".toLabel())
-        addSeparatorVertical(Color.GRAY)
+        addSeparatorVertical(separator)
+        add("Civilization Info".toLabel(fontColor = ink))
+        addSeparatorVertical(separator)
+        add("Social policies".toLabel(fontColor = ink))
+        addSeparatorVertical(separator)
+        add("Wonders".toLabel(fontColor = ink))
+        addSeparatorVertical(separator)
         add(Table().apply {
-            add("Relations".toLabel()).row()
+            add("Relations".toLabel(fontColor = ink)).row()
             add(diagramButton).pad(10f)
         })
         row()
-        addSeparator(Color.GRAY)
-
+        addSeparator(separator)
         createGlobalPoliticsTable()
     }
 

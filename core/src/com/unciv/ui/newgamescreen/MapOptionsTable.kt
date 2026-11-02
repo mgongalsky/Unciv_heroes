@@ -36,7 +36,12 @@ class MapOptionsTable(private val newGameScreen: NewGameScreen): Table() {
         //defaults().pad(5f) - each nested table having the same can give 'stairs' effects,
         // better control directly. Besides, the first Labels/Buttons should have 10f to look nice
         addMapTypeSelection()
-        background = BaseScreen.skinStrings.getUiBackground("NewGameScreen/MapOptionsTable", tintColor = BaseScreen.skinStrings.skinConfig.clearColor)
+        background = BaseScreen.skinStrings.getUiBackground("NewGameScreen/MapOptionsTable", tintColor = if (UncivGame.Current.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD") else BaseScreen.skinStrings.skinConfig.clearColor)
+    }
+
+    override fun draw(batch: com.badlogic.gdx.graphics.g2d.Batch, parentAlpha: Float) {
+        com.unciv.ui.utils.RoyalUi.applyPaperText(this)
+        super.draw(batch, parentAlpha)
     }
 
     private fun addMapTypeSelection() {

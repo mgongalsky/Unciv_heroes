@@ -83,8 +83,14 @@ class LoadGameScreen(previousScreen:BaseScreen) : LoadOrSaveScreen() {
         rightSideButton.onActivation { onLoadGame() }
         rightSideButton.keyShortcuts.add(KeyCharAndCode.RETURN)
         rightSideButton.isVisible = false
-        pickerPane.bottomTable.background = skinStrings.getUiBackground("LoadGameScreen/BottomTable", tintColor = skinStrings.skinConfig.clearColor)
-        pickerPane.topTable.background = skinStrings.getUiBackground("LoadGameScreen/TopTable", tintColor = skinStrings.skinConfig.clearColor)
+        pickerPane.bottomTable.background = skinStrings.getUiBackground("LoadGameScreen/BottomTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD") else skinStrings.skinConfig.clearColor)
+        pickerPane.topTable.background = skinStrings.getUiBackground("LoadGameScreen/TopTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD") else skinStrings.skinConfig.clearColor)
+    }
+
+    override fun render(delta: Float) {
+        com.unciv.ui.utils.RoyalUi.applyPaperText(pickerPane.topTable)
+        com.unciv.ui.utils.RoyalUi.applyPaperText(pickerPane.bottomTable)
+        super.render(delta)
     }
 
     override fun resetWindowState() {

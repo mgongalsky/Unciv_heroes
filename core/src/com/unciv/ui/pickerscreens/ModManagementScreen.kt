@@ -135,8 +135,14 @@ class ModManagementScreen(
         else
             refreshOnlineModTable()
 
-        pickerPane.bottomTable.background = skinStrings.getUiBackground("ModManagementScreen/BottomTable", tintColor = skinStrings.skinConfig.clearColor)
-        pickerPane.topTable.background = skinStrings.getUiBackground("ModManagementScreen/TopTable", tintColor = skinStrings.skinConfig.clearColor)
+        pickerPane.bottomTable.background = skinStrings.getUiBackground("ModManagementScreen/BottomTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD") else skinStrings.skinConfig.clearColor)
+        pickerPane.topTable.background = skinStrings.getUiBackground("ModManagementScreen/TopTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD") else skinStrings.skinConfig.clearColor)
+    }
+
+    override fun render(delta: Float) {
+        com.unciv.ui.utils.RoyalUi.applyPaperText(pickerPane.topTable)
+        com.unciv.ui.utils.RoyalUi.applyPaperText(pickerPane.bottomTable)
+        super.render(delta)
     }
 
     private fun initPortrait() {

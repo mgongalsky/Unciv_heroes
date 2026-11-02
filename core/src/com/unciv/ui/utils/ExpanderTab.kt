@@ -69,14 +69,15 @@ class ExpanderTab(
         headerIcon.setSize(arrowSize, arrowSize)
         headerIcon.setOrigin(Align.center)
         headerIcon.rotation = 180f
-        headerIcon.color = arrowColor
+        headerIcon.color = if (UncivGame.Current.settings.skin == "Minimal") Color.valueOf("453925") else arrowColor
         header.background(
             BaseScreen.skinStrings.getUiBackground(
                 "General/ExpanderTab",
-                tintColor = BaseScreen.skinStrings.skinConfig.baseColor
+                tintColor = if (UncivGame.Current.settings.skin == "Minimal") Color.valueOf("D7C89F") else BaseScreen.skinStrings.skinConfig.baseColor
             )
         )
         if (icon != null) header.add(icon)
+        if (UncivGame.Current.settings.skin == "Minimal") RoyalUi.applyPaperText(headerLabel)
         header.add(headerLabel)
         header.add(headerIcon).size(arrowSize).align(Align.center)
         header.touchable= Touchable.enabled

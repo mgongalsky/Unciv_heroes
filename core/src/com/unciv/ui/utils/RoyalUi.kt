@@ -347,4 +347,45 @@ object RoyalUi {
         style.hScrollKnob = knob(style.hScrollKnob)
         style.vScrollKnob = knob(style.vScrollKnob)
     }
+
+    /** Затемняет обычные белые подписи на явно выбранной пергаментной поверхности. */
+    fun applyPaperText(root: com.badlogic.gdx.scenes.scene2d.Actor) {
+        if (com.unciv.UncivGame.Current.settings.skin != "Minimal") return
+        fun visit(actor: com.badlogic.gdx.scenes.scene2d.Actor) {
+            when (actor) {
+                is com.badlogic.gdx.scenes.scene2d.ui.CheckBox -> {
+                    if (actor.style.fontColor == Color.WHITE) {
+                        actor.style =
+                                com.badlogic.gdx.scenes.scene2d.ui.CheckBox.CheckBoxStyle(actor.style)
+                                    .apply {
+                                        fontColor = Color.valueOf("453925")
+                                        disabledFontColor = Color.valueOf("70634c")
+                                    }
+                    }
+                }
+
+                is Button -> Unit
+                is com.badlogic.gdx.scenes.scene2d.ui.Label -> {
+                    if (actor.style.fontColor == Color.WHITE && actor.color == Color.WHITE) {
+                        actor.style =
+                                com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle(actor.style)
+                                    .apply {
+                                        fontColor = Color.valueOf("453925")
+                                    }
+                    }
+                }
+
+                is com.badlogic.gdx.scenes.scene2d.ui.Table -> {
+                    // У вложенной карточки может быть тёмный или национальный фон.
+                    if (actor === root || actor.background == null)
+                        for (child in actor.children) visit(child)
+                }
+
+                is com.badlogic.gdx.scenes.scene2d.Group -> {
+                    for (child in actor.children) visit(child)
+                }
+            }
+        }
+        visit(root)
+    }
 }

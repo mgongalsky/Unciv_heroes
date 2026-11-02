@@ -73,7 +73,7 @@ class OptionsPopup(
         }
         tabs = TabbedPager(
             tabMinWidth, tabMaxWidth, 0f, tabMaxHeight,
-            headerFontSize = 21, backgroundColor = if (royal) Color.valueOf("002042") else Color.CLEAR, capacity = 8
+            headerFontSize = 21, backgroundColor = if (royal) Color.valueOf("EADFBD") else Color.CLEAR, capacity = 8
         )
         add(tabs).pad(0f).grow().row()
 
@@ -243,6 +243,49 @@ class OptionsPopup(
             table.add(label).width((availableWidth - controlWidth - 30f).coerceAtLeast(1f)).left()
             table.add(control).width(controlWidth).pad(10f).fillX().row()
         }
+    }
+
+    /** Обновляет контраст динамического содержимого только внутри светлых панелей настроек. */
+    override fun draw(batch: com.badlogic.gdx.graphics.g2d.Batch, parentAlpha: Float) {
+        if (settings.skin == "Minimal") {
+            fun styleContent(actor: com.badlogic.gdx.scenes.scene2d.Actor) {
+                when (actor) {
+                    is com.badlogic.gdx.scenes.scene2d.ui.CheckBox -> {
+                        if (actor.style.fontColor == Color.WHITE) {
+                            actor.style =
+                                    com.badlogic.gdx.scenes.scene2d.ui.CheckBox.CheckBoxStyle(actor.style)
+                                        .apply {
+                                            fontColor = Color.valueOf("453925")
+                                            disabledFontColor = Color.valueOf("70634c")
+                                        }
+                        }
+                    }
+
+                    is com.badlogic.gdx.scenes.scene2d.ui.Button -> Unit
+                    is Label -> {
+                        if (actor.style.fontColor == Color.WHITE && actor.color == Color.WHITE) {
+                            actor.style = Label.LabelStyle(actor.style)
+                                .apply { fontColor = Color.valueOf("453925") }
+                        }
+                    }
+
+                    is Table -> {
+                        // Вложенные карточки со своим фоном сохраняют собственный контракт контраста.
+                        if (actor.background == null) for (child in actor.children) styleContent(
+                            child
+                        )
+                    }
+
+                    is com.badlogic.gdx.scenes.scene2d.Group -> {
+                        for (child in actor.children) styleContent(child)
+                    }
+                }
+            }
+            for (scroll in tabs.children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.ScrollPane>()) {
+                scroll.actor?.let { styleContent(it) }
+            }
+        }
+        super.draw(batch, parentAlpha)
     }
 }
 
