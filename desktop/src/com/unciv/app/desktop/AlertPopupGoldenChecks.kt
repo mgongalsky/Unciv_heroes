@@ -115,4 +115,116 @@ internal object AlertPopupGoldenChecks {
                 (actor as? com.badlogic.gdx.scenes.scene2d.utils.Layout)?.invalidateHierarchy()
         }
     }
+
+    fun verifyPairedResponses(screen: WorldScreen) {
+        check(screen.game.settings.skin == "Minimal")
+        val civ = screen.viewingCiv
+        val stage = screen.stage as UncivStage
+        val viewport = stage.viewport
+        val visibleArea = Rectangle(stage.lastKnownVisibleArea)
+        val alerts = civ.popupAlerts.toList()
+        val shouldUpdate = screen.shouldUpdate
+        val gold = civ.gold
+        val notifications = civ.notifications.toList()
+        val diplomacy = civ.diplomacy.toMap()
+        try {
+            for (width in listOf(360f, 1000f)) {
+                stage.viewport = FitViewport(width, 480f)
+                stage.viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
+                EventBus.send(UncivStage.VisibleAreaChanged(Rectangle(0f, 0f, width, 480f)))
+                for (type in listOf(AlertType.WarDeclaration, AlertType.BorderConflict)) {
+                    for (responseIndex in 0..1) {
+                        val alert = PopupAlert(type, civ.civName)
+                        val pending = PopupAlert(AlertType.GoldenAge, "")
+                        civ.popupAlerts.clear()
+                        civ.popupAlerts.addAll(listOf(alert, pending))
+                        val popup = AlertPopup(screen, alert)
+                        var closed = 0
+                        popup.closeListeners.add { closed++ }
+                        try {
+                            popup.open(force = true)
+                            check(popup.innerTable.background is RoyalPanelDrawable)
+                            val responses = checkNotNull(
+                                popup.findActor<com.badlogic.gdx.scenes.scene2d.ui.Table>("alertResponses")
+                            )
+                            val buttons = responses.children.filterIsInstance<TextButton>()
+                            check(buttons.size == 2)
+                            val originalCaptions = buttons.map { it.text.toString() }
+                            for ((index, button) in buttons.withIndex()) {
+                                button.setText("Response $index to the message from the distant royal provinces beyond the mountains")
+                            }
+                            val labels = popup.innerTable.children.filterIsInstance<Label>()
+                            check(labels.isNotEmpty())
+                            labels.first().setText(
+                                "A long diplomatic message from the distant provinces. ".repeat(25)
+                            )
+                            for (label in labels) {
+                                val effective = label.color.cpy()
+                                label.style.fontColor?.let { effective.mul(it) }
+                                check(effective == Color.valueOf("453925"))
+                            }
+                            popup.invalidateHierarchy()
+                            popup.validate()
+                            val scroll = popup.children.filterIsInstance<ScrollPane>().single()
+                            scroll.validate()
+                            popup.innerTable.validate()
+                            stage.draw()
+                            val origin = scroll.localToStageCoordinates(Vector2())
+                            val detail = "$type response=$responseIndex width=$width"
+                            check(scroll.maxX <= 1f && scroll.maxY > 0f) { detail }
+                            check(
+                                origin.x >= -1f && origin.y >= -1f &&
+                                        origin.x + scroll.width <= width + 1f &&
+                                        origin.y + scroll.height <= 481f
+                            ) { detail }
+                            check(buttons[0].y >= buttons[1].top - 1f) { "Responses overlap: $detail" }
+                            for (button in buttons) {
+                                check(button.label.wrap) { "Response wrapping disabled: $detail" }
+                                if (width == 360f) check(button.label.glyphLayout.runs.size > 1) {
+                                    "Long response did not wrap on narrow scene: $detail"
+                                }
+                                check(button.label.height + 1f >= button.label.prefHeight) { "Response text clipped: $detail" }
+                                check(button.x >= -1f && button.right <= responses.width + 1f) { detail }
+                            }
+                            val button = buttons[responseIndex]
+                            val local = button.localToAscendantCoordinates(scroll.actor, Vector2())
+                            scroll.scrollTo(local.x, local.y, button.width, button.height)
+                            scroll.updateVisualScroll()
+                            stage.draw()
+                            val point = button.localToStageCoordinates(
+                                Vector2(
+                                    button.width / 2f,
+                                    button.height / 2f
+                                )
+                            )
+                            val hit = stage.hit(point.x, point.y, true)
+                            check(hit === button || hit?.isDescendantOf(button) == true) {
+                                "Response inaccessible: $detail caption=${originalCaptions[responseIndex]}"
+                            }
+                            check(civ.popupAlerts.toList() == listOf(alert, pending))
+                            stage.stageToScreenCoordinates(point)
+                            stage.touchDown(point.x.toInt(), point.y.toInt(), 0, Input.Buttons.LEFT)
+                            stage.touchUp(point.x.toInt(), point.y.toInt(), 0, Input.Buttons.LEFT)
+                            check(popup.parent == null && closed == 1) { detail }
+                            check(civ.popupAlerts.toList() == listOf(pending)) { detail }
+                            check(screen.shouldUpdate)
+                            check(civ.gold == gold && civ.notifications.toList() == notifications)
+                            check(civ.diplomacy == diplomacy)
+                        } finally {
+                            if (popup.parent != null) popup.close()
+                        }
+                    }
+                }
+            }
+        } finally {
+            civ.popupAlerts.clear()
+            civ.popupAlerts.addAll(alerts)
+            screen.shouldUpdate = shouldUpdate
+            stage.viewport = viewport
+            viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
+            EventBus.send(UncivStage.VisibleAreaChanged(visibleArea))
+            for (actor in stage.actors)
+                (actor as? com.badlogic.gdx.scenes.scene2d.utils.Layout)?.invalidateHierarchy()
+        }
+    }
 }

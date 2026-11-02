@@ -323,19 +323,22 @@ class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popu
     private fun configureRoyalTextAlert(): Float {
         if (worldScreen.game.settings.skin != "Minimal") return 0f
         if (popupAlert.type !in setOf(
-                AlertType.Defeated, AlertType.FirstContact, AlertType.GoldenAge,
-                AlertType.StartIntro, AlertType.DemandToStopSettlingCitiesNear,
-                AlertType.CitySettledNearOtherCivDespiteOurPromise,
-                AlertType.DeclarationOfFriendship,
-                AlertType.BulliedProtectedMinor, AlertType.AttackedProtectedMinor
-            )) return 0f
-        innerTable.background = com.unciv.ui.utils.RoyalPanelDrawable(com.unciv.ui.utils.BaseScreen.skin)
+                    AlertType.Defeated, AlertType.FirstContact, AlertType.GoldenAge,
+                    AlertType.StartIntro, AlertType.DemandToStopSettlingCitiesNear,
+                    AlertType.CitySettledNearOtherCivDespiteOurPromise,
+                    AlertType.DeclarationOfFriendship,
+                    AlertType.BulliedProtectedMinor, AlertType.AttackedProtectedMinor,
+                    AlertType.WarDeclaration, AlertType.BorderConflict
+                )
+        ) return 0f
+        innerTable.background =
+                com.unciv.ui.utils.RoyalPanelDrawable(com.unciv.ui.utils.BaseScreen.skin)
         innerTable.pad(52f).padTop(58f)
         val scroll = children.filterIsInstance<ScrollPane>().single()
         val style = scroll.style
         val chrome = innerTable.padLeft + innerTable.padRight + 10f +
-            maxOf(style.vScroll?.minWidth ?: 0f, style.vScrollKnob?.minWidth ?: 0f) +
-            (style.background?.leftWidth ?: 0f) + (style.background?.rightWidth ?: 0f)
+                maxOf(style.vScroll?.minWidth ?: 0f, style.vScrollKnob?.minWidth ?: 0f) +
+                (style.background?.leftWidth ?: 0f) + (style.background?.rightWidth ?: 0f)
         val contentWidth = minOf(700f, stageToShowOn.width - 24f - chrome).coerceAtLeast(1f)
         getCell(scroll).width(contentWidth + chrome)
             .maxHeight((stageToShowOn.height - 24f).coerceAtLeast(1f))
@@ -344,6 +347,13 @@ class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popu
 
     init {
         if (royalContentWidth > 0f) {
+            fun configureButton(table: Table, button: TextButton) {
+                button.label.wrap = true
+                button.labelCell.width(
+                    (royalContentWidth - button.padLeft - button.padRight - 20f).coerceAtLeast(1f)
+                ).pad(10f)
+                table.getCell(button).width(royalContentWidth).minHeight(48f).fillX()
+            }
             for (actor in innerTable.children) {
                 when (actor) {
                     is com.badlogic.gdx.scenes.scene2d.ui.Label -> {
@@ -351,12 +361,26 @@ class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popu
                         actor.wrap = true
                         innerTable.getCell(actor).width(royalContentWidth)
                     }
-                    is TextButton -> {
-                        actor.label.wrap = true
-                        actor.labelCell.width(
-                            (royalContentWidth - actor.padLeft - actor.padRight - 20f).coerceAtLeast(1f)
-                        ).pad(10f)
-                        innerTable.getCell(actor).width(royalContentWidth).minHeight(48f).fillX()
+
+                    is TextButton -> configureButton(innerTable, actor)
+                    is Table -> {
+                        if (popupAlert.type in setOf(
+                                    AlertType.WarDeclaration,
+                                    AlertType.BorderConflict
+                                )
+                                && actor.children.size > 0 && actor.children.all { it is TextButton }
+                        ) {
+                            val buttons = actor.children.filterIsInstance<TextButton>()
+                            actor.clearChildren()
+                            actor.defaults().pad(0f)
+                            actor.name = "alertResponses"
+                            for (button in buttons) {
+                                actor.add(button).padBottom(10f)
+                                configureButton(actor, button)
+                                actor.row()
+                            }
+                            innerTable.getCell(actor).width(royalContentWidth)
+                        }
                     }
                 }
             }
