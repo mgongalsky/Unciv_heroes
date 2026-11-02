@@ -16,90 +16,100 @@ import com.unciv.ui.worldscreen.WorldScreen
 
 class WorldScreenMenuPopup(val worldScreen: WorldScreen) : Popup(worldScreen) {
     init {
+        val royal = worldScreen.game.settings.skin == "Minimal"
+        val buttonStyle = BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)
         defaults().fillX()
+        var buttonWidth = 0f
+        if (royal) {
+            innerTable.background = com.unciv.ui.utils.RoyalPanelDrawable(BaseScreen.skin)
+            innerTable.pad(52f).padTop(58f)
+            val scroll = children.filterIsInstance<com.unciv.ui.utils.AutoScrollPane>().single()
+            scroll.setScrollingDisabled(true, false)
+            scroll.setOverscroll(false, false)
+            val scrollStyle = scroll.style
+            val barWidth = maxOf(
+                scrollStyle.vScroll?.minWidth ?: 0f,
+                scrollStyle.vScrollKnob?.minWidth ?: 0f
+            )
+            val insets = (scrollStyle.background?.leftWidth ?: 0f) +
+                    (scrollStyle.background?.rightWidth ?: 0f)
+            // Полоса резервируется до первой раскладки, когда scrollBarWidth ещё равен нулю.
+            val chrome = innerTable.padLeft + innerTable.padRight + 10f + barWidth + insets
+            buttonWidth = minOf(360f, stageToShowOn.width - 24f - chrome).coerceAtLeast(1f)
+            getCell(scroll).width(buttonWidth + chrome).minHeight(0f)
+                .maxHeight((stageToShowOn.height - 40f).coerceAtLeast(1f))
+        }
 
-        // TODO: remove code dubbing, create function for a button
-        addButton("Main menu", null, BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)) {
+        fun configure(cell: com.badlogic.gdx.scenes.scene2d.ui.Cell<TextButton>) {
+            cell.actor.label.setAlignment(Align.center)
+            if (royal) {
+                cell.actor.label.setWrap(true)
+                cell.actor.pad(10f, 25f, 10f, 25f)
+                cell.width(buttonWidth).minHeight(58f)
+            } else {
+                cell.actor.label.setFontScale(0.5f, 0.5f)
+                cell.actor.pad(0f, 10f, 0f, 10f)
+            }
+        }
+
+        val mainMenu = addButton("Main menu", null, buttonStyle) {
             worldScreen.game.goToMainMenu()
-        }.apply {
-            actor.label.setFontScale(0.5f, 0.5f)
-            actor.label.setAlignment(Align.center)
-            actor.pad(0f,10f,0f, 10f)
+        }
+        configure(mainMenu)
+        if (!royal) mainMenu.padTop(25f)
+        mainMenu.row()
 
-        }.padTop(25f).row()
-        addButton("Civilopedia", null, BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)) {
+        val civilopedia = addButton("Civilopedia", null, buttonStyle) {
             close()
             worldScreen.game.pushScreen(CivilopediaScreen(worldScreen.gameInfo.ruleSet))
-        }.apply {
-            actor.label.setFontScale(0.5f, 0.5f)
-            actor.label.setAlignment(Align.center)
-            actor.pad(0f,10f,0f, 10f)
+        }
+        configure(civilopedia)
+        civilopedia.row()
 
-        }.row()
-        addButton("Save game", null, BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)) {
+        val save = addButton("Save game", null, buttonStyle) {
             close()
             worldScreen.game.pushScreen(SaveGameScreen(worldScreen.gameInfo))
-        }.apply {
-            actor.label.setFontScale(0.5f, 0.5f)
-            actor.label.setAlignment(Align.center)
-            actor.pad(0f,10f,0f, 10f)
+        }
+        configure(save)
+        save.row()
 
-        }.row()
-        addButton("Load game", null, BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)) {
+        val load = addButton("Load game", null, buttonStyle) {
             close()
             worldScreen.game.pushScreen(LoadGameScreen(worldScreen))
-        }.apply {
-            actor.label.setFontScale(0.5f, 0.5f)
-            actor.label.setAlignment(Align.center)
-            actor.pad(0f,10f,0f, 10f)
+        }
+        configure(load)
+        load.row()
 
-        }.row()
-
-        addButton("New game", null, BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)) {
+        val newGame = addButton("New game", null, buttonStyle) {
             close()
             val newGameSetupInfo = GameSetupInfo(worldScreen.gameInfo)
             newGameSetupInfo.mapParameters.reseed()
-            val newGameScreen = NewGameScreen(newGameSetupInfo)
-            worldScreen.game.pushScreen(newGameScreen)
-        }.apply {
-            actor.label.setFontScale(0.5f, 0.5f)
-            actor.label.setAlignment(Align.center)
+            worldScreen.game.pushScreen(NewGameScreen(newGameSetupInfo))
+        }
+        configure(newGame)
+        newGame.row()
 
-            actor.pad(0f,10f,0f, 10f)
-        }.row()
-
-        addButton("Victory status", null, BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)) {
+        val victory = addButton("Victory status", null, buttonStyle) {
             close()
             worldScreen.game.pushScreen(VictoryScreen(worldScreen))
-        }.apply {
-            actor.label.setFontScale(0.5f, 0.5f)
-            actor.label.setAlignment(Align.center)
-            actor.pad(0f,10f,0f, 10f)
+        }
+        configure(victory)
+        victory.row()
 
-        }.row()
-        addButton("Options", null, BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)) {
+        val options = addButton("Options", null, buttonStyle) {
             close()
             worldScreen.openOptionsPopup()
-        }.apply {
-            actor.label.setFontScale(0.5f, 0.5f)
-            actor.label.setAlignment(Align.center)
+        }
+        configure(options)
+        options.row()
 
-            actor.pad(0f,10f,0f, 10f)
-        }.row()
-        addButton("Community", null, BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)) {
+        val community = addButton("Community", null, buttonStyle) {
             close()
             WorldScreenCommunityPopup(worldScreen).open(force = true)
-        }.apply {
-            actor.label.setFontScale(0.5f, 0.5f)
-            actor.label.setAlignment(Align.center)
-            actor.pad(0f,10f,0f, 10f)
-
-        }.row()
-        addCloseButton("Close", null, BaseScreen.skin.get("fantasy", TextButton.TextButtonStyle::class.java)).apply {
-            actor.label.setFontScale(0.5f, 0.5f)
-            actor.label.setAlignment(Align.center)
-            actor.pad(0f,10f,0f, 10f)
         }
+        configure(community)
+        community.row()
+        configure(addCloseButton("Close", null, buttonStyle))
         pack()
     }
 }

@@ -77,6 +77,12 @@
 - desktop/src/com/unciv/app/desktop/MainMenuGoldenChecks.kt — ожидание фоновой карты, проверка границ, длинной подписи и доступности последнего пункта после кадра прокрутки.
 - UiGoldenTestRunner и UiGoldenTest регистрируют main-menu и mainMenuRender; визуальный эталон не утверждается.
 
+## Игровое меню
+
+- core/src/com/unciv/ui/worldscreen/mainmenu/WorldScreenMenuPopup.kt — пергаментная рамка, перенос подписей и ограничения размеров меню Minimal.
+- desktop/src/com/unciv/app/desktop/WorldMenuGoldenChecks.kt — размеры, длинная подпись, прокрутка и закрытие через Stage.
+- CityScreenGoldenChecks вызывает проверку игрового меню после загрузки мира в сценарии empire-overview-stats.
+
 ## Дальнейшие кандидаты
 
 SkinStrings.kt, общий Popup.kt и остальные экраны требуют отдельного аудита. В городе остаются согласованная раскладка всех панелей, выбор города и другие элементы. CityScreenGoldenChecks дополнительно наполняет разделы подготовленных событий и великих людей существующими определениями ruleset; применение игровых эффектов остаётся вне этой проверки раскладки.

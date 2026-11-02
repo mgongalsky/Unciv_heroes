@@ -1146,6 +1146,7 @@ internal object CityScreenGoldenChecks {
                     if (added) options.add(option)
                     try {
                         game.loadGame(world)
+                        WorldMenuGoldenChecks.verify(game.worldScreen!!)
                         val civ = world.currentPlayerCiv
                         addVisitingHero(civ.cities.single())
                         val originalResources = civ.detailedCivResources
@@ -1157,8 +1158,7 @@ internal object CityScreenGoldenChecks {
                         try {
                             civ.detailedCivResources = supply
                             val screen = com.unciv.ui.overviewscreen.EmpireOverviewScreen(
-                                civ,
-                                defaultPage = "Stats"
+                                civ, defaultPage = "Stats"
                             )
                             game.pushScreen(screen)
                             OverviewStatsGoldenChecks.verify(screen, civ)
