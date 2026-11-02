@@ -491,4 +491,126 @@ internal object AlertPopupGoldenChecks {
                 (actor as? com.badlogic.gdx.scenes.scene2d.utils.Layout)?.invalidateHierarchy()
         }
     }
+    fun verifyRecapturedCivilian(screen: WorldScreen) {
+        check(screen.game.settings.skin == "Minimal")
+        val civ = screen.viewingCiv
+        val stage = screen.stage as UncivStage
+        val viewport = stage.viewport
+        val visibleArea = Rectangle(stage.lastKnownVisibleArea)
+        val alerts = civ.popupAlerts.toList()
+        val shouldUpdate = screen.shouldUpdate
+        val unitsBefore = civ.getCivUnits().toList()
+        val exploredBefore = civ.exploredTiles.map { it.cpy() }.toHashSet()
+        val gold = civ.gold
+        val notifications = civ.notifications.toList()
+        var worker: com.unciv.logic.map.MapUnit? = null
+        try {
+            val unit = checkNotNull(
+                civ.placeUnitNearTile(
+                    civ.cities.first().location,
+                    com.unciv.Constants.worker
+                )
+            )
+            worker = unit
+            unit.originalOwner = civ.civName
+            val tile = unit.currentTile
+            check(tile.civilianUnit === unit)
+            val movement = unit.currentMovement
+            val health = unit.health
+            val action = unit.action
+            val unitsWithWorker = civ.getCivUnits().toList()
+            for (width in listOf(360f, 1000f)) {
+                stage.viewport = FitViewport(width, 480f)
+                stage.viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
+                EventBus.send(UncivStage.VisibleAreaChanged(Rectangle(0f, 0f, width, 480f)))
+                val alert = PopupAlert(AlertType.RecapturedCivilian, tile.position.toString())
+                val pending = PopupAlert(AlertType.GoldenAge, "")
+                civ.popupAlerts.clear()
+                civ.popupAlerts.addAll(listOf(alert, pending))
+                val popup = AlertPopup(screen, alert)
+                try {
+                    popup.open(force = true)
+                    check(popup.innerTable.background is RoyalPanelDrawable)
+                    val labels = popup.innerTable.children.filterIsInstance<Label>()
+                    check(labels.size == 2)
+                    labels.last().setText(
+                        "The liberated worker originally belonged to the distant royal provinces. ".repeat(
+                            25
+                        )
+                    )
+                    val responses =
+                            checkNotNull(popup.findActor<com.badlogic.gdx.scenes.scene2d.ui.Table>("alertResponses"))
+                    val buttons = responses.children.filterIsInstance<TextButton>()
+                    check(buttons.size == 2)
+                    buttons[0].setText("Return the liberated worker to its original owner in the distant provinces")
+                    buttons[1].setText("Keep the liberated worker in the service of our own royal provinces")
+                    popup.invalidateHierarchy()
+                    popup.validate()
+                    val scroll = popup.children.filterIsInstance<ScrollPane>().single()
+                    scroll.validate()
+                    popup.innerTable.validate()
+                    stage.draw()
+                    val detail = "RecapturedCivilian at ${width}x480"
+                    val origin = scroll.localToStageCoordinates(Vector2())
+                    check(
+                        origin.x >= -1f && origin.y >= -1f &&
+                                origin.x + scroll.width <= width + 1f && origin.y + scroll.height <= 481f
+                    ) { detail }
+                    check(scroll.maxX <= 1f && scroll.maxY > 0f) { detail }
+                    for (label in labels) {
+                        val effective = label.color.cpy()
+                        label.style.fontColor?.let { effective.mul(it) }
+                        check(effective == Color.valueOf("453925")) { detail }
+                        check(label.wrap && label.height + 1f >= label.prefHeight) { detail }
+                    }
+                    check(buttons[0].y >= buttons[1].top - 1f) { detail }
+                    for (button in buttons) {
+                        check(button.label.wrap && button.label.height + 1f >= button.label.prefHeight) { detail }
+                        if (width == 360f) check(button.label.glyphLayout.runs.size > 1) { detail }
+                        check(button.x >= -1f && button.right <= responses.width + 1f) { detail }
+                        val local = button.localToAscendantCoordinates(scroll.actor, Vector2())
+                        scroll.scrollTo(local.x, local.y, button.width, button.height)
+                        scroll.updateVisualScroll()
+                        stage.draw()
+                        val point = button.localToStageCoordinates(
+                            Vector2(
+                                button.width / 2f,
+                                button.height / 2f
+                            )
+                        )
+                        val hit = stage.hit(point.x, point.y, true)
+                        check(hit === button || hit?.isDescendantOf(button) == true) {
+                            "Civilian response inaccessible: $detail ${button.text}"
+                        }
+                    }
+                    check(civ.popupAlerts.toList() == listOf(alert, pending))
+                    check(civ.getCivUnits().toList() == unitsWithWorker)
+                    check(tile.civilianUnit === unit && unit.currentTile === tile)
+                    check(unit.civInfo === civ && unit.originalOwner == civ.civName)
+                    check(unit.currentMovement == movement && unit.health == health && unit.action == action)
+                    check(civ.gold == gold && civ.notifications.toList() == notifications)
+                } finally {
+                    popup.events.stopReceiving()
+                    popup.remove()
+                }
+            }
+        } finally {
+            try {
+                worker?.destroy(destroyTransportedUnit = false)
+            } finally {
+                civ.exploredTiles.clear()
+                civ.exploredTiles.addAll(exploredBefore)
+                civ.popupAlerts.clear()
+                civ.popupAlerts.addAll(alerts)
+                screen.shouldUpdate = shouldUpdate
+                stage.viewport = viewport
+                viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
+                EventBus.send(UncivStage.VisibleAreaChanged(visibleArea))
+                for (actor in stage.actors)
+                    (actor as? com.badlogic.gdx.scenes.scene2d.utils.Layout)?.invalidateHierarchy()
+            }
+        }
+        check(civ.getCivUnits().toList() == unitsBefore) { "Temporary civilian was not removed" }
+        check(civ.gold == gold && civ.notifications.toList() == notifications)
+    }
 }

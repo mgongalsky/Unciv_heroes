@@ -338,17 +338,6 @@ class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popu
 
     private fun configureRoyalTextAlert(): Float {
         if (worldScreen.game.settings.skin != "Minimal") return 0f
-        if (popupAlert.type !in setOf(
-                    AlertType.Defeated, AlertType.FirstContact, AlertType.GoldenAge,
-                    AlertType.StartIntro, AlertType.DemandToStopSettlingCitiesNear,
-                    AlertType.CitySettledNearOtherCivDespiteOurPromise,
-                    AlertType.DeclarationOfFriendship,
-                    AlertType.BulliedProtectedMinor, AlertType.AttackedProtectedMinor,
-                    AlertType.WarDeclaration, AlertType.BorderConflict,
-                    AlertType.WonderBuilt, AlertType.TechResearched,
-                    AlertType.CityConquered, AlertType.CityTraded, AlertType.DiplomaticMarriage
-                )
-        ) return 0f
         innerTable.background =
                 com.unciv.ui.utils.RoyalPanelDrawable(com.unciv.ui.utils.BaseScreen.skin)
         innerTable.pad(52f).padTop(58f)
@@ -384,9 +373,9 @@ class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popu
                     is Table -> {
                         if (popupAlert.type in setOf(
                                     AlertType.WarDeclaration,
-                                    AlertType.BorderConflict
-                                )
-                                && actor.children.size > 0 && actor.children.all { it is TextButton }
+                                    AlertType.BorderConflict,
+                                    AlertType.RecapturedCivilian
+                                ) && actor.children.size > 0 && actor.children.all { it is TextButton }
                         ) {
                             val buttons = actor.children.filterIsInstance<TextButton>()
                             actor.clearChildren()

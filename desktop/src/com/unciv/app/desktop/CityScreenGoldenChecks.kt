@@ -1152,6 +1152,7 @@ internal object CityScreenGoldenChecks {
                         AlertPopupGoldenChecks.verifyPairedResponses(game.worldScreen!!)
                         AlertPopupGoldenChecks.verifyDiscoveries(game.worldScreen!!)
                         AlertPopupGoldenChecks.verifyCityDecisions(game.worldScreen!!)
+                        AlertPopupGoldenChecks.verifyRecapturedCivilian(game.worldScreen!!)
                         val civ = world.currentPlayerCiv
                         addVisitingHero(civ.cities.single())
                         val originalResources = civ.detailedCivResources
