@@ -758,12 +758,15 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
     ) {
         SoundPlayer.play(stat.purchaseSound)
         val city = cityScreen.city
-        if (!city.cityConstructions.purchaseConstruction(construction.name, selectedQueueEntry, false, stat, tile)) {
-            Popup(cityScreen).apply {
-                add("No space available to place [${construction.name}] near [${city.name}]".tr()).row()
-                addCloseButton()
-                open()
-            }
+        if (!city.cityConstructions.purchaseConstruction(
+                    construction.name,
+                    selectedQueueEntry,
+                    false,
+                    stat,
+                    tile
+                )
+        ) {
+            ConstructionPurchaseFailurePopup(cityScreen.stage, construction.name, city.name).open()
             return
         }
         if (isSelectedQueueEntry() || cityScreen.selectedConstruction?.isBuildable(city.cityConstructions) != true) {

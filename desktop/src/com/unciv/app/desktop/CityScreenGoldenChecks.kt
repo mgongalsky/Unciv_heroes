@@ -48,6 +48,7 @@ internal object CityScreenGoldenChecks {
                     verifyArmySlotAppearance(screen, city)
                     verifyDetailedStatsModel(screen)
                     verifyDetailedStats(screen)
+                    verifyPurchaseFailurePopup()
                     screen.stage.root.addAction(object : com.badlogic.gdx.scenes.scene2d.Action() {
                         override fun act(delta: Float): Boolean {
                             if (!constructionsReady(screen)) return false
@@ -1189,6 +1190,95 @@ internal object CityScreenGoldenChecks {
                         if (added) options.remove(option)
                     }
                 }
+            }
+        }
+    }
+    private fun verifyPurchaseFailurePopup() {
+        check(com.unciv.UncivGame.Current.settings.skin == "Minimal")
+        for (width in listOf(360f, 1000f)) {
+            val stage = com.unciv.ui.UncivStage(
+                com.badlogic.gdx.utils.viewport.FitViewport(width, 480f)
+            )
+            try {
+                stage.viewport.update(
+                    com.badlogic.gdx.Gdx.graphics.width,
+                    com.badlogic.gdx.Gdx.graphics.height,
+                    true
+                )
+                val constructionName =
+                        "The royal regiment from the distant northern valleys ".repeat(16).trim()
+                val cityName = "The ancient city beyond the mountains and rivers ".repeat(16).trim()
+                val popup = com.unciv.ui.cityscreen.ConstructionPurchaseFailurePopup(
+                    stage, constructionName, cityName
+                )
+                var closed = 0
+                popup.closeListeners.add { closed++ }
+                try {
+                    popup.open(force = true)
+                    popup.validate()
+                    val scroll =
+                            popup.children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.ScrollPane>()
+                                .single()
+                    scroll.validate()
+                    popup.innerTable.validate()
+                    stage.draw()
+                    val detail = "Purchase failure at ${width}x480"
+                    check(popup.innerTable.background is com.unciv.ui.utils.RoyalPanelDrawable) { detail }
+                    val origin = scroll.localToStageCoordinates(Vector2())
+                    check(
+                        origin.x >= -1f && origin.y >= -1f &&
+                                origin.x + scroll.width <= width + 1f &&
+                                origin.y + scroll.height <= 481f
+                    ) { detail }
+                    check(scroll.maxX <= 1f && scroll.maxY > 0f) { detail }
+                    val label =
+                            popup.innerTable.children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>()
+                                .single()
+                    check(
+                        label.text.toString().contains(constructionName) && label.text.toString()
+                            .contains(cityName)
+                    ) { detail }
+                    check(label.wrap && label.height + 1f >= label.prefHeight) { detail }
+                    val effectiveColor = label.color.cpy()
+                    label.style.fontColor?.let { effectiveColor.mul(it) }
+                    check(effectiveColor == com.badlogic.gdx.graphics.Color.valueOf("453925")) { detail }
+                    val button =
+                            popup.innerTable.children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.TextButton>()
+                                .single()
+                    check(button.label.wrap && button.label.height + 1f >= button.label.prefHeight) { detail }
+                    val local = button.localToAscendantCoordinates(scroll.actor, Vector2())
+                    scroll.scrollTo(local.x, local.y, button.width, button.height)
+                    scroll.updateVisualScroll()
+                    stage.draw()
+                    val point = button.localToStageCoordinates(
+                        Vector2(
+                            button.width / 2f,
+                            button.height / 2f
+                        )
+                    )
+                    check(point.x in 0f..width && point.y in 0f..480f) { detail }
+                    val hit = stage.hit(point.x, point.y, true)
+                    check(hit === button || hit?.isDescendantOf(button) == true) { detail }
+                    stage.stageToScreenCoordinates(point)
+                    stage.touchDown(
+                        point.x.toInt(),
+                        point.y.toInt(),
+                        0,
+                        com.badlogic.gdx.Input.Buttons.LEFT
+                    )
+                    stage.touchUp(
+                        point.x.toInt(),
+                        point.y.toInt(),
+                        0,
+                        com.badlogic.gdx.Input.Buttons.LEFT
+                    )
+                    check(popup.parent == null && closed == 1) { detail }
+                } finally {
+                    popup.events.stopReceiving()
+                    popup.remove()
+                }
+            } finally {
+                stage.dispose()
             }
         }
     }
