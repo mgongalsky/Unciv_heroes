@@ -1171,6 +1171,7 @@ internal object CityScreenGoldenChecks {
                             OverviewStatsGoldenChecks.verifyPolitics(screen, civ)
                             OverviewStatsGoldenChecks.verifyReligion(screen, civ)
                             OverviewStatsGoldenChecks.verifyWonders(screen, civ)
+                            OverviewStatsGoldenChecks.verifyCivilopedia(screen, civ)
                             val returnedScreen =
                                     OverviewStatsGoldenChecks.verifyTechnologies(screen, civ)
                             onReady(returnedScreen)

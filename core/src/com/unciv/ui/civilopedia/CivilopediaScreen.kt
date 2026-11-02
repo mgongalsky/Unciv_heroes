@@ -169,11 +169,24 @@ class CivilopediaScreen(
         currentEntry = entry.name
         currentEntryPerCategory[currentCategory] = entry.name
         flavourTable.clear()
+        val royal = game.settings.skin == "Minimal"
         if (entry.flavour != null) {
             flavourTable.isVisible = true
-            flavourTable.add(
-                entry.flavour.assembleCivilopediaText(ruleset)
-                    .renderCivilopediaText(stage.width * 0.5f) { selectLink(it) })
+            val assembled = entry.flavour.assembleCivilopediaText(ruleset)
+            if (royal) {
+                // Меняем только обычный текст: явные цвета, значки и ссылки принадлежат разметке.
+                flavourTable.background = skinStrings.getUiBackground(
+                    "CivilopediaScreen/Description", tintColor = Color.valueOf("EADFBD")
+                )
+                flavourTable.pad(10f)
+                flavourTable.add(MarkupRenderer.renderWithTextColor(
+                    assembled.civilopediaText,
+                    defaultTextColor = Color.valueOf("453925"),
+                    labelWidth = (stage.width * 0.5f - 20f).coerceAtLeast(48f)
+                ) { selectLink(it) })
+            } else {
+                flavourTable.add(assembled.renderCivilopediaText(stage.width * 0.5f) { selectLink(it) })
+            }
         } else {
             flavourTable.isVisible = false
         }

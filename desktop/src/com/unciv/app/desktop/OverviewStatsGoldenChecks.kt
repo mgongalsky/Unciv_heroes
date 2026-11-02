@@ -806,4 +806,107 @@ internal object OverviewStatsGoldenChecks {
             manager.techsToResearch = originalQueue
         }
     }
+
+    /** Проверяет локальные цвета описания и внутреннюю ссылку цивилопедии без изменения ruleset. */
+    fun verifyCivilopedia(screen: EmpireOverviewScreen, civ: CivilizationInfo) {
+        val entries = civ.gameInfo.ruleSet.technologies.values.take(2)
+        check(entries.size == 2)
+        val source = entries[0]
+        val target = entries[1]
+        val sourceText = source.civilopediaText
+        val targetText = target.civilopediaText
+        val ordinary = "Royal civilopedia ordinary text"
+        val explicit = "Royal civilopedia explicit red text"
+        val linkCaption = "Royal civilopedia internal navigation"
+        val destination = "Royal civilopedia destination text"
+        var pedia: com.unciv.ui.civilopedia.CivilopediaScreen? = null
+        try {
+            source.civilopediaText = listOf(
+                com.unciv.ui.civilopedia.FormattedLine(ordinary),
+                com.unciv.ui.civilopedia.FormattedLine(explicit, color = "#8C2923"),
+                com.unciv.ui.civilopedia.FormattedLine(
+                    linkCaption,
+                    link = "Technology/${target.name}"
+                )
+            )
+            target.civilopediaText = listOf(com.unciv.ui.civilopedia.FormattedLine(destination))
+            val view = com.unciv.ui.civilopedia.CivilopediaScreen(
+                civ.gameInfo.ruleSet,
+                com.unciv.ui.civilopedia.CivilopediaCategories.Technology,
+                source.name
+            )
+            pedia = view
+            fun layout() {
+                for (root in view.stage.actors.toList()) {
+                    descendants(root).filterIsInstance<com.badlogic.gdx.scenes.scene2d.utils.Layout>()
+                        .forEach { it.validate() }
+                }
+            }
+
+            fun labels() = view.stage.actors.toList().asSequence().flatMap { descendants(it) }
+                .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>().toList()
+            layout()
+            val plainLabel = labels().single { it.text.toString() == ordinary }
+            val redLabel = labels().single { it.text.toString() == explicit }
+            fun effectiveColor(label: com.badlogic.gdx.scenes.scene2d.ui.Label): com.badlogic.gdx.graphics.Color {
+                val color = label.color.cpy()
+                label.style.fontColor?.let { color.mul(it) }
+                return color
+            }
+            if (screen.game.settings.skin == "Minimal") {
+                check(effectiveColor(plainLabel) == com.badlogic.gdx.graphics.Color.valueOf("453925"))
+            }
+            check(effectiveColor(redLabel) == com.badlogic.gdx.graphics.Color.valueOf("8C2923")) {
+                "Цивилопедия потеряла явный цвет разметки"
+            }
+            val linkLabel = labels().single { it.text.toString() == linkCaption }
+            var linkActor: Actor = linkLabel
+            while (linkActor.listeners.size == 0) {
+                linkActor =
+                        checkNotNull(linkActor.parent) { "Внутренняя ссылка не имеет обработчика" }
+            }
+            var ancestor = linkActor.parent
+            while (ancestor != null && ancestor !is com.badlogic.gdx.scenes.scene2d.ui.ScrollPane)
+                ancestor = ancestor.parent
+            val scroll = checkNotNull(ancestor as? com.badlogic.gdx.scenes.scene2d.ui.ScrollPane)
+            scroll.validate()
+            val local = linkActor.localToAscendantCoordinates(
+                scroll.actor,
+                com.badlogic.gdx.math.Vector2()
+            )
+            scroll.scrollTo(local.x, local.y, linkActor.width, linkActor.height)
+            scroll.updateVisualScroll()
+            scroll.layout()
+            val point = linkLabel.localToStageCoordinates(
+                com.badlogic.gdx.math.Vector2(linkLabel.width / 2f, linkLabel.height / 2f)
+            )
+            val hit = checkNotNull(view.stage.hit(point.x, point.y, true))
+            check(hit === linkActor || hit.isDescendantOf(linkActor)) { "Ссылка цивилопедии перекрыта" }
+            view.stage.stageToScreenCoordinates(point)
+            view.stage.touchDown(
+                point.x.toInt(),
+                point.y.toInt(),
+                0,
+                com.badlogic.gdx.Input.Buttons.LEFT
+            )
+            view.stage.touchUp(
+                point.x.toInt(),
+                point.y.toInt(),
+                0,
+                com.badlogic.gdx.Input.Buttons.LEFT
+            )
+            layout()
+            check(labels().any { it.text.toString() == destination }) { "Ссылка не открыла целевую запись" }
+            check(labels().none { it.text.toString() == ordinary }) { "Старое описание осталось после перехода" }
+            view.selectEntry(source.name, noScrollAnimation = true)
+            layout()
+            check(labels().count { it.text.toString() == ordinary } == 1)
+            check(source.civilopediaText.map { it.text } == listOf(ordinary, explicit, linkCaption))
+            check(target.civilopediaText.single().text == destination)
+        } finally {
+            pedia?.dispose()
+            source.civilopediaText = sourceText
+            target.civilopediaText = targetText
+        }
+    }
 }
