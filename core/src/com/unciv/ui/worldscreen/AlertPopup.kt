@@ -42,6 +42,8 @@ import java.util.*
  * @see AlertType
  */
 class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popup(worldScreen) {
+    private val royalContentWidth: Float = configureRoyalTextAlert()
+
 
     private fun getCloseButton(text: String, key: Char = Char.MIN_VALUE, action: (() -> Unit)? = null): TextButton {
         // Popup.addCloseButton is close but AlertPopup needs the flexibility to add these inside a wrapper
@@ -61,7 +63,9 @@ class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popu
     }
 
     fun addLeaderName(civInfo: CivilizationInfo) {
-        add(LeaderIntroTable(civInfo))
+        add(LeaderIntroTable(civInfo, parchmentWidth = royalContentWidth)).apply {
+            if (royalContentWidth > 0f) width(royalContentWidth)
+        }
         addSeparator()
     }
 
@@ -313,6 +317,49 @@ class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popu
                 }).row()
             }
             AlertType.RecapturedCivilian -> addRecapturedCivilianTable()
+        }
+    }
+
+    private fun configureRoyalTextAlert(): Float {
+        if (worldScreen.game.settings.skin != "Minimal") return 0f
+        if (popupAlert.type !in setOf(
+                AlertType.Defeated, AlertType.FirstContact, AlertType.GoldenAge,
+                AlertType.StartIntro, AlertType.DemandToStopSettlingCitiesNear,
+                AlertType.CitySettledNearOtherCivDespiteOurPromise,
+                AlertType.DeclarationOfFriendship,
+                AlertType.BulliedProtectedMinor, AlertType.AttackedProtectedMinor
+            )) return 0f
+        innerTable.background = com.unciv.ui.utils.RoyalPanelDrawable(com.unciv.ui.utils.BaseScreen.skin)
+        innerTable.pad(52f).padTop(58f)
+        val scroll = children.filterIsInstance<ScrollPane>().single()
+        val style = scroll.style
+        val chrome = innerTable.padLeft + innerTable.padRight + 10f +
+            maxOf(style.vScroll?.minWidth ?: 0f, style.vScrollKnob?.minWidth ?: 0f) +
+            (style.background?.leftWidth ?: 0f) + (style.background?.rightWidth ?: 0f)
+        val contentWidth = minOf(700f, stageToShowOn.width - 24f - chrome).coerceAtLeast(1f)
+        getCell(scroll).width(contentWidth + chrome)
+            .maxHeight((stageToShowOn.height - 24f).coerceAtLeast(1f))
+        return contentWidth
+    }
+
+    init {
+        if (royalContentWidth > 0f) {
+            for (actor in innerTable.children) {
+                when (actor) {
+                    is com.badlogic.gdx.scenes.scene2d.ui.Label -> {
+                        actor.color = com.badlogic.gdx.graphics.Color.valueOf("453925")
+                        actor.wrap = true
+                        innerTable.getCell(actor).width(royalContentWidth)
+                    }
+                    is TextButton -> {
+                        actor.label.wrap = true
+                        actor.labelCell.width(
+                            (royalContentWidth - actor.padLeft - actor.padRight - 20f).coerceAtLeast(1f)
+                        ).pad(10f)
+                        innerTable.getCell(actor).width(royalContentWidth).minHeight(48f).fillX()
+                    }
+                }
+            }
         }
     }
 

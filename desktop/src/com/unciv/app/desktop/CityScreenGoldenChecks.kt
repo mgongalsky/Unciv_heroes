@@ -1148,6 +1148,7 @@ internal object CityScreenGoldenChecks {
                         game.loadGame(world)
                         WorldMenuGoldenChecks.verify(game.worldScreen!!)
                         TradePopupGoldenChecks.verify(game.worldScreen!!)
+                        AlertPopupGoldenChecks.verify(game.worldScreen!!)
                         val civ = world.currentPlayerCiv
                         addVisitingHero(civ.cities.single())
                         val originalResources = civ.detailedCivResources
