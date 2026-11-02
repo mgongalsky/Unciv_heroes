@@ -227,4 +227,135 @@ internal object AlertPopupGoldenChecks {
                 (actor as? com.badlogic.gdx.scenes.scene2d.utils.Layout)?.invalidateHierarchy()
         }
     }
+    fun verifyDiscoveries(screen: WorldScreen) {
+        check(screen.game.settings.skin == "Minimal")
+        val civ = screen.viewingCiv
+        val stage = screen.stage as UncivStage
+        val viewport = stage.viewport
+        val visibleArea = Rectangle(stage.lastKnownVisibleArea)
+        val alerts = civ.popupAlerts.toList()
+        val shouldUpdate = screen.shouldUpdate
+        val researched = civ.tech.techsResearched.toSet()
+        val researchQueue = civ.tech.techsToResearch.toList()
+        val buildings =
+                civ.cities.associate { it.id to it.cityConstructions.builtBuildings.toSet() }
+        val gold = civ.gold
+        val ruleset = screen.gameInfo.ruleSet
+        val wonders = ruleset.buildings.values.filter { it.isWonder }
+            .groupBy { com.unciv.ui.images.ImageGetter.wonderImageExists(it.name) }
+            .values.map { group -> group.sortedBy { it.name }.first() }
+        check(wonders.isNotEmpty())
+        val technology = ruleset.technologies.values.sortedBy { it.name }.first()
+        val samples = wonders.map { AlertType.WonderBuilt to it.name } +
+                (AlertType.TechResearched to technology.name)
+        try {
+            for (width in listOf(360f, 1000f)) {
+                stage.viewport = FitViewport(width, 480f)
+                stage.viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
+                EventBus.send(UncivStage.VisibleAreaChanged(Rectangle(0f, 0f, width, 480f)))
+                for ((type, value) in samples) {
+                    val alert = PopupAlert(type, value)
+                    val pending = PopupAlert(AlertType.GoldenAge, "")
+                    civ.popupAlerts.clear()
+                    civ.popupAlerts.addAll(listOf(alert, pending))
+                    val popup = AlertPopup(screen, alert)
+                    var closed = 0
+                    popup.closeListeners.add { closed++ }
+                    try {
+                        popup.open(force = true)
+                        check(popup.innerTable.background is RoyalPanelDrawable)
+                        val quote = checkNotNull(popup.findActor<Label>("alertDiscoveryQuote"))
+                        val description =
+                                checkNotNull(popup.findActor<Label>("alertDiscoveryDescription"))
+                        val illustration = checkNotNull(
+                            popup.findActor<com.badlogic.gdx.scenes.scene2d.Actor>("alertDiscoveryIllustration")
+                        )
+                        val textTable = checkNotNull(
+                            popup.findActor<com.badlogic.gdx.scenes.scene2d.ui.Table>("alertDiscoveryText")
+                        )
+                        quote.setText(
+                            "A quotation about the ancient knowledge of the distant royal provinces. ".repeat(
+                                20
+                            )
+                        )
+                        description.setText(
+                            "A detailed description of the discovery and its effects in the royal provinces. ".repeat(
+                                25
+                            )
+                        )
+                        popup.invalidateHierarchy()
+                        popup.validate()
+                        val scroll = popup.children.filterIsInstance<ScrollPane>().single()
+                        scroll.validate()
+                        popup.innerTable.validate()
+                        stage.draw()
+                        val detail = "$type $value at ${width}x480"
+                        val origin = scroll.localToStageCoordinates(Vector2())
+                        check(
+                            origin.x >= -1f && origin.y >= -1f &&
+                                    origin.x + scroll.width <= width + 1f &&
+                                    origin.y + scroll.height <= 481f
+                        ) { detail }
+                        check(scroll.maxX <= 1f && scroll.maxY > 0f) { detail }
+                        check(
+                            illustration.width > 0f && illustration.height > 0f &&
+                                    illustration.x >= -1f && illustration.right <= popup.innerTable.width + 1f
+                        ) { detail }
+                        for (label in listOf(quote, description)) {
+                            val effective = label.color.cpy()
+                            label.style.fontColor?.let { effective.mul(it) }
+                            check(effective == Color.valueOf("453925")) { detail }
+                            check(label.wrap && label.glyphLayout.runs.size > 1) { detail }
+                            check(label.height + 1f >= label.prefHeight) { detail }
+                            check(label.x >= -1f && label.right <= textTable.width + 1f) { detail }
+                        }
+                        if (width == 360f) check(quote.y >= description.top - 1f) { detail }
+                        else check(quote.right <= description.x + 1f) { detail }
+                        val close =
+                                popup.innerTable.children.filterIsInstance<TextButton>().single()
+                        val local = close.localToAscendantCoordinates(scroll.actor, Vector2())
+                        scroll.scrollTo(local.x, local.y, close.width, close.height)
+                        scroll.updateVisualScroll()
+                        stage.draw()
+                        val point = close.localToStageCoordinates(
+                            Vector2(
+                                close.width / 2f,
+                                close.height / 2f
+                            )
+                        )
+                        val hit = stage.hit(point.x, point.y, true)
+                        check(hit === close || hit?.isDescendantOf(close) == true) { "Discovery close inaccessible: $detail" }
+                        stage.stageToScreenCoordinates(point)
+                        stage.touchDown(point.x.toInt(), point.y.toInt(), 0, Input.Buttons.LEFT)
+                        stage.touchUp(point.x.toInt(), point.y.toInt(), 0, Input.Buttons.LEFT)
+                        check(popup.parent == null && closed == 1) { detail }
+                        check(civ.popupAlerts.toList() == listOf(pending)) { detail }
+                        check(civ.tech.techsResearched == researched && civ.tech.techsToResearch.toList() == researchQueue)
+                        check(civ.cities.associate { it.id to it.cityConstructions.builtBuildings.toSet() } == buildings)
+                        check(civ.gold == gold)
+                    } finally {
+                        if (popup.parent != null) popup.close()
+                    }
+                }
+            }
+            println(
+                "Discovery alert checks passed: wonder image variants=${
+                    wonders.map {
+                        com.unciv.ui.images.ImageGetter.wonderImageExists(
+                            it.name
+                        )
+                    }
+                }, technology=${technology.name}"
+            )
+        } finally {
+            civ.popupAlerts.clear()
+            civ.popupAlerts.addAll(alerts)
+            screen.shouldUpdate = shouldUpdate
+            stage.viewport = viewport
+            viewport.update(Gdx.graphics.width, Gdx.graphics.height, true)
+            EventBus.send(UncivStage.VisibleAreaChanged(visibleArea))
+            for (actor in stage.actors)
+                (actor as? com.badlogic.gdx.scenes.scene2d.utils.Layout)?.invalidateHierarchy()
+        }
+    }
 }

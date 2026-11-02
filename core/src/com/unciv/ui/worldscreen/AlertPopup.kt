@@ -195,45 +195,61 @@ class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popu
             }
             AlertType.WonderBuilt -> {
                 val wonder = worldScreen.gameInfo.ruleSet.buildings[popupAlert.value]!!
-                addGoodSizedLabel(wonder.name)
-                addSeparator()
-                if(ImageGetter.wonderImageExists(wonder.name)) {    // Wonder Graphic exists
-                    if(worldScreen.stage.height * 3 > worldScreen.stage.width * 4) {    // Portrait
-                        add(ImageGetter.getWonderImage(wonder.name))
-                            .width(worldScreen.stage.width / 1.5f)
-                            .height(worldScreen.stage.width / 3)
-                            .row()
+                if (royalContentWidth > 0f) {
+                    val hasImage = ImageGetter.wonderImageExists(wonder.name)
+                    val illustration = if (hasImage) ImageGetter.getWonderImage(wonder.name)
+                        else ImageGetter.getPortraitImage(wonder.name, 100f)
+                    addRoyalDiscoveryContent(
+                        wonder.name, wonder.quote, wonder.getShortDescription(), illustration, hasImage
+                    )
+                } else {
+                    addGoodSizedLabel(wonder.name)
+                    addSeparator()
+                    if(ImageGetter.wonderImageExists(wonder.name)) {    // Wonder Graphic exists
+                        if(worldScreen.stage.height * 3 > worldScreen.stage.width * 4) {    // Portrait
+                            add(ImageGetter.getWonderImage(wonder.name))
+                                .width(worldScreen.stage.width / 1.5f)
+                                .height(worldScreen.stage.width / 3)
+                                .row()
+                        }
+                        else {  // Landscape (or squareish)
+                            add(ImageGetter.getWonderImage(wonder.name))
+                                .width(worldScreen.stage.width / 2.5f)
+                                .height(worldScreen.stage.width / 5)
+                                .row()
+                        }
+                    } else {    // Fallback
+                        add(ImageGetter.getPortraitImage(wonder.name, 100f)).pad(20f).row()
                     }
-                    else {  // Landscape (or squareish)
-                        add(ImageGetter.getWonderImage(wonder.name))
-                            .width(worldScreen.stage.width / 2.5f)
-                            .height(worldScreen.stage.width / 5)
-                            .row()
-                    }
-                } else {    // Fallback
-                    add(ImageGetter.getPortraitImage(wonder.name, 100f)).pad(20f).row()
-                }
 
-                val centerTable = Table()
-                centerTable.add(wonder.quote.toLabel().apply { wrap = true }).width(worldScreen.stage.width / 3).pad(10f)
-                centerTable.add(wonder.getShortDescription()
-                        .toLabel().apply { wrap = true }).width(worldScreen.stage.width / 3).pad(10f)
-                add(centerTable).row()
-                add(getCloseButton(Constants.close))
+                    val centerTable = Table()
+                    centerTable.add(wonder.quote.toLabel().apply { wrap = true }).width(worldScreen.stage.width / 3).pad(10f)
+                    centerTable.add(wonder.getShortDescription()
+                            .toLabel().apply { wrap = true }).width(worldScreen.stage.width / 3).pad(10f)
+                    add(centerTable).row()
+                    add(getCloseButton(Constants.close))
+                }
                 UncivGame.Current.musicController.chooseTrack(wonder.name, MusicMood.Wonder, MusicTrackChooserFlags.setSpecific)
             }
             AlertType.TechResearched -> {
                 val gameBasics = worldScreen.gameInfo.ruleSet
                 val tech = gameBasics.technologies[popupAlert.value]!!
-                addGoodSizedLabel(tech.name)
-                addSeparator()
-                val centerTable = Table()
-                centerTable.add(tech.quote.toLabel().apply { wrap = true }).width(worldScreen.stage.width / 3)
-                centerTable.add(ImageGetter.getTechIconGroup(tech.name, 100f)).pad(20f)
-                val descriptionScroll = ScrollPane(tech.getDescription(gameBasics).toLabel().apply { wrap = true })
-                centerTable.add(descriptionScroll).width(worldScreen.stage.width / 3).maxHeight(worldScreen.stage.height / 2)
-                add(centerTable).row()
-                add(getCloseButton(Constants.close))
+                if (royalContentWidth > 0f) {
+                    addRoyalDiscoveryContent(
+                        tech.name, tech.quote, tech.getDescription(gameBasics),
+                        ImageGetter.getTechIconGroup(tech.name, 100f), false
+                    )
+                } else {
+                    addGoodSizedLabel(tech.name)
+                    addSeparator()
+                    val centerTable = Table()
+                    centerTable.add(tech.quote.toLabel().apply { wrap = true }).width(worldScreen.stage.width / 3)
+                    centerTable.add(ImageGetter.getTechIconGroup(tech.name, 100f)).pad(20f)
+                    val descriptionScroll = ScrollPane(tech.getDescription(gameBasics).toLabel().apply { wrap = true })
+                    centerTable.add(descriptionScroll).width(worldScreen.stage.width / 3).maxHeight(worldScreen.stage.height / 2)
+                    add(centerTable).row()
+                    add(getCloseButton(Constants.close))
+                }
                 UncivGame.Current.musicController.chooseTrack(tech.name, MusicMood.Researched, MusicTrackChooserFlags.setSpecific)
             }
             AlertType.GoldenAge -> {
@@ -328,7 +344,8 @@ class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popu
                     AlertType.CitySettledNearOtherCivDespiteOurPromise,
                     AlertType.DeclarationOfFriendship,
                     AlertType.BulliedProtectedMinor, AlertType.AttackedProtectedMinor,
-                    AlertType.WarDeclaration, AlertType.BorderConflict
+                    AlertType.WarDeclaration, AlertType.BorderConflict,
+                    AlertType.WonderBuilt, AlertType.TechResearched
                 )
         ) return 0f
         innerTable.background =
@@ -500,5 +517,43 @@ class AlertPopup(val worldScreen: WorldScreen, val popupAlert: PopupAlert): Popu
     override fun close() {
         worldScreen.viewingCiv.popupAlerts.remove(popupAlert)
         super.close()
+    }
+    private fun addRoyalDiscoveryContent(
+        title: String,
+        quote: String,
+        description: String,
+        illustration: com.badlogic.gdx.scenes.scene2d.Actor,
+        wideIllustration: Boolean
+    ) {
+        addGoodSizedLabel(title).row()
+        addSeparator()
+        illustration.name = "alertDiscoveryIllustration"
+        (illustration as? com.badlogic.gdx.scenes.scene2d.ui.Image)
+            ?.setScaling(com.badlogic.gdx.utils.Scaling.fit)
+        val imageWidth = if (wideIllustration) royalContentWidth else minOf(100f, royalContentWidth)
+        val imageHeight = if (wideIllustration) imageWidth / 2f else imageWidth
+        add(illustration).size(imageWidth, imageHeight).padTop(10f).padBottom(10f).row()
+        val stacked = royalContentWidth < 500f
+        val columnWidth = if (stacked) royalContentWidth else (royalContentWidth - 20f) / 2f
+        fun paragraph(text: String, actorName: String) = text.toLabel(
+            fontColor = com.badlogic.gdx.graphics.Color.valueOf("453925")
+        ).apply {
+            name = actorName
+            wrap = true
+            setAlignment(com.badlogic.gdx.utils.Align.left)
+        }
+
+        val content = Table().apply { name = "alertDiscoveryText" }
+        val quoteLabel = paragraph(quote, "alertDiscoveryQuote")
+        val descriptionLabel = paragraph(description, "alertDiscoveryDescription")
+        if (stacked) {
+            content.add(quoteLabel).width(columnWidth).top().padBottom(15f).row()
+            content.add(descriptionLabel).width(columnWidth).top().row()
+        } else {
+            content.add(quoteLabel).width(columnWidth).top().padRight(20f)
+            content.add(descriptionLabel).width(columnWidth).top().row()
+        }
+        add(content).width(royalContentWidth).row()
+        add(getCloseButton(Constants.close)).row()
     }
 }
