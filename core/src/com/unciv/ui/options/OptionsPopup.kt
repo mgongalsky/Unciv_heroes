@@ -57,25 +57,31 @@ class OptionsPopup(
         if (settings.addCompletedTutorialTask("Open the options table"))
             (screen as? WorldScreen)?.shouldUpdate = true
 
-        innerTable.pad(0f)
+        val royal = settings.skin == "Minimal"
+        if (royal) {
+            innerTable.background = com.unciv.ui.utils.RoyalPanelDrawable(BaseScreen.skin)
+            innerTable.pad(58f, 52f, 52f, 52f)
+        } else innerTable.pad(0f)
         val tabMaxWidth: Float
         val tabMinWidth: Float
         val tabMaxHeight: Float
         screen.run {
             selectBoxMinWidth = if (stage.width < 600f) 200f else 240f
-            tabMaxWidth = if (isPortrait()) stage.width - 10f else 0.8f * stage.width
-            tabMinWidth = 0.6f * stage.width
+            tabMaxWidth = if (royal) (stage.width - 128f).coerceAtLeast(1f) else if (isPortrait()) stage.width - 10f else 0.8f * stage.width
+            tabMinWidth = minOf(0.6f * stage.width, tabMaxWidth)
             tabMaxHeight = (if (isPortrait()) 0.7f else 0.8f) * stage.height
         }
         tabs = TabbedPager(
             tabMinWidth, tabMaxWidth, 0f, tabMaxHeight,
-            headerFontSize = 21, backgroundColor = Color.CLEAR, capacity = 8
+            headerFontSize = 21, backgroundColor = if (royal) Color.valueOf("002042") else Color.CLEAR, capacity = 8
         )
         add(tabs).pad(0f).grow().row()
 
         tabs.addPage(
             "About",
-            aboutTab(),
+            aboutTab(if (royal) tabMaxWidth - 20f else null).apply {
+                if (royal) background = BaseScreen.skinStrings.getUiBackground("General/TabbedPager", tintColor = Color.valueOf("eadfbd"))
+            },
             ImageGetter.getExternalImage("Icon.png"), 24f
         )
         tabs.addPage(
@@ -117,12 +123,21 @@ class OptionsPopup(
             tabs.addPage("Debug", debugTab(), ImageGetter.getImage("OtherIcons/SecretOptions"), 24f, secret = true)
         }
 
-        addCloseButton {
+        val closeCell = addCloseButton {
             screen.game.musicController.onChange(null)
             screen.game.platformSpecificHelper?.allowPortrait(settings.allowAndroidPortrait)
             onClose()
         }.padBottom(10f)
 
+        if (royal) {
+            closeCell.actor.label.wrap = true
+            closeCell.actor.labelCell.width((tabMaxWidth - closeCell.actor.padLeft - closeCell.actor.padRight - 20f).coerceAtLeast(1f))
+            closeCell.width(tabMaxWidth).minHeight(48f).fillX()
+            val closeHeight = closeCell.actor.prefHeight.coerceAtLeast(48f) + closeCell.padTop + closeCell.padBottom
+            val pagerHeight = (stageToShowOn.height - 24f - innerTable.padTop - innerTable.padBottom - closeHeight).coerceAtLeast(tabs.minHeight)
+            getCell(innerTable).maxWidth(stageToShowOn.width - 24f)
+            innerTable.getCell(tabs).width(tabMaxWidth).height(pagerHeight)
+        }
         pack() // Needed to show the background.
         center(screen.stage)
     }
@@ -157,14 +172,36 @@ class OptionsPopup(
         }
     }
 
-    fun addCheckbox(table: Table, text: String, initialState: Boolean, updateWorld: Boolean = false, action: ((Boolean) -> Unit)) {
+    fun addCheckbox(
+        table: Table,
+        text: String,
+        initialState: Boolean,
+        updateWorld: Boolean = false,
+        action: ((Boolean) -> Unit)
+    ) {
         val checkbox = text.toCheckBox(initialState) {
             action(it)
             settings.save()
             val worldScreen = UncivGame.Current.getWorldScreenIfActive()
             if (updateWorld && worldScreen != null) worldScreen.shouldUpdate = true
         }
-        table.add(checkbox).colspan(2).left().row()
+        val cell = table.add(checkbox).colspan(2).left()
+        if (settings.skin == "Minimal") {
+            val availableWidth =
+                    (tabs.maxWidth - table.padLeft - table.padRight - cell.padLeft - cell.padRight - 20f).coerceAtLeast(
+                        1f
+                    )
+            val indicatorWidth =
+                    checkbox.image.prefWidth + checkbox.imageCell.padLeft + checkbox.imageCell.padRight
+            val labelWidth =
+                    (availableWidth - checkbox.padLeft - checkbox.padRight - indicatorWidth - checkbox.labelCell.padLeft - checkbox.labelCell.padRight).coerceAtLeast(
+                        1f
+                    )
+            checkbox.label.wrap = true
+            checkbox.labelCell.width(labelWidth)
+            cell.width(availableWidth).fillX()
+        }
+        cell.row()
     }
 
     fun addCheckbox(table: Table,
@@ -178,6 +215,35 @@ class OptionsPopup(
         }
     }
 
+    /** Добавляет строку настройки; на узкой Royal-панели подпись расположена над контролом. */
+    fun addControlRow(
+        table: Table,
+        text: String,
+        control: com.badlogic.gdx.scenes.scene2d.Actor,
+        controlMinWidth: Float = 0f
+    ) {
+        val label = text.toLabel()
+        if (settings.skin != "Minimal") {
+            table.add(label).left().fillX()
+            table.add(control).minWidth(controlMinWidth).pad(10f).row()
+            return
+        }
+        val availableWidth =
+                (tabs.maxWidth - table.padLeft - table.padRight - 20f).coerceAtLeast(1f)
+        label.wrap = true
+        if (availableWidth < 600f) {
+            table.add(label).colspan(2).width((availableWidth - 10f).coerceAtLeast(1f)).left().row()
+            table.add(control).colspan(2).width((availableWidth - 20f).coerceAtLeast(1f)).pad(10f)
+                .fillX().row()
+        } else {
+            val controlWidth = maxOf(
+                controlMinWidth,
+                availableWidth * 0.4f
+            ).coerceAtMost(availableWidth * 0.5f)
+            table.add(label).width((availableWidth - controlWidth - 30f).coerceAtLeast(1f)).left()
+            table.add(control).width(controlWidth).pad(10f).fillX().row()
+        }
+    }
 }
 
 class SelectItem<T>(val label: String, val value: T) {

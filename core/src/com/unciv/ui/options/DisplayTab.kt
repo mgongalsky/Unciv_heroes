@@ -39,17 +39,17 @@ fun displayTab(
     optionsPopup.addCheckbox(this, "Experimental Demographics scoreboard", settings.useDemographics, true) { settings.useDemographics = it }
     optionsPopup.addCheckbox(this, "Show zoom buttons in world screen", settings.showZoomButtons, true) { settings.showZoomButtons = it }
 
-    addMinimapSizeSlider(this, settings, optionsPopup.selectBoxMinWidth)
+    addMinimapSizeSlider(this, settings, optionsPopup)
 
-    addUnitIconAlphaSlider(this, settings, optionsPopup.selectBoxMinWidth)
+    addUnitIconAlphaSlider(this, settings, optionsPopup)
 
-    addScreenSizeSelectBox(this, settings, optionsPopup.selectBoxMinWidth, onChange)
+    addScreenSizeSelectBox(this, settings, optionsPopup, onChange)
 
-    addTileSetSelectBox(this, settings, optionsPopup.selectBoxMinWidth, onChange)
+    addTileSetSelectBox(this, settings, optionsPopup, onChange)
 
-    addUnitSetSelectBox(this, settings, optionsPopup.selectBoxMinWidth, onChange)
+    addUnitSetSelectBox(this, settings, optionsPopup, onChange)
 
-    addSkinSelectBox(this, settings, optionsPopup.selectBoxMinWidth, onChange)
+    addSkinSelectBox(this, settings, optionsPopup, onChange)
 
     optionsPopup.addCheckbox(this, "Continuous rendering", settings.continuousRendering) {
         settings.continuousRendering = it
@@ -62,12 +62,16 @@ fun displayTab(
         optionsPopup.tabs.prefWidth, Color.ORANGE.brighten(0.7f), 14
     )
     continuousRenderingLabel.wrap = true
-    add(continuousRenderingLabel).colspan(2).padTop(10f).row()
+    val descriptionCell = add(continuousRenderingLabel).colspan(2).padTop(10f)
+    if (settings.skin == "Minimal") {
+        descriptionCell.width((optionsPopup.tabs.maxWidth - padLeft - padRight - 30f).coerceAtLeast(1f))
+    }
+    descriptionCell.row()
 
 }
 
-private fun addMinimapSizeSlider(table: Table, settings: GameSettings, selectBoxMinWidth: Float) {
-    table.add("Minimap size".toLabel()).left().fillX()
+private fun addMinimapSizeSlider(table: Table, settings: GameSettings, optionsPopup: OptionsPopup) {
+
 
     // The meaning of the values needs a formula to be synchronized between here and
     // [Minimap.init]. It goes off-10%-11%..29%-30%-35%-40%-45%-50% - and the percentages
@@ -96,11 +100,11 @@ private fun addMinimapSizeSlider(table: Table, settings: GameSettings, selectBox
         if (worldScreen != null)
             worldScreen.shouldUpdate = true
     }
-    table.add(minimapSlider).minWidth(selectBoxMinWidth).pad(10f).row()
+    optionsPopup.addControlRow(table, "Minimap size", minimapSlider, optionsPopup.selectBoxMinWidth)
 }
 
-private fun addUnitIconAlphaSlider(table: Table, settings: GameSettings, selectBoxMinWidth: Float) {
-    table.add("Unit icon opacity".toLabel()).left().fillX()
+private fun addUnitIconAlphaSlider(table: Table, settings: GameSettings, optionsPopup: OptionsPopup) {
+
 
     val getTipText: (Float) -> String = {"%.0f".format(it*100) + "%"}
 
@@ -115,16 +119,16 @@ private fun addUnitIconAlphaSlider(table: Table, settings: GameSettings, selectB
             worldScreen.shouldUpdate = true
 
     }
-    table.add(unitIconAlphaSlider).minWidth(selectBoxMinWidth).pad(10f).row()
+    optionsPopup.addControlRow(table, "Unit icon opacity", unitIconAlphaSlider, optionsPopup.selectBoxMinWidth)
 }
 
-private fun addScreenSizeSelectBox(table: Table, settings: GameSettings, selectBoxMinWidth: Float, onResolutionChange: () -> Unit) {
-    table.add("Screen Size".toLabel()).left().fillX()
+private fun addScreenSizeSelectBox(table: Table, settings: GameSettings, optionsPopup: OptionsPopup, onResolutionChange: () -> Unit) {
+
 
     val screenSizeSelectBox = SelectBox<ScreenSize>(table.skin)
     screenSizeSelectBox.items = Array(ScreenSize.values())
     screenSizeSelectBox.selected = settings.screenSize
-    table.add(screenSizeSelectBox).minWidth(selectBoxMinWidth).pad(10f).row()
+    optionsPopup.addControlRow(table, "Screen Size", screenSizeSelectBox, optionsPopup.selectBoxMinWidth)
 
     screenSizeSelectBox.onChange {
         settings.screenSize = screenSizeSelectBox.selected
@@ -132,8 +136,8 @@ private fun addScreenSizeSelectBox(table: Table, settings: GameSettings, selectB
     }
 }
 
-private fun addTileSetSelectBox(table: Table, settings: GameSettings, selectBoxMinWidth: Float, onTilesetChange: () -> Unit) {
-    table.add("Tileset".toLabel()).left().fillX()
+private fun addTileSetSelectBox(table: Table, settings: GameSettings, optionsPopup: OptionsPopup, onTilesetChange: () -> Unit) {
+
 
     val tileSetSelectBox = SelectBox<String>(table.skin)
     val tileSetArray = Array<String>()
@@ -141,7 +145,7 @@ private fun addTileSetSelectBox(table: Table, settings: GameSettings, selectBoxM
     for (tileset in tileSets) tileSetArray.add(tileset)
     tileSetSelectBox.items = tileSetArray
     tileSetSelectBox.selected = settings.tileSet
-    table.add(tileSetSelectBox).minWidth(selectBoxMinWidth).pad(10f).row()
+    optionsPopup.addControlRow(table, "Tileset", tileSetSelectBox, optionsPopup.selectBoxMinWidth)
 
     val unitSets = ImageGetter.getAvailableUnitsets()
 
@@ -157,8 +161,8 @@ private fun addTileSetSelectBox(table: Table, settings: GameSettings, selectBoxM
     }
 }
 
-private fun addUnitSetSelectBox(table: Table, settings: GameSettings, selectBoxMinWidth: Float, onUnitsetChange: () -> Unit) {
-    table.add("Unitset".toLabel()).left().fillX()
+private fun addUnitSetSelectBox(table: Table, settings: GameSettings, optionsPopup: OptionsPopup, onUnitsetChange: () -> Unit) {
+
 
     val unitSetSelectBox = SelectBox<String>(table.skin)
     val unitSetArray = Array<String>()
@@ -168,7 +172,7 @@ private fun addUnitSetSelectBox(table: Table, settings: GameSettings, selectBoxM
     for (unitset in unitSets) unitSetArray.add(unitset)
     unitSetSelectBox.items = unitSetArray
     unitSetSelectBox.selected = settings.unitSet ?: nullValue
-    table.add(unitSetSelectBox).minWidth(selectBoxMinWidth).pad(10f).row()
+    optionsPopup.addControlRow(table, "Unitset", unitSetSelectBox, optionsPopup.selectBoxMinWidth)
 
     unitSetSelectBox.onChange {
         settings.unitSet = if (unitSetSelectBox.selected != nullValue) unitSetSelectBox.selected else null
@@ -178,8 +182,8 @@ private fun addUnitSetSelectBox(table: Table, settings: GameSettings, selectBoxM
     }
 }
 
-private fun addSkinSelectBox(table: Table, settings: GameSettings, selectBoxMinWidth: Float, onSkinChange: () -> Unit) {
-    table.add("UI Skin".toLabel()).left().fillX()
+private fun addSkinSelectBox(table: Table, settings: GameSettings, optionsPopup: OptionsPopup, onSkinChange: () -> Unit) {
+
 
     val skinSelectBox = SelectBox<String>(table.skin)
     val skinArray = Array<String>()
@@ -187,7 +191,7 @@ private fun addSkinSelectBox(table: Table, settings: GameSettings, selectBoxMinW
     for (skin in skins) skinArray.add(skin)
     skinSelectBox.items = skinArray
     skinSelectBox.selected = settings.skin
-    table.add(skinSelectBox).minWidth(selectBoxMinWidth).pad(10f).row()
+    optionsPopup.addControlRow(table, "UI Skin", skinSelectBox, optionsPopup.selectBoxMinWidth)
 
     skinSelectBox.onChange {
         settings.skin = skinSelectBox.selected

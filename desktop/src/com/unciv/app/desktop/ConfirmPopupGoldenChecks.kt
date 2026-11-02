@@ -18,6 +18,7 @@ internal object ConfirmPopupGoldenChecks {
         verifyRoyalTextReuse()
         verifyDropboxWarning(screen)
         MultiplayerStatusGoldenChecks.verify(screen)
+        OptionsPopupGoldenChecks.verify(screen)
         val question = List(18) {
             "Replace the current army with the selected template? Existing changes will be lost."
         }.joinToString(" ")

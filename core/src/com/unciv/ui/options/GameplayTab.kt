@@ -45,11 +45,11 @@ fun gameplayTab(
     optionsPopup.addCheckbox(this, "Order trade offers by amount", settings.orderTradeOffersByAmount) { settings.orderTradeOffersByAmount = it }
     optionsPopup.addCheckbox(this, "Ask for confirmation when pressing next turn", settings.confirmNextTurn) { settings.confirmNextTurn = it }
 
-    addNotificationLogMaxTurnsSlider(this, settings, UncivGame.Current.worldScreen, optionsPopup.selectBoxMinWidth)
+    addNotificationLogMaxTurnsSlider(this, settings, optionsPopup)
 }
 
-private fun addNotificationLogMaxTurnsSlider(table: Table, settings: GameSettings, screen: BaseScreen?, selectBoxMinWidth: Float) {
-    table.add("Notifications log max turns".toLabel()).left().fillX()
+private fun addNotificationLogMaxTurnsSlider(table: Table, settings: GameSettings, optionsPopup: OptionsPopup) {
+
 
     val minimapSlider = UncivSlider(
         3f, 15f, 1f,
@@ -59,5 +59,5 @@ private fun addNotificationLogMaxTurnsSlider(table: Table, settings: GameSetting
         settings.notificationsLogMaxTurns = turns
         settings.save()
     }
-    table.add(minimapSlider).minWidth(selectBoxMinWidth).pad(10f).row()
+    optionsPopup.addControlRow(table, "Notifications log max turns", minimapSlider, optionsPopup.selectBoxMinWidth)
 }

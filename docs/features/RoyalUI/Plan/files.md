@@ -94,3 +94,13 @@ android/assets/UI_bundles/ существовал до задачи и не от
 Не включать результаты захвата, lasterror.txt, локальные настройки, сборочные каталоги и прежние пользовательские изменения, включая wiki/Make-sprite-atlas.md. Untracked-эталон не считается созданным этой работой только по его наличию в рабочем каталоге.
 
 [План](PLAN.md)
+
+## Настройки: точка просмотра
+
+- core/src/com/unciv/ui/options/OptionsPopup.kt — рамка, размеры, перенос флажков и адаптивные строки.
+- core/src/com/unciv/ui/options/AboutTab.kt — явная ширина пергаментного содержимого.
+- core/src/com/unciv/ui/options/DisplayTab.kt — адаптация двух ползунков, четырёх списков и пояснения.
+- core/src/com/unciv/ui/options/GameplayTab.kt — адаптация строки истории уведомлений.
+- desktop/src/com/unciv/app/desktop/OptionsPopupGoldenChecks.kt — новый сценарий размеров и закрытия.
+- desktop/src/com/unciv/app/desktop/ConfirmPopupGoldenChecks.kt — подключение сценария настроек.
+- docs/features/RoyalUI/Plan/PLAN.md, STEPS.md, STEP_02_Screens.md, STEP_03_Verification.md, files.md и ../CODE_GUIDE.md — граница этапа, покрытие и маршрут просмотра.
