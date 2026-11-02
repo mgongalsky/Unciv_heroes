@@ -95,6 +95,7 @@ object UiGoldenTestRunner {
 
     private fun scenarios() = listOf(
         Scenario("main-menu") {},
+        Scenario("terrain-playground") {},
         Scenario("terrain-parameters") { TerrainParametersGoldenChecks.open(it) },
         Scenario("terrain-editor-layers") {},
         Scenario("network-room") {},
@@ -104,10 +105,7 @@ object UiGoldenTestRunner {
         arenaScenario("arena-complete", 3),
         Scenario("split-troop-empty") { com.unciv.ui.playground.openSplitTroopPreview(it) },
         Scenario("split-troop-occupied") {
-            com.unciv.ui.playground.openSplitTroopPreview(
-                it,
-                targetAmount = 12
-            )
+            com.unciv.ui.playground.openSplitTroopPreview(it, targetAmount = 12)
         },
         Scenario("army-troop-info") { com.unciv.ui.playground.openArmyTroopInfoPreview(it) },
         Scenario("hero-overview") {},
