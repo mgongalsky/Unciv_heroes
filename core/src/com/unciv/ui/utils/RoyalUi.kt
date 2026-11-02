@@ -130,4 +130,36 @@ object RoyalUi {
         style.checkboxOffDisabled = RoyalCheckBoxDrawable(skin, false, false, true, size)
         style.checkboxOnDisabled = RoyalCheckBoxDrawable(skin, true, false, true, size)
     }
+
+    /** Вызывается после installCheckBoxes, создавшего общий белый пиксель в Skin. */
+    fun installSliders(skin: Skin) {
+        val pixel = skin.get("royal-control-pixel", Texture::class.java)
+        for (vertical in listOf(false, true)) {
+            val name = if (vertical) "default-vertical" else "default-horizontal"
+            val style = skin.get(
+                name,
+                com.badlogic.gdx.scenes.scene2d.ui.Slider.SliderStyle::class.java
+            )
+            val width = maxOf(20f, style.knob?.minWidth ?: 0f)
+            val height = maxOf(20f, style.knob?.minHeight ?: 0f)
+            fun knob(emphasized: Boolean = false, disabled: Boolean = false) =
+                    RoyalSliderDrawable(pixel, true, vertical, emphasized, disabled, width, height)
+
+            fun track(disabled: Boolean = false) =
+                    RoyalSliderDrawable(
+                        pixel, false, vertical, false, disabled,
+                        if (vertical) 5f else 0f, if (vertical) 0f else 5f
+                    )
+            style.background = track()
+            style.disabledBackground = track(true)
+            style.knob = knob()
+            style.knobOver = knob(emphasized = true)
+            style.knobDown = knob(emphasized = true)
+            style.disabledKnob = knob(disabled = true)
+            style.knobBefore = null
+            style.knobAfter = null
+            style.disabledKnobBefore = null
+            style.disabledKnobAfter = null
+        }
+    }
 }

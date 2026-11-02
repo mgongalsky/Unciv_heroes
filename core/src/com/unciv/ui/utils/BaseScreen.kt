@@ -207,6 +207,7 @@ abstract class BaseScreen : Screen {
             if (UncivGame.Current.settings.skin == "Minimal") {
                 RoyalUi.installButtons(skin)
                 RoyalUi.installCheckBoxes(skin)
+                RoyalUi.installSliders(skin)
                 RoyalUi.installTypography(skin)
             }
             clearColor = skinStrings.skinConfig.clearColor

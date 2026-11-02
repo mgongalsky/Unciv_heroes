@@ -346,4 +346,10 @@ class UiGoldenTest {
     fun royalCheckBoxRender() {
         UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=royal-checkbox"))
     }
+
+    /** Проверяет ввод и disabled для обеих ориентаций Royal-ползунка. */
+    @Test
+    fun royalSliderRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=royal-slider"))
+    }
 }
