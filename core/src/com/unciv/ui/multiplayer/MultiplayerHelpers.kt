@@ -15,12 +15,14 @@ import com.unciv.utils.concurrency.Concurrency
 import com.unciv.utils.concurrency.launchOnGLThread
 import java.time.Duration
 import java.time.Instant
+import com.unciv.ui.popup.applyRoyalTextLayout
 
 object MultiplayerHelpers {
 
     fun loadMultiplayerGame(screen: BaseScreen, selectedGame: OnlineMultiplayerGame) {
         val loadingGamePopup = Popup(screen)
         loadingGamePopup.addGoodSizedLabel("Loading latest game state...")
+        loadingGamePopup.applyRoyalTextLayout()
         loadingGamePopup.open()
 
         Concurrency.run("JoinMultiplayerGame") {
@@ -30,6 +32,7 @@ object MultiplayerHelpers {
                 val (message) = LoadGameScreen.getLoadExceptionMessage(ex)
                 launchOnGLThread {
                     loadingGamePopup.reuseWith(message, true)
+                    loadingGamePopup.applyRoyalTextLayout()
                 }
             }
         }

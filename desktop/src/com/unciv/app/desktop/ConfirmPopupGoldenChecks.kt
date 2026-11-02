@@ -7,6 +7,7 @@ import com.unciv.ui.popup.ConfirmPopup
 import com.unciv.ui.utils.BaseScreen
 import com.unciv.ui.utils.extensions.activate
 import com.unciv.ui.utils.extensions.stageBoundingBox
+import com.unciv.ui.popup.applyRoyalTextLayout
 
 /** Checks constrained logical sizes and callbacks; capture does not approve a visual baseline. */
 internal object ConfirmPopupGoldenChecks {
@@ -14,6 +15,7 @@ internal object ConfirmPopupGoldenChecks {
         check(UncivGame.Current.settings.skin == "Minimal") {
             "Royal confirmation checks require the Minimal skin"
         }
+        verifyRoyalTextReuse()
         val question = List(18) {
             "Replace the current army with the selected template? Existing changes will be lost."
         }.joinToString(" ")
@@ -95,5 +97,93 @@ internal object ConfirmPopupGoldenChecks {
             "Replace the current army with the selected template? Existing changes will be lost.",
             "Replace army", action = {}
         ).open(force = true)
+    }
+    private fun verifyRoyalTextReuse() {
+        for (width in listOf(360f, 1000f)) {
+            val stage = com.unciv.ui.UncivStage(
+                com.badlogic.gdx.utils.viewport.FitViewport(
+                    width,
+                    480f
+                )
+            )
+            try {
+                stage.viewport.update(
+                    com.badlogic.gdx.Gdx.graphics.width,
+                    com.badlogic.gdx.Gdx.graphics.height,
+                    true
+                )
+                val popup = com.unciv.ui.popup.Popup(stage)
+                var closed = 0
+                popup.closeListeners.add { closed++ }
+                try {
+                    popup.addGoodSizedLabel("Loading latest game state...")
+                    popup.applyRoyalTextLayout()
+                    popup.open(force = true)
+                    popup.validate()
+                    check(popup.innerTable.background is com.unciv.ui.utils.RoyalPanelDrawable)
+                    check(popup.innerTable.children.filterIsInstance<TextButton>().isEmpty())
+                    val message =
+                            "The requested game could not be loaded. Please check the server and try again. ".repeat(
+                                30
+                            )
+                    popup.reuseWith(message, true)
+                    popup.applyRoyalTextLayout()
+                    popup.applyRoyalTextLayout()
+                    popup.validate()
+                    val scroll = popup.children.filterIsInstance<ScrollPane>().single()
+                    scroll.validate()
+                    popup.innerTable.validate()
+                    stage.draw()
+                    val detail = "Reused Royal popup at ${width}x480"
+                    check(popup.innerTable.background is com.unciv.ui.utils.RoyalPanelDrawable) { detail }
+                    val origin = scroll.localToStageCoordinates(com.badlogic.gdx.math.Vector2())
+                    check(origin.x >= -1f && origin.y >= -1f && origin.x + scroll.width <= width + 1f && origin.y + scroll.height <= 481f) { detail }
+                    check(scroll.maxX <= 1f && scroll.maxY > 0f) { detail }
+                    val label =
+                            popup.innerTable.children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>()
+                                .single()
+                    check(label.text.toString() == message && label.wrap && label.height + 1f >= label.prefHeight) { detail }
+                    val color = label.color.cpy()
+                    label.style.fontColor?.let { color.mul(it) }
+                    check(color == com.badlogic.gdx.graphics.Color.valueOf("453925")) { detail }
+                    val button = popup.innerTable.children.filterIsInstance<TextButton>().single()
+                    check(button.label.wrap && button.label.height + 1f >= button.label.prefHeight) { detail }
+                    val local = button.localToAscendantCoordinates(
+                        scroll.actor,
+                        com.badlogic.gdx.math.Vector2()
+                    )
+                    scroll.scrollTo(local.x, local.y, button.width, button.height)
+                    scroll.updateVisualScroll()
+                    stage.draw()
+                    val point = button.localToStageCoordinates(
+                        com.badlogic.gdx.math.Vector2(
+                            button.width / 2f,
+                            button.height / 2f
+                        )
+                    )
+                    val hit = stage.hit(point.x, point.y, true)
+                    check(hit === button || hit?.isDescendantOf(button) == true) { detail }
+                    stage.stageToScreenCoordinates(point)
+                    stage.touchDown(
+                        point.x.toInt(),
+                        point.y.toInt(),
+                        0,
+                        com.badlogic.gdx.Input.Buttons.LEFT
+                    )
+                    stage.touchUp(
+                        point.x.toInt(),
+                        point.y.toInt(),
+                        0,
+                        com.badlogic.gdx.Input.Buttons.LEFT
+                    )
+                    check(popup.parent == null && closed == 1) { detail }
+                } finally {
+                    popup.events.stopReceiving()
+                    popup.remove()
+                }
+            } finally {
+                stage.dispose()
+            }
+        }
     }
 }

@@ -16,6 +16,7 @@ import com.unciv.ui.utils.extensions.enable
 import com.unciv.ui.utils.extensions.onClick
 import com.unciv.ui.utils.extensions.toTextButton
 import com.unciv.ui.utils.AutoScrollPane as ScrollPane
+import com.unciv.ui.popup.applyRoyalTextLayout
 
 class MultiplayerScreen(previousScreen: BaseScreen) : PickerScreen() {
     private var selectedGame: OnlineMultiplayerGame? = null
@@ -158,15 +159,15 @@ class MultiplayerScreen(previousScreen: BaseScreen) : PickerScreen() {
                 .row()
             helpPopup.addGoodSizedLabel("").row()
 
-            helpPopup.addGoodSizedLabel("The symbol of your nation will appear next to the game when it's your turn").row()
-
+            helpPopup.addGoodSizedLabel("The symbol of your nation will appear next to the game when it's your turn")
+                .row()
             helpPopup.addCloseButton()
+            helpPopup.applyRoyalTextLayout()
             helpPopup.open()
         }
         tab.add(helpButton)
         tab.x = (stage.width - helpButton.width)
         tab.y = (stage.height - helpButton.height)
-
         stage.addActor(tab)
     }
 
