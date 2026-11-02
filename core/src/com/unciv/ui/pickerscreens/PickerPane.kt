@@ -19,6 +19,9 @@ import com.unciv.ui.utils.extensions.toTextButton
 class PickerPane(
     disableScroll: Boolean = false,
 ) : Table() {
+    private var adaptiveWidth = -1f
+    private var adaptiveActions = false
+
     /** The close button on the lower left of [bottomTable], see [setDefaultCloseAction] */
     val closeButton = Constants.close.toTextButton()
     /** A scrollable wrapped Label you can use to show descriptions in the [bottomTable], starts empty */
@@ -61,9 +64,43 @@ class PickerPane(
     }
 
     override fun layout() {
+        if (!adaptiveActions) {
+            super.layout()
+            bottomTable.height = bottomTable.height.coerceAtMost(maxBottomTableHeight)
+            splitPane.splitAmount =
+                    (scrollPane.height / (scrollPane.height + bottomTable.height)).coerceAtLeast(
+                        screenSplit
+                    )
+            return
+        }
+        if (adaptiveWidth != width) {
+            adaptiveWidth = width
+            val descriptionScroll =
+                    bottomTable.cells.mapNotNull { it.actor as? AutoScrollPane }.single()
+            bottomTable.clearChildren()
+            val stacked = width < 600f
+            val contentWidth = (width - 20f).coerceAtLeast(1f)
+            val actionWidth = if (stacked) contentWidth else ((width - 40f) / 2f).coerceAtLeast(1f)
+            closeButton.label.setWrap(true)
+            rightSideButton.label.setWrap(true)
+            rightSideGroup.grow()
+            bottomTable.add(descriptionScroll).colspan(if (stacked) 1 else 2)
+                .width(contentWidth).height(60f).pad(5f).fill().row()
+            bottomTable.add(closeButton).width(actionWidth).pad(5f).fillX()
+            if (stacked) bottomTable.row()
+            bottomTable.add(rightSideGroup).width(actionWidth).pad(5f).fillX()
+            rightSideGroup.setWidth(actionWidth)
+            rightSideGroup.invalidate()
+            rightSideGroup.validate()
+        }
+        bottomTable.invalidate()
+        val desiredHeight = bottomTable.prefHeight
+        // Нижняя панель получает высоту перенесённых подписей, а не фиксированные 15% сцены.
+        val availableHeight = (height - splitPane.style.handle.minHeight).coerceAtLeast(1f)
+        splitPane.splitAmount = (1f - desiredHeight / availableHeight).coerceIn(0.2f, 0.85f)
         super.layout()
-        bottomTable.height = bottomTable.height.coerceAtMost(maxBottomTableHeight)
-        splitPane.splitAmount = (scrollPane.height / (scrollPane.height + bottomTable.height)).coerceAtLeast(screenSplit)
+        splitPane.invalidate()
+        splitPane.validate()
     }
 
     /** Enables the [rightSideButton]. See [pick] for a way to set the text. */
@@ -87,5 +124,12 @@ class PickerPane(
                 labelCell.pad(10f)
             }
         }
+    }
+
+    /** Клиент включает перенос действий без изменения остальных экранов выбора. */
+    fun enableAdaptiveActions() {
+        if (adaptiveActions) return
+        adaptiveActions = true
+        invalidateHierarchy()
     }
 }

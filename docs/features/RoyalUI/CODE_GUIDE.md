@@ -76,6 +76,8 @@ TechPickerScreen.setButtonsInfo для Minimal задаёт цвет фона п
 
 CivilopediaScreen передаёт собранные строки описания в MarkupRenderer.renderWithTextColor только для Minimal. Явные цвета и ссылки сохраняются. Выделение категории использует isChecked, выделение записи меняет фон таблицы; значки не тонируются целиком.
 
+PickerPane.enableAdaptiveActions включает отдельную строку описания и перенос действий при ширине меньше 600. Режим подключает только Royal-вариант TechPickerScreen; остальные клиенты сохраняют прежнюю компоновку. Высота нижней панели рассчитывается по содержимому. Проверка verifyTechnologyActionLayout временно меняет viewport и текст подтверждения, проверяет границы и Stage.hit, затем восстанавливает исходные значения.
+
 ## Главное и игровое меню
 
 MainMenuScreen находится в core/src/com/unciv, а не в ui/mainmenuscreen. Для Minimal getMenuButton создаёт Button с общим стилем Royal, кремовой подписью и переносом; singleColumn включается также при stage.width < 1000. MainMenuGoldenChecks ждёт карту и окончание анимации, а попадание в последний пункт проверяет после кадра, применившего прокрутку.

@@ -804,6 +804,7 @@ internal object OverviewStatsGoldenChecks {
                 check(card(alternative.name).bg.color == com.badlogic.gdx.graphics.Color.valueOf("9BC6D1")) {
                     "Выбор не обновил текущее состояние карточки"
                 }
+                verifyTechnologyActionLayout(tree)
             }
             verifyEraHeadings()
             check(manager.techsToResearch === sampleQueue && sampleQueue == sampleBefore)
@@ -923,6 +924,60 @@ internal object OverviewStatsGoldenChecks {
             pedia?.dispose()
             source.civilopediaText = sourceText
             target.civilopediaText = targetText
+        }
+    }
+
+    /** Проверяет доступность действий дерева при длинной подписи без подтверждения исследования. */
+    private fun verifyTechnologyActionLayout(tree: com.unciv.ui.pickerscreens.TechPickerScreen) {
+        val viewport = tree.stage.viewport
+        val originalWidth = viewport.worldWidth
+        val originalHeight = viewport.worldHeight
+        val originalText = tree.rightSideButton.text.toString()
+        try {
+            tree.rightSideButton.setText("Research the ancient knowledge of the distant royal provinces\n(12345/67890)")
+            for ((width, height) in listOf(360f to 480f, 1000f to 600f)) {
+                viewport.setWorldSize(width, height)
+                tree.pickerPane.invalidateHierarchy()
+                tree.pickerPane.validate()
+                tree.stage.draw()
+                val buttons = listOf(tree.closeButton, tree.rightSideButton)
+                val bounds = buttons.map { button ->
+                    button.validate()
+                    val position = button.localToStageCoordinates(com.badlogic.gdx.math.Vector2())
+                    com.badlogic.gdx.math.Rectangle(
+                        position.x,
+                        position.y,
+                        button.width,
+                        button.height
+                    )
+                }
+                for ((index, button) in buttons.withIndex()) {
+                    val box = bounds[index]
+                    val detail = "stage=${width}x$height button=${button.text} bounds=$box"
+                    check(
+                        box.width > 0f && box.height > 0f && box.x >= -1f && box.y >= -1f &&
+                                box.x + box.width <= width + 1f && box.y + box.height <= height + 1f
+                    ) {
+                        "Действие дерева выходит за границы: $detail"
+                    }
+                    check(button.label.height + 1f >= button.label.prefHeight) {
+                        "Подпись действия обрезана по высоте: $detail"
+                    }
+                    val hit = tree.stage.hit(box.x + box.width / 2f, box.y + box.height / 2f, true)
+                    check(hit != null && (hit === button || hit.isDescendantOf(button))) {
+                        "Действие дерева перекрыто: $detail"
+                    }
+                }
+                check(!bounds[0].overlaps(bounds[1])) { "Кнопки дерева перекрываются при ширине $width" }
+                if (width == 360f) check(tree.rightSideButton.label.wrap) {
+                    "Длинная подпись подтверждения не переносится"
+                }
+            }
+        } finally {
+            tree.rightSideButton.setText(originalText)
+            viewport.setWorldSize(originalWidth, originalHeight)
+            tree.pickerPane.invalidateHierarchy()
+            tree.pickerPane.validate()
         }
     }
 }

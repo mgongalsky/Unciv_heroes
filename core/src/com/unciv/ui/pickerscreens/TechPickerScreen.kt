@@ -65,14 +65,12 @@ class TechPickerScreen(
     init {
         setDefaultCloseAction()
         scrollPane.setOverscroll(false, false)
-
         descriptionLabel.onClick {
             if (selectedTech != null)
                 game.pushScreen(
                     CivilopediaScreen(
                         civInfo.gameInfo.ruleSet,
-                        CivilopediaCategories.Technology,
-                        selectedTech!!.name
+                        CivilopediaCategories.Technology, selectedTech!!.name
                     )
                 )
         }
@@ -87,6 +85,7 @@ class TechPickerScreen(
         pickerPane.bottomTable.background =
                 skinStrings.getUiBackground("TechPickerScreen/BottomTable", tintColor = panelColor)
         if (royal) {
+            pickerPane.enableAdaptiveActions()
             topTable.background = skinStrings.getUiBackground(
                 "TechPickerScreen/Background",
                 tintColor = panelColor
@@ -97,7 +96,6 @@ class TechPickerScreen(
             }
             descriptionLabel.color = Color.WHITE
         }
-
         rightSideButton.setText("Pick a tech".tr())
         rightSideButton.onClick(UncivSound.Paper) {
             if (freeTechPick) {
@@ -109,7 +107,6 @@ class TechPickerScreen(
             game.settings.addCompletedTutorialTask("Pick technology")
             game.popScreen()
         }
-
         val tech = centerOnTech ?: civInfo.tech.currentTechnology()
         if (tech != null) {
             if (civInfo.tech.isResearched(tech.name) || civInfo.tech.techsToResearch.size <= 1)
