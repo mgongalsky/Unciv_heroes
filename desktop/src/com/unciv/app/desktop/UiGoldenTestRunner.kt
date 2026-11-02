@@ -107,6 +107,7 @@ object UiGoldenTestRunner {
         Scenario("main-menu") {},
         Scenario("terrain-playground") {},
         Scenario("native-font-lifecycle") { NativeFontGoldenChecks.open(it) },
+        Scenario("royal-checkbox") { RoyalCheckBoxGoldenChecks.open(it) },
         Scenario("terrain-parameters") { TerrainParametersGoldenChecks.open(it) },
         Scenario("terrain-editor-layers") {},
         Scenario("network-room") {},

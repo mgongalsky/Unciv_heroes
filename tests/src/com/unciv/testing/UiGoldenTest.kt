@@ -340,4 +340,10 @@ class UiGoldenTest {
     fun nativeFontLifecycleRender() {
         UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=native-font-lifecycle"))
     }
+
+    /** Проверяет переключение и disabled-состояния Royal-флажков без утверждения эталона. */
+    @Test
+    fun royalCheckBoxRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=royal-checkbox"))
+    }
 }

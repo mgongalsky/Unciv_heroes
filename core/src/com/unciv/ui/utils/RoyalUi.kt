@@ -115,4 +115,19 @@ object RoyalUi {
                 com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle::class.java
             ).font = display
     }
+
+    /** Меняет только индикаторы: подписи и локальные смысловые стили сохраняются. */
+    fun installCheckBoxes(skin: Skin) {
+        val style = skin.get(com.badlogic.gdx.scenes.scene2d.ui.CheckBox.CheckBoxStyle::class.java)
+        val size = maxOf(
+            16f, style.checkboxOff.minWidth, style.checkboxOff.minHeight,
+            style.checkboxOn.minWidth, style.checkboxOn.minHeight
+        )
+        style.checkboxOff = RoyalCheckBoxDrawable(skin, false, false, false, size)
+        style.checkboxOn = RoyalCheckBoxDrawable(skin, true, false, false, size)
+        style.checkboxOver = RoyalCheckBoxDrawable(skin, false, true, false, size)
+        style.checkboxOnOver = RoyalCheckBoxDrawable(skin, true, true, false, size)
+        style.checkboxOffDisabled = RoyalCheckBoxDrawable(skin, false, false, true, size)
+        style.checkboxOnDisabled = RoyalCheckBoxDrawable(skin, true, false, true, size)
+    }
 }

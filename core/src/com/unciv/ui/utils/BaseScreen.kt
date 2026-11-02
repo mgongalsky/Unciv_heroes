@@ -206,6 +206,7 @@ abstract class BaseScreen : Screen {
             // Пользовательские skins сохраняют своё оформление; Royal заменяет базовый Minimal.
             if (UncivGame.Current.settings.skin == "Minimal") {
                 RoyalUi.installButtons(skin)
+                RoyalUi.installCheckBoxes(skin)
                 RoyalUi.installTypography(skin)
             }
             clearColor = skinStrings.skinConfig.clearColor
