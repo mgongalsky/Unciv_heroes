@@ -563,57 +563,81 @@ internal object OverviewStatsGoldenChecks {
         }
     }
 
+    /** Проверяет заполненный пантеон, узкую раскладку и повторное построение без изменения игровых данных. */
     fun verifyReligion(screen: EmpireOverviewScreen, civ: CivilizationInfo) {
         val world = civ.gameInfo
         val manager = civ.religionManager
         val originalReligion = manager.religion
         val originalFaith = manager.storedFaith
         val originalState = manager.religionState
+        val viewport = screen.stage.viewport
+        val originalWidth = viewport.worldWidth
+        val originalHeight = viewport.worldHeight
         val belief = world.ruleSet.beliefs.values.first {
             it.type == com.unciv.models.ruleset.BeliefType.Pantheon
         }
         val name = "Royal overview verification pantheon"
+        val displayName =
+                "The ancient faith of the distant royal provinces beyond the northern mountains"
         val originalEntry = world.religions[name]
         val religion = com.unciv.models.Religion(name, world, civ.civName).apply {
+            this.displayName = displayName
             followerBeliefs.add(belief.name)
         }
         try {
             world.religions[name] = religion
             manager.religion = religion
-            val tab = com.unciv.ui.overviewscreen.ReligionOverviewTab(civ, screen)
-            tab.select(name)
-            tab.pack()
-            check(tab.persistableData.selectedReligion == name)
-            val labels = descendants(tab)
-                .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>().toList()
-            check(labels.any { it.text.toString() == name }) {
-                "Выбранный пантеон не отображается в статистике"
-            }
-            check(labels.any { it.text.toString().contains(belief.name) }) {
-                "Описание выбранного верования отсутствует"
-            }
-            var summaryLabelCount: Int? = null
-            repeat(3) {
-                val fixed = tab.getFixedContent()
-                fixed.pack()
-                val count = descendants(fixed)
-                    .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>().count()
-                check(count > 0)
-                check(summaryLabelCount == null || summaryLabelCount == count) {
-                    "Повторное построение дублирует строки сводки религии"
-                }
-                summaryLabelCount = count
-                val buttons = descendants(fixed)
-                    .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Button>().toList()
-                check(buttons.any { it.touchable == com.badlogic.gdx.scenes.scene2d.Touchable.disabled }) {
-                    "Кнопка выбранной религии принимает ввод"
+            for (width in listOf(360f, 1000f)) {
+                viewport.setWorldSize(width, originalHeight)
+                val tab = com.unciv.ui.overviewscreen.ReligionOverviewTab(civ, screen)
+                var summaryLabelCount: Int? = null
+                repeat(3) {
+                    tab.select(name)
+                    tab.pack()
+                    check(tab.persistableData.selectedReligion == name)
+                    val labels = descendants(tab)
+                        .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>().toList()
+                    val nameLabel = labels.single { it.text.toString() == displayName }
+                    check(labels.any { it.text.toString().contains(belief.name) }) {
+                        "Описание выбранного верования отсутствует"
+                    }
+                    val fixed = tab.getFixedContent()
+                    fixed.pack()
+                    val fixedLabels = descendants(fixed)
+                        .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>().toList()
+                    val count = fixedLabels.size
+                    check(count > 0)
+                    check(summaryLabelCount == null || summaryLabelCount == count) {
+                        "Повторное построение дублирует строки сводки религии"
+                    }
+                    summaryLabelCount = count
+                    val buttons = descendants(fixed)
+                        .filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Button>().toList()
+                    check(buttons.any { it.touchable == com.badlogic.gdx.scenes.scene2d.Touchable.disabled }) {
+                        "Кнопка выбранной религии принимает ввод"
+                    }
+                    if (screen.game.settings.skin == "Minimal") {
+                        check(tab.width <= width + 1f) { "Содержимое Religion шире сцены $width: ${tab.width}" }
+                        check(fixed.width <= width + 1f) { "Заголовок Religion шире сцены $width: ${fixed.width}" }
+                        val heading = fixedLabels.single { it.text.toString() == displayName }
+                        for (label in listOf(nameLabel, heading)) {
+                            label.validate()
+                            check(label.wrap && label.width > 0f && label.height > 0f)
+                            check(label.color == com.badlogic.gdx.graphics.Color.valueOf("453925"))
+                            if (width == 360f) check(label.glyphLayout.runs.size > 1) {
+                                "Длинное название религии не перенесено"
+                            }
+                        }
+                    }
                 }
             }
             check(manager.storedFaith == originalFaith && manager.religionState == originalState)
             check(manager.religion === religion && world.religions[name] === religion)
+            check(religion.displayName == displayName)
             check(religion.followerBeliefs == setOf(belief.name))
             check(religion.founderBeliefs.isEmpty())
         } finally {
+            viewport.setWorldSize(originalWidth, originalHeight)
             manager.religion = originalReligion
             if (originalEntry == null) world.religions.remove(name)
             else world.religions[name] = originalEntry
