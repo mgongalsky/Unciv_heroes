@@ -16,6 +16,7 @@ internal object ConfirmPopupGoldenChecks {
             "Royal confirmation checks require the Minimal skin"
         }
         verifyRoyalTextReuse()
+        verifyDropboxWarning(screen)
         val question = List(18) {
             "Replace the current army with the selected template? Existing changes will be lost."
         }.joinToString(" ")
@@ -184,6 +185,136 @@ internal object ConfirmPopupGoldenChecks {
             } finally {
                 stage.dispose()
             }
+        }
+    }
+
+    private fun verifyDropboxWarning(screen: BaseScreen) {
+        val settings = UncivGame.Current.settings.multiplayer
+        val originalServer = settings.server
+        val originalHidden = settings.hideDropboxWarning
+        val stage = screen.stage as com.unciv.ui.UncivStage
+        val originalViewport = stage.viewport
+        val originalArea = com.badlogic.gdx.math.Rectangle(stage.lastKnownVisibleArea)
+        try {
+            settings.server = com.unciv.Constants.dropboxMultiplayerServer
+            for (width in listOf(360f, 1000f)) {
+                stage.viewport = com.badlogic.gdx.utils.viewport.FitViewport(width, 480f)
+                stage.viewport.update(
+                    com.badlogic.gdx.Gdx.graphics.width,
+                    com.badlogic.gdx.Gdx.graphics.height,
+                    true
+                )
+                com.unciv.logic.event.EventBus.send(
+                    com.unciv.ui.UncivStage.VisibleAreaChanged(
+                        com.badlogic.gdx.math.Rectangle(
+                            0f,
+                            0f,
+                            width,
+                            480f
+                        )
+                    )
+                )
+                for (hide in listOf(false, true)) {
+                    settings.hideDropboxWarning = false
+                    val previous = stage.actors.toList()
+                    com.unciv.ui.multiplayer.MultiplayerHelpers.showDropboxWarning(screen)
+                    val popup = stage.actors.filterIsInstance<com.unciv.ui.popup.Popup>()
+                        .single { it !in previous }
+                    try {
+                        popup.validate()
+                        val scroll = popup.children.filterIsInstance<ScrollPane>().single()
+                        val checkBox =
+                                popup.innerTable.children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.CheckBox>()
+                                    .single()
+                        checkBox.label.setText(
+                            "Do not show this multiplayer server warning again on future visits ".repeat(
+                                8
+                            )
+                        )
+                        val warning =
+                                popup.innerTable.children.filterIsInstance<com.badlogic.gdx.scenes.scene2d.ui.Label>()
+                                    .single()
+                        warning.setText((warning.text.toString() + "\n\n").repeat(8))
+                        popup.invalidateHierarchy()
+                        popup.validate()
+                        scroll.validate()
+                        popup.innerTable.validate()
+                        stage.draw()
+                        val detail =
+                                "Dropbox warning at ${width}x480, hide=$hide, maxX=${scroll.maxX}, maxY=${scroll.maxY}, scroll=${scroll.width}x${scroll.height}, inner=${popup.innerTable.width}x${popup.innerTable.height}"
+                        check(popup.innerTable.background is com.unciv.ui.utils.RoyalPanelDrawable) { detail }
+                        val origin = scroll.localToStageCoordinates(com.badlogic.gdx.math.Vector2())
+                        check(origin.x >= -1f && origin.y >= -1f && origin.x + scroll.width <= width + 1f && origin.y + scroll.height <= 481f) { detail }
+                        check(scroll.maxX <= 1f) { "Horizontal overflow: $detail" }
+                        check(scroll.maxY > 0f) { "Fixture did not exercise vertical scrolling: $detail" }
+                        check(warning.wrap && warning.height + 1f >= warning.prefHeight) { detail }
+                        check(checkBox.label.wrap && checkBox.label.height + 1f >= checkBox.label.prefHeight) { detail }
+                        val color = checkBox.label.color.cpy()
+                        checkBox.label.style.fontColor?.let { color.mul(it) }
+                        check(color == com.badlogic.gdx.graphics.Color.valueOf("453925")) { detail }
+                        fun click(actor: com.badlogic.gdx.scenes.scene2d.Actor) {
+                            val local = actor.localToAscendantCoordinates(
+                                scroll.actor,
+                                com.badlogic.gdx.math.Vector2()
+                            )
+                            scroll.scrollTo(local.x, local.y, actor.width, actor.height)
+                            scroll.updateVisualScroll()
+                            stage.draw()
+                            val point = actor.localToStageCoordinates(
+                                com.badlogic.gdx.math.Vector2(
+                                    actor.width / 2f,
+                                    actor.height / 2f
+                                )
+                            )
+                            val hit = stage.hit(point.x, point.y, true)
+                            check(hit === actor || hit?.isDescendantOf(actor) == true) { detail }
+                            stage.stageToScreenCoordinates(point)
+                            stage.touchDown(
+                                point.x.toInt(),
+                                point.y.toInt(),
+                                0,
+                                com.badlogic.gdx.Input.Buttons.LEFT
+                            )
+                            stage.touchUp(
+                                point.x.toInt(),
+                                point.y.toInt(),
+                                0,
+                                com.badlogic.gdx.Input.Buttons.LEFT
+                            )
+                        }
+                        check(!checkBox.isChecked)
+                        if (hide) click(checkBox)
+                        check(checkBox.isChecked == hide) { detail }
+                        check(!settings.hideDropboxWarning) { "Preference changed before closing" }
+                        val close = popup.innerTable.children.filterIsInstance<TextButton>().last()
+                        click(close)
+                        check(popup.parent == null && settings.hideDropboxWarning == hide) { detail }
+                        if (hide) {
+                            com.unciv.ui.multiplayer.MultiplayerHelpers.showDropboxWarning(screen)
+                            check(stage.actors.none { it is com.unciv.ui.popup.Popup && it !in previous }) { detail }
+                        }
+                    } finally {
+                        popup.events.stopReceiving()
+                        popup.remove()
+                    }
+                }
+            }
+        } finally {
+            settings.server = originalServer
+            settings.hideDropboxWarning = originalHidden
+            stage.viewport = originalViewport
+            originalViewport.update(
+                com.badlogic.gdx.Gdx.graphics.width,
+                com.badlogic.gdx.Gdx.graphics.height,
+                true
+            )
+            com.unciv.logic.event.EventBus.send(
+                com.unciv.ui.UncivStage.VisibleAreaChanged(
+                    originalArea
+                )
+            )
+            for (actor in stage.actors)
+                (actor as? com.badlogic.gdx.scenes.scene2d.utils.Layout)?.invalidateHierarchy()
         }
     }
 }

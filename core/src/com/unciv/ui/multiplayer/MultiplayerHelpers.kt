@@ -58,20 +58,33 @@ object MultiplayerHelpers {
     fun showDropboxWarning(screen: BaseScreen) {
         if (!OnlineMultiplayer.usesDropbox() || UncivGame.Current.settings.multiplayer.hideDropboxWarning) return
 
+        val royal = UncivGame.Current.settings.skin == "Minimal"
+        val columns = if (royal) 1 else 2
         val dropboxWarning = Popup(screen)
         dropboxWarning.addGoodSizedLabel(
             "You're currently using the default multiplayer server, which is based on a free Dropbox account. " +
-            "Because a lot of people use this, it is uncertain if you'll actually be able to access it consistently. " +
-            "Consider using a custom server instead."
-        ).colspan(2).row()
+                    "Because a lot of people use this, it is uncertain if you'll actually be able to access it consistently. " +
+                    "Consider using a custom server instead."
+        ).colspan(columns).row()
         dropboxWarning.addButton("Open Documentation") {
             Gdx.net.openURI("https://yairm210.github.io/Unciv/Other/Multiplayer/#hosting-a-multiplayer-server")
-        }.colspan(2).row()
+        }.colspan(columns).row()
 
         val checkBox = "Don't show again".toCheckBox()
-        dropboxWarning.add(checkBox)
+        dropboxWarning.add(checkBox).apply { if (royal) row() }
         dropboxWarning.addCloseButton {
             UncivGame.Current.settings.multiplayer.hideDropboxWarning = checkBox.isChecked
+        }
+        dropboxWarning.applyRoyalTextLayout()
+        if (royal) {
+            checkBox.label.color = com.badlogic.gdx.graphics.Color.valueOf("453925")
+            val indicatorWidth = checkBox.image.prefWidth +
+                    checkBox.imageCell.padLeft + checkBox.imageCell.padRight
+            checkBox.labelCell.width(
+                (checkBox.labelCell.prefWidth - indicatorWidth).coerceAtLeast(
+                    1f
+                )
+            )
         }
         dropboxWarning.open()
     }
