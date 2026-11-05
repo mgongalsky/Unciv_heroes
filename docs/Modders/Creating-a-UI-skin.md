@@ -34,64 +34,103 @@ These shapes are used all over Unciv and can be replaced to make a lot of UI ele
 <!--- DO NOT REMOVE OR MODIFY THIS LINE UI_ELEMENT_TABLE_REGION -->
 | Directory | Name | Default shape | Image |
 |---|:---:|:---:|---|
+|  | EADFBD | null | |
 | CityScreen/ | CityPickerTable | roundedEdgeRectangle | |
-| CityScreen/CitizenManagementTable/ | AvoidCell | null | |
 | CityScreen/CitizenManagementTable/ | FocusCell | null | |
-| CityScreen/CitizenManagementTable/ | ResetCell | null | |
+| CityScreen/CityConstructionTable/ | AvailableConstructionsTable | null | |
 | CityScreen/CityConstructionTable/ | AvailableConstructionsTable | null | |
 | CityScreen/CityConstructionTable/ | ConstructionsQueueTable | null | |
+| CityScreen/CityConstructionTable/ | ConstructionsQueueTable | null | |
 | CityScreen/CityConstructionTable/ | Header | null | |
-| CityScreen/CityConstructionTable/ | PickConstructionButton | null | |
 | CityScreen/CityConstructionTable/ | PickConstructionButtonSelected | null | |
-| CityScreen/CityConstructionTable/ | QueueEntry | null | |
 | CityScreen/CityConstructionTable/ | QueueEntrySelected | null | |
 | CityScreen/CityScreenTileTable/ | Background | null | |
 | CityScreen/CityScreenTileTable/ | InnerTable | null | |
 | CityScreen/CityStatsTable/ | Background | null | |
+| CityScreen/CityStatsTable/ | Background", tintColor = Color.valueOf("A18B5A | null | |
 | CityScreen/CityStatsTable/ | InnerTable | null | |
+| CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |
+| CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |
+| CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |
+| CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |
+| CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |
+| CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |
+| CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |
+| CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |
+| CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |
 | CityScreen/ConstructionInfoTable/ | Background | null | |
 | CityScreen/ConstructionInfoTable/ | Background | null | |
 | CityScreen/ConstructionInfoTable/ | SelectedConstructionTable | null | |
 | CityScreen/ConstructionInfoTable/ | heroArmyTable | null | |
+| CivilopediaScreen/ | Description", tintColor = Color.valueOf("EADFBD | null | |
 | CivilopediaScreen/ | EntryButton | null | |
+| CivilopediaScreen/ | EntryButton | null | |
+| EmpireOverview/Cities/ | Header", tintColor = Color.valueOf("EADFBD | null | |
+| EmpireOverview/Cities/ | Panel", tintColor = Color.valueOf("EADFBD | null | |
+| EmpireOverview/Resources/ | Header", tintColor = Color.valueOf("EADFBD | null | |
+| EmpireOverview/Resources/ | Panel", tintColor = Color.valueOf("EADFBD | null | |
+| EmpireOverview/Stats/ | Panel", tintColor = Color.valueOf("EADFBD | null | |
+| EmpireOverview/Wonders/ | Header | null | |
+| EmpireOverview/Wonders/ | Panel | null | |
 | General/ | Border | null | |
 | General/ | Border | null | |
 | General/ | Border | null | |
 | General/ | Border | null | |
 | General/ | Border | null | |
 | General/ | ExpanderTab | null | |
+| General/ | ExpanderTab | null | |
+| General/ | ExpanderTab | null | |
+| General/ | ExpanderTab | null | |
+| General/ | ExpanderTab | null | |
+| General/ | ExpanderTab", tintColor = Color.valueOf("D7C89F | null | |
+| General/ | ExpanderTab", tintColor = Color.valueOf("D7C89F | null | |
 | General/ | HealthBar | null | |
 | General/ | TabbedPager | null | |
+| General/ | TabbedPager", tintColor = Color.valueOf("eadfbd | null | |
 | General/ | Tooltip | roundedEdgeRectangle | |
 | General/Popup/ | Background | null | |
 | General/Popup/ | InnerTable | null | |
 | LanguagePickerScreen/ | LanguageTable | null | |
-| LoadGameScreen/ | BottomTable | null | |
-| LoadGameScreen/ | TopTable | null | |
+| LoadGameScreen/ | BottomTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD | null | |
+| LoadGameScreen/ | TopTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD | null | |
 | MainMenuScreen/ | Background | null | |
 | MainMenuScreen/ | MenuButton | roundedEdgeRectangle | |
 | MapEditor/MapEditorToolsDrawer/ | Handle", tintColor = BaseScreen.skin.get("color | null | |
 | ModManagementOptions/ | ExpanderTab | null | |
-| ModManagementScreen/ | BottomTable | null | |
-| ModManagementScreen/ | TopTable | null | |
-| MultiplayerScreen/ | BottomTable | null | |
-| MultiplayerScreen/ | TopTable | null | |
+| ModManagementScreen/ | BottomTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD | null | |
+| ModManagementScreen/ | TopTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD | null | |
+| MultiplayerScreen/ | BottomTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD | null | |
+| MultiplayerScreen/ | TopTable", tintColor = if (game.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD | null | |
 | NewGameScreen/ | BottomTable | null | |
-| NewGameScreen/ | GameOptionsTable | null | |
-| NewGameScreen/ | MapOptionsTable | null | |
-| NewGameScreen/ | PlayerPickerTable | null | |
+| NewGameScreen/ | GameOptionsTable", tintColor = if (UncivGame.Current.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD | null | |
+| NewGameScreen/ | MapOptionsTable", tintColor = if (UncivGame.Current.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD | null | |
+| NewGameScreen/ | PlayerPickerTable", tintColor = if (UncivGame.Current.settings.skin == "Minimal") com.badlogic.gdx.graphics.Color.valueOf("EADFBD | null | |
 | NewGameScreen/ | TopTable | null | |
 | NewGameScreen/NationTable/ | Background | null | |
 | NewGameScreen/NationTable/ | BorderTable | null | |
 | NewGameScreen/NationTable/ | RightInnerTable | null | |
 | NewGameScreen/NationTable/ | Title | null | |
 | NewGameScreen/PlayerPickerTable/ | PlayerTable | null | |
+| OverviewScreen/DiplomacyOverviewTab/ | Background", tintColor = Color.valueOf("EADFBD | null | |
+| OverviewScreen/DiplomacyOverviewTab/ | CivInfo", tintColor = Color.valueOf("EADFBD | null | |
 | OverviewScreen/DiplomacyOverviewTab/ | CivTable | null | |
+| OverviewScreen/DiplomacyOverviewTab/ | CivTable", tintColor = Color.valueOf("EADFBD | null | |
+| OverviewScreen/DiplomacyOverviewTab/ | Policies", tintColor = Color.valueOf("EADFBD | null | |
+| OverviewScreen/DiplomacyOverviewTab/ | Relations", tintColor = Color.valueOf("EADFBD | null | |
+| OverviewScreen/DiplomacyOverviewTab/ | Wonders", tintColor = Color.valueOf("EADFBD | null | |
 | OverviewScreen/NotificationOverviewTable/ | Notification | roundedEdgeRectangle | |
+| OverviewScreen/NotificationOverviewTable/ | Notification | roundedEdgeRectangle | |
+| OverviewScreen/Notifications/ | Turn", tintColor = Color.valueOf("EADFBD | null | |
 | OverviewScreen/ReligionOverviewTab/ | BeliefDescription | null | |
+| OverviewScreen/ReligionOverviewTab/ | Heading", tintColor = Color.valueOf("EADFBD | null | |
+| OverviewScreen/TradesOverviewTab/ | Nation | null | |
 | OverviewScreen/TradesOverviewTab/ | OffersTable | null | |
+| OverviewScreen/UnitOverviewTab/ | Panel", tintColor = Color.valueOf("EADFBD | null | |
+| OverviewScreen/UnitOverviewTab/ | UnitSupplyHeader | null | |
 | OverviewScreen/UnitOverviewTab/ | UnitSupplyTable | null | |
 | PlayerReadyScreen/ | Background | null | |
+| Reset Citizens", "CityScreen/CitizenManagementTable/ | ResetCell | null | |
+| TechPickerScreen/ | Background | null | |
 | TechPickerScreen/ | Background | null | |
 | TechPickerScreen/ | Background | null | |
 | TechPickerScreen/ | BottomTable | null | |
