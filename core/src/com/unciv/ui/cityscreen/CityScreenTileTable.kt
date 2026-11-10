@@ -56,7 +56,6 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
             innerTable.background = com.unciv.ui.utils.RoyalPanelDrawable(BaseScreen.skin)
             innerTable.pad(52f).padTop(58f)
         } else innerTable.pad(5f)
-
         val markup = MarkupRenderer.renderWithTextColor(
             selectedTile.toMarkup(city.civInfo),
             defaultTextColor = if (royal) ink else null,
@@ -69,7 +68,6 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
         if (royal) markupCell.width(contentWidth)
         markupCell.row()
         innerTable.add(getTileStatsTable(selectedTile.getTileStats(city, city.civInfo))).row()
-
         fun addText(text: String) {
             val label = text.toLabel(fontColor = ink)
             val cell = innerTable.add(label)
@@ -79,7 +77,6 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
             }
             cell.row()
         }
-
         if (isTilePurchaseShown(selectedTile)) {
             val goldCostOfTile = city.expansion.getGoldCostOfTile(selectedTile)
             val buyTileButton = "Buy for [$goldCostOfTile] gold".toTextButton()
@@ -96,7 +93,6 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
             addText("Owned by [${selectedTile.owningCity!!.name}]")
         if (city.civInfo.cities.filterNot { it == city }.any { it.isWorked(selectedTile) })
             addText("Worked by [${selectedTile.getWorkingCity()!!.name}]")
-
         if (city.isWorked(selectedTile)) {
             if (selectedTile.isLocked()) {
                 val unlockButton = "Unlock".toTextButton()
@@ -120,9 +116,8 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
         }
         if (selectedTile.isCityCenter() && selectedTile.getCity() != city && selectedTile.getCity()!!.civInfo == city.civInfo)
             innerTable.add("Move to city".toTextButton().onClick {
-                cityScreen.game.replaceCurrentScreen(CityScreen(selectedTile.getCity()!!))
+                cityScreen.game.replaceCurrentScreen(cityScreen.createCityScreen(selectedTile.getCity()!!))
             })
-
         if (royal) {
             for (cell in innerTable.cells) {
                 val button =
@@ -138,10 +133,10 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
                 scrollStyle.vScrollKnob?.minWidth ?: 0f
             )
             val scrollBackground = scrollStyle.background
-            val horizontalInsets = (scrollBackground?.leftWidth ?: 0f) +
-                    (scrollBackground?.rightWidth ?: 0f)
-            val verticalInsets = (scrollBackground?.topHeight ?: 0f) +
-                    (scrollBackground?.bottomHeight ?: 0f)
+            val horizontalInsets =
+                    (scrollBackground?.leftWidth ?: 0f) + (scrollBackground?.rightWidth ?: 0f)
+            val verticalInsets =
+                    (scrollBackground?.topHeight ?: 0f) + (scrollBackground?.bottomHeight ?: 0f)
             clearChildren()
             add(scroll).width(innerTable.prefWidth + barWidth + horizontalInsets)
                 .height(
@@ -160,32 +155,24 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
         }
     }
 
-    /** Ask whether user wants to buy [selectedTile] for gold.
-     *
-     * Used from onClick and keyboard dispatch, thus only minimal parameters are passed,
-     * and it needs to do all checks and the sound as appropriate.
-     */
+    /** Проверяет покупку клетки и сохраняет контекст экрана при обновлении карты. */
     fun askToBuyTile(selectedTile: TileInfo) {
-        // These checks are redundant for the onClick action, but not for the keyboard binding
+        // Проверки нужны и для клавиатурной привязки, которая обходит состояние кнопки.
         if (!isTilePurchaseShown(selectedTile)) return
         val goldCostOfTile = city.expansion.getGoldCostOfTile(selectedTile)
         if (!isTilePurchaseAllowed(goldCostOfTile)) return
-
         cityScreen.closeAllPopups()
-
         val purchasePrompt = "Currently you have [${city.civInfo.gold}] [Gold].".tr() + "\n\n" +
                 "Would you like to purchase [Tile] for [$goldCostOfTile] [${Stat.Gold.character}]?".tr()
         ConfirmPopup(
-            cityScreen,
-            purchasePrompt,
-            "Purchase",
-            true,
+            cityScreen, purchasePrompt, "Purchase", true,
             restoreDefault = { cityScreen.update() }
         ) {
             SoundPlayer.play(UncivSound.Coin)
             city.expansion.buyTile(selectedTile)
-            // preselect the next tile on city screen rebuild so bulk buying can go faster
-            UncivGame.Current.replaceCurrentScreen(CityScreen(city, initSelectedTile = city.expansion.chooseNewTileToOwn()))
+            UncivGame.Current.replaceCurrentScreen(
+                cityScreen.createCityScreen(initSelectedTile = city.expansion.chooseNewTileToOwn())
+            )
         }.open()
     }
 

@@ -102,7 +102,6 @@ class ConstructionInfoTable(val cityScreen: CityScreen): Table() {
             selectedConstructionTable.background =
                 com.unciv.ui.utils.RoyalPanelDrawable(BaseScreen.skin)
         }
-
         selectedConstructionTable.run {
             if (royal) pad(52f).padTop(58f) else pad(10f)
             val portrait = ImageGetter.getPortraitImage(construction.name, 50f).apply {
@@ -115,7 +114,6 @@ class ConstructionInfoTable(val cityScreen: CityScreen): Table() {
             }
             val portraitCell = add(portrait).pad(5f)
             if (royal) portraitCell.colspan(2).row()
-
             var buildingText = construction.name.tr()
             val specialConstruction =
                 PerpetualConstruction.perpetualConstructionsMap[construction.name]
@@ -125,7 +123,6 @@ class ConstructionInfoTable(val cityScreen: CityScreen): Table() {
             val titleCell = add(title)
             if (royal) titleCell.colspan(2).width(contentWidth)
             titleCell.row()
-
             val description = when (construction) {
                 is BaseUnit -> construction.getDescription(city)
                 is Building -> construction.getDescription(city, true)
@@ -138,7 +135,6 @@ class ConstructionInfoTable(val cityScreen: CityScreen): Table() {
             val descriptionLabel = textLabel(description)
             descriptionLabel.wrap = true
             add(descriptionLabel).colspan(2).width(contentWidth)
-
             if (construction is Building && cityConstructions.isBuilt(construction.name)
                 && construction.isSellable()
             ) {
@@ -167,9 +163,8 @@ class ConstructionInfoTable(val cityScreen: CityScreen): Table() {
                 }
                 if (cityScreen.city.hasSoldBuildingThisTurn && !cityScreen.city.civInfo.gameInfo.gameParameters.godMode
                     || cityScreen.city.isPuppet
-                    || !UncivGame.Current.worldScreen!!.isPlayersTurn || !cityScreen.canChangeState
-                )
-                    sellBuildingButton.disable()
+                    || !cityScreen.isPlayersTurn || !cityScreen.canChangeState
+                ) sellBuildingButton.disable()
             }
         }
     }

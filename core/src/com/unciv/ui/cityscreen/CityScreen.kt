@@ -42,7 +42,8 @@ import com.unciv.ui.utils.extensions.toLabel
 class CityScreen(
     internal val city: CityInfo,
     initSelectedConstruction: IConstruction? = null,
-    initSelectedTile: TileInfo? = null
+    initSelectedTile: TileInfo? = null,
+    internal val context: CityScreenContext = CityScreenContext.fromWorld()
 ): BaseScreen(), RecreateOnResize {
     private var compactRoot: Table? = null
     private val compactDetails = Table()
@@ -56,8 +57,12 @@ class CityScreen(
         const val wltkIconSize = 40f
     }
 
-    /** Toggles or adds/removes all state changing buttons */
-    val canChangeState = UncivGame.Current.worldScreen!!.canChangeState
+    /** Сохраняет прежний снимок разрешения при открытии, не требуя мирового экрана. */
+    val canChangeState = context.canChangeState()
+
+    /** Проверки хода в дочерних панелях используют тот же источник, что и сам экран. */
+    val isPlayersTurn: Boolean
+        get() = context.isPlayersTurn()
 
     // Clockwise from the top-left
 
@@ -138,7 +143,7 @@ class CityScreen(
     /** A [Building] with [UniqueType.CreatesOneImprovement] has been selected _in the queue_: show the tile it will place the improvement on */
     private var selectedQueueEntryTargetTile: TileInfo? = null
     /** Cached city.expansion.chooseNewTileToOwn() */
-    // val should be OK as buying tiles is what changes this, and that would re-create the whole CityScreen
+    // val should be OK as buying tiles is what changes this, which would re-create the whole CityScreen
     private val nextTileToOwn = city.expansion.chooseNewTileToOwn()
 
     private val cityAmbiencePlayer = CityAmbiencePlayer(city)
@@ -155,7 +160,8 @@ class CityScreen(
             SoundPlayer.play(UncivSound("WLTK"))
         }
 
-        UncivGame.Current.settings.addCompletedTutorialTask("Enter city screen")
+        if (context.recordTutorialTasks)
+            UncivGame.Current.settings.addCompletedTutorialTask("Enter city screen")
 
         addTiles()
 
@@ -220,7 +226,6 @@ class CityScreen(
             } else
                 visitingArmyView.isVisible = false
         }
-
 
         // In portrait mode only: calculate already occupied horizontal space
         val rightMargin = when {
@@ -337,8 +342,8 @@ class CityScreen(
     private fun updateAnnexAndRazeCityButton() {
         razeCityButtonHolder.clear()
 
-        fun addWltkIcon(name: String, apply: Image.()->Unit = {}) =
-            razeCityButtonHolder.add(ImageGetter.getImage(name).apply(apply)).size(wltkIconSize)
+        fun addWltkIcon(name: String, apply: Image.() -> Unit = {}) =
+                razeCityButtonHolder.add(ImageGetter.getImage(name).apply(apply)).size(wltkIconSize)
 
         if (city.isWeLoveTheKingDayActive()) {
             addWltkIcon("OtherIcons/WLTK LR") { color = Color.GOLD }
@@ -381,7 +386,8 @@ class CityScreen(
 
         razeCityButtonHolder.pack()
         val centerX = if (!isPortrait()) stage.width / 2
-            else constructionsTable.getUpperWidth().let { it + (stage.width - cityStatsTable.width - it) / 2 }
+        else constructionsTable.getUpperWidth()
+            .let { it + (stage.width - cityStatsTable.width - it) / 2 }
         razeCityButtonHolder.setPosition(centerX, stage.height - 20f, Align.top)
         if (compactPager == null) stage.addActor(razeCityButtonHolder)
         else razeCityButtonHolder.invalidateHierarchy()
@@ -454,7 +460,8 @@ class CityScreen(
             if (!tileInfo.providesYield() && cityInfo.population.getFreePopulation() > 0) {
                 cityInfo.workedTiles.add(tileInfo.position)
                 cityInfo.lockedTiles.add(tileInfo.position)
-                game.settings.addCompletedTutorialTask("Reassign worked tiles")
+                if (context.recordTutorialTasks)
+                    game.settings.addCompletedTutorialTask("Reassign worked tiles")
             } else if (tileInfo.isWorked()) {
                 cityInfo.workedTiles.remove(tileInfo.position)
                 cityInfo.lockedTiles.remove(tileInfo.position)
@@ -509,18 +516,24 @@ class CityScreen(
         }
     }
 
+    /** Общий путь пересоздания сохраняет источник разрешений в игре и в песочнице. */
+    fun createCityScreen(
+        targetCity: CityInfo = city,
+        initSelectedTile: TileInfo? = null
+    ): CityScreen = CityScreen(targetCity, initSelectedTile = initSelectedTile, context = context)
+
     fun page(delta: Int) {
         val civInfo = city.civInfo
         val numCities = civInfo.cities.size
         if (numCities == 0) return
         val indexOfCity = civInfo.cities.indexOf(city)
         val indexOfNextCity = (indexOfCity + delta + numCities) % numCities
-        val newCityScreen = CityScreen(civInfo.cities[indexOfNextCity])
+        val newCityScreen = createCityScreen(civInfo.cities[indexOfNextCity])
         newCityScreen.update()
         game.replaceCurrentScreen(newCityScreen)
     }
 
-    override fun recreate(): BaseScreen = CityScreen(city)
+    override fun recreate(): BaseScreen = createCityScreen()
 
     override fun dispose() {
         cityAmbiencePlayer.dispose()

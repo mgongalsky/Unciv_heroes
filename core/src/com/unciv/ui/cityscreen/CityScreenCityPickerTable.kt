@@ -27,7 +27,6 @@ class CityScreenCityPickerTable(private val cityScreen: CityScreen) : Table() {
             BaseScreen.skinStrings.roundedEdgeRectangleShape,
             if (royal) Color.valueOf("EADFBD") else civInfo.nation.getOuterColor()
         )
-
         fun addArrow(direction: Int) {
             if (!hasNeighbours) {
                 add()
@@ -47,7 +46,6 @@ class CityScreenCityPickerTable(private val cityScreen: CityScreen) : Table() {
             add(button).pad(if (royal) 5f else 10f)
         }
         addArrow(-1)
-
         val cityNameTable = Table()
         val statusTable = if (royal) Table() else cityNameTable
         if (city.isBeingRazed)
@@ -62,7 +60,6 @@ class CityScreenCityPickerTable(private val cityScreen: CityScreen) : Table() {
             }).size(20f).padRight(5f)
         if (city.isInResistance())
             statusTable.add(ImageGetter.getImage("StatIcons/Resistance")).size(20f).padRight(5f)
-
         val label = city.name.toLabel(fontSize = 30, fontColor = ink)
         if (cityScreen.canChangeState) label.onClick {
             AskTextPopup(
@@ -72,7 +69,7 @@ class CityScreenCityPickerTable(private val cityScreen: CityScreen) : Table() {
                 validate = { it != "" },
                 actionOnOk = { text ->
                     city.name = text
-                    cityScreen.game.replaceCurrentScreen(CityScreen(city))
+                    cityScreen.game.replaceCurrentScreen(cityScreen.createCityScreen())
                 }
             ).open()
         }

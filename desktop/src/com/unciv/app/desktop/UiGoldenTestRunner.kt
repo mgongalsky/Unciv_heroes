@@ -104,6 +104,8 @@ object UiGoldenTestRunner {
     }
 
     private fun scenarios() = listOf(
+        // Автономный сценарий должен выполняться до сценариев, загружающих партию в приложение.
+        Scenario("city-sandbox") {},
         Scenario("main-menu") {},
         Scenario("terrain-playground") {},
         Scenario("native-font-lifecycle") { NativeFontGoldenChecks.open(it) },
@@ -145,9 +147,7 @@ object UiGoldenTestRunner {
         Scenario("battle-troop-info") { openBattleTroopInfoPreview(it) },
         Scenario("battle-threat-preview") { openBattleThreatPreview(it) },
         Scenario("battle-tile-highlights") {
-            com.unciv.ui.playground.openBattleTileHighlightPreview(
-                it
-            )
+            com.unciv.ui.playground.openBattleTileHighlightPreview(it)
         },
         Scenario("battle-flanking") { openBattleFlankingPreview(it) },
         Scenario("battle-result-layout") { BattleResultLayoutChecks.open(it) },
@@ -282,6 +282,11 @@ object UiGoldenTestRunner {
                 stableFrames = 0
             }
 
+            "city-sandbox" -> CityScreenGoldenChecks.standaloneLoadingScreen { screen ->
+                expectedScreen = screen
+                stableFrames = 0
+            }
+
             "empire-overview-stats" -> CityScreenGoldenChecks.overviewLoadingScreen { screen ->
                 expectedScreen = screen
                 stableFrames = 0
@@ -295,7 +300,10 @@ object UiGoldenTestRunner {
             else -> GoldenScenarioScreen(scenario.open)
         }.also {
             expectedScreen = if (scenario.name in setOf(
-                        "city-screen", "city-screen-compact", "empire-overview-stats"
+                        "city-screen",
+                        "city-screen-compact",
+                        "city-sandbox",
+                        "empire-overview-stats"
                     )
             ) null else it
         }

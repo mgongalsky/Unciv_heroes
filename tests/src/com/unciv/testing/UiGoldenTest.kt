@@ -364,4 +364,16 @@ class UiGoldenTest {
     fun storyDialogueLayoutRender() {
         UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=story-dialogue-layout"))
     }
+
+    /** Проверяет автономный город, героя и пересоздание без мирового экрана; кадр не утверждает эталон. */
+    @Test
+    fun citySandboxRender() {
+        UiGoldenTestRunner.main(arrayOf("--capture-only", "--scenario=city-sandbox"))
+    }
+
+    /** Сравнивает автономный город с отдельно принятым платформенным эталоном. */
+    @Test
+    fun citySandbox() {
+        UiGoldenTestRunner.main(arrayOf("--scenario=city-sandbox"))
+    }
 }

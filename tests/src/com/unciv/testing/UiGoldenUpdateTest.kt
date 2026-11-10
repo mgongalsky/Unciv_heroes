@@ -119,4 +119,10 @@ class UiGoldenUpdateTest {
             )
         )
     }
+
+    /** Обновляет эталон автономного города только после отдельного просмотра и принятия изображения. */
+    @Test
+    fun citySandbox() {
+        UiGoldenTestRunner.main(arrayOf("--update", "--scenario=city-sandbox"))
+    }
 }

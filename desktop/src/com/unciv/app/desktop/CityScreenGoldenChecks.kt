@@ -1282,4 +1282,104 @@ internal object CityScreenGoldenChecks {
             }
         }
     }
+
+    /** Проверяет производственную фабрику песочницы без загрузки партии и мирового экрана. */
+    fun standaloneLoadingScreen(onReady: (BaseScreen) -> Unit): BaseScreen = object : BaseScreen() {
+        private var started = false
+        override fun show() {
+            if (started) return
+            started = true
+            com.badlogic.gdx.Gdx.app.postRunnable {
+                check(game.worldScreen == null && game.gameInfo == null)
+                val previousSize = game.settings.screenSize
+                val first = try {
+                    game.settings.screenSize = com.unciv.models.metadata.ScreenSize.Large
+                    com.unciv.ui.cityscreen.CitySandbox.createScreen()
+                } finally {
+                    game.settings.screenSize = previousSize
+                }
+                game.replaceCurrentScreen(first)
+                val city = first.stage.actors
+                    .filterIsInstance<com.unciv.ui.cityscreen.CityScreenTileTable>().single().city
+                val world = city.civInfo.gameInfo
+                val hero = checkNotNull(city.getVisitingHero())
+                check(world.civilizations.size == 1 && city.civInfo.cities.size == 1)
+                check(world.tileMap.values.size > 1)
+                check(hero.army.getAllTroops().any { it != null && it.amount > 0 })
+                check(first.canChangeState && first.isPlayersTurn)
+                val queue = city.cityConstructions.constructionQueue.toList()
+                val troops = hero.army.getAllTroops()
+                    .map { it?.let { troop -> troop.unitName to troop.amount } }
+                val turns = world.turns
+                val originalName = city.name
+                city.name = "Standalone renamed city"
+                val second = first.recreate() as CityScreen
+                game.replaceCurrentScreen(second)
+                check(second.canChangeState && second.isPlayersTurn)
+                check(city.name == "Standalone renamed city")
+                check(city.getVisitingHero() === hero)
+                check(city.cityConstructions.constructionQueue.toList() == queue)
+                check(
+                    hero.army.getAllTroops()
+                        .map { it?.let { troop -> troop.unitName to troop.amount } } == troops)
+                check(world.turns == turns)
+                check(game.worldScreen == null && game.gameInfo == null)
+
+                // Построенное здание упражняет ветки продажи и специалистов без WorldScreen.
+                val building = world.ruleSet.buildings.values
+                    .filter { !it.newSpecialists().isEmpty() && it.isSellable() }
+                    .minByOrNull { it.name } ?: error("No sellable specialist building in ruleset")
+                city.cityConstructions.addBuilding(building.name)
+                verifySpecialists(second, city)
+                val card = com.unciv.ui.cityscreen.ConstructionInfoTable(second)
+                card.update(building)
+                var playersTurn = false
+                val restricted = CityScreen(
+                    city,
+                    initSelectedConstruction = building,
+                    context = com.unciv.ui.cityscreen.CityScreenContext(
+                        canChangeState = { false },
+                        isPlayersTurn = { playersTurn },
+                        recordTutorialTasks = false
+                    )
+                )
+                game.replaceCurrentScreen(restricted)
+                check(!restricted.canChangeState && !restricted.isPlayersTurn)
+                val restrictedCopy = restricted.recreate() as CityScreen
+                game.replaceCurrentScreen(restrictedCopy)
+                check(!restrictedCopy.canChangeState && !restrictedCopy.isPlayersTurn)
+                playersTurn = true
+                check(restrictedCopy.isPlayersTurn && !restrictedCopy.canChangeState)
+
+                city.name = originalName
+                // Проверяем также общий путь, используемый покупкой клетки и переименованием.
+                val finalScreen = second.createCityScreen(initSelectedTile = city.getCenterTile())
+                game.replaceCurrentScreen(finalScreen)
+                check(finalScreen.selectedTile === city.getCenterTile())
+                check(finalScreen.canChangeState && finalScreen.isPlayersTurn)
+                check(game.worldScreen == null && game.gameInfo == null)
+                finalScreen.stage.root.addAction(object : com.badlogic.gdx.scenes.scene2d.Action() {
+                    override fun act(delta: Float): Boolean {
+                        val actors = ArrayList<com.badlogic.gdx.scenes.scene2d.Actor>()
+                        fun collect(actor: com.badlogic.gdx.scenes.scene2d.Actor) {
+                            actors.add(actor)
+                            if (actor is com.badlogic.gdx.scenes.scene2d.Group)
+                                actor.children.toList().forEach { collect(it) }
+                            if (actor is com.unciv.ui.utils.ExpanderTab && !actor.isOpen)
+                                collect(actor.innerTable)
+                        }
+                        collect(finalScreen.stage.root)
+                        if (actors.none { it.name?.startsWith("cityConstruction:") == true }) return false
+                        check(actors.any { it is com.unciv.ui.cityscreen.CityTileGroup })
+                        check(actors.filterIsInstance<com.unciv.ui.army.ArmyView>().size == 2)
+                        check(city.getVisitingHero() === hero && world.turns == turns)
+                        check(city.cityConstructions.constructionQueue.toList() == queue)
+                        check(game.worldScreen == null && game.gameInfo == null)
+                        onReady(finalScreen)
+                        return true
+                    }
+                })
+            }
+        }
+    }
 }

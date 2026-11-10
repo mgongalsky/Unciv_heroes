@@ -104,8 +104,11 @@ class SpecialistAllocationTable(val cityScreen: CityScreen) : Table(BaseScreen.s
         return table
     }
 
-    private fun getAssignButton(assignedSpecialists: Int, maxSpecialists: Int, specialistName: String): Actor {
-
+    private fun getAssignButton(
+        assignedSpecialists: Int,
+        maxSpecialists: Int,
+        specialistName: String
+    ): Actor {
         if (assignedSpecialists >= maxSpecialists || cityInfo.isPuppet) return Table()
         val assignButton = "+".toLabel(Color.BLACK, Constants.headingFontSize)
             .apply { this.setAlignment(Align.center) }
@@ -116,7 +119,7 @@ class SpecialistAllocationTable(val cityScreen: CityScreen) : Table(BaseScreen.s
             cityInfo.cityStats.update()
             cityScreen.update()
         }
-        if (cityInfo.population.getFreePopulation() == 0 || !UncivGame.Current.worldScreen!!.isPlayersTurn)
+        if (cityInfo.population.getFreePopulation() == 0 || !cityScreen.isPlayersTurn)
             assignButton.clear()
         return assignButton
     }
@@ -131,9 +134,8 @@ class SpecialistAllocationTable(val cityScreen: CityScreen) : Table(BaseScreen.s
             cityInfo.cityStats.update()
             cityScreen.update()
         }
-
         if (assignedSpecialists <= 0 || cityInfo.isPuppet) unassignButton.isVisible = false
-        if (!UncivGame.Current.worldScreen!!.isPlayersTurn) unassignButton.clear()
+        if (!cityScreen.isPlayersTurn) unassignButton.clear()
         return unassignButton
     }
 
