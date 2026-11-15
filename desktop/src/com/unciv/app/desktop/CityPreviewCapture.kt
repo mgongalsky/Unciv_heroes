@@ -88,13 +88,17 @@ object CityPreviewCapture {
                 return
             }
             val screen = game.screen as? CityScreen ?: return
-            val tilePreview = System.getenv("CITY_PREVIEW_TILE") == "1"
+            val statsPreview = System.getenv("CITY_PREVIEW_STATS") == "1"
+            val tilePreview = !statsPreview && System.getenv("CITY_PREVIEW_TILE") == "1"
+            val pager =
+                    screen.stage.root.findActor<com.unciv.ui.utils.TabbedPager>("cityCompactPager")
+            if (statsPreview && stableFrames == 0) {
+                // Открываем производственную страницу; данные готовит обычное обновление города.
+                if (pager == null || pager.getPageIndex("Stats") < 0) return
+                pager.selectPage("Stats")
+            }
             if (tilePreview && !tilePreviewOpened) {
-                // На узкой сцене карта присоединяется к дереву только после открытия Map.
-                val pager =
-                        screen.stage.root.findActor<com.unciv.ui.utils.TabbedPager>("cityCompactPager")
                 if (pager != null && pager.getPageIndex("Map") >= 0) pager.selectPage("Map")
-                // Выбор существует только в автономном экране; назначение жителей не выполняется.
                 fun findTile(actor: com.badlogic.gdx.scenes.scene2d.Actor): com.unciv.ui.cityscreen.CityTileGroup? {
                     if (actor is com.unciv.ui.cityscreen.CityTileGroup && !actor.tileInfo.isCityCenter()) return actor
                     if (actor is com.badlogic.gdx.scenes.scene2d.Group)
@@ -108,7 +112,11 @@ object CityPreviewCapture {
                 stableFrames = 0
                 return
             }
-            val target = if (tilePreview) "cityTileSummary" else "cityConstruction:Worker"
+            val target = when {
+                statsPreview -> "cityIncomeTable"
+                tilePreview -> "cityTileSummary"
+                else -> "cityConstruction:Worker"
+            }
             val ready =
                     screen.stage.root.findActor<com.badlogic.gdx.scenes.scene2d.Actor>(target) != null
             if (!ready) {
@@ -117,7 +125,10 @@ object CityPreviewCapture {
             }
             if (++stableFrames < 20 || saved) return
             val pixmap = ScreenUtils.getFrameBufferPixmap(
-                0, 0, Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight
+                0,
+                0,
+                Gdx.graphics.backBufferWidth,
+                Gdx.graphics.backBufferHeight
             )
             try {
                 output.parentFile.mkdirs()

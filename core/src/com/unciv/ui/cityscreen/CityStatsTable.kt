@@ -42,6 +42,7 @@ import kotlin.math.roundToInt
 import com.unciv.ui.utils.AutoScrollPane as ScrollPane
 
 class CityStatsTable(val cityScreen: CityScreen): Table(), KoinComponent {
+    private val incomeTable = CityIncomeTable()
     private val supplyMechanic: SupplyMechanic by inject()
     private val innerTable = Table() // table within this Table. Slightly smaller creates border
     private val upperTable = Table() // fixed position table
@@ -92,69 +93,59 @@ class CityStatsTable(val cityScreen: CityScreen): Table(), KoinComponent {
         upperTable.clear()
         lowerTable.clear()
         val royal = cityScreen.game.settings.skin == "Minimal"
-        val contentWidth = ((cityScreen.stage.width / 3f).coerceAtLeast(300f)
-            .coerceAtMost(cityScreen.stage.width - 24f) - 20f).coerceAtLeast(1f)
         if (royal) {
-            background = BaseScreen.skinStrings.getUiBackground(
-                "CityScreen/CityStatsTable/Background", tintColor = Color.valueOf("A18B5A")
+            background = null
+            innerTable.background = null
+            val wide = cityScreen.stage.width >= 900f
+            val minimumControls = (cityScreen.stage.width / 3f).coerceAtLeast(300f) + 104f
+            val mapSide = if (wide) minOf(
+                cityScreen.stage.height,
+                cityScreen.stage.width - minimumControls
             )
-            innerTable.background = BaseScreen.skinStrings.getUiBackground(
-                "CityScreen/CityStatsTable/InnerTable", tintColor = Color.valueOf("EADFBD")
-            )
-        }
-        val miniStatsTable = Table()
-        val selected = if (royal) Color.valueOf("C6C394")
-        else BaseScreen.skin.get("selection", Color::class.java)
-        var displayedStats = 0
-        for ((stat, amount) in cityInfo.cityStats.currentCityStats) {
-            if (stat == Stat.Faith && !cityInfo.civInfo.gameInfo.isReligionEnabled()) continue
-            val icon = Table()
-            if (cityInfo.cityAIFocus.stat == stat) {
-                icon.add(
-                    ImageGetter.getStatIcon(stat.name)
-                        .surroundWithCircle(27f, false, color = selected)
-                )
-                if (cityScreen.canCityBeChanged()) {
-                    icon.onClick {
+                .coerceAtLeast(1f) else 0f
+            val pageWidth = cityScreen.stage.width - mapSide - if (wide) 48f else 12f
+            val contentWidth = (pageWidth - 40f).coerceAtLeast(1f)
+            // Только адаптер знает CityInfo; новая таблица получает независимый снимок значений.
+            incomeTable.update(CityStatsSnapshotAdapter.read(cityInfo), contentWidth)
+            upperTable.add(incomeTable).width(contentWidth).top().row()
+        } else {
+            val miniStatsTable = Table()
+            val selected = BaseScreen.skin.get("selection", Color::class.java)
+            for ((stat, amount) in cityInfo.cityStats.currentCityStats) {
+                if (stat == Stat.Faith && !cityInfo.civInfo.gameInfo.isReligionEnabled()) continue
+                val icon = Table()
+                if (cityInfo.cityAIFocus.stat == stat) {
+                    icon.add(
+                        ImageGetter.getStatIcon(stat.name)
+                            .surroundWithCircle(27f, false, color = selected)
+                    )
+                    if (cityScreen.canCityBeChanged()) icon.onClick {
                         cityInfo.cityAIFocus = CityFocus.NoFocus
-                        cityInfo.reassignPopulation(); cityScreen.update()
+                        cityInfo.reassignPopulation()
+                        cityScreen.update()
                     }
-                }
-            } else {
-                icon.add(
-                    ImageGetter.getStatIcon(stat.name)
-                        .surroundWithCircle(27f, false, color = Color.CLEAR)
-                )
-                if (cityScreen.canCityBeChanged()) {
-                    icon.onClick {
+                } else {
+                    icon.add(
+                        ImageGetter.getStatIcon(stat.name)
+                            .surroundWithCircle(27f, false, color = Color.CLEAR)
+                    )
+                    if (cityScreen.canCityBeChanged()) icon.onClick {
                         cityInfo.cityAIFocus = cityInfo.cityAIFocus.safeValueOf(stat)
-                        cityInfo.reassignPopulation(); cityScreen.update()
+                        cityInfo.reassignPopulation()
+                        cityScreen.update()
                     }
                 }
+                miniStatsTable.add(icon).size(27f).padRight(3f)
+                val valueToDisplay =
+                        if (stat == Stat.Happiness) cityInfo.cityStats.happinessList.values.sum() else amount
+                miniStatsTable.add(
+                    round(valueToDisplay).toInt().toString().toLabel(fontColor = Color.WHITE)
+                ).padRight(5f)
             }
-            miniStatsTable.add(icon).size(27f).padRight(3f)
-            val valueToDisplay =
-                    if (stat == Stat.Happiness) cityInfo.cityStats.happinessList.values.sum() else amount
-            val label = round(valueToDisplay).toInt().toString().toLabel(
-                fontColor = if (royal) Color.valueOf("453925") else Color.WHITE
-            )
-            val cell = miniStatsTable.add(label).padRight(5f)
-            if (royal) {
-                label.setWrap(true)
-                cell.width((contentWidth / 2f - 35f).coerceAtLeast(1f))
-                displayedStats++
-                if (displayedStats % 2 == 0) miniStatsTable.row()
-            }
-        }
-        upperTable.add(miniStatsTable)
-        upperTable.addSeparator(color = if (royal) Color.valueOf("A18B5A") else Color.WHITE)
-        for (button in listOf(detailedStatsButton, testFantasyButton)) {
-            val cell = upperTable.add(button)
-            if (royal) {
-                button.label.setWrap(true)
-                cell.width(contentWidth).minHeight(48f).fillX()
-            }
-            cell.row()
+            upperTable.add(miniStatsTable)
+            upperTable.addSeparator(color = Color.WHITE)
+            for (button in listOf(detailedStatsButton, testFantasyButton)) upperTable.add(button)
+                .row()
         }
         addText()
         addCitizenManagement()
@@ -167,10 +158,13 @@ class CityStatsTable(val cityScreen: CityScreen): Table(), KoinComponent {
             addReligionInfo()
         addBuildingsInfo()
         addPreparedCityEvents()
-
+        if (royal) {
+            // Дополнительные legacy-инструменты остаются доступны после основной таблицы.
+            for (button in listOf(detailedStatsButton, testFantasyButton)) lowerTable.add(button)
+                .pad(5f).row()
+        }
         upperTable.pack()
         lowerTable.pack()
-        // Ограничение не должно становиться отрицательным при высокой сводке.
         lowerCell.maxHeight((height - upperTable.height - 8f).coerceAtLeast(0f))
         innerTable.pack()
         pack()

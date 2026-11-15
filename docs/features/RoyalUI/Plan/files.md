@@ -1,5 +1,20 @@
 # Перечень файлов
 
+## Итерация Stats: граница данных
+
+Фактические пути относительно корня проекта:
+
+- core/src/com/unciv/pure/application/city/CityStatsSnapshot.kt — независимые идентификаторы и защищённые копии коллекций снимка.
+- core/src/com/unciv/ui/cityscreen/CityStatsSnapshotAdapter.kt — чтение готовых расчётов legacy и отдельного счастья.
+- core/src/com/unciv/ui/cityscreen/CityIncomeTable.kt — таблица по DTO, форматирование, прокрутка и детализация источников.
+- core/src/com/unciv/ui/cityscreen/CityStatsTable.kt — подключение новой сводки для Minimal с сохранением прежних разделов.
+- desktop/src/com/unciv/app/desktop/CityPreviewCapture.kt — режим CITY_PREVIEW_STATS=1.
+- tests/src/com/unciv/testing/pure/application/city/CityStatsSnapshotTest.kt — три проверки изоляции снимка.
+- tests/src/com/unciv/testing/pure/CityTestSuite.kt — регистрация нового класса.
+- docs/features/RoyalUI/Plan/PLAN.md, STEPS.md, files.md, STEP_07_City_Tiles_Stats.md, Research/RESEARCH.md и CODE_GUIDE.md — описание реализации и проверки.
+
+CityScreen.kt в этой итерации не изменялся. Новые изображения не добавлялись. Захваты и журналы в desktop/build/city-preview не предназначены для коммита. Посторонние файлы сохранены.
+
 ## Текущая итерация: вкладка Tile
 
 Фактические файлы относительно корня проекта:
@@ -178,3 +193,8 @@ android/assets/UI_bundles/ существовал до задачи и не от
 - desktop/src/com/unciv/app/desktop/OptionsPopupGoldenChecks.kt — новый сценарий размеров и закрытия.
 - desktop/src/com/unciv/app/desktop/ConfirmPopupGoldenChecks.kt — подключение сценария настроек.
 - docs/features/RoyalUI/Plan/PLAN.md, STEPS.md, STEP_02_Screens.md, STEP_03_Verification.md, files.md и ../CODE_GUIDE.md — граница этапа, покрытие и маршрут просмотра.
+
+
+## Компактная сводка Stats
+
+Компактная компоновка меняет только CityIncomeTable.kt и документы RoyalUI. DTO, адаптер чтения, игровые формулы и тесты не меняются. Захваты stats-compact-1568-690.png и stats-compact-400-690.png находятся в desktop/build/city-preview и не предназначены для коммита.
