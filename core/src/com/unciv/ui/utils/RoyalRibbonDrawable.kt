@@ -54,7 +54,7 @@ class RoyalRibbonDrawable(
     }
 
     private val idle = load(skin, "ribbon", "idle")
-    private val active = load(skin, "ribbon", "active")
+    private var active = load(skin, "ribbon", "active")
     private val rails = load(skin, "shared-rails")
     private val corner = TextureRegion(load(skin, "quiet-corner"))
     private val oppositeCorner = TextureRegion(corner).apply { flip(true, true) }
@@ -99,5 +99,35 @@ class RoyalRibbonDrawable(
                 batch.draw(oppositeCorner, x + right - 1f - size, y + 10f, size, size)
             }
         }
+    }
+
+    /** Локальный синий вариант сохраняет геометрию ленты и не меняет остальные экземпляры. */
+    fun useAzureSelection(skin: Skin) {
+        val key = "royal-ribbon-active-azure"
+        if (skin.has(key, Texture::class.java)) {
+            active = skin.get(key, Texture::class.java)
+            return
+        }
+        val pixels = Pixmap(Gdx.files.internal(RoyalUi.assetRoot + "ui/navigation/ribbon.png"))
+        val texture = try {
+            pixels.setBlending(Pixmap.Blending.None)
+            for (y in 0 until pixels.height) for (x in 0 until pixels.width) {
+                val pixel = pixels.getPixel(x, y)
+                val light = (pixel ushr 24 and 255) * 0.2126f +
+                        (pixel ushr 16 and 255) * 0.7152f + (pixel ushr 8 and 255) * 0.0722f
+                pixels.drawPixel(
+                    x, y,
+                    ((light * 0.10f).toInt() shl 24) or
+                            ((light * 0.22f).toInt() shl 16) or
+                            ((light * 0.48f).toInt() shl 8) or (pixel and 255)
+                )
+            }
+            Texture(pixels)
+        } finally {
+            pixels.dispose()
+        }
+        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+        skin.add(key, texture, Texture::class.java)
+        active = texture
     }
 }

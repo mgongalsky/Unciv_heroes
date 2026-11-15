@@ -689,4 +689,9 @@ open class TabbedPager(
             else com.badlogic.gdx.scenes.scene2d.Touchable.disabled
             label.color.a = if (value) 1f else 0.55f
         }
+
+    /** Включает синий акцент только у явно выбранного городским экраном экземпляра. */
+    fun useAzureRoyalHeader() {
+        (header.background as? RoyalRibbonDrawable)?.useAzureSelection(BaseScreen.skin)
+    }
 }

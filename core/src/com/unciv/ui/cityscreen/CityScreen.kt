@@ -149,43 +149,29 @@ class CityScreen(
     private val cityAmbiencePlayer = CityAmbiencePlayer(city)
 
     init {
-
-        // Link garrison and visiting hero ArmyViews, if there is a visitor
-        if(visitingArmyView.isHero()) {
+        if (visitingArmyView.isHero()) {
             garrisonView.setExchangeArmyView(visitingArmyView)
             visitingArmyView.setExchangeArmyView(garrisonView)
         }
-
-        if (city.isWeLoveTheKingDayActive() && UncivGame.Current.settings.citySoundsVolume > 0) {
+        if (city.isWeLoveTheKingDayActive() && UncivGame.Current.settings.citySoundsVolume > 0)
             SoundPlayer.play(UncivSound("WLTK"))
-        }
-
         if (context.recordTutorialTasks)
             UncivGame.Current.settings.addCompletedTutorialTask("Enter city screen")
 
         addTiles()
-
-        //stage.setDebugTableUnderMouse(true)
         stage.addActor(cityStatsTable)
         constructionsTable.addActorsToStage()
-        garrisonView.bottom().left()//.pad(10f)
+        garrisonView.bottom().left()
         stage.addActor(garrisonView)
         visitingArmyView.setPosition(posFromEdge, posFromEdge, Align.bottomLeft)
-
         stage.addActor(selectedConstructionTable)
         stage.addActor(tileTable)
-
-        // Here is weird condition, because visitingArmyView always exists, but may contain no actual visiting Hero
-        // That's because of the bug in libGDX, which does not like nullable objects as Tables
-        if(visitingArmyView.isHero()) {
-            stage.addActor(visitingArmyView)
-            // Initial positioning will be set properly in update() method
-        }
-
-        stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
+        if (visitingArmyView.isHero()) stage.addActor(visitingArmyView)
+        stage.addActor(cityPickerTable)
         stage.addActor(exitCityButton)
+        // Оба входа используют один экран и те же экземпляры игровых панелей.
+        if (game.settings.skin == "Minimal") createCompactLayout()
         update()
-
         globalShortcuts.add(Input.Keys.LEFT) { page(-1) }
         globalShortcuts.add(Input.Keys.RIGHT) { page(1) }
     }
@@ -495,10 +481,15 @@ class CityScreen(
     }
     fun clearSelection() = selectTile(null)
 
-    fun startPickTileForCreatesOneImprovement(construction: Building, stat: Stat, isBuying: Boolean) {
+    fun startPickTileForCreatesOneImprovement(
+        construction: Building,
+        stat: Stat,
+        isBuying: Boolean
+    ) {
         val improvement = construction.getImprovementToCreate(city.getRuleset()) ?: return
         pickTileData = PickTileForImprovementData(construction, improvement, isBuying, stat)
-        compactPager?.selectPage("Map")
+        // На широкой сцене карта уже видна; выбор отсутствующей страницы очистил бы панель.
+        compactPager?.let { if (it.getPageIndex("Map") >= 0) it.selectPage("Map") }
         updateTileGroups()
         ToastPopup("Please select a tile for this building's [${improvement.name}]", this)
     }
@@ -540,19 +531,28 @@ class CityScreen(
         super.dispose()
     }
 
-    /** На узкой сцене разделы используют существующие панели и игровые обработчики. */
+    /** Две области заполняют сцену без внешних зазоров; карта остаётся квадратной. */
     private fun createCompactLayout() {
         cityPickerTable.update()
-        val width = (stage.width - 10f).coerceAtLeast(1f)
+        val wide = stage.width >= 900f
+        val pickerHeight = minOf(84f, cityPickerTable.prefHeight)
+        exitCityButton.label.setWrap(true)
+        HeroicCityStyle.applyActionStyle(exitCityButton)
+        val exitHeight = maxOf(48f, exitCityButton.prefHeight)
+        val minimumControls = (stage.width / 3f).coerceAtLeast(300f) + 104f
+        val mapSide = if (wide) minOf(stage.height, stage.width - minimumControls)
+            .coerceAtLeast(1f) else 0f
+        val controlsWidth = if (wide) stage.width - mapSide else stage.width
+        val width = (controlsWidth - if (wide) 48f else 0f).coerceAtLeast(1f)
         val pickerScroll = com.unciv.ui.utils.AutoScrollPane(cityPickerTable).apply {
             setScrollingDisabled(true, false)
             setOverscroll(false, false)
         }
         val pager = com.unciv.ui.utils.TabbedPager(
             minimumWidth = width, maximumWidth = width,
-            maximumHeight = stage.height,
-            backgroundColor = Color.valueOf("EADFBD")
+            maximumHeight = stage.height, backgroundColor = Color.valueOf("EADFBD")
         )
+        pager.useAzureRoyalHeader()
         compactPager = pager
         pager.name = "cityCompactPager"
         fun page(map: Boolean = false) =
@@ -565,12 +565,10 @@ class CityScreen(
                         pager.setScrollDisabled(map)
                     }
                 }.apply { top() }
-
-        val mapPage = page(map = true).apply {
+        if (!wide) pager.addPage("Map", page(map = true).apply {
             name = "cityCompactMap"
             add(mapScrollPane).minSize(0f).grow()
-        }
-        pager.addPage("Map", mapPage)
+        })
         pager.addPage("Construction", page().apply {
             add(constructionsTable.asCompactContent()).top().row()
         })
@@ -589,19 +587,36 @@ class CityScreen(
         tileTable.remove()
         selectedConstructionTable.remove()
         pager.addPage("Details", page().apply { add(compactDetails).top() })
-        exitCityButton.label.setWrap(true)
+        val controls = Table().apply {
+            if (wide) background = HeroicCityStyle.panel()
+            add(pickerScroll).width(width).height(pickerHeight).row()
+            add(pager).width(width).minHeight(0f).growY().row()
+            add(exitCityButton).width(minOf(width, 360f)).minHeight(exitHeight).padTop(5f).row()
+        }
         val root = Table().apply {
             name = "cityCompactRoot"
             setFillParent(true)
-            pad(5f)
-            add(pickerScroll).width(width).height(minOf(100f, cityPickerTable.prefHeight)).row()
-            add(pager).width(width).minHeight(0f).growY().row()
-            add(exitCityButton).width(width).minHeight(48f).padTop(5f).row()
+            // Таблица ещё не добавлена на сцену: используем сцену экрана явно.
+            add(controls).width(controlsWidth).height(this@CityScreen.stage.height)
+        }
+        if (wide) {
+            val mapFrame = com.badlogic.gdx.scenes.scene2d.ui.Stack().apply {
+                add(mapScrollPane)
+                add(Image(HeroicCityStyle.mapOverlay()).apply {
+                    setScaling(com.badlogic.gdx.utils.Scaling.stretch)
+                    touchable = com.badlogic.gdx.scenes.scene2d.Touchable.disabled
+                })
+            }
+            root.add(mapFrame).size(mapSide).top()
         }
         compactRoot = root
         stage.addActor(root)
-        pager.selectPage(if (selectedConstruction != null) "Construction" else "Map")
+        pager.selectPage(if (wide || selectedConstruction != null) "Construction" else "Map")
         root.validate()
+        mapScrollPane.layout()
+        mapScrollPane.scrollPercentX = 0.5f
+        mapScrollPane.scrollPercentY = 0.5f
+        mapScrollPane.updateVisualScroll()
     }
     private fun updateCompactLayout(triggeredByArmyView: Boolean) {
         val pager = checkNotNull(compactPager)
@@ -628,5 +643,18 @@ class CityScreen(
         updateTileGroups()
         compactRoot?.invalidateHierarchy()
         compactRoot?.validate()
+    }
+
+    /** Пергаментная очистка принадлежит только городу; общий clearColor используется также логикой клеток. */
+    override fun render(delta: Float) {
+        if (game.settings.skin != "Minimal") {
+            super.render(delta)
+            return
+        }
+        com.badlogic.gdx.Gdx.gl.glClearColor(234f / 255f, 223f / 255f, 189f / 255f, 1f)
+        com.badlogic.gdx.Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT)
+        stage.act()
+        compactRoot?.let { HeroicCityStyle.applyButtons(it) }
+        stage.draw()
     }
 }
