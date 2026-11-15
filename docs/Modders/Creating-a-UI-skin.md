@@ -47,8 +47,9 @@ These shapes are used all over Unciv and can be replaced to make a lot of UI ele
 | CityScreen/CityScreenTileTable/ | Background | null | |
 | CityScreen/CityScreenTileTable/ | InnerTable | null | |
 | CityScreen/CityStatsTable/ | Background | null | |
-| CityScreen/CityStatsTable/ | Background", tintColor = Color.valueOf("A18B5A | null | |
 | CityScreen/CityStatsTable/ | InnerTable | null | |
+| CityScreen/CityStatsTable/ | InnerTable | null | |
+| CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("DDD0AB | null | |
 | CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |
 | CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |
 | CityScreen/CityStatsTable/ | InnerTable", tintColor = Color.valueOf("EADFBD | null | |

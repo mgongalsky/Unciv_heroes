@@ -100,29 +100,52 @@ class TroopArmyView(
         }
     }
 
-    /** Меняет только цвет фона слота, не изменяя общую текстуру и изображение отряда. */
+    /** Контрастные состояния городского слота; общие текстуры и изображение отряда не изменяются. */
     private fun updateViewForSelection() {
         val backgroundImage = troopGroup.findActor<Image>("backgroundImage") ?: return
-        val royal = armyView.getScreen().game.settings.skin == "Minimal"
-        backgroundImage.color = if (royal)
+        val royalCity = armyView.getScreen() is com.unciv.ui.cityscreen.CityScreen &&
+                armyView.getScreen().game.settings.skin == "Minimal"
+        backgroundImage.color = if (royalCity) Color.valueOf(
+            when {
+                selected -> "A9BED0"
+                troopInfo == null -> "C9BC98"
+                else -> "D9CCA9"
+            }
+        ) else if (armyView.getScreen().game.settings.skin == "Minimal")
             Color.valueOf(if (selected) "C6C394" else "EADFBD")
         else if (selected) Color.GOLD else Color.BROWN
+        troopGroup.findActor<Image>("slotBorder")?.color =
+            Color.valueOf(if (selected) "355A80" else "927B4E")
     }
 
-    /** Собирает слот из общих ресурсов; повторная отрисовка не создаёт текстуры фона. */
+    /** Фон и рамка используют общий белый пиксель; пустой слот остаётся полноценной целью переноса. */
     fun draw() {
+        val royalCity = armyView.getScreen() is com.unciv.ui.cityscreen.CityScreen &&
+                armyView.getScreen().game.settings.skin == "Minimal"
+        setSize(slotSize, slotSize)
+        troopGroup.setSize(slotSize, slotSize)
         troopGroup.findActor<Image>("backgroundImage")?.remove()
+        troopGroup.findActor<Image>("slotBorder")?.remove()
+        val inset = if (royalCity) 2f else 0f
         val backgroundImage = ImageGetter.getWhiteDot().apply {
             name = "backgroundImage"
-            setSize(slotSize, slotSize)
+            setBounds(inset, inset, slotSize - 2f * inset, slotSize - 2f * inset)
             touchable = if (isInteractive) Touchable.enabled else Touchable.disabled
             align = Align.center
         }
         troopGroup.addActor(backgroundImage)
         backgroundImage.toBack()
+        if (royalCity) {
+            val border = ImageGetter.getWhiteDot().apply {
+                name = "slotBorder"
+                setSize(slotSize, slotSize)
+                touchable = Touchable.disabled
+            }
+            troopGroup.addActor(border)
+            border.toBack()
+        }
         updateViewForSelection()
         drawAvatar()
-
         if (!avatarOnly && troopInfo != null) {
             val amountText = Label(troopInfo.amount.toString(), BaseScreen.skin).apply {
                 if (armyView.getScreen().game.settings.skin == "Minimal") {
@@ -130,8 +153,7 @@ class TroopArmyView(
                 }
                 setAlignment(Align.right)
                 scaleBy(0.5f * slotSize / 64f)
-                moveBy(backgroundImage.width * 0.95f, 0.5f)
-                setPosition(x, y, Align.bottomRight)
+                setPosition(slotSize * 0.95f, 0.5f, Align.bottomRight)
                 name = "amountLabel"
                 touchable = Touchable.disabled
             }

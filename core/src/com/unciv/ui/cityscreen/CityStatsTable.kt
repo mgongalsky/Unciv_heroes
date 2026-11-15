@@ -313,8 +313,9 @@ class CityStatsTable(val cityScreen: CityScreen): Table(), KoinComponent {
         lowerTable.add(expanderTab).growX().row()
     }
 
+    /** В Minimal снабжение находится рядом с армиями; остальные скины сохраняют прежнюю панель. */
     private fun addHeroSupplyInfo() {
-        if (!supplyMechanic.isEnabled) return
+        if (cityScreen.game.settings.skin == "Minimal" || !supplyMechanic.isEnabled) return
         val expanderTab = HeroSupplyTable(cityScreen).asExpander { onContentResize() }
         lowerTable.add(expanderTab).growX().row()
     }

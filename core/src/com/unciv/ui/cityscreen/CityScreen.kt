@@ -45,6 +45,8 @@ class CityScreen(
     initSelectedTile: TileInfo? = null,
     internal val context: CityScreenContext = CityScreenContext.fromWorld()
 ): BaseScreen(), RecreateOnResize {
+    private var heroSupplyTable: CityHeroSupplyTable? = null
+    private val heroSupplyAdapter by lazy { CityHeroSupplyAdapter(this) }
     private var buildingsTable: CityBuildingsTable? = null
     private var compactHeader: CityCompactHeader? = null
     private var compactRoot: Table? = null
@@ -552,7 +554,6 @@ class CityScreen(
             minimumWidth = contentWidth, maximumWidth = contentWidth,
             maximumHeight = pagerHeight, backgroundColor = Color.valueOf("EADFBD")
         )
-
         compactPager = pager
         pager.name = "cityCompactPager"
         fun page(ownScroll: Boolean = false) =
@@ -569,10 +570,8 @@ class CityScreen(
             name = "cityCompactMap"
             add(mapScrollPane).minSize(0f).grow()
         })
-        // Высота заголовка известна после создания страниц; отдельная таблица удерживает области внутри неё.
         val constructionPage = page(ownScroll = true)
         pager.addPage("Construction", constructionPage)
-        // Карточка использует прокрутку страницы и оставляет место для её полосы.
         val tileContentWidth = (contentWidth - 24f).coerceAtLeast(1f)
         pager.addPage("Tile", page().apply {
             name = "cityTilePage"
@@ -583,14 +582,7 @@ class CityScreen(
             add(cityStatsTable).top().row()
             add(razeCityButtonHolder).padTop(5f).row()
         })
-        pager.addPage("Army", page().apply {
-            add("Garrison".toLabel(fontColor = Color.valueOf("453925"))).pad(5f).row()
-            add(garrisonView).row()
-            if (visitingArmyView.isHero()) {
-                add("Visiting hero".toLabel(fontColor = Color.valueOf("453925"))).pad(5f).row()
-                add(visitingArmyView).row()
-            }
-        })
+        pager.addPage("Army", createArmyContent(contentWidth))
         tileTable.remove()
         selectedConstructionTable.remove()
         addBuildingsPage(pager, contentWidth)
@@ -638,9 +630,9 @@ class CityScreen(
         constructionsTable.update(selectedConstruction)
         tileTable.update(selectedTile)
         selectedConstructionTable.update(selectedConstruction)
-
         compactHeader?.update()
         updateBuildingsPage()
+        heroSupplyTable?.update(heroSupplyAdapter.read(), (pager.width - 24f).coerceAtLeast(1f))
         val statsHeight = (pager.height - pager.minHeight - 24f).coerceAtLeast(100f)
         cityStatsTable.update(statsHeight)
         cityStatsTable.constrainPanelHeight(statsHeight)
@@ -731,5 +723,40 @@ class CityScreen(
             CityBuildingsSnapshotAdapter.read(city, canChangeState, isPlayersTurn),
             (pager.width - 24f).coerceAtLeast(1f)
         )
+    }
+
+    /** Армии сохраняют прежние команды; снабжение получает независимый снимок и отдельные callbacks. */
+    private fun createArmyContent(contentWidth: Float): Table {
+        val innerWidth = (contentWidth - 24f).coerceAtLeast(1f)
+        val supply = CityHeroSupplyTable(
+            onTransfer = heroSupplyAdapter::transfer,
+            onMaximum = heroSupplyAdapter::supplyMaximum,
+            onToggle = heroSupplyAdapter::toggleAutomatic,
+            onChanged = { update(triggeredByArmyView = true) }
+        )
+        heroSupplyTable = supply
+        supply.update(heroSupplyAdapter.read(), innerWidth)
+        return object : Table(), com.unciv.ui.utils.TabbedPager.IPageExtensions {
+            override fun activated(
+                index: Int,
+                caption: String,
+                pager: com.unciv.ui.utils.TabbedPager
+            ) {
+                pager.setScrollDisabled(false)
+            }
+        }.apply {
+            name = "cityArmyPage"
+            top().left()
+            add("Garrison".toLabel(fontColor = Color.valueOf("355A80"))).left().pad(8f).row()
+            garrisonView.name = "cityGarrisonSlots"
+            add(garrisonView).left().padLeft(8f).padRight(8f).row()
+            if (visitingArmyView.isHero()) {
+                add("Visiting hero".toLabel(fontColor = Color.valueOf("355A80"))).left().pad(8f)
+                    .row()
+                visitingArmyView.name = "cityHeroSlots"
+                add(visitingArmyView).left().padLeft(8f).padRight(8f).row()
+            }
+            add(supply).width(innerWidth).left().pad(8f).padTop(16f).row()
+        }
     }
 }

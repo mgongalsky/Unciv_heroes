@@ -73,7 +73,11 @@ object CityPreviewCapture {
                     initialScreenFactory = {
                         // Настройки и отдельная модель захвата не сохраняются в пользовательскую партию.
                         UncivGame.Current.settings.citySoundsVolume = 0f
-                        CitySandbox.createScreen(previewBuildings = System.getenv("CITY_PREVIEW_BUILDINGS") == "1")
+                        val armyPreview = System.getenv("CITY_PREVIEW_ARMY") == "1"
+                        CitySandbox.createScreen(
+                            previewBuildings = !armyPreview && System.getenv("CITY_PREVIEW_BUILDINGS") == "1",
+                            previewArmy = armyPreview
+                        )
                     }
                 )
             )
@@ -89,19 +93,23 @@ object CityPreviewCapture {
                 return
             }
             val screen = game.screen as? CityScreen ?: return
-            val buildingsPreview = System.getenv("CITY_PREVIEW_BUILDINGS") == "1"
-            val statsPreview = !buildingsPreview && System.getenv("CITY_PREVIEW_STATS") == "1"
-            val tilePreview = !buildingsPreview && !statsPreview && System.getenv("CITY_PREVIEW_TILE") == "1"
+            val armyPreview = System.getenv("CITY_PREVIEW_ARMY") == "1"
+            val buildingsPreview = !armyPreview && System.getenv("CITY_PREVIEW_BUILDINGS") == "1"
+            val statsPreview =
+                    !armyPreview && !buildingsPreview && System.getenv("CITY_PREVIEW_STATS") == "1"
+            val tilePreview =
+                    !armyPreview && !buildingsPreview && !statsPreview && System.getenv("CITY_PREVIEW_TILE") == "1"
             val pager =
                     screen.stage.root.findActor<com.unciv.ui.utils.TabbedPager>("cityCompactPager")
-            if (buildingsPreview && stableFrames == 0) {
-                if (pager == null || pager.getPageIndex("Buildings") < 0) return
-                pager.selectPage("Buildings")
+            val requestedPage = when {
+                armyPreview -> "Army"
+                buildingsPreview -> "Buildings"
+                statsPreview -> "Stats"
+                else -> null
             }
-            if (statsPreview && stableFrames == 0) {
-                // Открываем производственную страницу; данные готовит обычное обновление города.
-                if (pager == null || pager.getPageIndex("Stats") < 0) return
-                pager.selectPage("Stats")
+            if (requestedPage != null && stableFrames == 0) {
+                if (pager == null || pager.getPageIndex(requestedPage) < 0) return
+                pager.selectPage(requestedPage)
             }
             if (tilePreview && !tilePreviewOpened) {
                 if (pager != null && pager.getPageIndex("Map") >= 0) pager.selectPage("Map")
@@ -119,6 +127,7 @@ object CityPreviewCapture {
                 return
             }
             val target = when {
+                armyPreview -> "cityHeroSupplyTable"
                 buildingsPreview -> "cityBuildingsTable"
                 statsPreview -> "cityIncomeTable"
                 tilePreview -> "cityTileSummary"
@@ -132,10 +141,8 @@ object CityPreviewCapture {
             }
             if (++stableFrames < 20 || saved) return
             val pixmap = ScreenUtils.getFrameBufferPixmap(
-                0,
-                0,
-                Gdx.graphics.backBufferWidth,
-                Gdx.graphics.backBufferHeight
+                0, 0,
+                Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight
             )
             try {
                 output.parentFile.mkdirs()
