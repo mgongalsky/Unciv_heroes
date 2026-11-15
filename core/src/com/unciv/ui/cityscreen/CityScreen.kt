@@ -45,6 +45,7 @@ class CityScreen(
     initSelectedTile: TileInfo? = null,
     internal val context: CityScreenContext = CityScreenContext.fromWorld()
 ): BaseScreen(), RecreateOnResize {
+    private var compactHeader: CityCompactHeader? = null
     private var compactRoot: Table? = null
     private val compactDetails = Table()
     private var compactPager: com.unciv.ui.utils.TabbedPager? = null
@@ -531,47 +532,44 @@ class CityScreen(
         super.dispose()
     }
 
-    /** Две области заполняют сцену без внешних зазоров; карта остаётся квадратной. */
+    /** Шапка закреплена над вкладками, каталог и очередь получают отдельные области прокрутки. */
     private fun createCompactLayout() {
-        cityPickerTable.update()
         val wide = stage.width >= 900f
-        val pickerHeight = minOf(84f, cityPickerTable.prefHeight)
-        exitCityButton.label.setWrap(true)
-        HeroicCityStyle.applyActionStyle(exitCityButton)
-        val exitHeight = maxOf(48f, exitCityButton.prefHeight)
         val minimumControls = (stage.width / 3f).coerceAtLeast(300f) + 104f
         val mapSide = if (wide) minOf(stage.height, stage.width - minimumControls)
             .coerceAtLeast(1f) else 0f
         val controlsWidth = if (wide) stage.width - mapSide else stage.width
-        val width = (controlsWidth - if (wide) 48f else 0f).coerceAtLeast(1f)
-        val pickerScroll = com.unciv.ui.utils.AutoScrollPane(cityPickerTable).apply {
-            setScrollingDisabled(true, false)
-            setOverscroll(false, false)
-        }
+        val contentWidth = (controlsWidth - if (wide) 48f else 12f).coerceAtLeast(1f)
+        cityPickerTable.remove()
+        val header = CityCompactHeader(this, exitCityButton, contentWidth)
+        compactHeader = header
+        header.update()
+        val frameInsets = if (wide) 60f else 12f
+        val pagerHeight = (stage.height - frameInsets - header.prefHeight).coerceAtLeast(1f)
         val pager = com.unciv.ui.utils.TabbedPager(
-            minimumWidth = width, maximumWidth = width,
-            maximumHeight = stage.height, backgroundColor = Color.valueOf("EADFBD")
+            minimumWidth = contentWidth, maximumWidth = contentWidth,
+            maximumHeight = pagerHeight, backgroundColor = Color.valueOf("EADFBD")
         )
         pager.useAzureRoyalHeader()
         compactPager = pager
         pager.name = "cityCompactPager"
-        fun page(map: Boolean = false) =
+        fun page(ownScroll: Boolean = false) =
                 object : Table(), com.unciv.ui.utils.TabbedPager.IPageExtensions {
                     override fun activated(
                         index: Int,
                         caption: String,
                         pager: com.unciv.ui.utils.TabbedPager
                     ) {
-                        pager.setScrollDisabled(map)
+                        pager.setScrollDisabled(ownScroll)
                     }
                 }.apply { top() }
-        if (!wide) pager.addPage("Map", page(map = true).apply {
+        if (!wide) pager.addPage("Map", page(ownScroll = true).apply {
             name = "cityCompactMap"
             add(mapScrollPane).minSize(0f).grow()
         })
-        pager.addPage("Construction", page().apply {
-            add(constructionsTable.asCompactContent()).top().row()
-        })
+        // Высота заголовка известна после создания страниц; отдельная таблица удерживает области внутри неё.
+        val constructionPage = page(ownScroll = true)
+        pager.addPage("Construction", constructionPage)
         pager.addPage("Stats", page().apply {
             add(cityStatsTable).top().row()
             add(razeCityButtonHolder).padTop(5f).row()
@@ -587,16 +585,17 @@ class CityScreen(
         tileTable.remove()
         selectedConstructionTable.remove()
         pager.addPage("Details", page().apply { add(compactDetails).top() })
+        val pageHeight = (pagerHeight - pager.minHeight).coerceAtLeast(1f)
+        constructionPage.add(constructionsTable.asCompactContent(contentWidth, pageHeight))
+            .width(contentWidth).height(pageHeight).row()
         val controls = Table().apply {
-            if (wide) background = HeroicCityStyle.panel()
-            add(pickerScroll).width(width).height(pickerHeight).row()
-            add(pager).width(width).minHeight(0f).growY().row()
-            add(exitCityButton).width(minOf(width, 360f)).minHeight(exitHeight).padTop(5f).row()
+            if (wide) background = HeroicCityStyle.panel() else pad(6f)
+            add(header).width(contentWidth).top().row()
+            add(pager).width(contentWidth).height(pagerHeight).top().row()
         }
         val root = Table().apply {
             name = "cityCompactRoot"
             setFillParent(true)
-            // Таблица ещё не добавлена на сцену: используем сцену экрана явно.
             add(controls).width(controlsWidth).height(this@CityScreen.stage.height)
         }
         if (wide) {
@@ -618,6 +617,7 @@ class CityScreen(
         mapScrollPane.scrollPercentY = 0.5f
         mapScrollPane.updateVisualScroll()
     }
+
     private fun updateCompactLayout(triggeredByArmyView: Boolean) {
         val pager = checkNotNull(compactPager)
         if (!triggeredByArmyView) {
@@ -635,7 +635,7 @@ class CityScreen(
             else -> compactDetails.add("Pick a construction".toLabel(fontColor = Color.valueOf("453925")))
                 .row()
         }
-        cityPickerTable.update()
+        compactHeader?.update()
         val statsHeight = (pager.height - 100f).coerceAtLeast(100f)
         cityStatsTable.update(statsHeight)
         cityStatsTable.constrainPanelHeight(statsHeight)

@@ -200,14 +200,66 @@ internal object HeroicCityStyle {
     private class CityButtonStyle(source: TextButton.TextButtonStyle, val inactive: Boolean) :
         TextButton.TextButtonStyle(source)
 
-    /** Подхватывает новые кнопки после асинхронного наполнения и переключения страниц. */
+    /** Подхватывает новые кнопки, сохраняя выбранный размер локального оформления. */
     fun applyButtons(actor: com.badlogic.gdx.scenes.scene2d.Actor) {
         if (actor is com.badlogic.gdx.scenes.scene2d.ui.CheckBox) return
         if (actor is TextButton) {
-            applyActionStyle(actor)
+            if (actor.style is CompactButtonStyle) applyCompactStyle(actor)
+            else applyActionStyle(actor)
             return
         }
         if (actor is com.badlogic.gdx.scenes.scene2d.Group)
             for (child in actor.children) applyButtons(child)
+    }
+
+    /** Маркер компактных действий: общий обход не заменяет их крупным стилем с ланцетами. */
+    private class CompactButtonStyle(source: TextButton.TextButtonStyle, val inactive: Boolean) :
+        TextButton.TextButtonStyle(source)
+
+    /** Небольшая тканевая кнопка без боковых росчерков; общий BitmapFont не изменяется. */
+    fun applyCompactStyle(button: TextButton) {
+        val inactive = button.isDisabled || button.touchable == Touchable.disabled
+        val previous = button.style
+        if (previous is CompactButtonStyle && previous.inactive == inactive) return
+        fun background(state: String): Drawable {
+            val skin = BaseScreen.skin
+            val key = "heroic-city-compact-azure:$state"
+            if (skin.has(key, Drawable::class.java)) return skin.get(key, Drawable::class.java)
+            val source = region("png/skin/azure/button-base-$state.9.png")
+            val content = TextureRegion(
+                source.texture,
+                1,
+                1,
+                source.regionWidth - 2,
+                source.regionHeight - 2
+            )
+            val patch = NinePatch(content, 8, 8, 8, 8).apply {
+                scale(0.5f, 0.5f)
+                setPadding(8f, 8f, 4f, 4f)
+            }
+            return NinePatchDrawable(patch).apply {
+                minWidth = 32f
+                minHeight = 32f
+            }.also { skin.add(key, it, Drawable::class.java) }
+        }
+        button.style = CompactButtonStyle(previous, inactive).apply {
+            font = com.unciv.ui.utils.Fonts.font
+            up = background(if (inactive) "disabled" else "up")
+            over = background(if (inactive) "disabled" else "over")
+            down = background(if (inactive) "disabled" else "down")
+            checked = down
+            checkedOver = over
+            disabled = background("disabled")
+            fontColor = Color.valueOf("FFF0CB")
+            overFontColor = fontColor.cpy()
+            downFontColor = fontColor.cpy()
+            checkedFontColor = fontColor.cpy()
+            disabledFontColor = fontColor.cpy()
+        }
+        button.label.setFontScale(16f / com.unciv.ui.utils.Fonts.ORIGINAL_FONT_SIZE)
+        button.label.setWrap(false)
+        button.label.setEllipsis(true)
+        button.labelCell.pad(0f)
+        button.pad(4f, 8f, 4f, 8f)
     }
 }
