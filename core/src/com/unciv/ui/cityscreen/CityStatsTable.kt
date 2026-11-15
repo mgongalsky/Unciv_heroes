@@ -156,7 +156,7 @@ class CityStatsTable(val cityScreen: CityScreen): Table(), KoinComponent {
                     .isNotEmpty() && cityInfo.civInfo.gameInfo.isReligionEnabled()
         )
             addReligionInfo()
-        addBuildingsInfo()
+        if (!royal) addBuildingsInfo()
         addPreparedCityEvents()
         if (royal) {
             // Дополнительные legacy-инструменты остаются доступны после основной таблицы.

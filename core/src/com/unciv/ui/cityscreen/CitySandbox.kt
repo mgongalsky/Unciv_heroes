@@ -19,16 +19,23 @@ import com.unciv.ui.images.ImageGetter
 
 /** Адаптер автономного просмотра: настоящее окружение города без мирового экрана и цикла ходов. */
 object CitySandbox {
-    /** Вызывается на GL-потоке после загрузки ruleset, шрифтов и Skin приложением. */
-    fun createScreen(): CityScreen {
+    /** Вызывается на GL-потоке; дополнительные постройки нужны только для автономного захвата Buildings. */
+    fun createScreen(previewBuildings: Boolean = false): CityScreen {
         val game = UncivGame.Current
         check(game.worldScreen == null && game.gameInfo == null) {
             "City sandbox must start independently of an active game"
         }
         val city = createCity()
         prepareConstructionPreview(city)
+        if (previewBuildings) {
+            // Только отдельная модель песочницы, без сохранения партии и демонстрационных правил бандла.
+            for (name in listOf("Monument", "Library")) {
+                check(city.getRuleset().buildings.containsKey(name))
+                if (!city.cityConstructions.isBuilt(name)) city.cityConstructions.addBuilding(name)
+            }
+            city.cityStats.update()
+        }
         ImageGetter.setNewRuleset(city.getRuleset())
-        // Модель принадлежит экрану: не вызываем loadGame и не включаем автосохранение партии.
         return CityScreen(
             city,
             context = CityScreenContext(
@@ -36,10 +43,7 @@ object CitySandbox {
                 isPlayersTurn = { true },
                 recordTutorialTasks = false
             )
-        ).apply {
-            // Демонстрация строительства открывает каталог и на узком экране.
-            showConstructionPage()
-        }
+        ).apply { showConstructionPage() }
     }
 
     /** Создаёт каждый раз отдельную небольшую модель, используя определения действующей игры. */

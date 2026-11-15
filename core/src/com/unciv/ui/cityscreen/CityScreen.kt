@@ -45,6 +45,7 @@ class CityScreen(
     initSelectedTile: TileInfo? = null,
     internal val context: CityScreenContext = CityScreenContext.fromWorld()
 ): BaseScreen(), RecreateOnResize {
+    private var buildingsTable: CityBuildingsTable? = null
     private var compactHeader: CityCompactHeader? = null
     private var compactRoot: Table? = null
     private var compactPager: com.unciv.ui.utils.TabbedPager? = null
@@ -253,7 +254,7 @@ class CityScreen(
 
     fun updateCityStatsTable() {
         compactPager?.let { pager ->
-            val availableHeight = (pager.height - 100f).coerceAtLeast(100f)
+            val availableHeight = (pager.height - pager.minHeight - 24f).coerceAtLeast(100f)
             cityStatsTable.update(availableHeight)
             cityStatsTable.constrainPanelHeight(availableHeight)
             compactRoot?.invalidateHierarchy()
@@ -551,7 +552,7 @@ class CityScreen(
             minimumWidth = contentWidth, maximumWidth = contentWidth,
             maximumHeight = pagerHeight, backgroundColor = Color.valueOf("EADFBD")
         )
-        pager.useAzureRoyalHeader()
+
         compactPager = pager
         pager.name = "cityCompactPager"
         fun page(ownScroll: Boolean = false) =
@@ -592,6 +593,8 @@ class CityScreen(
         })
         tileTable.remove()
         selectedConstructionTable.remove()
+        addBuildingsPage(pager, contentWidth)
+        pager.useCompactCityHeader { selection -> CityTabsDrawable(selection) }
         val pageHeight = (pagerHeight - pager.minHeight).coerceAtLeast(1f)
         constructionPage.add(constructionsTable.asCompactContent(contentWidth, pageHeight))
             .width(contentWidth).height(pageHeight).row()
@@ -637,7 +640,8 @@ class CityScreen(
         selectedConstructionTable.update(selectedConstruction)
 
         compactHeader?.update()
-        val statsHeight = (pager.height - 100f).coerceAtLeast(100f)
+        updateBuildingsPage()
+        val statsHeight = (pager.height - pager.minHeight - 24f).coerceAtLeast(100f)
         cityStatsTable.update(statsHeight)
         cityStatsTable.constrainPanelHeight(statsHeight)
         updateAnnexAndRazeCityButton()
@@ -662,5 +666,70 @@ class CityScreen(
     /** Открывает страницу строительства при выборе описания из шапки или очереди. */
     internal fun showConstructionPage() {
         compactPager?.selectPage("Construction")
+    }
+
+    /** Отдельная страница построек; виджет получает только снимок и обработчики действий. */
+    private fun addBuildingsPage(pager: com.unciv.ui.utils.TabbedPager, contentWidth: Float) {
+        val table = CityBuildingsTable(
+            onInspect = { link ->
+                game.pushScreen(
+                    com.unciv.ui.civilopedia.CivilopediaScreen(
+                        city.getRuleset(),
+                        link = link
+                    )
+                )
+            },
+            onSell = { name -> confirmBuildingSale(name) }
+        )
+        buildingsTable = table
+        val width = (contentWidth - 24f).coerceAtLeast(1f)
+        table.update(CityBuildingsSnapshotAdapter.read(city, canChangeState, isPlayersTurn), width)
+        val page = object : Table(), com.unciv.ui.utils.TabbedPager.IPageExtensions {
+            override fun activated(
+                index: Int,
+                caption: String,
+                pager: com.unciv.ui.utils.TabbedPager
+            ) {
+                pager.setScrollDisabled(false)
+            }
+        }.apply {
+            name = "cityBuildingsPage"
+            top().left()
+            add(table).width(width).pad(8f).top().row()
+        }
+        pager.addPage("Buildings", page)
+    }
+
+    /** Продажа использует прежние игровые последствия и повторную проверку после подтверждения. */
+    private fun confirmBuildingSale(name: String) {
+        fun allowed() =
+                CityBuildingsSnapshotAdapter.canSell(city, name, canChangeState, isPlayersTurn)
+        if (!allowed()) {
+            update()
+            return
+        }
+        val amount = city.getGoldForSellingBuilding(name)
+        com.unciv.ui.popup.ConfirmPopup(
+            this,
+            "Are you sure you want to sell this [$name]?",
+            "Sell [$amount] " + com.unciv.ui.utils.Fonts.gold,
+            restoreDefault = { update() }
+        ) {
+            if (allowed() && city.getGoldForSellingBuilding(name) == amount) {
+                city.sellBuilding(name)
+                clearSelection()
+            }
+            update()
+        }.open()
+    }
+
+    /** Обновляет DTO после штатного пересчёта города, не меняя выбранную страницу. */
+    private fun updateBuildingsPage() {
+        val table = buildingsTable ?: return
+        val pager = compactPager ?: return
+        table.update(
+            CityBuildingsSnapshotAdapter.read(city, canChangeState, isPlayersTurn),
+            (pager.width - 24f).coerceAtLeast(1f)
+        )
     }
 }

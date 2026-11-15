@@ -2,6 +2,7 @@ package com.unciv.testing.pure
 
 import com.unciv.testing.pure.application.city.PrepareScenarioCitiesUseCaseTest
 import com.unciv.testing.pure.application.city.CityStatsSnapshotTest
+import com.unciv.testing.pure.application.city.CityBuildingsSnapshotTest
 import com.unciv.testing.pure.application.scenario.*
 import com.unciv.testing.pure.application.victory.ProcessCityCapturedUseCaseTest
 import com.unciv.testing.pure.domain.army.CityArmyCopyTest
@@ -20,6 +21,6 @@ import org.junit.runners.Suite
     ScenarioCityValidationTest::class, PrepareScenarioCitiesUseCaseTest::class,
     CaptureCityObjectiveTest::class, ProcessCityCapturedUseCaseTest::class,
     VictoryOptionsTest::class, ScenarioVictoryValidationTest::class,
-    CityStatsSnapshotTest::class
+    CityStatsSnapshotTest::class, CityBuildingsSnapshotTest::class
 )
 class CityTestSuite

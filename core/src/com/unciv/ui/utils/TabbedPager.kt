@@ -694,4 +694,26 @@ open class TabbedPager(
     fun useAzureRoyalHeader() {
         (header.background as? RoyalRibbonDrawable)?.useAzureSelection(BaseScreen.skin)
     }
+
+    /** Локальная компактная лента; вызывается после добавления страниц и не меняет общий стиль Skin. */
+    fun useCompactCityHeader(
+        backgroundFactory: (() -> Pair<Float, Float>?) -> com.badlogic.gdx.scenes.scene2d.utils.Drawable
+    ) {
+        if (!royalHeader) return
+        header.background = backgroundFactory {
+            pages.getOrNull(activePage)?.button?.let { it.x to it.width }
+        }
+        header.name = "cityTabsHeader"
+        header.pad(0f, 22f, 0f, 22f)
+        header.defaults().pad(0f)
+        for (page in pages) {
+            page.button.pad(0f, 8f, 0f, 8f)
+            page.button.label.setFontScale(14f / Fonts.ORIGINAL_FONT_SIZE)
+            header.getCell(page.button).pad(0f).height(48f).growX()
+        }
+        headerHeight = 48f
+        getCell(headerScroll).minHeight(48f).height(48f)
+        header.invalidateHierarchy()
+        invalidateHierarchy()
+    }
 }

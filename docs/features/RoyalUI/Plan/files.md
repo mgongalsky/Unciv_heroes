@@ -198,3 +198,8 @@ android/assets/UI_bundles/ существовал до задачи и не от
 ## Компактная сводка Stats
 
 Компактная компоновка меняет только CityIncomeTable.kt и документы RoyalUI. DTO, адаптер чтения, игровые формулы и тесты не меняются. Захваты stats-compact-1568-690.png и stats-compact-400-690.png находятся в desktop/build/city-preview и не предназначены для коммита.
+
+
+## Buildings и городская полоса вкладок
+
+Фактические Kotlin-файлы: core/src/com/unciv/pure/application/city/CityBuildingsSnapshot.kt; core/src/com/unciv/ui/cityscreen/CityBuildingsSnapshotAdapter.kt, CityBuildingsTable.kt, CityTabsDrawable.kt, CityScreen.kt, CityStatsTable.kt, CitySandbox.kt; core/src/com/unciv/ui/utils/TabbedPager.kt; desktop/src/com/unciv/app/desktop/CityPreviewCapture.kt; tests/src/com/unciv/testing/pure/application/city/CityBuildingsSnapshotTest.kt и tests/src/com/unciv/testing/pure/CityTestSuite.kt. Обновлены PLAN.md, STEPS.md, files.md, STEP_07_City_Tiles_Stats.md, Research/RESEARCH.md, CODE_GUIDE.md. CityTabsDrawable использует существующие frames/azure/scroll-left.png, scroll-right.png, scroll-centre-tile.png, materials/azure/cloth-tab.png и png/frames/azure/tabs-trim-420x64.png из libgdx-ready городского бандла. Захваты остаются в desktop/build/city-preview. Посторонний wiki/Make-sprite-atlas.md не относится к задаче.

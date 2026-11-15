@@ -71,11 +71,12 @@ object CityPreviewCapture {
                         settings.fontFamily
                     ),
                     initialScreenFactory = {
-                        // У автономного захвата нет активной партии для поиска звуков модов; настройки не сохраняются.
+                        // Настройки и отдельная модель захвата не сохраняются в пользовательскую партию.
                         UncivGame.Current.settings.citySoundsVolume = 0f
-                        CitySandbox.createScreen()
+                        CitySandbox.createScreen(previewBuildings = System.getenv("CITY_PREVIEW_BUILDINGS") == "1")
                     }
-                ))
+                )
+            )
             game.create()
         }
 
@@ -88,10 +89,15 @@ object CityPreviewCapture {
                 return
             }
             val screen = game.screen as? CityScreen ?: return
-            val statsPreview = System.getenv("CITY_PREVIEW_STATS") == "1"
-            val tilePreview = !statsPreview && System.getenv("CITY_PREVIEW_TILE") == "1"
+            val buildingsPreview = System.getenv("CITY_PREVIEW_BUILDINGS") == "1"
+            val statsPreview = !buildingsPreview && System.getenv("CITY_PREVIEW_STATS") == "1"
+            val tilePreview = !buildingsPreview && !statsPreview && System.getenv("CITY_PREVIEW_TILE") == "1"
             val pager =
                     screen.stage.root.findActor<com.unciv.ui.utils.TabbedPager>("cityCompactPager")
+            if (buildingsPreview && stableFrames == 0) {
+                if (pager == null || pager.getPageIndex("Buildings") < 0) return
+                pager.selectPage("Buildings")
+            }
             if (statsPreview && stableFrames == 0) {
                 // Открываем производственную страницу; данные готовит обычное обновление города.
                 if (pager == null || pager.getPageIndex("Stats") < 0) return
@@ -113,6 +119,7 @@ object CityPreviewCapture {
                 return
             }
             val target = when {
+                buildingsPreview -> "cityBuildingsTable"
                 statsPreview -> "cityIncomeTable"
                 tilePreview -> "cityTileSummary"
                 else -> "cityConstruction:Worker"
