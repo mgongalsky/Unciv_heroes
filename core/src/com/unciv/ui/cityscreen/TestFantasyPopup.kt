@@ -35,8 +35,14 @@ class TestFantasyPopup(val cityScreen: CityScreen, stageToShowOn: Stage) : Popup
     private var onlyWithStat: Stat? = null
     private var isDetailed: Boolean = false
 
-    private val colorTotal: Color = Color.BLUE.brighten(0.5f)
-    private val colorSelector: Color = Color.GREEN.darken(0.5f)
+    private val colorTotal: Color =
+        if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("D7C89F") else Color.BLUE.brighten(
+            0.5f
+        )
+    private val colorSelector: Color =
+            if (cityScreen.game.settings.skin == "Minimal") Color.valueOf("A9BED0") else Color.GREEN.darken(
+                0.5f
+            )
 
     init {
         val scrollPane = AutoScrollPane(totalTable)

@@ -84,20 +84,24 @@ class BattleTroopInfoPanel(
         add(value.toLabel(fontColor = textColor, fontSize = 15)).right().row()
     }
 
+    /** В городе временная карточка использует его рамку; положение и масштаб сохраняют прежние ограничения. */
     fun showNextTo(stage: Stage, anchor: Actor) {
         remove()
+        if (com.unciv.ui.cityscreen.CityPopupStyle.appliesTo(stage)) {
+            background = com.unciv.ui.cityscreen.HeroicCityStyle.panel()
+        } else {
+            background = if (royal) RoyalPanelDrawable(BaseScreen.skin)
+            else BaseScreen.skin.get("fantasy_background", NinePatchDrawable::class.java)
+        }
         stage.addActor(this)
         setScale(1f)
         pack()
-        // This transient, non-interactive panel cannot be scrolled while holding a troop.
-        // Fit its complete contents when the logical stage is smaller than its preferred size.
         val marginX = minOf(EDGE_MARGIN, stage.width / 4f)
         val marginY = minOf(EDGE_MARGIN, stage.height / 4f)
         val availableWidth = (stage.width - 2f * marginX).coerceAtLeast(0f)
         val availableHeight = (stage.height - 2f * marginY).coerceAtLeast(0f)
         val fitScale = minOf(
-            1f,
-            availableWidth / width.coerceAtLeast(1f),
+            1f, availableWidth / width.coerceAtLeast(1f),
             availableHeight / height.coerceAtLeast(1f)
         )
         setTransform(true)

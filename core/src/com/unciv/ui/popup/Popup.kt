@@ -80,11 +80,9 @@ open class Popup(
         this.setFillParent(true)
     }
 
-    /**
-     * Displays the Popup on the screen. If another popup is already open, this one will display after the other has
-     * closed. Use [force] = true if you want to open this popup above the other one anyway.
-     */
+    /** Оформляет готовое содержимое перед измерением и сохраняет прежнюю очередь показа окон. */
     fun open(force: Boolean = false) {
+        com.unciv.ui.cityscreen.CityPopupStyle.prepare(this)
         stageToShowOn.addActor(this)
         innerTable.pack()
         pack()
@@ -244,6 +242,13 @@ open class Popup(
             if (stageToShowOn.setKeyboardFocus(value))
                 (value as? TextField)?.selectAll()
         }
+
+    /** Перестроенные строки и изменившееся disabled-состояние получают тот же локальный стиль города. */
+    override fun act(delta: Float) {
+        super.act(delta)
+        if (isVisible && com.unciv.ui.cityscreen.CityPopupStyle.appliesTo(stageToShowOn))
+            com.unciv.ui.cityscreen.CityPopupStyle.refresh(innerTable)
+    }
 }
 
 

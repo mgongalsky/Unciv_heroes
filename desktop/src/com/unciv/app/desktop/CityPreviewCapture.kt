@@ -55,6 +55,7 @@ object CityPreviewCapture {
 
     /** Ожидает асинхронный каталог; завершает приложение без сохранения пользовательских настроек. */
     private class CaptureApplication(private val output: File) : ApplicationAdapter() {
+        private var popupPreviewOpened = false
         private var tilePreviewOpened = false
         private lateinit var game: UncivGame
         private var stableFrames = 0
@@ -93,6 +94,7 @@ object CityPreviewCapture {
                 return
             }
             val screen = game.screen as? CityScreen ?: return
+            if (capturePopupPreview(screen)) return
             val armyPreview = System.getenv("CITY_PREVIEW_ARMY") == "1"
             val buildingsPreview = !armyPreview && System.getenv("CITY_PREVIEW_BUILDINGS") == "1"
             val statsPreview =
@@ -192,6 +194,90 @@ object CityPreviewCapture {
                 output.parentFile,
                 output.nameWithoutExtension + ".layout.tsv"
             ).writeText(report.toString(), Charsets.UTF_8)
+        }
+
+        /** Открывает производственные окна в автономной сцене без выполнения покупок и изменения армии. */
+        private fun capturePopupPreview(screen: CityScreen): Boolean {
+            val mode =
+                    System.getenv("CITY_PREVIEW_POPUP")?.takeIf { it.isNotBlank() } ?: return false
+            if (!popupPreviewOpened) {
+                val pager =
+                        screen.stage.root.findActor<com.unciv.ui.utils.TabbedPager>("cityCompactPager")
+                            ?: return true
+                pager.selectPage("Army")
+                pager.validate()
+                val popup: com.unciv.ui.popup.Popup = when (mode) {
+                    "confirm" -> com.unciv.ui.popup.ConfirmPopup(
+                        screen,
+                        "Currently you have 0 ${Fonts.gold} Gold.\n\nWould you like to purchase Tile for 0 ${Fonts.gold}?",
+                        "Purchase", true
+                    ) {}
+
+                    "rename" -> com.unciv.ui.popup.AskTextPopup(
+                        screen,
+                        label = "Please enter a new name for your city",
+                        defaultText = "City Sandbox"
+                    )
+
+                    "stats" -> com.unciv.ui.cityscreen.DetailedStatsPopup(screen)
+                    "fantasy" -> com.unciv.ui.cityscreen.TestFantasyPopup(screen)
+                    "failure" -> com.unciv.ui.cityscreen.ConstructionPurchaseFailurePopup(
+                        screen.stage,
+                        "Worker",
+                        "City Sandbox"
+                    )
+
+                    "split" -> {
+                        val army = checkNotNull(
+                            screen.stage.root.findActor<com.unciv.ui.army.ArmyView>("cityHeroSlots")
+                        )
+                        val slots =
+                                army.children.filterIsInstance<com.unciv.ui.army.TroopArmyView>()
+                        com.unciv.ui.popup.SplitTroopPopup(
+                            screen,
+                            slots.first { !it.isEmptySlot() },
+                            slots.first { it.isEmptySlot() }) { _, _ -> }
+                    }
+
+                    "unit" -> {
+                        val troop = com.unciv.pure.domain.troop.TroopFactory.create(
+                            "Spearman", 10,
+                            com.unciv.pure.domain.troop.RulesetTroopDefinitionSource(com.unciv.ui.images.ImageGetter.ruleset)
+                        )
+                        com.unciv.ui.army.UnitInfoPopup(screen, troop)
+                    }
+
+                    "toast" -> com.unciv.ui.popup.ToastPopup(
+                        "Please select a tile for this building's [Farm]",
+                        screen,
+                        60000L
+                    )
+
+                    else -> error("Unknown CITY_PREVIEW_POPUP: $mode")
+                }
+                popup.name = "cityPopupPreview"
+                popup.innerTable.name = "cityPopupPreviewContent"
+                if (popup.parent == null) popup.open()
+                popupPreviewOpened = true
+                stableFrames = 0
+                return true
+            }
+            if (++stableFrames < 20 || saved) return true
+            val pixmap = ScreenUtils.getFrameBufferPixmap(
+                0, 0,
+                Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight
+            )
+            try {
+                output.parentFile.mkdirs()
+                writeLayoutReport(screen)
+                PixmapIO.writePNG(Gdx.files.absolute(output.path), pixmap, -1, true)
+                saved = true
+                println("CAPTURED ${output.path} (${pixmap.width}x${pixmap.height}), popup=$mode")
+            } finally {
+                pixmap.dispose()
+            }
+            Gdx.app.exit()
+            return true
         }
     }
 }
