@@ -95,15 +95,20 @@ object CityPreviewCapture {
             }
             val screen = game.screen as? CityScreen ?: return
             if (capturePopupPreview(screen)) return
-            val armyPreview = System.getenv("CITY_PREVIEW_ARMY") == "1"
-            val buildingsPreview = !armyPreview && System.getenv("CITY_PREVIEW_BUILDINGS") == "1"
+            val heroPreview = System.getenv("CITY_PREVIEW_HERO") == "1"
+            val armyPreview = !heroPreview && System.getenv("CITY_PREVIEW_ARMY") == "1"
+            val buildingsPreview =
+                    !heroPreview && !armyPreview && System.getenv("CITY_PREVIEW_BUILDINGS") == "1"
             val statsPreview =
-                    !armyPreview && !buildingsPreview && System.getenv("CITY_PREVIEW_STATS") == "1"
+                    !heroPreview && !armyPreview && !buildingsPreview && System.getenv("CITY_PREVIEW_STATS") == "1"
             val tilePreview =
-                    !armyPreview && !buildingsPreview && !statsPreview && System.getenv("CITY_PREVIEW_TILE") == "1"
+                    !heroPreview && !armyPreview && !buildingsPreview && !statsPreview && System.getenv(
+                        "CITY_PREVIEW_TILE"
+                    ) == "1"
             val pager =
                     screen.stage.root.findActor<com.unciv.ui.utils.TabbedPager>("cityCompactPager")
             val requestedPage = when {
+                heroPreview -> "Hero"
                 armyPreview -> "Army"
                 buildingsPreview -> "Buildings"
                 statsPreview -> "Stats"
@@ -129,22 +134,28 @@ object CityPreviewCapture {
                 return
             }
             val target = when {
-                armyPreview -> "cityHeroSupplyTable"
+                heroPreview -> "cityHeroDetails"
+                armyPreview -> "cityGarrisonSlots"
                 buildingsPreview -> "cityBuildingsTable"
                 statsPreview -> "cityIncomeTable"
                 tilePreview -> "cityTileSummary"
                 else -> "cityConstruction:Worker"
             }
-            val ready =
-                    screen.stage.root.findActor<com.badlogic.gdx.scenes.scene2d.Actor>(target) != null
-            if (!ready) {
+            if (screen.stage.root.findActor<com.badlogic.gdx.scenes.scene2d.Actor>(target) == null) {
                 stableFrames = 0
                 return
             }
+            // Отдельный кадр нижней части показывает доступность армии и команд снабжения.
+            if (heroPreview && stableFrames == 10 && System.getenv("CITY_PREVIEW_BOTTOM") == "1") {
+                pager?.validate()
+                pager?.setPageScrollY(pager.getPageIndex("Hero"), Float.MAX_VALUE)
+            }
             if (++stableFrames < 20 || saved) return
             val pixmap = ScreenUtils.getFrameBufferPixmap(
-                0, 0,
-                Gdx.graphics.backBufferWidth, Gdx.graphics.backBufferHeight
+                0,
+                0,
+                Gdx.graphics.backBufferWidth,
+                Gdx.graphics.backBufferHeight
             )
             try {
                 output.parentFile.mkdirs()

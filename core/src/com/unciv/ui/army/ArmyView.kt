@@ -23,6 +23,8 @@ class ArmyView(
     private val screen: BaseScreen,
     private val slotSize: Float = 64f // Размер слотов по умолчанию
 ) : Table() {
+    /** Позволяет принимающему экрану обновить сведения после штатного обновления армии. */
+    var onArmyUpdated: (() -> Unit)? = null
     // !! Note here, ArmyInfo is nullable, which is weird, but unfortunately it's the easiest way to handle the bug
     // of libGDX, which goes crazy if you feed it nullable (but not null!) Table-derived class.
     // So visitingArmyView exists always, but there might be no visiting hero ) Crazy, but it works.
@@ -46,8 +48,10 @@ class ArmyView(
         updateView(initialized = false)
     }
 
-    /** Обновляет слоты армии; в городе Minimal переносит их по доступной ширине панели. */
+    /** Обновляет слоты без повторного уведомления при синхронизации нескольких представлений. */
     fun updateView(initialized: Boolean = true) {
+        val selectedIndex = if (!initialized) getSelectedTroopIndex() else null
+        selectedTroop = null
         clear()
         val royalCity = screen is CityScreen && screen.game.settings.skin == "Minimal"
         val columns = if (royalCity) {
@@ -55,18 +59,24 @@ class ArmyView(
                 .coerceAtMost(screen.stage.width - 10f)
             (availableWidth / (slotSize + 10f)).toInt().coerceAtLeast(1)
         } else Int.MAX_VALUE
-
-        // Перенос меняет только раскладку: массив сохраняет индексы игровых слотов.
+        // Индексы игровых слотов сохраняются при переносах строк.
         armyInfo?.getAllTroops()?.forEachIndexed { index, troop ->
             val troopView = TroopArmyView(troop, this, slotSize = slotSize)
             troopViewsArray[index] = troopView
             add(troopView).size(slotSize).pad(5f)
             if (royalCity && (index + 1) % columns == 0) row()
+            if (index == selectedIndex && !troopView.isEmptySlot()) {
+                troopView.select()
+                selectedTroop = troopView
+            }
         }
         pack()
-        if (initialized && screen is CityScreen) {
-            screen.city.cityStats.updateTileStats()
-            screen.update(triggeredByArmyView = true)
+        if (initialized) {
+            if (screen is CityScreen) {
+                screen.city.cityStats.updateTileStats()
+                screen.update(triggeredByArmyView = true)
+            }
+            onArmyUpdated?.invoke()
         }
     }
 
@@ -151,103 +161,76 @@ class ArmyView(
     }
 
 
-    /**
-     * Handles interactions with a troop slot in the army view.
-     * This function processes troop selection, deselection, and actions such as troop splitting,
-     * swapping, or combining between the selected slot and the clicked slot. The behavior depends
-     * on whether the clicked troop is in the same army or a different army.
-     *
-     * - If no troop is selected, clicking a slot selects it.
-     * - If the selected troop is clicked again, it is deselected.
-     * - If a different troop is clicked, the function performs the appropriate action (split, swap, or combine).
-     *
-     * @param clickedTroopView The visual representation of the clicked troop slot.
-     * @param isTroopSplitting A flag indicating whether a troop splitting action is required.
-     */
+    /** Выполняет прежние операции армии, проверяя актуальность городской сцены перед изменением. */
     fun onTroopClicked(clickedTroopView: TroopArmyView, isTroopSplitting: Boolean) {
-
-        // First of all let's handle first click, when just a selection without any other actions required
-        if (    (exchangeArmyView == null && selectedTroop == null) || // If there is only one army and no selection in that army
-                (exchangeArmyView != null && exchangeArmyView?.selectedTroop == null && selectedTroop == null)) // there is two armies, but no selection in both
-        {
-            deselectAllTroops() // Deselect all troops in the current army
-            if(!clickedTroopView.isEmptySlot()) {
+        fun allowed(): Boolean = screen !is CityScreen ||
+                (screen.city.getVisitingHero() === screen.visitingHero &&
+                        screen.context.canChangeState() && screen.canCityBeChanged() && screen.isPlayersTurn)
+        if (!allowed()) {
+            deselectAllTroops()
+            exchangeArmyView?.deselectAllTroops()
+            return
+        }
+        val clickedIndex = troopViewsArray.indexOf(clickedTroopView)
+        if (clickedIndex == -1) return
+        if (selectedTroop == null && exchangeArmyView?.selectedTroop == null) {
+            deselectAllTroops()
+            if (!clickedTroopView.isEmptySlot()) {
                 clickedTroopView.select()
                 selectedTroop = clickedTroopView
             }
             return
         }
-
-        // Second, let's check if previously selected troop was clicked for the second time. We need to deselect it.
-        val clickedIndex = troopViewsArray.indexOf(clickedTroopView)
-        if (clickedIndex == -1) return // If the troop is not found, do nothing
-
-        if (clickedIndex == getSelectedTroopIndex()){
-            deselectAllTroops() // Deselect all troops in the current army
-            selectedTroop = null
+        if (clickedIndex == getSelectedTroopIndex()) {
+            deselectAllTroops()
             return
         }
-
-        // Ok, now we sure, that non-trivial action (swap, combine or split) is required. So let's determine target (clicked troop) and source (previously selected troop)
-
-        // Target army is this army, because callBack comes from the clicked slot, and it is a target
-        val targetArmyInfo = armyInfo ?: return
-        val targetTroop = targetArmyInfo.getTroopAt(clickedIndex)
-        val isSameArmy = (getSelectedTroopIndex() != null) // Check if interaction is within same army or different
-
-        // Now let's declare source parameters
-        val sourceIndex = if (isSameArmy) {
-            getSelectedTroopIndex()
-        } else {
-            exchangeArmyView?.getSelectedTroopIndex()
+        val targetArmy = armyInfo ?: return
+        val sameArmy = getSelectedTroopIndex() != null
+        val sourceView = if (sameArmy) this else exchangeArmyView ?: return
+        val sourceIndex = sourceView.getSelectedTroopIndex() ?: return
+        val sourceArmy = sourceView.armyInfo ?: return
+        val sourceTroopView = sourceView.troopViewsArray[sourceIndex] ?: return
+        val sourceTroop = sourceArmy.getTroopAt(sourceIndex)
+        val targetTroop = targetArmy.getTroopAt(clickedIndex)
+        fun refresh() {
+            deselectAllTroops()
+            sourceView.deselectAllTroops()
+            updateView()
+            if (!sameArmy) sourceView.updateView()
         }
-
-        if (sourceIndex == null) return // That should not be the case, but we need convertion from int? to int
-
-        val sourceArmyView = if (isSameArmy) this else exchangeArmyView ?: return
-        val sourceArmyInfo = if (isSameArmy) armyInfo else exchangeArmyView?.armyInfo ?: return
-        val sourceTroop = sourceArmyInfo.getTroopAt(sourceIndex)
-        val sourceTroopView = sourceArmyView.troopViewsArray[sourceIndex] ?: return
-
-
         if (isTroopSplitting) {
-            // Open the split popup with updated logic for handling two non-empty slots
             SplitTroopPopup(
                 screen = screen,
                 sourceTroopView = sourceTroopView,
-                targetTroopView = clickedTroopView, // Pass the clicked TroopArmyView as the target
-                onSplit = { firstPart, secondPart ->
-                    armyManager.splitTroop(
-                        sourceArmy = sourceArmyInfo,
-                        sourceIndex = sourceIndex,
-                        targetArmy = targetArmyInfo,
-                        targetIndex = clickedIndex,
-                        finalFirstTroopCount = firstPart
-                    )
-                    updateView()
-                    if (!isSameArmy)
-                        exchangeArmyView?.updateView()
+                targetTroopView = clickedTroopView,
+                onSplit = { firstPart, _ ->
+                    // Диалог мог пережить уход героя или изменение выбранных слотов.
+                    if (allowed() && sourceArmy.getTroopAt(sourceIndex) === sourceTroop &&
+                            targetArmy.getTroopAt(clickedIndex) === targetTroop
+                    ) {
+                        armyManager.splitTroop(
+                            sourceArmy = sourceArmy,
+                            sourceIndex = sourceIndex,
+                            targetArmy = targetArmy,
+                            targetIndex = clickedIndex,
+                            finalFirstTroopCount = firstPart
+                        )
+                        refresh()
+                    }
                 }
             ).open()
         } else {
             val success = armyManager.swapOrCombineTroops(
-                firstArmy = sourceArmyInfo,
+                firstArmy = sourceArmy,
                 firstIndex = sourceIndex,
-                secondArmy = targetArmyInfo,
+                secondArmy = targetArmy,
                 secondIndex = clickedIndex,
                 combine = true
             )
-            if (!success)
-                println("Army swapping or combining is unsuccessful")
+            if (!success) println("Army swapping or combining is unsuccessful")
         }
-
-        updateView() // Refresh the current army view
-        deselectAllTroops() // Clear selection in the current army
-
-        if (!isSameArmy) {
-            exchangeArmyView?.updateView() // Refresh the exchange army view
-            exchangeArmyView?.deselectAllTroops() // Clear selection in the exchange army
-        }
+        refresh()
     }
 
 }

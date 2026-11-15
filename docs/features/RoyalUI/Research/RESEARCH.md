@@ -94,3 +94,8 @@ CityConstructionsTable.kt использует ширину контейнера
 ## Городские всплывающие окна: единый стиль
 
 Аудит выявил рабочие входы: AskTextPopup из шапки и CityPicker; ConfirmPopup для клетки, строительства и продажи здания; ConstructionPurchaseFailurePopup; DetailedStatsPopup и TestFantasyPopup; SplitTroopPopup; UnitInfoPopup; ToastPopup при выборе улучшения; временный BattleTroopInfoPanel по правой кнопке. SimplePopup в army остаётся неиспользуемым прототипом по поиску вызовов. Основная причина несоответствия — отдельные Actors окон не входили в обход compactRoot, а их рамки использовали fantasy_background/RoyalPanelDrawable. CityPopupStyle применяется после конструктора наследника, перед pack, только при наличии cityCompactRoot на сцене Minimal. Внешние экраны и общий Skin сохраняют прежние стили. Все восемь режимов Popup успешно захвачены на двух размерах; временная карточка проверена сборкой и чтением кода, отдельный захват не выполнялся.
+
+
+## Вкладка Hero и общие сведения о герое
+
+Общий производственный путь: MapUnit → HeroOverviewSnapshotAdapter → HeroOverviewSnapshot → HeroDetailsTable. Его используют HeroOverviewScreen и городская Hero; CityHeroSupplyAdapter также читает общие значения. Расход вне города и население при основании остаются в существующих методах модели. Snapshot не содержит Gdx, DI или ссылок на изменяемую модель; новой игровой механики нет. Вместимость обзора basicFoodCapacity, ручная baseFoodCapacity и автоматическая с городскими бонусами сохраняют исторические различия. ArmyView использует ту же ArmyInfo в разных Actors; обновления синхронизируются без рекурсивных уведомлений. При смене посетителя CityScreen пересоздаётся; команды армии проверяют посетителя и разрешения, разделение повторяет проверку после диалога.

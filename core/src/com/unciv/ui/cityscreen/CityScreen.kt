@@ -45,6 +45,8 @@ class CityScreen(
     initSelectedTile: TileInfo? = null,
     internal val context: CityScreenContext = CityScreenContext.fromWorld()
 ): BaseScreen(), RecreateOnResize {
+    private var heroPageArmyView: ArmyView? = null
+    private var heroDetailsTable: com.unciv.ui.heroscreen.HeroDetailsTable? = null
     private var heroSupplyTable: CityHeroSupplyTable? = null
     private val heroSupplyAdapter by lazy { CityHeroSupplyAdapter(this) }
     private var buildingsTable: CityBuildingsTable? = null
@@ -529,7 +531,24 @@ class CityScreen(
         game.replaceCurrentScreen(newCityScreen)
     }
 
-    override fun recreate(): BaseScreen = createCityScreen(initSelectedTile = selectedTile)
+    /** Сохраняет выбранную вкладку при изменении размера или посетителя, если она ещё существует. */
+    override fun recreate(): BaseScreen {
+        val pager = compactPager
+        val caption = pager?.takeIf { it.activePage >= 0 }?.let {
+            it.getPageButton(it.activePage).name
+        }
+        val replacement = CityScreen(city, selectedConstruction, selectedTile, context)
+        replacement.pickTileData = pickTileData
+        val replacementPager = replacement.compactPager
+        if (replacementPager != null) {
+            if (caption != null && replacementPager.getPageIndex(caption) >= 0) {
+                replacementPager.selectPage(caption)
+            } else if (caption == "Hero") {
+                replacementPager.selectPage("Army")
+            }
+        }
+        return replacement
+    }
 
     override fun dispose() {
         cityAmbiencePlayer.dispose()
@@ -620,19 +639,36 @@ class CityScreen(
         mapScrollPane.updateVisualScroll()
     }
 
+    /** Обе вкладки перечитывают одну модель после операций армии и снабжения. */
     private fun updateCompactLayout(triggeredByArmyView: Boolean) {
         val pager = checkNotNull(compactPager)
-        if (!triggeredByArmyView) {
-            garrisonView.updateView(initialized = false)
-            visitingArmyView.updateView(initialized = false)
+        if (triggeredByArmyView) {
+            garrisonView.deselectAllTroops()
+            visitingArmyView.deselectAllTroops()
+            heroPageArmyView?.deselectAllTroops()
         }
+        garrisonView.updateView(initialized = false)
+        visitingArmyView.updateView(initialized = false)
+        heroPageArmyView?.updateView(initialized = false)
         constructionsTable.isVisible = true
         constructionsTable.update(selectedConstruction)
         tileTable.update(selectedTile)
         selectedConstructionTable.update(selectedConstruction)
         compactHeader?.update()
         updateBuildingsPage()
-        heroSupplyTable?.update(heroSupplyAdapter.read(), (pager.width - 24f).coerceAtLeast(1f))
+        val width = (pager.width - 24f).coerceAtLeast(1f)
+        heroSupplyTable?.let { supply ->
+            val snapshot = heroSupplyAdapter.read()
+            supply.update(snapshot, width)
+            city.getVisitingHero()?.let { hero ->
+                heroDetailsTable?.update(
+                    com.unciv.ui.heroscreen.HeroOverviewSnapshotAdapter.read(
+                        hero,
+                        snapshot.enabled
+                    ), width
+                )
+            }
+        }
         val statsHeight = (pager.height - pager.minHeight - 24f).coerceAtLeast(100f)
         cityStatsTable.update(statsHeight)
         cityStatsTable.constrainPanelHeight(statsHeight)
@@ -642,8 +678,12 @@ class CityScreen(
         compactRoot?.validate()
     }
 
-    /** Пергаментная очистка принадлежит только городу; общий clearColor используется также логикой клеток. */
+    /** При смене посетителя пересоздаёт связанные представления; оформление остаётся локальным городу. */
     override fun render(delta: Float) {
+        if (compactPager != null && city.getVisitingHero() !== visitingHero) {
+            game.replaceCurrentScreen(recreate())
+            return
+        }
         if (game.settings.skin != "Minimal") {
             super.render(delta)
             return
@@ -725,17 +765,9 @@ class CityScreen(
         )
     }
 
-    /** Армии сохраняют прежние команды; снабжение получает независимый снимок и отдельные callbacks. */
+    /** Создаёт связанные страницы до оформления ленты; Army сохраняет обе стороны обмена. */
     private fun createArmyContent(contentWidth: Float): Table {
-        val innerWidth = (contentWidth - 24f).coerceAtLeast(1f)
-        val supply = CityHeroSupplyTable(
-            onTransfer = heroSupplyAdapter::transfer,
-            onMaximum = heroSupplyAdapter::supplyMaximum,
-            onToggle = heroSupplyAdapter::toggleAutomatic,
-            onChanged = { update(triggeredByArmyView = true) }
-        )
-        heroSupplyTable = supply
-        supply.update(heroSupplyAdapter.read(), innerWidth)
+        addHeroPage(contentWidth)
         return object : Table(), com.unciv.ui.utils.TabbedPager.IPageExtensions {
             override fun activated(
                 index: Int,
@@ -743,6 +775,15 @@ class CityScreen(
                 pager: com.unciv.ui.utils.TabbedPager
             ) {
                 pager.setScrollDisabled(false)
+            }
+
+            override fun deactivated(
+                index: Int,
+                caption: String,
+                pager: com.unciv.ui.utils.TabbedPager
+            ) {
+                garrisonView.deselectAllTroops()
+                visitingArmyView.deselectAllTroops()
             }
         }.apply {
             name = "cityArmyPage"
@@ -756,7 +797,62 @@ class CityScreen(
                 visitingArmyView.name = "cityHeroSlots"
                 add(visitingArmyView).left().padLeft(8f).padRight(8f).row()
             }
+        }
+    }
+
+    /** Вкладка существует только для посетителя; армия использует общую модель и отдельный Actor. */
+    private fun addHeroPage(contentWidth: Float) {
+        val hero = visitingHero ?: return
+        val pager = checkNotNull(compactPager)
+        val innerWidth = (contentWidth - 24f).coerceAtLeast(1f)
+        val details = com.unciv.ui.heroscreen.HeroDetailsTable(true).apply {
+            name = "cityHeroDetails"
+        }
+        heroDetailsTable = details
+        val army = ArmyView(hero.army, ArmyManager(hero.army), this).apply {
+            name = "cityHeroOverviewSlots"
+        }
+        heroPageArmyView = army
+        val supply = CityHeroSupplyTable(
+            onTransfer = heroSupplyAdapter::transfer,
+            onMaximum = heroSupplyAdapter::supplyMaximum,
+            onToggle = heroSupplyAdapter::toggleAutomatic,
+            onChanged = { update(triggeredByArmyView = true) }
+        )
+        heroSupplyTable = supply
+        val snapshot = heroSupplyAdapter.read()
+        details.update(
+            com.unciv.ui.heroscreen.HeroOverviewSnapshotAdapter.read(
+                hero,
+                snapshot.enabled
+            ), innerWidth
+        )
+        supply.update(snapshot, innerWidth)
+        val page = object : Table(), com.unciv.ui.utils.TabbedPager.IPageExtensions {
+            override fun activated(
+                index: Int,
+                caption: String,
+                pager: com.unciv.ui.utils.TabbedPager
+            ) {
+                pager.setScrollDisabled(false)
+                update(triggeredByArmyView = false)
+            }
+
+            override fun deactivated(
+                index: Int,
+                caption: String,
+                pager: com.unciv.ui.utils.TabbedPager
+            ) {
+                army.deselectAllTroops()
+            }
+        }.apply {
+            name = "cityHeroPage"
+            top().left()
+            add(details).width(innerWidth).left().pad(8f).row()
+            add("Army".toLabel(fontColor = Color.valueOf("355A80"))).left().pad(8f).row()
+            add(army).left().padLeft(8f).padRight(8f).row()
             add(supply).width(innerWidth).left().pad(8f).padTop(16f).row()
         }
+        pager.addPage("Hero", page)
     }
 }

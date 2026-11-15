@@ -18,17 +18,20 @@ internal class CityHeroSupplyAdapter(private val screen: CityScreen) : KoinCompo
     private var displayedHero: MapUnit? = null
     private var displayed: CityHeroSupplySnapshot? = null
 
-    /** Ручная и автоматическая вместимость отражают ограничения соответствующих игровых путей. */
+    /** Общие сведения читаются тем же адаптером, что и обзор; городские ограничения добавляются отдельно. */
     fun read(): CityHeroSupplySnapshot {
         val city = screen.city
         val hero = city.getVisitingHero()
         displayedHero = hero
         val enabled = mechanic.isEnabled
-        val food = hero?.hero?.currentFood ?: 0f
-        val manual = hero?.hero?.baseFoodCapacity ?: 0f
+        val overview = hero?.let {
+            com.unciv.ui.heroscreen.HeroOverviewSnapshotAdapter.read(it, enabled)
+        }
+        val food = overview?.food ?: 0f
+        val manual = overview?.manualCapacity ?: 0f
         val bonus = city.getMatchingUniques(UniqueType.FoodCapacityBonus)
             .sumOf { it.params[0].toInt() }
-        val automatic = (hero?.basicFoodCapacity ?: 0f) * (1f + bonus / 100f)
+        val automatic = (overview?.overviewCapacity ?: 0f) * (1f + bonus / 100f)
         val citySpace = (city.population.getFoodToNextPopulation() - city.population.foodStored)
             .toFloat().coerceAtLeast(0f)
         return CityHeroSupplySnapshot(
@@ -36,17 +39,19 @@ internal class CityHeroSupplyAdapter(private val screen: CityScreen) : KoinCompo
             enabled = enabled,
             hasHero = hero != null,
             canChange = enabled && hero != null && screen.context.canChangeState() &&
-                screen.canCityBeChanged() && screen.isPlayersTurn,
+                    screen.canCityBeChanged() && screen.isPlayersTurn,
             cityFood = city.population.foodStored,
             heroFood = food,
             manualCapacity = manual,
             automaticCapacity = automatic,
-            maintenance = hero?.army?.calculateFoodMaintenance(isInCity = false) ?: 0f,
-            morale = hero?.morale ?: 0,
+            maintenance = overview?.outsideMaintenance ?: 0f,
+            morale = overview?.morale ?: 0,
             autoSupply = city.autoFeedHero,
             minimumTransfer = -minOf(food.coerceAtLeast(0f), citySpace),
-            maximumTransfer = minOf((manual - food).coerceAtLeast(0f),
-                city.population.foodStored.toFloat().coerceAtLeast(0f))
+            maximumTransfer = minOf(
+                (manual - food).coerceAtLeast(0f),
+                city.population.foodStored.toFloat().coerceAtLeast(0f)
+            )
         ).also { displayed = it }
     }
 

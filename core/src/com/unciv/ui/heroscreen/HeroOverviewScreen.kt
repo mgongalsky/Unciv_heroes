@@ -28,7 +28,6 @@ class HeroOverviewScreen(
     private val supplyMechanic: SupplyMechanic by inject()
     internal val centerAreaHeight = stage.height - 82f
     private val royal = game.settings.skin == "Minimal"
-    private val ink = if (royal) Color.valueOf("453925") else Color.WHITE
     private val contentWidth = minOf(740f, stage.width - if (royal) 136f else 52f)
         .coerceAtLeast(160f)
     private val heroArmyManager = ArmyManager(viewingHero.army)
@@ -64,61 +63,18 @@ class HeroOverviewScreen(
         stage.addActor(tabbedPager)
     }
 
-    private fun heroLabel(text: String, heading: Boolean = false): Label =
-        text.toLabel(fontColor = ink, fontSize = if (heading) 24 else 18).apply {
-            if (heading && royal && skin.has("royal-display", BitmapFont::class.java)) {
-                style = Label.LabelStyle(style).apply {
-                    font = skin.get("royal-display", BitmapFont::class.java)
-                }
-            }
-            setWrap(true)
-            setAlignment(if (heading) Align.center else Align.left)
-        }
-
+    /** Отдельный обзор использует те же сведения и подписи, что и городская вкладка. */
     private fun setupHeroStatsTable() {
         if (royal) {
             heroStatsTable.background = RoyalPanelDrawable(skin)
             heroStatsTable.pad(52f).padTop(58f)
         } else heroStatsTable.pad(10f)
-
-        fun heading(text: String) {
-            heroStatsTable.add(heroLabel(text, heading = true))
-                .colspan(2).width(contentWidth).padTop(10f).padBottom(10f).row()
-        }
-        fun stat(text: String, value: String) {
-            heroStatsTable.add(heroLabel(text)).width(contentWidth * 0.7f - 10f)
-                .left().pad(5f)
-            heroStatsTable.add(heroLabel(value).apply { setAlignment(Align.right) })
-                .width(contentWidth * 0.3f - 10f).right().pad(5f).row()
-        }
-        fun paragraph(text: String) {
-            heroStatsTable.add(heroLabel(text)).colspan(2)
-                .width(contentWidth - 10f).left().pad(5f).row()
-        }
-
-        heading("Hero Skills")
-        stat("Attack Skill:", viewingHero.heroAttackSkill.toString())
-        stat("Defense Skill:", viewingHero.heroDefenseSkill.toString())
-        stat("Morale:", viewingHero.morale.toString())
-        stat("Luck:", viewingHero.luck.toString())
-        if (supplyMechanic.isEnabled) {
-            heading("Food supply")
-            val currentFood = viewingHero.hero.currentFood
-            val maxFood = viewingHero.basicFoodCapacity
-            // Plan consumption outside a city, as in the original overview.
-            val foodMaintenance = viewingHero.army.calculateFoodMaintenance(false)
-            paragraph(
-                "Now ${currentFood.toInt()}${Fonts.food} of max ${maxFood.toInt()}${Fonts.food}. Per turn when outside city: %.1f${Fonts.food}."
-                    .format(foodMaintenance)
-            )
-            val foodDuration = if (foodMaintenance > 0) (currentFood / foodMaintenance).toInt()
-                else Int.MAX_VALUE
-            paragraph(if (foodDuration == Int.MAX_VALUE) "Food will last indefinitely."
-                else "Food will last for $foodDuration${Fonts.turn}.")
-        }
-        heading("City Settlement")
-        val cityPopulation = viewingHero.calculateArmyPopulation() + 1
-        paragraph("Can settle city with $cityPopulation${Fonts.population}")
+        val details = HeroDetailsTable(royal)
+        details.update(
+            HeroOverviewSnapshotAdapter.read(viewingHero, supplyMechanic.isEnabled),
+            contentWidth
+        )
+        heroStatsTable.add(details).width(contentWidth).top().left()
     }
 
     private fun updateHeroStatsTable() {
@@ -126,14 +82,16 @@ class HeroOverviewScreen(
         setupHeroStatsTable()
     }
 
+    /** Изменение состава армии обновляет расход еды и сведения об основании города. */
     private fun setupHeroArmyView() {
+        heroArmyView.onArmyUpdated = { updateHeroStatsTable() }
         heroArmyView.bottom().pad(10f)
         updateHeroArmyView()
     }
 
     private fun updateHeroArmyView() {
         updateHeroStatsTable()
-        heroArmyView.updateView()
+        heroArmyView.updateView(initialized = false)
         heroArmyView.isVisible = true
     }
 
