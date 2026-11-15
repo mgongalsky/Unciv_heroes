@@ -26,6 +26,7 @@ object CitySandbox {
             "City sandbox must start independently of an active game"
         }
         val city = createCity()
+        prepareConstructionPreview(city)
         ImageGetter.setNewRuleset(city.getRuleset())
         // Модель принадлежит экрану: не вызываем loadGame и не включаем автосохранение партии.
         return CityScreen(
@@ -35,7 +36,10 @@ object CitySandbox {
                 isPlayersTurn = { true },
                 recordTutorialTasks = false
             )
-        )
+        ).apply {
+            // Демонстрация строительства открывает каталог и на узком экране.
+            showConstructionPage()
+        }
     }
 
     /** Создаёт каждый раз отдельную небольшую модель, используя определения действующей игры. */
@@ -92,5 +96,17 @@ object CitySandbox {
         hero.army.setTransients(civilization, hero)
         city.cityStats.update()
         return city
+    }
+
+    /** Заполняет только автономный пример; прогресс хранится в настоящей модели строительства. */
+    private fun prepareConstructionPreview(city: CityInfo) {
+        val constructions = city.cityConstructions
+        constructions.constructionQueue.clear()
+        constructions.constructionQueue.addAll(listOf("Granary", "Worker", "Scout"))
+        constructions.currentConstructionIsUserSet = true
+        val granary = city.getRuleset().buildings.getValue("Granary")
+        constructions.inProgressConstructions[granary.name] =
+                granary.getProductionCost(city.civInfo) / 3
+        city.cityStats.update()
     }
 }

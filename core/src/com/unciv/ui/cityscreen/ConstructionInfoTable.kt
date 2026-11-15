@@ -81,11 +81,19 @@ class ConstructionInfoTable(val cityScreen: CityScreen): Table() {
         }
     }
 
-    private fun updateSelectedConstructionTable(construction: IConstruction) {
+    /** Встроенная карточка использует прокрутку страницы и сохраняет штатные действия проекта. */
+    internal fun embeddedContent(construction: IConstruction, width: Float): Table {
+        selectedConstructionTable.remove()
+        selectedConstructionTable.clear()
+        updateSelectedConstructionTable(construction, width)
+        return selectedConstructionTable
+    }
+
+    private fun updateSelectedConstructionTable(construction: IConstruction, embeddedWidth: Float? = null) {
         val city = cityScreen.city
         val cityConstructions = city.cityConstructions
         val royal = UncivGame.Current.settings.skin == "Minimal"
-        val contentWidth = if (royal) {
+        val contentWidth = if (embeddedWidth != null) (embeddedWidth - 16f).coerceAtLeast(1f) else if (royal) {
             val panelWidth = (cityScreen.stage.width / 4f).coerceAtLeast(260f)
                 .coerceAtMost(cityScreen.stage.width - 10f)
             (panelWidth - 108f).coerceAtLeast(1f)
@@ -99,11 +107,11 @@ class ConstructionInfoTable(val cityScreen: CityScreen): Table() {
         }
         if (royal) {
             background = null
-            selectedConstructionTable.background =
-                com.unciv.ui.utils.RoyalPanelDrawable(BaseScreen.skin)
+            selectedConstructionTable.background = if (embeddedWidth != null) null
+                else com.unciv.ui.utils.RoyalPanelDrawable(BaseScreen.skin)
         }
         selectedConstructionTable.run {
-            if (royal) pad(52f).padTop(58f) else pad(10f)
+            if (embeddedWidth != null) pad(8f) else if (royal) pad(52f).padTop(58f) else pad(10f)
             val portrait = ImageGetter.getPortraitImage(construction.name, 50f).apply {
                 val link = (construction as? IRulesetObject)?.makeLink() ?: return@apply
                 if (link.isEmpty()) return@apply

@@ -200,10 +200,11 @@ internal object HeroicCityStyle {
     private class CityButtonStyle(source: TextButton.TextButtonStyle, val inactive: Boolean) :
         TextButton.TextButtonStyle(source)
 
-    /** Подхватывает новые кнопки, сохраняя выбранный размер локального оформления. */
+    /** Обновляет оформление новых кнопок, сохраняя компактные действия и прозрачные элементы каталога. */
     fun applyButtons(actor: com.badlogic.gdx.scenes.scene2d.Actor) {
         if (actor is com.badlogic.gdx.scenes.scene2d.ui.CheckBox) return
         if (actor is TextButton) {
+            if (actor.style.up == null && actor.style.down == null && actor.style.over == null) return
             if (actor.style is CompactButtonStyle) applyCompactStyle(actor)
             else applyActionStyle(actor)
             return

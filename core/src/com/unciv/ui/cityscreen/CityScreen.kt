@@ -657,4 +657,9 @@ class CityScreen(
         compactRoot?.let { HeroicCityStyle.applyButtons(it) }
         stage.draw()
     }
+
+    /** Открывает страницу строительства при выборе описания из шапки или очереди. */
+    internal fun showConstructionPage() {
+        compactPager?.selectPage("Construction")
+    }
 }

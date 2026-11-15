@@ -69,7 +69,20 @@ import com.unciv.ui.utils.AutoScrollPane as ScrollPane
  * - Available constructions display, scrolling, grouped with expanders and therefore of dynamic height.
  */
 class CityConstructionsTable(private val cityScreen: CityScreen) {
+    private var catalogueRequest = 0
+    private var compactCategory = "Buildings"
+    private var compactQueueWidth = 0f
     private var compactContent: Table? = null
+    private val compactViewHost = Table()
+    private val compactDescriptionContent = Table()
+    private val compactDescriptionScroll = ScrollPane(compactDescriptionContent).apply {
+        setScrollingDisabled(true, false)
+        setOverscroll(false, false)
+    }
+    private val compactDescription by lazy { ConstructionInfoTable(cityScreen) }
+    private var descriptionOpen = false
+    private var descriptionName: String? = null
+    private var catalogScrollY = 0f
 
     /* -1 = Nothing, >= 0 queue entry (0 = current construction) */
     private var selectedQueueEntry = -1 // None
@@ -199,6 +212,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         updateButtons(selectedConstruction)
         updateConstructionQueue()
         if (compactContent != null) {
+            updateCompactView(selectedConstruction)
             // Размеры областей задаёт страница; pack legacy-контейнеров здесь не нужен.
             compactContent?.invalidateHierarchy()
             updateAvailableConstructions()
@@ -226,17 +240,18 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
 
     private fun updateButtons(construction: IConstruction?) {
         buyButtonsTable.clear()
+        if (compactContent != null && (!descriptionOpen || construction == null)) return
         val buttons = ArrayList<TextButton>()
         buttons.add(getQueueButton(construction))
         if (construction != null && construction !is PerpetualConstruction)
             buttons.addAll(getBuyButtons(construction as INonPerpetualConstruction))
         if (compactContent != null) {
-            // В выделенной полосе одна строка: дополнительные способы покупки доступны прокруткой.
+            // Действия принадлежат открытому описанию; длинные переводы переносятся.
             buyButtonsTable.left()
             for (button in buttons) {
-                button.label.setWrap(false)
+                button.label.setWrap(true)
                 HeroicCityStyle.applyActionStyle(button)
-                buyButtonsTable.add(button).minWidth(140f).height(48f).padRight(5f)
+                buyButtonsTable.add(button).width(contentWidth()).minHeight(44f).padBottom(4f).row()
             }
             return
         }
@@ -349,83 +364,91 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         return constructionButtonDTOList
     }
 
+    /** Обновляет каталог после расчёта; устаревший фоновый ответ не заменяет более свежий выбор категории. */
     private fun updateAvailableConstructions() {
-        val constructionsScrollY = availableConstructionsScrollPane.scrollY
-
-        if (!availableConstructionsTable.hasChildren()) {
+        val request = ++catalogueRequest
+        if (!availableConstructionsTable.hasChildren())
             availableConstructionsTable.add(Constants.loading.toLabel()).pad(10f)
-        }
-
         Concurrency.run("Construction info gathering - ${cityScreen.city.name}") {
-            // Сбор информации о доступных строительных объектах и событиях
-            val constructionButtonDTOList = getConstructionButtonDTOs()
-            val city = cityScreen.city
-            val cityEvents = city.cityConstructions.getConstructableEvents()
-                .map { event ->
-                    ConstructionButtonDTO(
-                        event,
-                        "[${event.name}]".tr()
-                    )
-                }
-
+            val entries = getConstructionButtonDTOs()
             launchOnGLThread {
-                val units = ArrayList<Table>()
-                val buildableWonders = ArrayList<Table>()
-                val buildableNationalWonders = ArrayList<Table>()
-                val buildableBuildings = ArrayList<Table>()
-                val cityEventsTables = ArrayList<Table>()
-                val specialConstructions = ArrayList<Table>()
-
-                var maxButtonWidth = constructionsQueueTable.width
-                for (dto in constructionButtonDTOList) {
-                    val constructionButton = getConstructionButton(dto)
-                    when (dto.construction) {
-                        is BaseUnit -> {
-                            units.add(constructionButton)
-                        }
-                        is Building -> {
-                            when {
-                                dto.construction.isWonder -> buildableWonders += constructionButton
-                                dto.construction.isNationalWonder -> buildableNationalWonders += constructionButton
-                                else -> buildableBuildings += constructionButton
+                if (request != catalogueRequest) return@launchOnGLThread
+                val savedY =
+                        if (descriptionOpen) catalogScrollY else availableConstructionsScrollPane.scrollY
+                availableConstructionsTable.clear()
+                availableConstructionsTable.top().left()
+                if (compactContent != null) {
+                    val categories = listOf(compactCategory) + listOf(
+                        "Units",
+                        "Buildings",
+                        "Events"
+                    ).filter { it != compactCategory }
+                    for (category in categories) {
+                        val group = entries.filter {
+                            when (it.construction) {
+                                is BaseUnit -> category == "Units"
+                                is Building -> category == "Buildings"
+                                else -> category == "Events"
                             }
                         }
-                        is CityEvent -> {
-                            cityEventsTables.add(constructionButton)
-                        }
-                        is PerpetualConstruction -> {
-                            specialConstructions.add(constructionButton)
+                        if (group.isEmpty()) continue
+                        availableConstructionsTable.add(
+                            category.toLabel(
+                                fontSize = 12,
+                                fontColor = Color.valueOf("70634C")
+                            )
+                        )
+                            .width(contentWidth()).left().padTop(4f).padBottom(6f).row()
+                        for (entry in group) {
+                            availableConstructionsTable.add(getCompactConstructionButton(entry))
+                                .width(contentWidth()).left().row()
+                            availableConstructionsTable.addSeparator(color = Color.valueOf("CBBB95"))
                         }
                     }
-                    maxButtonWidth = max(maxButtonWidth, constructionButton.packIfNeeded().width)
-                }
-
-                availableConstructionsTable.apply {
-                    clear()
-                    defaults().left().bottom()
-                    addCategory("Units", units, maxButtonWidth)
-                    addCategory("Buildings", buildableBuildings, maxButtonWidth)
-                    addCategory("Wonders", buildableWonders, maxButtonWidth)
-                    addCategory("National Wonders", buildableNationalWonders, maxButtonWidth)
-                    addCategory("City Events", cityEventsTables, maxButtonWidth)
-                    addCategory("Other", specialConstructions, maxButtonWidth)
-                    pack()
-                }
-
-                if (compactContent != null) {
-                    // Асинхронная загрузка меняет содержимое, но не размеры выделенных областей.
                     compactContent?.invalidateHierarchy()
                     compactContent?.validate()
                 } else {
-                    availableConstructionsScrollPane.setSize(maxButtonWidth,
-                        min(availableConstructionsTable.prefHeight, lowerTableScrollCell.maxHeight))
+                    val groups = linkedMapOf<String, ArrayList<Table>>(
+                        "Units" to arrayListOf(),
+                        "Buildings" to arrayListOf(),
+                        "Wonders" to arrayListOf(),
+                        "National Wonders" to arrayListOf(),
+                        "City Events" to arrayListOf(),
+                        "Other" to arrayListOf()
+                    )
+                    var maxWidth = constructionsQueueTable.width
+                    for (entry in entries) {
+                        val construction = entry.construction
+                        val category = when (construction) {
+                            is BaseUnit -> "Units"
+                            is Building -> when {
+                                construction.isWonder -> "Wonders"
+                                construction.isNationalWonder -> "National Wonders"
+                                else -> "Buildings"
+                            }
+
+                            is CityEvent -> "City Events"
+                            else -> "Other"
+                        }
+                        val button = getConstructionButton(entry)
+                        groups.getValue(category).add(button)
+                        maxWidth = max(maxWidth, button.packIfNeeded().width)
+                    }
+                    for ((category, group) in groups) availableConstructionsTable.addCategory(
+                        category,
+                        group,
+                        maxWidth
+                    )
+                    availableConstructionsTable.pack()
+                    availableConstructionsScrollPane.setSize(
+                        maxWidth,
+                        min(availableConstructionsTable.prefHeight, lowerTableScrollCell.maxHeight)
+                    )
                     lowerTable.pack()
                 }
-                availableConstructionsScrollPane.apply {
-                    layout()
-                    scrollY = constructionsScrollY
-                    updateVisualScroll()
-                }
+                availableConstructionsScrollPane.layout()
+                availableConstructionsScrollPane.scrollY = savedY
+                availableConstructionsScrollPane.updateVisualScroll()
             }
         }
     }
@@ -547,7 +570,15 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         val labelCell = pickConstructionButton.add(label).expandX().fillX()
         if (royal) {
             label.setWrap(true)
-            labelCell.width((rowWidth - 115f).coerceAtLeast(1f))
+            labelCell.width((rowWidth - if (compactContent != null) 151f else 115f).coerceAtLeast(1f))
+        }
+        if (compactContent != null) {
+            val infoButton = "?".toTextButton()
+            HeroicCityStyle.applyCompactStyle(infoButton)
+            infoButton.addTooltip("Description")
+            infoButton.onClick { openCompactDescription(construction) }
+            pickConstructionButton.add(infoButton).size(32f).padRight(4f)
+            label.onClick { openCompactDescription(construction) }
         }
         if (!cannotAddConstructionToQueue(
                 construction,
@@ -572,7 +603,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                 pickConstructionButton.add(addToQueueButton).size(40f)
             }
         } else if (royal) {
-            pickConstructionButton.add().width(40f)
+            pickConstructionButton.add().width(if (compactContent != null) 32f else 40f)
         }
         pickConstructionButton.row()
 
@@ -585,7 +616,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
                 .colspan(pickConstructionButton.columns).fillX().left().padTop(2f)
             if (royal) reasonCell.width((rowWidth - 10f).coerceAtLeast(1f))
         }
-        pickConstructionButton.onClick {
+        if (compactContent == null) pickConstructionButton.onClick {
             if (cityScreen.selectedConstruction == construction)
                 cityScreen.clearSelection()
             else
@@ -933,50 +964,120 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         add(expander).prefWidth(prefWidth).growX().row()
     }
 
-    /** Каталог и очередь прокручиваются независимо внутри выделенной области страницы. */
+    /** Две колонки требуют достаточной ширины и в сцене, и в окне; иначе очередь находится снизу. */
     internal fun asCompactContent(width: Float, height: Float): Table {
         compactContent?.let { return it }
-        compactPanelWidth = (width - 12f).coerceAtLeast(1f)
+        // ExtendViewport сохраняет минимальную ширину сцены даже при уменьшении окна.
+        val windowScale = com.badlogic.gdx.Gdx.graphics.width.toFloat() / cityScreen.stage.width
+        val sideBySide = width * minOf(1f, windowScale) >= 441f
+        val queueWidth = if (sideBySide) maxOf(145f, (width - 14f) * 0.7f / 1.7f) else width
+        val catalogueWidth = if (sideBySide) width - queueWidth - 14f else width
+        compactPanelWidth = (catalogueWidth - 12f).coerceAtLeast(1f)
+        compactQueueWidth = (queueWidth - 12f).coerceAtLeast(1f)
         upperTable.remove()
         lowerTable.remove()
         constructionsQueueScrollPane.actor = constructionsQueueTable
         availableConstructionsScrollPane.actor = availableConstructionsTable
         constructionsQueueScrollPane.setScrollingDisabled(true, false)
         availableConstructionsScrollPane.setScrollingDisabled(true, false)
-        val actions = ScrollPane(buyButtonsTable).apply {
-            setScrollingDisabled(false, true)
-            setOverscroll(false, false)
+        compactViewHost.clearChildren()
+        compactViewHost.add(availableConstructionsScrollPane).minSize(0f).grow()
+        val categories = CityConstructionCategories(compactCategory) {
+            compactCategory = it
+            catalogScrollY = 0f
+            availableConstructionsScrollPane.scrollY = 0f
+            availableConstructionsScrollPane.updateVisualScroll()
+            descriptionOpen = false
+            selectedQueueEntry = -1
+            cityScreen.clearSelection()
+            cityScreen.update()
         }
-        val queueHeight = minOf(160f, height * 0.30f).coerceAtLeast(44f)
+        val columns = Table().apply {
+            top().left()
+            if (sideBySide) {
+                add(compactViewHost).width(catalogueWidth).minHeight(0f).growY().padRight(14f)
+                add(constructionsQueueScrollPane).width(queueWidth).minHeight(0f).growY()
+            } else {
+                add(compactViewHost).width(width).minHeight(0f).growY().row()
+                add(constructionsQueueScrollPane).width(width)
+                    .height(minOf(190f, (height - 55f) * 0.30f).coerceAtLeast(44f)).padTop(9f).row()
+            }
+        }
         return Table().apply {
             name = "cityCompactConstructions"
             top().left()
-            add(availableConstructionsScrollPane).width(width).minHeight(0f).growY().row()
-            add(actions).width(width).height(54f).row()
-            add(constructionsQueueScrollPane).width(width).height(queueHeight).row()
+            add(categories).width(width).height(48f).padBottom(7f).row()
+            add(columns).width(width).minHeight(0f).growY().row()
             compactContent = this
         }
     }
     private var compactPanelWidth: Float? = null
+
+    /** Описание использует выбранный объект модели; позиция каталога переживает переход туда и обратно. */
+    private fun openCompactDescription(construction: IConstruction, queueIndex: Int = -1) {
+        if (!descriptionOpen) catalogScrollY = availableConstructionsScrollPane.scrollY
+        descriptionOpen = true
+        selectedQueueEntry = queueIndex
+        cityScreen.selectConstruction(construction)
+        cityScreen.showConstructionPage()
+        cityScreen.update()
+    }
+
+    /** Каталог и описание делят верхнюю область, очередь остаётся отдельной и доступной. */
+    private fun updateCompactView(construction: IConstruction?) {
+        val wasDescriptionVisible = compactDescriptionScroll.parent === compactViewHost
+        if (construction == null) descriptionOpen = false
+        compactViewHost.clearChildren()
+        if (!descriptionOpen || construction == null) {
+            compactViewHost.add(availableConstructionsScrollPane).grow()
+            compactViewHost.validate()
+            if (wasDescriptionVisible) {
+                availableConstructionsScrollPane.layout()
+                availableConstructionsScrollPane.scrollY = catalogScrollY
+                availableConstructionsScrollPane.updateVisualScroll()
+            }
+            descriptionName = null
+            return
+        }
+        val savedY = if (descriptionName == construction.name) compactDescriptionScroll.scrollY else 0f
+        descriptionName = construction.name
+        compactDescriptionContent.clearChildren()
+        compactDescriptionContent.top().left()
+        val back = "Back".toTextButton()
+        HeroicCityStyle.applyCompactStyle(back)
+        back.onClick {
+            descriptionOpen = false
+            selectedQueueEntry = -1
+            cityScreen.clearSelection()
+            cityScreen.update()
+        }
+        compactDescriptionContent.add(back).left().height(32f).padBottom(4f).row()
+        compactDescriptionContent.add(compactDescription.embeddedContent(construction, contentWidth()))
+            .width(contentWidth()).left().row()
+        compactDescriptionContent.add(buyButtonsTable).width(contentWidth()).left().padTop(4f).row()
+        compactViewHost.add(compactDescriptionScroll).grow()
+        compactViewHost.validate()
+        compactDescriptionScroll.layout()
+        compactDescriptionScroll.scrollY = savedY
+        compactDescriptionScroll.updateVisualScroll()
+    }
 
     /** Ширина строк определяется контейнером; legacy сохраняет прежний расчёт. */
     private fun contentWidth(): Float =
             compactPanelWidth ?: (cityScreen.stage.width / 3f).coerceAtLeast(300f)
                 .coerceAtMost(cityScreen.stage.width - 24f)
 
-    /** Действия текущего проекта остаются доступны после удаления его дубля из нижней очереди. */
+    /** Быстрый доступ к описанию и операциям текущего проекта из шапки. */
     internal fun currentProjectActions(): Table {
         val city = cityScreen.city
         val queue = city.cityConstructions.constructionQueue
         val actions = Table()
         if (queue.isEmpty()) return actions
-        val select = "…".toTextButton()
+        val select = "?".toTextButton()
         HeroicCityStyle.applyCompactStyle(select)
-        select.addTooltip("Current construction")
+        select.addTooltip("Description")
         select.onClick {
-            selectedQueueEntry = 0
-            cityScreen.selectConstruction(queue[0])
-            cityScreen.update()
+            openCompactDescription(city.cityConstructions.getConstruction(queue[0]), 0)
         }
         actions.add(select).size(32f).padRight(3f)
         if (queue.size > 1) actions.add(getLowerPriorityButton(0, queue[0], city)).size(32f)
@@ -985,51 +1086,74 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         return actions
     }
 
-    /** Нижняя область содержит только ожидающие проекты, с исходными индексами игровой очереди. */
+    /** Полная очередь с исходными индексами модели и компактными действиями в своей колонке. */
     private fun updateCompactQueue() {
         val savedY = constructionsQueueScrollPane.scrollY
-        val queue = cityScreen.city.cityConstructions.constructionQueue
+        val city = cityScreen.city
+        val queue = city.cityConstructions.constructionQueue
+        val ink = Color.valueOf("453925")
         constructionsQueueTable.clear()
         constructionsQueueTable.top().left()
-        constructionsQueueTable.add(
-            "Construction queue".toLabel(
-                fontSize = 17,
-                fontColor = Color.valueOf("453925")
-            )
-        )
-            .left().pad(3f).row()
-        if (queue.size <= 1) {
-            constructionsQueueTable.add(
-                "—".toLabel(
-                    fontSize = 16,
-                    fontColor = Color.valueOf("70634C")
-                )
-            )
-                .left().pad(3f).row()
+        val heading =
+                "Construction queue".toLabel(fontSize = 13, fontColor = ink).apply { setWrap(true) }
+        constructionsQueueTable.add(heading).width(compactQueueWidth).left().padBottom(6f).row()
+        if (queue.isEmpty()) {
+            constructionsQueueTable.add("—".toLabel(fontSize = 16, fontColor = ink)).left().row()
         }
-        for (index in 1 until queue.size) {
+        for (index in queue.indices) {
             val name = queue[index]
-            val row = Table()
-            row.add(ImageGetter.getPortraitImage(name, 26f)).size(26f).padRight(5f)
-            val label = name.toLabel(fontSize = 16, fontColor = Color.valueOf("453925"))
-                .apply { setEllipsis(true) }
+            val row = Table().apply { left() }
+            row.add((index + 1).toString().toLabel(fontSize = 12, fontColor = ink)).width(14f)
+            row.add(CityConstructionVisuals.portrait(name, 26f)).size(26f).padRight(4f)
+            val label = name.toLabel(fontSize = 16, fontColor = ink).apply { setEllipsis(true) }
+            label.addTooltip(if (index == 0) "Current construction".tr() + ": " + name.tr() else name.tr())
             label.onClick {
-                selectedQueueEntry = index
+                openCompactDescription(
+                    city.cityConstructions.getConstruction(name),
+                    index
+                )
+            }
+            row.add(label).width((compactQueueWidth - 116f).coerceAtLeast(1f)).left()
+            fun action(text: String, tooltip: String, enabled: Boolean, block: () -> Unit) {
+                val button = text.toTextButton()
+                button.style = TextButton.TextButtonStyle(button.style).apply {
+                    up = null; over = null; down = null; checked = null; checkedOver =
+                        null; disabled = null
+                    font = com.unciv.ui.utils.Fonts.font
+                    fontColor = ink
+                    disabledFontColor = Color.valueOf("A99D82")
+                }
+                button.label.setFontScale(16f / com.unciv.ui.utils.Fonts.ORIGINAL_FONT_SIZE)
+                button.labelCell.pad(0f)
+                button.pad(0f)
+                button.isDisabled = !enabled || !cityScreen.canCityBeChanged()
+                button.addTooltip(tooltip)
+                button.onClick {
+                    if (!button.isDisabled && cityScreen.canCityBeChanged()) block()
+                }
+                // Обёртка не даёт общему обходу TextButton подменить локальное оформление.
+                row.add(button).width(24f).height(30f)
+            }
+            action("↑", "Move up", index > 0) {
+                city.cityConstructions.raisePriority(index)
+                selectedQueueEntry = index - 1
                 cityScreen.selectConstruction(name)
                 cityScreen.update()
             }
-            row.add(label).width((contentWidth() - 150f).coerceAtLeast(1f)).left()
-            row.add(getRaisePriorityButton(index, name, cityScreen.city)).size(32f).padRight(3f)
-            if (index < queue.lastIndex) row.add(
-                getLowerPriorityButton(
-                    index,
-                    name,
-                    cityScreen.city
-                )
-            ).size(32f).padRight(3f)
-            else row.add().size(32f).padRight(3f)
-            row.add(getRemoveFromQueueButton(index, cityScreen.city)).size(32f)
-            constructionsQueueTable.add(row).growX().padBottom(3f).row()
+            action("↓", "Move down", index < queue.lastIndex) {
+                city.cityConstructions.lowerPriority(index)
+                selectedQueueEntry = index + 1
+                cityScreen.selectConstruction(name)
+                cityScreen.update()
+            }
+            action("×", "Remove from queue", true) {
+                city.cityConstructions.removeFromQueue(index, false)
+                selectedQueueEntry = -1
+                cityScreen.clearSelection()
+                cityScreen.update()
+            }
+            constructionsQueueTable.add(row).width(compactQueueWidth).minHeight(40f).row()
+            constructionsQueueTable.addSeparator(color = Color.valueOf("CBBB95"))
         }
         constructionsQueueScrollPane.layout()
         constructionsQueueScrollPane.scrollY = savedY
@@ -1046,5 +1170,66 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
             if (cityScreen.canCityBeChanged()) action()
         }
         return Table().apply { add(button).size(32f) }
+    }
+
+    /** Компактная строка макета; название, описание и быстрое добавление имеют отдельные обработчики. */
+    private fun getCompactConstructionButton(dto: ConstructionButtonDTO): Table {
+        val construction = dto.construction
+        val ink = Color.valueOf("453925")
+        val row = Table().apply {
+            name = "cityConstruction:${construction.name}"
+            left().padTop(4f).padBottom(4f)
+        }
+        row.add(CityConstructionVisuals.portrait(construction.name, 36f)).size(36f).padRight(8f)
+        val textWidth = (contentWidth() - 104f).coerceAtLeast(1f)
+        val text = Table().apply { left() }
+        val title =
+                construction.name.toLabel(fontSize = 17, fontColor = ink).apply { setWrap(true) }
+        title.onClick { openCompactDescription(construction) }
+        text.add(title).width(textWidth).left().row()
+        val details = dto.buttonText.removePrefix(construction.name.tr()).trim()
+        if (details.isNotEmpty()) {
+            text.add(
+                details.toLabel(fontSize = 12, fontColor = Color.valueOf("70634C"))
+                    .apply { setWrap(true) })
+                .width(textWidth).left().row()
+        }
+        dto.rejectionReason?.let {
+            text.add(
+                it.toLabel(fontSize = 12, fontColor = Color.valueOf("8C2923"))
+                    .apply { setWrap(true) })
+                .width(textWidth).left().row()
+        }
+        row.add(text).width(textWidth).left()
+        fun action(caption: String, tooltip: String, enabled: Boolean = true, run: () -> Unit) {
+            val button = caption.toTextButton()
+            button.style = TextButton.TextButtonStyle(button.style).apply {
+                up = null; down = null; over = null; checked = null; checkedOver = null; disabled =
+                    null
+                font = com.unciv.ui.utils.Fonts.font
+                fontColor = Color.valueOf("365C85")
+                disabledFontColor = Color.valueOf("A99D82")
+            }
+            button.label.setFontScale(18f / com.unciv.ui.utils.Fonts.ORIGINAL_FONT_SIZE)
+            button.labelCell.pad(0f)
+            button.pad(0f)
+            button.isDisabled = !enabled
+            button.addTooltip(tooltip)
+            button.onClick { if (!button.isDisabled) run() }
+            row.add(button).width(28f).height(30f).padLeft(2f)
+        }
+        action("?", "Description") { openCompactDescription(construction) }
+        action(
+            "+",
+            "Add to queue",
+            !cannotAddConstructionToQueue(
+                construction,
+                cityScreen.city,
+                cityScreen.city.cityConstructions
+            )
+        ) {
+            addConstructionToQueue(construction, cityScreen.city.cityConstructions)
+        }
+        return row
     }
 }
