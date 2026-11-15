@@ -28,6 +28,7 @@ import com.unciv.ui.utils.extensions.toTextButton
 import kotlin.math.roundToInt
 
 class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
+    private var embeddedWidth: Float? = null
     private val innerTable = Table()
     val city = cityScreen.city
 
@@ -40,18 +41,31 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
         background = BaseScreen.skinStrings.getUiBackground("CityScreen/CityScreenTileTable/Background", tintColor = Color.WHITE)
     }
 
+    /** Обновляет общие действия; во вкладке прокруткой и размерами владеет родитель. */
     fun update(selectedTile: TileInfo?) {
         innerTable.clear()
+        val embedded = embeddedWidth != null
         if (selectedTile == null) {
             isVisible = false
+            if (embedded) {
+                val label = "Select a tile".toLabel(fontColor = Color.valueOf("453925"))
+                label.setWrap(true)
+                innerTable.add(label).width(embeddedWidth!!).padTop(16f).row()
+                innerTable.invalidateHierarchy()
+            }
             return
         }
         isVisible = true
         val royal = UncivGame.Current.settings.skin == "Minimal"
-        val contentWidth = ((cityScreen.stage.width / 4f).coerceAtLeast(260f)
+        val contentWidth = embeddedWidth ?: ((cityScreen.stage.width / 4f).coerceAtLeast(260f)
             .coerceAtMost(cityScreen.stage.width - 10f) - 108f).coerceAtLeast(1f)
         val ink = if (royal) Color.valueOf("453925") else Color.WHITE
-        if (royal) {
+        if (embedded) {
+            innerTable.background = null
+            innerTable.pad(0f)
+            innerTable.add(CityTileSummary(city, selectedTile, contentWidth)).width(contentWidth)
+                .row()
+        } else if (royal) {
             background = null
             innerTable.background = com.unciv.ui.utils.RoyalPanelDrawable(BaseScreen.skin)
             innerTable.pad(52f).padTop(58f)
@@ -67,7 +81,14 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
         val markupCell = innerTable.add(markup)
         if (royal) markupCell.width(contentWidth)
         markupCell.row()
-        innerTable.add(getTileStatsTable(selectedTile.getTileStats(city, city.civInfo))).row()
+        if (!embedded) innerTable.add(
+            getTileStatsTable(
+                selectedTile.getTileStats(
+                    city,
+                    city.civInfo
+                )
+            )
+        ).row()
         fun addText(text: String) {
             val label = text.toLabel(fontColor = ink)
             val cell = innerTable.add(label)
@@ -89,10 +110,12 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
             buyTileButton.addTooltip('T')
             innerTable.add(buyTileButton).padTop(5f).row()
         }
-        if (selectedTile.owningCity != null)
-            addText("Owned by [${selectedTile.owningCity!!.name}]")
-        if (city.civInfo.cities.filterNot { it == city }.any { it.isWorked(selectedTile) })
-            addText("Worked by [${selectedTile.getWorkingCity()!!.name}]")
+        if (!embedded) {
+            if (selectedTile.owningCity != null)
+                addText("Owned by [${selectedTile.owningCity!!.name}]")
+            if (city.civInfo.cities.filterNot { it == city }.any { it.isWorked(selectedTile) })
+                addText("Worked by [${selectedTile.getWorkingCity()!!.name}]")
+        }
         if (city.isWorked(selectedTile)) {
             if (selectedTile.isLocked()) {
                 val unlockButton = "Unlock".toTextButton()
@@ -117,14 +140,20 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
         if (selectedTile.isCityCenter() && selectedTile.getCity() != city && selectedTile.getCity()!!.civInfo == city.civInfo)
             innerTable.add("Move to city".toTextButton().onClick {
                 cityScreen.game.replaceCurrentScreen(cityScreen.createCityScreen(selectedTile.getCity()!!))
-            })
+            }).row()
         if (royal) {
             for (cell in innerTable.cells) {
                 val button =
                         cell.actor as? com.badlogic.gdx.scenes.scene2d.ui.TextButton ?: continue
                 button.label.setWrap(true)
-                cell.width(contentWidth).minHeight(58f).fillX()
+                cell.width(contentWidth).minHeight(if (embedded) 36f else 58f).fillX()
             }
+        }
+        if (embedded) {
+            innerTable.invalidateHierarchy()
+            return
+        }
+        if (royal) {
             val scroll = tileScroll
             innerTable.pack()
             val scrollStyle = scroll.style
@@ -214,5 +243,14 @@ class CityScreenTileTable(private val cityScreen: CityScreen): Table() {
             setOverscroll(false, false)
             setFadeScrollBars(false)
         }
+    }
+
+    /** Вкладка владеет прокруткой; действия и описание используют прежнюю таблицу. */
+    fun embeddedContent(width: Float): Table {
+        embeddedWidth = width.coerceAtLeast(1f)
+        innerTable.remove()
+        innerTable.background = null
+        innerTable.pad(0f)
+        return innerTable
     }
 }

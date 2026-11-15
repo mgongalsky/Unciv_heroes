@@ -55,6 +55,7 @@ object CityPreviewCapture {
 
     /** Ожидает асинхронный каталог; завершает приложение без сохранения пользовательских настроек. */
     private class CaptureApplication(private val output: File) : ApplicationAdapter() {
+        private var tilePreviewOpened = false
         private lateinit var game: UncivGame
         private var stableFrames = 0
         private val startedAt = System.nanoTime()
@@ -82,15 +83,37 @@ object CityPreviewCapture {
             Gdx.graphics.isContinuousRendering = true
             game.render()
             if ((System.nanoTime() - startedAt) / 1_000_000_000L > 45L) {
-                System.err.println("City preview timed out waiting for the construction catalogue")
+                System.err.println("City preview timed out waiting for the requested page")
                 Gdx.app.exit()
                 return
             }
-            val screen = game.screen as? CityScreen
-            val ready = screen?.stage?.root
-                ?.findActor<com.badlogic.gdx.scenes.scene2d.Actor>("cityConstruction:Worker") != null
-            if (!ready || screen == null) {
-                stableFrames = 0; return
+            val screen = game.screen as? CityScreen ?: return
+            val tilePreview = System.getenv("CITY_PREVIEW_TILE") == "1"
+            if (tilePreview && !tilePreviewOpened) {
+                // На узкой сцене карта присоединяется к дереву только после открытия Map.
+                val pager =
+                        screen.stage.root.findActor<com.unciv.ui.utils.TabbedPager>("cityCompactPager")
+                if (pager != null && pager.getPageIndex("Map") >= 0) pager.selectPage("Map")
+                // Выбор существует только в автономном экране; назначение жителей не выполняется.
+                fun findTile(actor: com.badlogic.gdx.scenes.scene2d.Actor): com.unciv.ui.cityscreen.CityTileGroup? {
+                    if (actor is com.unciv.ui.cityscreen.CityTileGroup && !actor.tileInfo.isCityCenter()) return actor
+                    if (actor is com.badlogic.gdx.scenes.scene2d.Group)
+                        for (child in actor.children) findTile(child)?.let { return it }
+                    return null
+                }
+
+                val tile = findTile(screen.stage.root) ?: return
+                tilePreviewOpened = true
+                game.replaceCurrentScreen(screen.createCityScreen(initSelectedTile = tile.tileInfo))
+                stableFrames = 0
+                return
+            }
+            val target = if (tilePreview) "cityTileSummary" else "cityConstruction:Worker"
+            val ready =
+                    screen.stage.root.findActor<com.badlogic.gdx.scenes.scene2d.Actor>(target) != null
+            if (!ready) {
+                stableFrames = 0
+                return
             }
             if (++stableFrames < 20 || saved) return
             val pixmap = ScreenUtils.getFrameBufferPixmap(
@@ -101,7 +124,7 @@ object CityPreviewCapture {
                 writeLayoutReport(screen)
                 PixmapIO.writePNG(Gdx.files.absolute(output.path), pixmap, -1, true)
                 saved = true
-                println("CAPTURED ${output.path} (${pixmap.width}x${pixmap.height})")
+                println("CAPTURED ${output.path} (${pixmap.width}x${pixmap.height}), page=$target")
             } finally {
                 pixmap.dispose()
             }

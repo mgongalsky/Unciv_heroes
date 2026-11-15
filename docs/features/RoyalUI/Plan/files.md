@@ -1,5 +1,17 @@
 # Перечень файлов
 
+## Текущая итерация: вкладка Tile
+
+Фактические файлы относительно корня проекта:
+
+- core/src/com/unciv/ui/cityscreen/CityTileSummary.kt — новая сводка клетки, отдельное превью и сетка доходов.
+- core/src/com/unciv/ui/cityscreen/CityScreenTileTable.kt — встроенный режим, пустое состояние и переиспользование свойств и действий.
+- core/src/com/unciv/ui/cityscreen/CityScreen.kt — вкладка Tile, автоматический переход, подсветка и восстановление выбора.
+- desktop/src/com/unciv/app/desktop/CityPreviewCapture.kt — режим захвата Tile через CITY_PREVIEW_TILE=1, открытие Map на узком окне перед поиском клетки.
+- docs/features/RoyalUI/Plan/PLAN.md, STEPS.md, files.md, STEP_07_City_Tiles_Stats.md, Research/RESEARCH.md и CODE_GUIDE.md — границы и фактические результаты.
+
+Новые изображения и тесты не добавлялись. PNG, отчёты и журналы захвата находятся в desktop/build/city-preview и не предназначены для коммита. Посторонний wiki/Make-sprite-atlas.md не изменялся этой работой.
+
 ## Описание проекта и полная очередь — результат итерации
 
 Фактические изменения итерации: core/src/com/unciv/ui/cityscreen/CityConstructionsTable.kt — переключение каталога/описания, локальные действия, полная очередь; ConstructionInfoTable.kt в том же каталоге — встроенная карточка; CityScreen.kt — переход на Construction; CitySandbox.kt — Granary, Worker, Scout и частичный прогресс. Обновлены Plan/PLAN.md, Plan/STEPS.md, Plan/files.md, Plan/STEP_04_City_Visual_Shell.md, Research/RESEARCH.md и CODE_GUIDE.md. Новых файлов нет.

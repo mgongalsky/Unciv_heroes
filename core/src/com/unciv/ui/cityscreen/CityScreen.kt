@@ -47,7 +47,6 @@ class CityScreen(
 ): BaseScreen(), RecreateOnResize {
     private var compactHeader: CityCompactHeader? = null
     private var compactRoot: Table? = null
-    private val compactDetails = Table()
     private var compactPager: com.unciv.ui.utils.TabbedPager? = null
 
     companion object {
@@ -313,6 +312,8 @@ class CityScreen(
             tileGroup.update()
             tileGroup.hideHighlight()
             when {
+                tileGroup.tileInfo == selectedTile && pickTileData == null ->
+                    tileGroup.showHighlight(Color.valueOf("E8D59A"), 0.65f)
                 tileGroup.tileInfo == nextTileToOwn -> {
                     tileGroup.showHighlight(Color.PURPLE)
                     tileGroup.setColor(0f, 0f, 0f, 0.7f)
@@ -478,7 +479,7 @@ class CityScreen(
         selectedQueueEntryTargetTile = null
         pickTileData = null
         selectedTile = newTile
-        if (newTile != null) compactPager?.selectPage("Details")
+        if (newTile != null) compactPager?.selectPage("Tile")
     }
     fun clearSelection() = selectTile(null)
 
@@ -525,7 +526,7 @@ class CityScreen(
         game.replaceCurrentScreen(newCityScreen)
     }
 
-    override fun recreate(): BaseScreen = createCityScreen()
+    override fun recreate(): BaseScreen = createCityScreen(initSelectedTile = selectedTile)
 
     override fun dispose() {
         cityAmbiencePlayer.dispose()
@@ -570,6 +571,13 @@ class CityScreen(
         // Высота заголовка известна после создания страниц; отдельная таблица удерживает области внутри неё.
         val constructionPage = page(ownScroll = true)
         pager.addPage("Construction", constructionPage)
+        // Карточка использует прокрутку страницы и оставляет место для её полосы.
+        val tileContentWidth = (contentWidth - 24f).coerceAtLeast(1f)
+        pager.addPage("Tile", page().apply {
+            name = "cityTilePage"
+            add(tileTable.embeddedContent(tileContentWidth))
+                .width(tileContentWidth).pad(8f).top().row()
+        })
         pager.addPage("Stats", page().apply {
             add(cityStatsTable).top().row()
             add(razeCityButtonHolder).padTop(5f).row()
@@ -584,7 +592,6 @@ class CityScreen(
         })
         tileTable.remove()
         selectedConstructionTable.remove()
-        pager.addPage("Details", page().apply { add(compactDetails).top() })
         val pageHeight = (pagerHeight - pager.minHeight).coerceAtLeast(1f)
         constructionPage.add(constructionsTable.asCompactContent(contentWidth, pageHeight))
             .width(contentWidth).height(pageHeight).row()
@@ -610,7 +617,7 @@ class CityScreen(
         }
         compactRoot = root
         stage.addActor(root)
-        pager.selectPage(if (wide || selectedConstruction != null) "Construction" else "Map")
+        pager.selectPage(if (selectedTile != null) "Tile" else if (wide || selectedConstruction != null) "Construction" else "Map")
         root.validate()
         mapScrollPane.layout()
         mapScrollPane.scrollPercentX = 0.5f
@@ -628,13 +635,7 @@ class CityScreen(
         constructionsTable.update(selectedConstruction)
         tileTable.update(selectedTile)
         selectedConstructionTable.update(selectedConstruction)
-        compactDetails.clearChildren()
-        when {
-            selectedTile != null -> compactDetails.add(tileTable).row()
-            selectedConstruction != null -> compactDetails.add(selectedConstructionTable).row()
-            else -> compactDetails.add("Pick a construction".toLabel(fontColor = Color.valueOf("453925")))
-                .row()
-        }
+
         compactHeader?.update()
         val statsHeight = (pager.height - 100f).coerceAtLeast(100f)
         cityStatsTable.update(statsHeight)
